@@ -104,6 +104,13 @@ type Options struct {
 // and returns files sorted by path. Symlinks are recorded but never followed:
 // following them invites both cycles and escapes outside the root, and a symlink
 // target inside the repo is discovered on its own anyway.
+//
+// Every read goes through an os.Root scoped to the tree. The symlink skip above
+// already prevents an escape, but that is an argument about the code being right,
+// and this is a guarantee from the kernel handle instead. It is worth the
+// difference here because signpost reads a tree it does not control and commits
+// what it found: a path that escaped the root would put content from outside the
+// repository into a file that gets pushed.
 func Walk(root string, opts Options) (*Result, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
@@ -116,6 +123,11 @@ func Walk(root string, opts Options) (*Result, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("root is not a directory: %s", absRoot)
 	}
+	rt, err := os.OpenRoot(absRoot)
+	if err != nil {
+		return nil, fmt.Errorf("open root: %w", err)
+	}
+	defer func() { _ = rt.Close() }()
 
 	res := &Result{Root: absRoot}
 
@@ -129,7 +141,7 @@ func Walk(root string, opts Options) (*Result, error) {
 	}
 
 	var totalBytes int64
-	if err := walkDir(absRoot, "", base, opts, res, &totalBytes); err != nil {
+	if err := walkDir(rt, "", base, opts, res, &totalBytes); err != nil {
 		return nil, err
 	}
 
@@ -139,9 +151,11 @@ func Walk(root string, opts Options) (*Result, error) {
 }
 
 // walkDir recurses one directory. ig is the ignore set in effect, already
-// including any parent .gitignore files.
-func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, totalBytes *int64) error {
-	entries, err := os.ReadDir(absDir)
+// including any parent .gitignore files. relDir is the directory's path relative
+// to the root, "" for the root itself; every read is addressed through rt by that
+// relative path, so no name the walk constructs can leave the tree.
+func walkDir(rt *os.Root, relDir string, ig *ignoreSet, opts Options, res *Result, totalBytes *int64) error {
+	entries, err := readDirIn(rt, relDir)
 	if err != nil {
 		// An unreadable directory is recorded, not fatal: a permission-denied
 		// subtree should not fail a whole build.
@@ -154,7 +168,7 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 	local := ig
 	for _, e := range entries {
 		if e.Name() == ".gitignore" && !e.IsDir() {
-			f, err := os.Open(filepath.Join(absDir, ".gitignore"))
+			f, err := rt.Open(joinIn(relDir, ".gitignore"))
 			if err != nil {
 				break
 			}
@@ -168,8 +182,11 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 		}
 	}
 
-	// Sort entries so recursion order is fixed. os.ReadDir already sorts by
-	// filename, but relying on that leaves the guarantee implicit.
+	// Sort entries so recursion order is fixed. This is load-bearing, not
+	// belt-and-braces: reading through an os.Root handle means File.ReadDir, which
+	// returns entries in directory order and does not sort them the way os.ReadDir
+	// does. Without this the walk order follows the filesystem and the bundle stops
+	// being byte-reproducible.
 	names := make([]fs.DirEntry, len(entries))
 	copy(names, entries)
 	sort.Slice(names, func(i, j int) bool { return names[i].Name() < names[j].Name() })
@@ -180,7 +197,6 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 		if relDir != "" {
 			rel = relDir + "/" + name
 		}
-		abs := filepath.Join(absDir, name)
 
 		// A symlink is never followed, in either the file or directory case.
 		if e.Type()&fs.ModeSymlink != 0 {
@@ -198,7 +214,7 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 				res.Skipped = append(res.Skipped, Skip{Path: rel, Reason: "vendored directory"})
 				continue
 			}
-			if err := walkDir(abs, rel, local, opts, res, totalBytes); err != nil {
+			if err := walkDir(rt, rel, local, opts, res, totalBytes); err != nil {
 				return err
 			}
 			continue
@@ -214,7 +230,7 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 			continue
 		}
 
-		f, skip := readFile(abs, rel, opts, totalBytes)
+		f, skip := readFile(rt, rel, opts, totalBytes)
 		if skip != nil {
 			res.Skipped = append(res.Skipped, *skip)
 			continue
@@ -224,9 +240,37 @@ func walkDir(absDir, relDir string, ig *ignoreSet, opts Options, res *Result, to
 	return nil
 }
 
-// readFile stats, sniffs, and reads one file subject to the caps.
-func readFile(abs, rel string, opts Options, totalBytes *int64) (File, *Skip) {
-	info, err := os.Stat(abs)
+// readDirIn lists a directory addressed by its path relative to rt.
+//
+// os.Root has no ReadDir, so the directory is opened through the root — which is
+// where the confinement is enforced — and read from the resulting handle.
+func readDirIn(rt *os.Root, relDir string) ([]fs.DirEntry, error) {
+	name := relDir
+	if name == "" {
+		name = "."
+	}
+	d, err := rt.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = d.Close() }()
+	return d.ReadDir(-1)
+}
+
+// joinIn builds a root-relative path. os.Root takes slash-separated names on
+// every platform, so this is deliberately not filepath.Join: on Windows that
+// would produce a backslash and change what the name means.
+func joinIn(relDir, name string) string {
+	if relDir == "" {
+		return name
+	}
+	return relDir + "/" + name
+}
+
+// readFile stats, sniffs, and reads one file subject to the caps. rel is the
+// path relative to the root rt, which is how the read is confined to the tree.
+func readFile(rt *os.Root, rel string, opts Options, totalBytes *int64) (File, *Skip) {
+	info, err := rt.Stat(rel)
 	if err != nil {
 		return File{}, &Skip{Path: rel, Reason: "stat failed: " + err.Error()}
 	}
@@ -253,7 +297,7 @@ func readFile(abs, rel string, opts Options, totalBytes *int64) (File, *Skip) {
 		return File{}, &Skip{Path: rel, Reason: "walk byte budget exhausted"}
 	}
 
-	fh, err := os.Open(abs)
+	fh, err := rt.Open(rel)
 	if err != nil {
 		return File{}, &Skip{Path: rel, Reason: "open failed: " + err.Error()}
 	}

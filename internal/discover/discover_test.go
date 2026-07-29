@@ -342,6 +342,38 @@ func TestWalkDoesNotFollowSymlinks(t *testing.T) {
 	}
 }
 
+// Every read is confined to the root by an os.Root handle, so content from
+// outside the tree cannot reach the bundle even if the symlink skip above were
+// removed. Verified by reading through the same path the walker uses.
+func TestReadsAreConfinedToTheRoot(t *testing.T) {
+	root := writeTree(t, map[string]string{"real.go": "package a\n"})
+	outside := t.TempDir()
+	if err := os.WriteFile(filepath.Join(outside, "secret.go"), []byte("package secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rt, err := os.OpenRoot(root)
+	if err != nil {
+		t.Fatalf("OpenRoot: %v", err)
+	}
+	defer func() { _ = rt.Close() }()
+
+	var total int64
+	for _, escape := range []string{
+		"../secret.go",
+		"a/../../secret.go",
+		filepath.ToSlash(filepath.Join(outside, "secret.go")),
+	} {
+		if f, skip := readFile(rt, escape, Options{}, &total); skip == nil {
+			t.Errorf("readFile(%q) escaped the root and returned %+v", escape, f)
+		}
+	}
+	// A path inside the root still reads, so the confinement is not simply
+	// rejecting everything.
+	if _, skip := readFile(rt, "real.go", Options{}, &total); skip != nil {
+		t.Errorf("a path inside the root must still read: %+v", skip)
+	}
+}
+
 func TestWalkIsDeterministicAcrossRuns(t *testing.T) {
 	root := writeTree(t, map[string]string{
 		"z.go": "package z\n", "a.go": "package a\n", "m/q.go": "package q\n",

@@ -57,6 +57,40 @@ func TestRegistryDispatchesByLanguage(t *testing.T) {
 	}
 }
 
+// Every first-class language must have an extractor in the default set, and each
+// must actually read the language it claims. A language silently missing here
+// would be reported as unhandled for a whole repo.
+func TestDefaultRegistryCoversEveryFirstClassLanguage(t *testing.T) {
+	r := DefaultRegistry()
+	sources := map[discover.Lang]string{
+		discover.LangGo:     "package p\n\nimport \"fmt\"\n\nfunc Exported() { fmt.Print() }\n",
+		discover.LangPython: "import os\n\ndef exported():\n    return os.getcwd()\n",
+		discover.LangTS:     "import fs from \"node:fs\";\nexport function exported() { return fs; }\n",
+		discover.LangJS:     "const fs = require(\"node:fs\");\nfunction exported() { return fs; }\n",
+		discover.LangRust:   "use std::fmt;\n\npub fn exported() -> fmt::Result { Ok(()) }\n",
+	}
+	for lang, src := range sources {
+		e := r.For(lang)
+		if e == nil {
+			t.Errorf("%s has no extractor in the default registry", lang)
+			continue
+		}
+		fa, err := e.Extract(discover.File{
+			Path: "a." + string(lang), Lang: lang, Class: discover.ClassSource, Content: src,
+		})
+		if err != nil {
+			t.Errorf("%s: Extract errored: %v", lang, err)
+			continue
+		}
+		if len(fa.Imports) == 0 {
+			t.Errorf("%s: registered extractor found no imports in %q", lang, src)
+		}
+		if len(fa.Symbols) == 0 {
+			t.Errorf("%s: registered extractor found no symbols in %q", lang, src)
+		}
+	}
+}
+
 // A later registration replaces an earlier one, which is what makes the
 // documented tree-sitter fallback a swap rather than a redesign.
 func TestRegisterReplacesForSameLanguage(t *testing.T) {

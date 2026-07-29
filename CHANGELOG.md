@@ -78,6 +78,54 @@ All notable changes to this project are documented here. Format follows
     five-file corpus (9 imports, 22 symbols), and parses all of signpost's own Go
     files with no failures. Go uses the real parser, so this is the precision
     baseline the hand-written extractors are scored against, not merely a pass.
+  - One shared line scanner for the three hand-written extractors, landed with its
+    own tests before any extractor used it. It strips comments and blanks string
+    bodies while preserving byte offsets, so a pattern can never match across the
+    hole a deletion would leave and a caller can still recover a literal's real
+    value from the original bytes. Handles line, block, and nested block comments;
+    Python triple-quoted docstrings in both styles; JavaScript template literals;
+    Rust raw strings including `r#"…"#`, char literals, and multi-line `"…"`; and
+    escapes throughout. This exists because the dominant failure mode of a
+    line-oriented extractor is not missing a declaration but *inventing* one from
+    text inside a comment or a string — a missed import is a gap, while a spurious
+    one points an agent at a module that does not exist.
+  - Python extractor: all import forms including relative, star, aliased, and
+    lazy function-body imports; classes with method attribution; `__all__`
+    honoured as an override of the leading-underscore convention, including the
+    barrel `__init__.py` whose only purpose is to re-export names it does not
+    declare; docstrings; and `if __name__ == "__main__"` entrypoints. Indentation
+    decides scope, because a `def` inside a function is a closure nobody outside
+    can call.
+  - TypeScript/JavaScript extractor, one implementation for both: every ES import
+    form, re-exports (`export … from`, `export *`, `export * as`,
+    `export { default as X }`) recorded as the dependencies they are, since a
+    barrel file is how most packages define their surface and missing it
+    disconnects the graph exactly at the package boundary; `export` lists merged
+    with the declarations they name; CommonJS `require` and dynamic `import()`,
+    which are not legacy in Node tooling; arrow and function-expression constants
+    reported as functions; JSDoc summaries. Scope is decided by brace depth, not
+    indentation, so running a file through a formatter cannot change the extracted
+    symbol set — the determinism the committed bundle depends on.
+  - Rust extractor: `use` trees flattened recursively through nested braces, with
+    `crate::`/`self::`/`super::` kept distinct from external crates because that is
+    what separates an internal edge from a dependency; `impl` and `impl … for T`
+    attributing methods to the implementing type rather than the trait; trait
+    methods as declared surface; `mod x;` as both a dependency edge and a
+    declaration; modifier stacks (`pub unsafe extern "C" fn`); and `pub(crate)`
+    deliberately *not* public API, since a bundle listing it as such would tell a
+    consumer they can depend on something they cannot.
+  - **Measured: Python, TypeScript/JavaScript, and Rust all score F1 1.000 on both
+    imports and symbols** against five hand-labeled files each (Python 15 imports /
+    21 symbols; TS/JS 19 / 25; Rust 13 / 39). Every corpus includes an adversarial
+    fixture whose declarations live inside strings, docstrings, template literals,
+    raw strings, and nested comments; none of them are extracted. The harness
+    earned its place by finding two real gaps no behavioural test had caught — a
+    Python package's `__all__` re-exports going unreported, and Rust code being
+    read out of the interior of a multi-line string literal.
+  - `DefaultRegistry` assembles all four extractors in one place, with a test that
+    every first-class language both has an extractor and actually reads the
+    language it claims. A language silently missing here would report a whole repo
+    as unhandled.
 
 ### Changed
 
@@ -109,6 +157,13 @@ All notable changes to this project are documented here. Format follows
 - Corrected a stale reference to "fixed seeds in label propagation" in §8.1 left
   over from the Louvain change; clustering is deterministic by construction, with
   no seed to set.
+- `internal/discover` now reads every file through an `os.Root` handle scoped to
+  the walk root instead of composing absolute paths. Symlinks were already recorded
+  and never followed, so behaviour is unchanged — but that was an argument about
+  the code being correct, and this is a guarantee enforced below it. Worth the
+  change because signpost reads a tree it does not control and commits what it
+  found: a path that escaped the root would put content from outside the repository
+  into a file that gets pushed. `os.Root` is stdlib, so this costs no dependency.
 
 ### Notes
 

@@ -124,6 +124,20 @@ func (r *Registry) Register(e Extractor) {
 	}
 }
 
+// DefaultRegistry returns a registry holding every extractor signpost ships.
+//
+// One place assembles the set so a run cannot silently disagree with a test about
+// which languages are covered — a repo reported as fully extracted because an
+// extractor was never registered is worse than one reported as unhandled.
+func DefaultRegistry() *Registry {
+	r := NewRegistry()
+	r.Register(GoExtractor{})
+	r.Register(PythonExtractor{})
+	r.Register(TSExtractor{})
+	r.Register(RustExtractor{})
+	return r
+}
+
 // For returns the extractor for a language, or nil.
 func (r *Registry) For(l discover.Lang) Extractor {
 	return r.byLang[l]
@@ -239,8 +253,57 @@ func (fa *Facts) Normalize() {
 		}
 		return a.Kind < b.Kind
 	})
+	fa.Symbols = mergeSymbols(fa.Symbols)
 	sort.Strings(fa.Entrypoints)
 	fa.Entrypoints = dedupeStrings(fa.Entrypoints)
+}
+
+// mergeSymbols folds two records of the same declaration into one.
+//
+// This exists because a language can name a declaration in two places. In
+// TypeScript, `function helper() {}` and a later `export { helper }` are one
+// symbol described twice: the first knows its kind, the second knows it is
+// exported. Emitting both would put a duplicate on the page, one of them with no
+// kind at all.
+//
+// Merging is a union of what each record knows, and exportedness is sticky: if
+// any mention says exported, the declaration is reachable from outside, because
+// that is what an export statement means.
+//
+// Requires the slice to be sorted by (Name, Recv, Kind), which Normalize does
+// immediately before calling this — so a kindless record sorts adjacent to the
+// typed one it describes.
+func mergeSymbols(syms []Symbol) []Symbol {
+	if len(syms) < 2 {
+		return syms
+	}
+	out := syms[:1]
+	for _, s := range syms[1:] {
+		last := &out[len(out)-1]
+		// Same declaration when the identity matches and the kinds are compatible:
+		// either equal, or one side simply does not know.
+		same := last.Name == s.Name && last.Recv == s.Recv &&
+			(last.Kind == s.Kind || last.Kind == "" || s.Kind == "")
+		if !same {
+			out = append(out, s)
+			continue
+		}
+		if last.Kind == "" {
+			last.Kind = s.Kind
+		}
+		if s.Exported {
+			last.Exported = true
+		}
+		if last.Doc == "" {
+			last.Doc = s.Doc
+		}
+		// Keep the earliest line: provenance should point at the declaration, not
+		// at the export statement that mentions it later.
+		if s.Line > 0 && (last.Line == 0 || s.Line < last.Line) {
+			last.Line = s.Line
+		}
+	}
+	return out
 }
 
 // ExportedSymbols returns only the exported declarations, which are the public
