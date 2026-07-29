@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>signpost — give models signposting for repos</title>
+    <meta
+      name="description"
+      content="signpost compiles a repository into a map an agent reads before it starts work. One Go binary, no server, no embeddings. Output is Open Knowledge Format markdown committed to the repo."
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f151d" />
+
+    <meta property="og:title" content="signpost" />
+    <meta
+      property="og:description"
+      content="Give models signposting for repos. One binary that compiles a repository into a map an agent reads before it starts work."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://3rg0n.github.io/signpost/" />
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <span class="topbar__mark">signpost</span>
+      <nav class="topbar__nav">
+        <a href="#install">install</a>
+        <a href="#confidence">confidence</a>
+        <a href="#status">status</a>
+        <a href="https://github.com/3rg0n/signpost">repository</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <!-- The hero is the tool's own real output on its own repository, including
+           the line where it reports what it could not read. -->
+      <section class="hero">
+        <h1 class="hero__line">
+          Give models signposting<br />
+          for repos.
+        </h1>
+        <p class="hero__sub">
+          signpost compiles a repository into a map an agent reads
+          <em>before</em> it starts work — so it begins oriented instead of
+          re-deriving the same structure every session. One binary. No server,
+          no embeddings, no index to keep warm.
+        </p>
+
+        <figure class="term">
+          <figcaption class="term__cap">signpost, run on its own repository</figcaption>
+          <pre class="term__body"><span class="term__prompt">$</span> signpost graph .
+analysed 76 files: 11 nodes, 13 edges
+<span class="u">  no extractor for: .ps1 (1), .sh (1)</span>
+
+  11 nodes, 13 edges, 6 clusters
+
+hubs (top 10 by degree)
+  /modules/signpost      in 0    out 6
+  /modules/assemble      in 1    out 4
+  /modules/discover      in 4    out 0
+  /modules/graph         in 3    out 0
+
+cross-cluster edges (5)
+  /modules/assemble -imports-&gt; /modules/graph
+  /modules/signpost -imports-&gt; /modules/discover
+
+disconnected components (5)
+  7 nodes: /modules/assemble, /modules/discover, and 5 more
+  1 nodes: /references/adr-0001-hand-written-tolerant-yaml-reader</pre>
+        </figure>
+        <p class="term__note">
+          <span class="u-key" aria-hidden="true"></span>
+          The second line is signpost reporting two files it has no extractor
+          for. Coverage is not opt-in: the absence of a measurement is never a
+          clean bill of health.
+        </p>
+      </section>
+
+      <section class="row" id="install">
+        <h2 class="row__key">install</h2>
+        <div class="row__body">
+          <div class="cmd">
+            <p class="cmd__os">macOS, Linux</p>
+            <pre class="cmd__code">curl -fsSL https://raw.githubusercontent.com/3rg0n/signpost/main/install.sh | sh</pre>
+          </div>
+          <div class="cmd">
+            <p class="cmd__os">Windows</p>
+            <pre class="cmd__code">iex "&amp; { $(irm https://raw.githubusercontent.com/3rg0n/signpost/main/install.ps1) }"</pre>
+          </div>
+          <div class="cmd">
+            <p class="cmd__os">With a Go toolchain</p>
+            <pre class="cmd__code">go install github.com/3rg0n/signpost/cmd/signpost@latest</pre>
+          </div>
+          <p class="prose">
+            Both scripts verify the release archive against the SHA-256 digests
+            published with that tag, and install nothing if the digest does not
+            match. Pass <code>--version v0.1.0</code> to pin a release.
+          </p>
+        </div>
+      </section>
+
+      <section class="row" id="why">
+        <h2 class="row__key">why</h2>
+        <div class="row__body">
+          <p class="prose prose--lead">
+            An agent opening an unfamiliar repository rediscovers the same
+            things every time: which module owns what, where the entrypoints
+            are, which files move together, what the docs claim versus what the
+            code does.
+          </p>
+          <p class="prose">
+            That work is paid for on every session, thrown away at the end of
+            every session, and inconsistent between runs. signpost does the
+            derivation once, at a known commit, and writes it down where people
+            can correct it in place — so the corrections survive.
+          </p>
+          <p class="prose">
+            The output is
+            <a href="https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md">Open
+            Knowledge Format</a>
+            markdown committed to the repository. Agents, people, and static
+            site generators read it directly, which means the bundle keeps
+            working for everyone who does not have signpost installed. It
+            maintains the bundle; it does not serve it.
+          </p>
+        </div>
+      </section>
+
+      <!-- The signature: the legend that teaches the page's own visual grammar. -->
+      <section class="row row--legend" id="confidence">
+        <h2 class="row__key">confidence</h2>
+        <div class="row__body">
+          <p class="claim">A guess and a fact are drawn differently.</p>
+
+          <dl class="legend">
+            <div class="legend__item">
+              <dt class="legend__term">
+                <span class="arrow arrow--solid" aria-hidden="true"></span>
+                extracted
+              </dt>
+              <dd class="legend__def">
+                Read directly out of the repository. An import statement, a
+                service in a compose file, a line in CODEOWNERS.
+              </dd>
+            </div>
+            <div class="legend__item legend__item--u">
+              <dt class="legend__term">
+                <span class="arrow arrow--dashed" aria-hidden="true"></span>
+                inferred
+              </dt>
+              <dd class="legend__def">
+                Proposed rather than read, and marked as such in every format
+                signpost writes — dashed in the diagrams, verbatim in the data.
+              </dd>
+            </div>
+          </dl>
+
+          <p class="prose">
+            <em>storage imports auth</em> read out of an import statement and
+            the same edge proposed by a model are different claims. A rendered
+            graph that flattened the two would make the guess look like a
+            measurement, which is the failure this tool exists to avoid — so no
+            export format is permitted to drop the distinction, and an edge to a
+            concept that does not exist is dropped rather than drawn to an
+            invented one.
+          </p>
+          <p class="prose prose--aside">
+            Everything amber on this page is something signpost has not
+            verified.
+          </p>
+        </div>
+      </section>
+
+      <section class="row" id="properties">
+        <h2 class="row__key">properties</h2>
+        <div class="row__body">
+          <ul class="props">
+            <li class="props__item">
+              <span class="props__name">Human edits compound.</span>
+              Generated prose lives between managed markers. Everything outside
+              them is yours and is never touched. A generator that clobbers
+              corrections teaches people to ignore it.
+            </li>
+            <li class="props__item">
+              <span class="props__name">Stale fails loudly.</span>
+              <code>verify</code> exits non-zero. A silently stale knowledge
+              artifact is worse than none, because it is confidently wrong.
+            </li>
+            <li class="props__item">
+              <span class="props__name">Deterministic.</span>
+              Same commit in, identical bytes out. CI commits the bundle, so
+              nondeterminism would mean commit churn in your repository.
+            </li>
+            <li class="props__item">
+              <span class="props__name">Works with no model at all.</span>
+              The deterministic pass produces a complete structural bundle on
+              its own. A model only adds what prose alone can supply.
+            </li>
+            <li class="props__item">
+              <span class="props__name">Secrets are references.</span>
+              A Kubernetes Secret contributes its name and its key names; an
+              <code>env_file</code> is recorded by path and never opened. The
+              bundle gets committed.
+            </li>
+            <li class="props__item">
+              <span class="props__name">No third-party dependencies.</span>
+              <code>go.mod</code> has no <code>require</code> block. The policy
+              is not zero dependencies but patchable ones — few enough that
+              shipping a CVE fix the day it lands stays routine.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="row" id="reads">
+        <h2 class="row__key">reads</h2>
+        <div class="row__body">
+          <p class="prose prose--lead">
+            Go, TypeScript, JavaScript, Python, and Rust — imports, public
+            surface, and entrypoints. Each extractor is scored against
+            hand-labeled fixtures rather than asserted, at F1 1.000 for both
+            imports and symbols.
+          </p>
+          <p class="prose">
+            Beyond source, signpost reads what a repository states about
+            itself: <code>go.mod</code>, <code>package.json</code>,
+            <code>pyproject.toml</code>, <code>requirements.txt</code> and
+            <code>Cargo.toml</code> for dependencies; Containerfiles, compose
+            files, GitHub Actions workflows, Kubernetes manifests and Helm
+            charts for deployment; protobuf, OpenAPI and GraphQL SDL for
+            contracts; SQL migrations, CODEOWNERS, ADRs and Makefiles for the
+            rest.
+          </p>
+        </div>
+      </section>
+
+      <section class="row" id="status">
+        <h2 class="row__key">status</h2>
+        <div class="row__body">
+          <p class="prose prose--lead">
+            v0.1 in progress — the deterministic core. No model required, no
+            network.
+          </p>
+
+          <table class="status">
+            <caption class="status__cap">
+              Solid rows have shipped. Dashed rows have not.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Component</th>
+                <th scope="col">State</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="is-done">
+                <th scope="row">Graph model, metrics, Louvain clustering</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Discovery: gitignore, classification, bounded reads</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Manifest and infrastructure extraction</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Graph assembly and import resolution</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Export: Mermaid, DOT, GraphML, JSON</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row"><code>signpost graph</code>, <code>signpost export</code></th>
+                <td>done</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row">Git signals: co-change, churn, ownership</th>
+                <td>in progress</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row"><code>signpost build</code> — OKF emit, edit preservation</th>
+                <td>in progress</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row"><code>signpost verify</code></th>
+                <td>in progress</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row">Semantic pass: local IPC, or any OpenAI-compatible endpoint</th>
+                <td>v0.2</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row"><code>signpost-view</code> — the viewer, a separate repository</th>
+                <td>v0.4</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="prose">
+            <code>build</code> is deliberately absent from the binary until the
+            emitter lands. A command that wrote an incomplete bundle would be
+            worse than one that is not offered yet, because the bundle is the
+            thing agents trust.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p class="foot__line">
+        <a href="https://github.com/3rg0n/signpost">github.com/3rg0n/signpost</a>
+        <span class="foot__sep" aria-hidden="true">·</span>
+        <a href="https://github.com/3rg0n/signpost/blob/main/docs/design.md">design</a>
+        <span class="foot__sep" aria-hidden="true">·</span>
+        <a href="https://github.com/3rg0n/signpost/blob/main/CONTRIBUTING.md">contributing</a>
+      </p>
+      <p class="foot__line foot__line--quiet">MIT · 3rg0n</p>
+    </footer>
+  </body>
+</html>

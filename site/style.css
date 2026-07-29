@@ -1,0 +1,530 @@
+/* signpost — landing page.
+ *
+ * Hand-written CSS, no build step, no JavaScript. Every JS dependency in this
+ * project lives in the separate signpost-view repository (design §7): the page
+ * that advertises a tool with no dependencies should not itself ship a tree of
+ * them.
+ *
+ * The rule the palette follows: amber is reserved for what signpost has not
+ * verified — an unread file, an inferred edge, an unfinished component. It is
+ * never used on a link, a heading, or anything the project is pleased about.
+ * Confidence is the tool's central claim, so the page spends its one colour on
+ * doubt rather than on emphasis.
+ */
+
+:root {
+  --ground: #0f151d;
+  --raised: #151d27;
+  --rule: #232e3c;
+  /* Three steps, and the faintest one still clears WCAG AA (4.89:1 on --ground,
+     4.53:1 on --raised). The eyebrows, column headers, and OS labels set in it
+     are content, not decoration, so a dimmer value that only looked right would
+     make them unreadable for the people most likely to be reading a status
+     table carefully. */
+  --ink: #dae1ea;
+  --ink-dim: #8b97a6;
+  --ink-faint: #7a8592;
+
+  /* The one chromatic accent. Reserved for the unverified. */
+  --unsure: #e0a458;
+  --unsure-dim: #6d5334;
+
+  --display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* One measure for the prose column and one for the mono key rail, so every
+     section aligns on the same two edges. */
+  --rail: 9.5rem;
+  --measure: 34rem;
+  --gutter: clamp(1.25rem, 5vw, 4.5rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1rem;
+  line-height: 1.65;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--ink);
+  text-decoration-color: var(--ink-faint);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color 120ms ease;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  color: var(--ink);
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  padding: 0.6rem 1rem;
+  background: var(--raised);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.skip:focus {
+  left: var(--gutter);
+  top: 0.75rem;
+}
+
+/* --- top bar --------------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1.4rem var(--gutter);
+  border-bottom: 1px solid var(--rule);
+}
+
+.topbar__mark {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+/* A marker before the wordmark: the tool's name, given a mark that reads as a
+   direction rather than as a logo. */
+.topbar__mark::before {
+  content: "→";
+  margin-right: 0.5rem;
+  color: var(--ink-faint);
+}
+
+.topbar__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.topbar__nav a {
+  color: var(--ink-dim);
+  text-decoration: none;
+}
+
+.topbar__nav a:hover {
+  color: var(--ink);
+}
+
+/* --- hero ------------------------------------------------------------------ */
+
+.hero {
+  padding: clamp(3.5rem, 11vw, 8rem) var(--gutter) clamp(3rem, 8vw, 5.5rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.hero__line {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(2.5rem, 8.5vw, 5.25rem);
+  font-weight: 700;
+  line-height: 0.98;
+  /* Tight tracking is where Archivo's industrial character lives; at display
+     size the default spacing reads as a default. */
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.hero__sub {
+  margin: 1.75rem 0 0;
+  max-width: var(--measure);
+  color: var(--ink-dim);
+  font-size: clamp(1rem, 1.9vw, 1.1rem);
+}
+
+.hero__sub em {
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* --- the terminal figure --------------------------------------------------- */
+
+.term {
+  margin: clamp(2.5rem, 6vw, 3.5rem) 0 0;
+  max-width: 46rem;
+  border: 1px solid var(--rule);
+  background: var(--raised);
+}
+
+.term__cap {
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.73rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.term__body {
+  margin: 0;
+  padding: 1.25rem 1.1rem 1.4rem;
+  overflow-x: auto;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  line-height: 1.75;
+  tab-size: 2;
+}
+
+.term__prompt {
+  margin-right: 0.5ch;
+  color: var(--ink-faint);
+  user-select: none;
+}
+
+/* The unverified line, and the only colour above the fold. */
+.term__body .u {
+  color: var(--unsure);
+}
+
+.term__note {
+  display: flex;
+  gap: 0.85rem;
+  margin: 1.1rem 0 0;
+  max-width: 40rem;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
+.u-key {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.55rem;
+  background: var(--unsure);
+}
+
+/* --- section rows ---------------------------------------------------------- */
+
+/* The mono key on the left against prose on the right is the shape of what
+   signpost writes: frontmatter beside a managed prose region. */
+.row {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 0 clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(3rem, 7vw, 4.75rem) var(--gutter);
+  border-bottom: 1px solid var(--rule);
+}
+
+.row__key {
+  margin: 0;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.row__body {
+  min-width: 0;
+  max-width: 46rem;
+}
+
+.row__body > :first-child {
+  margin-top: 0;
+}
+
+.prose {
+  margin: 1.15rem 0 0;
+  max-width: var(--measure);
+  color: var(--ink-dim);
+}
+
+.prose--lead {
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2.1vw, 1.2rem);
+}
+
+.prose--aside {
+  color: var(--ink-faint);
+  font-size: 0.86rem;
+}
+
+.prose em {
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* --- install --------------------------------------------------------------- */
+
+.cmd + .cmd {
+  margin-top: 1.4rem;
+}
+
+.cmd__os {
+  margin: 0 0 0.5rem;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.cmd__code {
+  margin: 0;
+  padding: 0.95rem 1.1rem;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--ink-faint);
+  background: var(--raised);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+/* --- the legend: this page's signature ------------------------------------- */
+
+.row--legend {
+  background: var(--raised);
+}
+
+.claim {
+  margin: 0;
+  max-width: 26ch;
+  font-size: clamp(1.5rem, 4.2vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.legend {
+  margin: clamp(2rem, 5vw, 2.75rem) 0 0;
+  display: grid;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.legend__item {
+  padding: 1.35rem 1.25rem;
+  background: var(--ground);
+}
+
+.legend__term {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+}
+
+.legend__def {
+  margin: 0.6rem 0 0;
+  max-width: 42ch;
+  color: var(--ink-dim);
+  font-size: 0.92rem;
+}
+
+/* Two real arrows rather than glyphs, so the solid/dashed distinction is the
+   same one the exports draw. */
+.arrow {
+  position: relative;
+  flex: none;
+  width: 4.25rem;
+  height: 0;
+  border-top: 2px solid var(--ink);
+}
+
+.arrow::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  translate: 0 -50%;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid var(--ink);
+}
+
+.arrow--dashed {
+  border-top-style: dashed;
+  border-top-color: var(--unsure);
+}
+
+.arrow--dashed::after {
+  border-left-color: var(--unsure);
+}
+
+.legend__item--u .legend__term {
+  color: var(--unsure);
+}
+
+/* --- properties ------------------------------------------------------------ */
+
+.props {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.props__item {
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--rule);
+  max-width: var(--measure);
+  color: var(--ink-dim);
+}
+
+.props__name {
+  display: block;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* --- status table ---------------------------------------------------------- */
+
+.status {
+  width: 100%;
+  margin: 1.75rem 0 0;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.status__cap {
+  margin-bottom: 0.9rem;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.status thead th {
+  padding: 0 0 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Both cells align on the baseline, not the box: the state column is mono at a
+   smaller size than the component column beside it, so the browser default of
+   middle on a th leaves the two words visibly out of register. */
+.status tbody th {
+  padding: 0.7rem 1.5rem 0.7rem 0;
+  font-weight: 400;
+  vertical-align: baseline;
+}
+
+.status tbody td {
+  padding: 0.7rem 0;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  vertical-align: baseline;
+}
+
+/* The border does the telling before the word does: shipped rows are ruled
+   solid, unshipped rows dashed, which is the same grammar as the legend. */
+.status tbody th,
+.status tbody td {
+  border-bottom: 1px solid var(--rule);
+}
+
+.status .is-open th,
+.status .is-open td {
+  border-bottom-style: dashed;
+  border-bottom-color: var(--unsure-dim);
+  color: var(--ink-faint);
+}
+
+.status .is-open td {
+  color: var(--unsure);
+}
+
+/* --- footer ---------------------------------------------------------------- */
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2.25rem var(--gutter) 3rem;
+}
+
+.foot__line {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.foot__line--quiet {
+  color: var(--ink-faint);
+}
+
+.foot__sep {
+  margin: 0 0.6rem;
+  color: var(--ink-faint);
+}
+
+/* --- narrow ---------------------------------------------------------------- */
+
+@media (max-width: 46rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.35rem;
+  }
+
+  .status tbody th {
+    padding-right: 1rem;
+  }
+}
+
+/* --- motion and print ----------------------------------------------------- */
+
+/* There is no scripted motion here to disable; the transition on links is the
+   only animation, and it goes too. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

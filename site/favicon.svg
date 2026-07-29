@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The same mark the topbar uses: a direction, not a logo. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="signpost">
+  <rect width="32" height="32" fill="#0f151d" />
+  <path d="M5 16h17" stroke="#dae1ea" stroke-width="2.5" />
+  <path d="M20 9.5 27 16l-7 6.5z" fill="#dae1ea" />
+</svg>
