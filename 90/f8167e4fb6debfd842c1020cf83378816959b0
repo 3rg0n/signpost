@@ -1,0 +1,88 @@
+internal/extract/rust_test.go
+  s_f6c0b1ac81cb95::t_737325d1fdc3d0 352-353,360,362-368,370-372,374-375
+  s_f6c0b1ac81cb95::t_a1574ae6edd9dd 1-351,354-359,361,369,373,376-666
+internal/extract/rust.go
+  s_f6c0b1ac81cb95::t_f560ed769b1c04 441
+  s_f6c0b1ac81cb95::t_62acceaed66ff3 361
+  s_f6c0b1ac81cb95::t_998118a2bef11d 83-89,95-98
+  s_f6c0b1ac81cb95::t_7f32e80d791454 286
+  s_f6c0b1ac81cb95::t_ec608b41787ed6 372-388
+  s_f6c0b1ac81cb95::t_d0d4c01efa1aa5 1-82,90-94,99-285,287-360,362-371,389-440,442-600
+internal/extract/typescript.go
+  s_f6c0b1ac81cb95::t_4d06b129703491 330-333,339
+  s_f6c0b1ac81cb95::t_37b8a4717a9010 334-338
+  s_f6c0b1ac81cb95::t_8c40a1ce161ced 477-480
+  s_f6c0b1ac81cb95::t_50e34b8d04aadc 76
+  s_f6c0b1ac81cb95::t_7fef384e37ba6d 309,312-314,317
+  s_f6c0b1ac81cb95::t_44e12506bcd155 1-75,77-308,310-311,315-316,318-329,340-476,481-620
+internal/extract/typescript_test.go
+  s_f6c0b1ac81cb95::t_b89758f71d0aa6 1-449,453,456-640
+  s_f6c0b1ac81cb95::t_e23285824e3dc8 450-452,454-455
+internal/extract/extract_test.go
+  s_f6c0b1ac81cb95::t_fc860efa74ed2a 60-93
+internal/extract/lines_test.go
+  s_f6c0b1ac81cb95::t_731c38c117251c 1-238,286-446
+  s_f6c0b1ac81cb95::t_624514a2a86a4d 239-285
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_186ba15f72c2b9 260
+  s_f6c0b1ac81cb95::t_f3512430289914 49-54,89,97
+  s_f6c0b1ac81cb95::t_8213aa1003ae26 98
+  s_f6c0b1ac81cb95::t_6bd8685035972c 162,174,177,179,184,190
+  s_f6c0b1ac81cb95::t_ba669ee849dbf1 55-85
+  s_f6c0b1ac81cb95::t_4353bd0bc5e1c5 1-48,86-88,90-96,99-106,108-110,112,115-116,118-124,126,128-130,132-138,140,142,144-147,149-153,155-156,158-161,163-173,175-176,178,180-183,185-189,191-206,208-212,240,243-246,254-255,257-259,261-271,279-292,299-305,307-310,312,315-405,408,455,458-462,503-504,514-515,517,519-520,523,525-529
+  s_f6c0b1ac81cb95::t_e84e6a1ac9c33f 234-237,241-242
+  s_f6c0b1ac81cb95::t_adb205bb0395a6 207
+  s_f6c0b1ac81cb95::t_c93f1a9e460763 247-253
+  s_f6c0b1ac81cb95::t_6b782f2f8f85c5 256,272-278
+  s_f6c0b1ac81cb95::t_9764426d1aef06 213-216,218-219,227-233,238-239
+  s_f6c0b1ac81cb95::t_70fba4e131fd15 107,111,113-114,117,125,127,131
+  s_f6c0b1ac81cb95::t_4e6e59718de94a 293-298,306,311,313-314
+  s_f6c0b1ac81cb95::t_69db47373cca43 139,141,143,148,154,157
+  s_f6c0b1ac81cb95::t_b90b49ae1b7aa2 406-407,409-454,456-457,463-502,505-513,516,518,521-522,524
+  s_f6c0b1ac81cb95::t_b4fc19acd22e98 217,220-226
+internal/discover/discover.go
+  s_f6c0b1ac81cb95::t_8a1a8576a79bf2 107-113,126-130
+  s_f6c0b1ac81cb95::t_df347c542a4889 185-189
+  s_f6c0b1ac81cb95::t_7b08fca7023e0f 270-273
+  s_f6c0b1ac81cb95::t_e1338cc9bee368 144
+  s_f6c0b1ac81cb95::t_982b349f407f41 217
+  s_f6c0b1ac81cb95::t_be8c94b17733ec 300
+  s_f6c0b1ac81cb95::t_76780fc60691ee 243-269
+  s_f6c0b1ac81cb95::t_a8fa4887a05948 154-158,171
+  s_f6c0b1ac81cb95::t_f64053387a9a49 233
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_7d775d40f5d7f7 345-376
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_107c860a81f82d 160-166
+  s_f6c0b1ac81cb95::t_d719294839abcc 81-128
+internal/extract/python_test.go
+  s_f6c0b1ac81cb95::t_b4869f49fa3399 103-110
+  s_f6c0b1ac81cb95::t_be837d024d509f 1-102,111-576
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_ee4bc7c854a85b 256
+  s_f6c0b1ac81cb95::t_987ac81000dba8 127-140
+  s_f6c0b1ac81cb95::t_cd7238c759271b 261-308
+internal/extract/python.go
+  s_f6c0b1ac81cb95::t_db191189af5ae3 93
+  s_f6c0b1ac81cb95::t_4f27b330c8e377 1-72,74-92,94-125,127-128,171-292,340-381,387-521
+  s_f6c0b1ac81cb95::t_fa26e9ba86a2a4 293-339
+  s_f6c0b1ac81cb95::t_7976765ccc07f4 126,129-170
+  s_f6c0b1ac81cb95::t_b82dfc51944164 382-386
+  s_f6c0b1ac81cb95::t_3ab6f78a478cf6 73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "90f8167e4fb6debfd842c1020cf83378816959b0",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Ergon Copeland <196864108+ecopelan_cisco@users.noreply.github.com>"
+    }
+  }
+}
