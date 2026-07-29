@@ -1,0 +1,44 @@
+.gitattributes
+  s_f6c0b1ac81cb95::t_d5946f0344f6ae 1-18
+internal/graph/graph_test.go
+  s_f6c0b1ac81cb95::t_c65cfdf1e2dd9c 1-397
+internal/graph/metrics.go
+  s_f6c0b1ac81cb95::t_1c359281165010 1-263,266,274,279-281,283-289,295-297,299,301-302,305-387
+  s_f6c0b1ac81cb95::t_ac32e4884ae4ee 264-265,267-273,275-278,282
+  s_f6c0b1ac81cb95::t_f554869aebf076 290-294,298,300,303-304
+internal/graph/louvain.go
+  s_f6c0b1ac81cb95::t_9928e01b5e84d9 1-238
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_069828e11983b0 1-53
+.gitignore
+  s_f6c0b1ac81cb95::t_66cb0d46233d3a 1-42
+docs/design.md
+  s_f6c0b1ac81cb95::t_0c2095aa1eaa3f 84-85
+  s_f6c0b1ac81cb95::t_ebf051369d15cc 270-293
+  s_f6c0b1ac81cb95::t_bd26f4946809a3 81-83
+  s_f6c0b1ac81cb95::t_7b27052ee97087 86-88,267-269
+  s_f6c0b1ac81cb95::t_69b0307d7b0062 294-296
+  s_f6c0b1ac81cb95::t_d674c95ce38c09 1-80,89-266,297-702
+README.md
+  s_f6c0b1ac81cb95::t_ebe102c56c1a4a 1-78
+internal/graph/graph.go
+  s_f6c0b1ac81cb95::t_c763145ef16257 1-346
+go.mod
+  s_f6c0b1ac81cb95::t_12a4db31c5e969 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fe33897b43fc76962b80eac78e464e4afbb7af9c",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Ergon Copeland <196864108+ecopelan_cisco@users.noreply.github.com>"
+    }
+  }
+}
