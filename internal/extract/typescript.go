@@ -3,7 +3,7 @@ package extract
 import (
 	"strings"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 // TSExtractor reads TypeScript and JavaScript imports and top-level declarations.

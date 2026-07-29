@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 func tsFile(path, src string) discover.File {

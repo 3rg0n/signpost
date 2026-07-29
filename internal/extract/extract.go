@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 // SymbolKind classifies a declaration. These are the shapes that exist across

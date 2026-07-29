@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 func closeTo(a, b float64) bool { return math.Abs(a-b) < 1e-9 }

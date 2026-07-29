@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 // Extractor accuracy is measured, not asserted (design §4.2).

@@ -1,6 +1,8 @@
 # Binaries
-signpost
-signpost.exe
+# Anchored to the root: an unanchored `signpost` matches at any depth and so
+# ignores the cmd/signpost/ source directory as well as the built binary.
+/signpost
+/signpost.exe
 /dist/
 *.exe
 *.exe~

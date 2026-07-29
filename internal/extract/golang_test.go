@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cisco-sbg-emu/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/discover"
 )
 
 // goFile wraps source as a discovered file.
@@ -63,7 +63,7 @@ package main
 import (
 	"flag"
 	_ "net/http/pprof"
-	spr "github.com/cisco-sbg-emu/signpost/internal/graph"
+	spr "github.com/3rg0n/signpost/internal/graph"
 )
 
 func main() {
@@ -77,7 +77,7 @@ func init() {
 `),
 			Expected: Expected{
 				Package:     "main",
-				Imports:     []string{"flag", "github.com/cisco-sbg-emu/signpost/internal/graph", "net/http/pprof"},
+				Imports:     []string{"flag", "github.com/3rg0n/signpost/internal/graph", "net/http/pprof"},
 				Symbols:     []string{"init", "main"},
 				Entrypoints: []string{"init", "main"},
 			},
