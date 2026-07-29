@@ -1,0 +1,45 @@
+go.mod
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 1
+internal/extract/golang_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 7,66,80
+.gitignore
+  s_f6c0b1ac81cb95::t_1a9b630aa17bae 2-5
+internal/extract/python_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 7
+internal/extract/rust.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 6
+internal/extract/rust_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 7
+internal/extract/score.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 8
+internal/extract/extract_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 8
+internal/extract/typescript.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 6
+internal/extract/python.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 6
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 19
+internal/extract/score_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 8
+internal/extract/typescript_test.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 7
+internal/extract/golang.go
+  s_f6c0b1ac81cb95::t_4e1f1fd5a278a5 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2cbbb4d5de234c6dba295e48a2f875b3cb054465",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
