@@ -1,0 +1,50 @@
+name: pages
+
+# Deploys the landing page in site/ to GitHub Pages.
+#
+# Deliberately separate from ci.yml and off the merge path (design §7): if this
+# workflow breaks, merges keep working and the binary is unaffected. There is no
+# build step and nothing to install — site/ is hand-written HTML and CSS, so the
+# job uploads the directory as it stands. The interactive viewer, and every JS
+# dependency in this project, lives in the separate signpost-view repository.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and in-flight runs are not cancelled: a cancelled deploy
+# can leave Pages serving a half-published site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      # id-token for the OIDC exchange deploy-pages uses; no long-lived secret.
+      pages: write
+      id-token: write
+    steps:
+      # Pinned by commit SHA rather than tag: a tag is mutable, and these actions
+      # run in a job that can publish to a public URL.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

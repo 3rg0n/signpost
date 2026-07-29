@@ -1,0 +1,223 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Weekly, so a vulnerability disclosed against a dependency is found by a
+  # scheduled run rather than by whatever unrelated pull request happens to come
+  # next.
+  schedule:
+    - cron: "23 6 * * 1"
+
+# Read-only by default; no job here needs more.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    # Three platforms is not redundancy. Discovery normalises CRLF at ingest and
+    # matches gitignore patterns case-sensitively on every platform so a Windows
+    # checkout and a Linux runner produce identical bundles (§8.1). A
+    # single-platform matrix would let exactly that regress silently.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Actions are pinned by commit SHA, not tag (§8 dependency governance). A tag
+      # is mutable and has been moved in a real supply-chain compromise; a SHA is
+      # the artifact itself.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # Twice. signpost's output is committed to the repositories it analyses, so
+      # nondeterministic output is commit churn in someone else's repo. Several
+      # packages render freshly built graphs five times and compare bytes; a second
+      # run exercises them under a different map seed.
+      - name: Test
+        run: go test -count=2 ./...
+
+      - name: Test with the race detector
+        # Linux only, once. The pipeline is single-goroutine today, so this guards a
+        # future change rather than a per-platform concern, and the detector costs
+        # roughly an order of magnitude in runtime.
+        if: matrix.os == 'ubuntu-24.04'
+        run: go test -race ./...
+
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "these files are not gofmt'd:"
+            echo "$out"
+            exit 1
+          fi
+
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.12.2
+
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2026.1
+          staticcheck ./...
+
+      - name: shellcheck the installer
+        # install.sh is piped from the network straight into a shell. A portability
+        # bug there is a failed install on somebody's machine with no way to debug
+        # it, so it is linted as POSIX sh rather than bash.
+        run: shellcheck --shell=sh install.sh
+
+      - name: Parse install.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path ./install.ps1).Path, [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+
+  security:
+    name: security
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gitleaks scans history, which needs all of it. A secret removed from the
+          # tip but still reachable in an earlier commit is still leaked.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.28.0
+          gosec -quiet ./...
+
+      - name: gitleaks
+        run: |
+          version=8.30.1
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --redact --verbose
+
+  dependencies:
+    name: dependency gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The gate compares this branch's direct dependencies against the base, so
+          # it needs the base commit.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Tidy is committed
+        # A go.mod or go.sum that differs from what `go mod tidy` produces means the
+        # dependency list in the repository is not the one the build actually uses,
+        # which makes every statement below it unverifiable.
+        #
+        # Compared through git rather than by copying files aside: signpost has no
+        # go.sum today, and a `[ -f go.sum ]` test under `set -e` would fail the step
+        # on the absence rather than skip the check.
+        run: |
+          go mod tidy
+          if ! git diff --quiet -- go.mod go.sum; then
+            echo "go.mod/go.sum are not tidy; run 'go mod tidy' and commit the result"
+            git diff -- go.mod go.sum
+            exit 1
+          fi
+
+      - name: A new direct dependency requires an ADR
+        # §8: this gate is the mechanism that keeps the dependency list short enough
+        # for bumping to stay routine. Without it, "few dependencies, each justified"
+        # decays within a quarter — every individual addition looks reasonable, and
+        # nobody is reviewing the total.
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # Direct requirements only. `// indirect` marks the transitive set, which
+          # arrives as a consequence of a direct choice and is not itself one. The
+          # marker is a comment, which is exactly what distinguishes the two, so the
+          # require block is read directly rather than through `go mod edit -json` —
+          # that would need the base go.mod checked out as a module directory.
+          requires() {
+            awk '/^require \(/ {block=1; next}
+                 /^\)/          {block=0}
+                 block && NF && !/\/\/ indirect/ {print $1}
+                 /^require [^(]/ && !/\/\/ indirect/ {print $2}' "$1" | sort -u
+          }
+
+          # An empty file when the base has no go.mod at all, so a first-commit case
+          # reports every requirement as new rather than failing on a missing object.
+          git show "${BASE}:go.mod" > /tmp/base.mod 2>/dev/null || : > /tmp/base.mod
+          requires /tmp/base.mod > /tmp/base.direct
+          requires go.mod > /tmp/head.direct
+
+          added="$(comm -13 /tmp/base.direct /tmp/head.direct)"
+          if [ -z "$added" ]; then
+            echo "no new direct dependencies"
+            exit 0
+          fi
+
+          echo "new direct dependencies in this pull request:"
+          echo "$added"
+
+          # An ADR must be added or modified in the same pull request. Requiring it
+          # here rather than in review is the point: a reviewer looking at one
+          # plausible dependency has no view of the total, and the ADR is where the
+          # justification becomes reviewable later.
+          if git diff --name-only "${BASE}...HEAD" | grep -q '^docs/adr/.*\.md$'; then
+            echo "an ADR accompanies this change"
+            exit 0
+          fi
+          echo
+          echo "A new direct dependency needs an ADR in docs/adr/ (see CONTRIBUTING.md)."
+          echo "State what the dependency buys and what the stdlib alternative costs."
+          exit 1

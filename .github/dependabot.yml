@@ -1,0 +1,45 @@
+# Dependency governance, per design §8. The posture is not "no dependencies" but
+# "dependencies we can patch ourselves" — which is only true if a CVE arrives as a
+# pull request rather than as something someone notices.
+#
+# Dependabot handles security alerts and the ecosystems Renovate is not configured
+# for here; renovate.json groups routine non-security bumps onto a weekly cadence so
+# they do not arrive as a stream of individual pull requests.
+version: 2
+
+updates:
+  # Go modules. Nothing to bump today — go.mod has no require block — but this is
+  # enabled from the first commit so the first dependency added is covered on the
+  # day it lands rather than whenever somebody remembers to configure this.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "deps"
+      include: scope
+
+  # GitHub Actions. These run with write access on a protected branch, which makes
+  # them the highest-consequence dependency in the repository. They are pinned by
+  # commit SHA, and Dependabot understands the `# vX.Y.Z` comment convention — it
+  # bumps the SHA and updates the comment, so pinning does not mean going stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "ci"
+      include: scope

@@ -1,0 +1,17 @@
+# Every path, one owner. signpost reads CODEOWNERS to attribute ownership in the
+# bundles it writes, so this file is also a fixture for its own extractor.
+*                       @3rg0n
+
+# Called out separately because a change here changes what every consumer of a
+# bundle sees, and because signpost's whole claim is that a guess is never drawn
+# as a fact.
+/internal/export/       @3rg0n
+/internal/assemble/     @3rg0n
+
+# Runs with write access on a protected branch and publishes the binaries people
+# install, which makes it the highest-consequence directory in the repository.
+/.github/workflows/     @3rg0n
+
+# Piped from the network straight into a shell.
+/install.sh             @3rg0n
+/install.ps1            @3rg0n

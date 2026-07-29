@@ -1,0 +1,108 @@
+name: release
+
+# Tag-triggered. Cross-compiles every supported platform from one runner, which Go
+# does natively, and publishes archives plus a checksums file the installers verify
+# against. A matrix of real runners would buy nothing here and would produce
+# archives built on three different images.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: build and publish
+    runs-on: ubuntu-24.04
+    permissions:
+      # Creating the release and uploading assets to it.
+      contents: write
+    steps:
+      # Actions are pinned by commit SHA, not by tag: a tag is mutable and has been
+      # moved in a real supply-chain compromise, and a moved tag in a job that holds
+      # contents: write publishes whatever it now points at.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      # The gate runs again here rather than being trusted from the pull request.
+      # A tag can be pushed to any commit, including one that never passed CI, and a
+      # release is the artifact people actually run.
+      - name: Verify
+        run: |
+          test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+          go vet ./...
+          go test -count=2 ./...
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          mkdir -p dist
+
+          # -trimpath removes the builder's absolute paths from the binary, and
+          # SOURCE_DATE_EPOCH plus a fixed tar mtime makes the archives reproducible:
+          # a second run on the same tag produces the same checksums, which is what
+          # makes the published checksums file worth verifying against.
+          export SOURCE_DATE_EPOCH=0
+
+          for target in \
+            linux/amd64 linux/arm64 \
+            darwin/amd64 darwin/arm64 \
+            windows/amd64 windows/arm64
+          do
+            os="${target%/*}"
+            arch="${target#*/}"
+            name="signpost_${version}_${os}_${arch}"
+            stage="dist/${name}"
+            mkdir -p "$stage"
+
+            bin="signpost"
+            if [ "$os" = "windows" ]; then bin="signpost.exe"; fi
+
+            GOOS="$os" GOARCH="$arch" go build \
+              -trimpath \
+              -ldflags "-s -w -X main.version=${version}" \
+              -o "${stage}/${bin}" \
+              ./cmd/signpost
+
+            cp LICENSE README.md "$stage/"
+
+            if [ "$os" = "windows" ]; then
+              (cd dist && zip -q -X -r "${name}.zip" "$name")
+            else
+              tar --sort=name --owner=0 --group=0 --numeric-owner \
+                  --mtime="@${SOURCE_DATE_EPOCH}" \
+                  -czf "dist/${name}.tar.gz" -C dist "$name"
+            fi
+            rm -rf "$stage"
+          done
+
+          # Archives only, by basename so an installer can run `sha256sum -c` from
+          # whatever directory it downloaded into. Globbed by extension rather than
+          # listed: a bare `ls` would sweep in checksums.txt itself on a re-run and
+          # the file would attest to its own contents. LC_ALL=C so glob expansion
+          # sorts by byte value and the file is byte-identical on any runner.
+          (cd dist && LC_ALL=C sha256sum -- *.tar.gz *.zip > checksums.txt)
+          cat dist/checksums.txt
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag \
+            dist/*

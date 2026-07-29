@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(deps)",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Etc/UTC",
+  "schedule": ["before 7am on monday"],
+  "prConcurrentLimit": 5,
+  "labels": ["dependencies"],
+  "postUpdateOptions": ["gomodTidy"],
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"],
+    "prPriority": 10
+  },
+  "packageRules": [
+    {
+      "description": "Routine Go bumps arrive as one grouped pull request. Design §8: the point of a weekly cadence is that bumping stays routine, and five separate patch PRs a week is how routine becomes ignored.",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "go modules"
+    },
+    {
+      "description": "A major bump is reviewed on its own. It can change behaviour signpost's output depends on, and grouping it with patch updates hides that in a diff nobody reads line by line.",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "labels": ["dependencies", "major"]
+    },
+    {
+      "description": "Actions are pinned by commit SHA and bumped as one pull request with the # vX.Y.Z comments updated. A pinned action that never gets bumped is a different failure from an unpinned one, not a smaller one.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "pinDigests": true
+    },
+    {
+      "description": "The Go toolchain in go.mod moves on its own schedule and gates every job in CI, so it is never grouped with a library bump.",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["golang"],
+      "groupName": null,
+      "labels": ["dependencies", "toolchain"]
+    }
+  ]
+}
