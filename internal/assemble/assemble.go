@@ -1,0 +1,876 @@
+// Package assemble turns extracted facts into the graph.
+//
+// This is the layer design §4.4 calls "build the graph — in process", and it exists as
+// its own package for the reason the extractors state in their own doc comments: they
+// return Facts and deliberately do not write nodes, because resolving an import to a
+// module, deciding what deserves a page, and merging duplicates are the same problem
+// in every language and should be solved once. This is that one place.
+//
+// Three properties are load-bearing, and each one is a test in this package:
+//
+//   - **Deterministic.** Same facts in, byte-identical graph out. The bundle is
+//     committed (§8.1), so a graph that varied by map iteration order would mean CI
+//     churn on every run. Every loop here walks a sorted slice.
+//   - **No invention.** An edge exists only where a file or a manifest said so, and
+//     carries Confidence extracted. Nothing in this package infers, and the semantic
+//     pass (§4.5) is the only thing permitted to add inferred edges later.
+//   - **Gaps are reported.** An import that resolved to nothing is counted, not
+//     dropped silently. A structural map that quietly omits a third of a repo's
+//     dependencies is worse than one that says how much it could not resolve.
+package assemble
+
+import (
+	"path"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/3rg0n/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/extract"
+	"github.com/3rg0n/signpost/internal/graph"
+	"github.com/3rg0n/signpost/internal/manifest"
+)
+
+// Input is everything the earlier stages produced.
+type Input struct {
+	Discovered *discover.Result
+	Source     *extract.RunResult
+	Manifests  *manifest.RunResult
+}
+
+// Result is the assembled graph plus what assembly could not account for.
+type Result struct {
+	Graph *graph.Graph
+	// Unresolved counts import specifiers that matched neither a directory in the
+	// repository nor a declared dependency, keyed by specifier. A standard-library
+	// import is not counted: it is resolved, to nothing worth a node.
+	Unresolved map[string]int
+	// DroppedEdges is the number of edges removed for pointing at a node that does
+	// not exist. Non-zero is a bug in this package, and the CLI reports it.
+	DroppedEdges int
+}
+
+// Build assembles the graph.
+//
+// Order is fixed and matters: every node is created before any edge is drawn, because
+// an import points wherever it likes and a resolver that could only see nodes created
+// so far would resolve differently depending on path order. That would make the graph
+// depend on traversal, which is exactly what §8.1 forbids.
+func Build(in Input) (*Result, error) {
+	b := &builder{
+		g:          graph.New(),
+		ids:        newIDs(),
+		res:        newResolver(),
+		unresolved: make(map[string]int),
+		in:         in,
+	}
+	if err := b.run(); err != nil {
+		return nil, err
+	}
+	return &Result{Graph: b.g, Unresolved: b.unresolved, DroppedEdges: b.dropped}, nil
+}
+
+type builder struct {
+	g          *graph.Graph
+	ids        *ids
+	res        *resolver
+	in         Input
+	unresolved map[string]int
+	dropped    int
+
+	// moduleFiles groups source facts by the module directory they belong to, so a
+	// module node's description can be written from all of its files at once.
+	moduleFiles map[string][]extract.Facts
+	// testFiles marks paths discover classified as tests. The flag lives on
+	// discover.File and not on extract.Facts, so it is carried across here rather
+	// than re-derived from the filename — one place decides what a test is.
+	testFiles map[string]bool
+	// hasProdSource marks directories holding at least one non-test source file, so
+	// addTestEdges can tell a test sitting beside its subject from one in a directory
+	// of its own.
+	hasProdSource map[string]bool
+}
+
+func (b *builder) run() error {
+	b.index()
+	if err := b.addModules(); err != nil {
+		return err
+	}
+	if err := b.addExternals(); err != nil {
+		return err
+	}
+	if err := b.addServices(); err != nil {
+		return err
+	}
+	if err := b.addInterfaces(); err != nil {
+		return err
+	}
+	if err := b.addData(); err != nil {
+		return err
+	}
+	if err := b.addDocuments(); err != nil {
+		return err
+	}
+	// Edges last, for the reason Build's comment gives.
+	b.addImportEdges()
+	b.addDeclaredDepEdges()
+	b.addTestEdges()
+	b.addServiceEdges()
+	b.addDocEdges()
+	b.addOwnerEdges()
+	b.dropped = b.g.DropDangling()
+	return nil
+}
+
+// index records what exists, before anything is named.
+func (b *builder) index() {
+	b.moduleFiles = make(map[string][]extract.Facts)
+	b.testFiles = make(map[string]bool)
+	b.hasProdSource = make(map[string]bool)
+
+	if b.in.Discovered != nil {
+		for _, f := range b.in.Discovered.Files {
+			if f.IsTest {
+				b.testFiles[f.Path] = true
+			}
+		}
+	}
+	if b.in.Source != nil {
+		for _, f := range b.in.Source.Facts {
+			b.res.srcFiles[f.Path] = true
+			// A test file belongs to the module it tests, not to a module of its own:
+			// a `_test` node per package would double the graph and say nothing.
+			dir := dirOf(f.Path)
+			b.moduleFiles[dir] = append(b.moduleFiles[dir], f)
+			if !b.testFiles[f.Path] {
+				b.hasProdSource[dir] = true
+			}
+		}
+	}
+	if b.in.Manifests != nil {
+		b.res.ecosystems = manifestEcosystems(b.in.Manifests.Facts)
+		for _, f := range b.in.Manifests.Facts {
+			switch f.Kind {
+			case manifest.KindGoMod:
+				b.res.addGoModule(f.Path, f.Module.Name)
+			case manifest.KindCargo:
+				b.res.addCrate(f.Path)
+			}
+		}
+	}
+}
+
+// isTestFacts reports whether facts came from a test file. The discovery result is
+// the authority — it is where IsTest was decided — and extract.Facts does not carry
+// the flag.
+func (b *builder) isTest(p string) bool { return b.testFiles[p] }
+
+// addModules creates one node per directory holding extracted source.
+//
+// A directory rather than a language module, and the reason is that the four
+// first-class languages disagree about what a module is — a Go package is a
+// directory, a Rust module is a file or a directory, a Python package is a directory
+// with a marker, TypeScript has none — while every one of them agrees that files in a
+// directory belong together. Directory granularity is the one grouping that is
+// correct in all four and needs no per-language special case.
+func (b *builder) addModules() error {
+	dirs := make([]string, 0, len(b.moduleFiles))
+	for d := range b.moduleFiles {
+		dirs = append(dirs, d)
+	}
+	sort.Strings(dirs)
+
+	for _, dir := range dirs {
+		facts := b.moduleFiles[dir]
+		id := b.ids.assign(prefixModule, dir, moduleName(dir))
+		b.res.moduleIDs[dir] = id
+
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindModule,
+			Title: moduleTitle(dir),
+			Path:  dir,
+			Attrs: map[string]string{},
+		}
+		var files, entrypoints, langs []string
+		var incomplete int
+		pkg := ""
+		exported := 0
+		for _, f := range facts {
+			files = append(files, f.Path)
+			if f.Lang != "" {
+				langs = append(langs, string(f.Lang))
+			}
+			if pkg == "" {
+				pkg = f.Package
+			}
+			entrypoints = append(entrypoints, f.Entrypoints...)
+			if f.Incomplete {
+				incomplete++
+			}
+			for _, s := range f.Symbols {
+				if s.Exported {
+					exported++
+				}
+			}
+		}
+		n.Files = sortedUnique(files)
+		n.Lang = dominant(langs)
+		if pkg != "" {
+			n.Attrs["package"] = pkg
+		}
+		if eps := sortedUnique(entrypoints); len(eps) > 0 {
+			n.Attrs["entrypoints"] = strings.Join(eps, ", ")
+			// An entrypoint is what makes a directory a place execution starts, which
+			// is the single most useful thing to know about it when picking where to
+			// look first.
+			n.Tags = append(n.Tags, "entrypoint")
+		}
+		n.Attrs["files"] = strconv.Itoa(len(n.Files))
+		n.Attrs["exported"] = strconv.Itoa(exported)
+		if incomplete > 0 {
+			// Surfaced as a tag rather than only a count: a reader scanning the index
+			// should see that a module was read partially without opening its page.
+			n.Tags = append(n.Tags, "partial-extraction")
+			n.Attrs["incomplete_files"] = strconv.Itoa(incomplete)
+		}
+		n.Description = moduleDescription(n, exported)
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addExternals creates one node per declared dependency.
+//
+// Declared, never imported: see the resolver's doc comment. The node is keyed by
+// ecosystem and name so `serde` the crate and `serde` an npm package would be two
+// nodes, because they are two things with two separate advisory streams.
+func (b *builder) addExternals() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	type ext struct {
+		eco, name string
+		versions  []string
+		scopes    []string
+		sources   []string
+		manifests []string
+	}
+	byKey := make(map[string]*ext)
+	var order []string
+	for _, f := range b.in.Manifests.Facts {
+		for _, d := range f.Deps {
+			if d.Name == "" {
+				continue
+			}
+			key := d.Ecosystem + "\x00" + d.Name
+			e, ok := byKey[key]
+			if !ok {
+				e = &ext{eco: d.Ecosystem, name: d.Name}
+				byKey[key] = e
+				order = append(order, key)
+			}
+			e.versions = append(e.versions, d.Version)
+			e.scopes = append(e.scopes, string(d.Scope))
+			e.sources = append(e.sources, d.Source)
+			e.manifests = append(e.manifests, f.Path)
+		}
+	}
+	sort.Strings(order)
+
+	for _, key := range order {
+		e := byKey[key]
+		// The ecosystem is part of the ID, not just the key: two same-named packages
+		// in different registries must not collide into one page.
+		id := b.ids.assign(prefixReference, key, e.eco+"-"+e.name)
+		b.res.addDep(e.eco, e.name, id)
+
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindExternal,
+			Title: e.name,
+			Tags:  []string{"external", e.eco},
+			Attrs: map[string]string{"ecosystem": e.eco, "name": e.name},
+		}
+		if vs := sortedUnique(e.versions); len(vs) > 0 {
+			n.Attrs["version"] = strings.Join(vs, ", ")
+		}
+		scopes := sortedUnique(e.scopes)
+		n.Attrs["scope"] = strings.Join(scopes, ", ")
+		if !containsStr(scopes, string(manifest.ScopeIndirect)) || len(scopes) > 1 {
+			// Direct is the distinction §2 turns on: a direct dependency is one this
+			// repository can bump itself.
+			n.Tags = append(n.Tags, "direct")
+		}
+		if srcs := sortedUnique(e.sources); len(srcs) > 0 {
+			// A git or path dependency has no registry to publish an advisory
+			// against, which is a different supply-chain posture entirely.
+			n.Attrs["source"] = strings.Join(srcs, ", ")
+			n.Tags = append(n.Tags, "unregistered-source")
+		}
+		n.Files = sortedUnique(e.manifests)
+		n.Description = e.eco + " dependency " + e.name
+		if v := n.Attrs["version"]; v != "" {
+			n.Description += " (" + v + ")"
+		}
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addServices creates one node per runnable unit.
+//
+// Services from different files with the same name are one service: a compose file
+// and a Kubernetes manifest describing `api` describe the same thing, and the union
+// of what both say is the whole picture. That merge is why Service nodes are keyed by
+// name alone.
+func (b *builder) addServices() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	type svcAgg struct {
+		name  string
+		items []struct {
+			svc  manifest.Service
+			file string
+		}
+	}
+	byName := make(map[string]*svcAgg)
+	var order []string
+	for _, f := range b.in.Manifests.Facts {
+		for _, s := range f.Services {
+			if s.Name == "" {
+				continue
+			}
+			// A helm-values pseudo-service records the keys a chart configures, not a
+			// workload. It is configuration, and modelling it as a runnable unit
+			// would put something in the services index that cannot be run.
+			if s.Kind == "helm-values" {
+				continue
+			}
+			a, ok := byName[s.Name]
+			if !ok {
+				a = &svcAgg{name: s.Name}
+				byName[s.Name] = a
+				order = append(order, s.Name)
+			}
+			a.items = append(a.items, struct {
+				svc  manifest.Service
+				file string
+			}{s, f.Path})
+		}
+	}
+	sort.Strings(order)
+
+	for _, name := range order {
+		a := byName[name]
+		id := b.ids.assign(prefixService, name, name)
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindService,
+			Title: name,
+			Attrs: map[string]string{},
+		}
+		var images, ports, env, vols, kinds, ns, files, secrets []string
+		for _, it := range a.items {
+			files = append(files, it.file)
+			if it.svc.Image != "" {
+				images = append(images, it.svc.Image)
+			}
+			ports = append(ports, it.svc.Ports...)
+			env = append(env, it.svc.EnvKeys...)
+			vols = append(vols, it.svc.Volumes...)
+			if it.svc.Kind != "" {
+				kinds = append(kinds, it.svc.Kind)
+			}
+			if it.svc.Namespace != "" {
+				ns = append(ns, it.svc.Namespace)
+			}
+			if it.svc.Build != "" {
+				n.Attrs["build"] = it.svc.Build
+			}
+			if it.svc.Replicas != "" {
+				n.Attrs["replicas"] = it.svc.Replicas
+			}
+		}
+		// Secret references attach to the service through the file that declared it,
+		// which is the only link the fact model carries. Names, never values.
+		fileSet := sortedUnique(files)
+		for _, f := range b.in.Manifests.Facts {
+			if !containsStr(fileSet, f.Path) {
+				continue
+			}
+			secrets = append(secrets, f.SecretNames()...)
+		}
+		n.Files = fileSet
+		setJoined(n.Attrs, "image", images)
+		setJoined(n.Attrs, "ports", ports)
+		setJoined(n.Attrs, "env", env)
+		setJoined(n.Attrs, "volumes", vols)
+		setJoined(n.Attrs, "workload", kinds)
+		setJoined(n.Attrs, "namespace", ns)
+		if s := sortedUnique(secrets); len(s) > 0 {
+			n.Attrs["secret_refs"] = strings.Join(s, ", ")
+			n.Tags = append(n.Tags, "reads-secrets")
+		}
+		if containsStr(kinds, "Secret") {
+			n.Tags = append(n.Tags, "secret")
+		}
+		n.Description = serviceDescription(n, kinds)
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addInterfaces creates one node per contract file.
+//
+// Per file rather than per declaration: a `.proto` with twelve messages is one API
+// surface a reader consults as a whole, and twelve pages would bury the service
+// definition that matters among its parameter types. The declarations become
+// attributes on the one node.
+func (b *builder) addInterfaces() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	for _, f := range b.in.Manifests.Facts {
+		if len(f.Contracts) == 0 {
+			continue
+		}
+		switch f.Kind {
+		case manifest.KindProto, manifest.KindOpenAPI, manifest.KindGraphQL:
+		default:
+			// A CRD found in a Kubernetes manifest is recorded as a contract by the
+			// reader; it belongs to the service page, not to its own interface page.
+			continue
+		}
+		id := b.ids.assign(prefixInterface, f.Path, contractName(f))
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindInterface,
+			Title: contractName(f),
+			Path:  f.Path,
+			Files: []string{f.Path},
+			Tags:  []string{string(f.Kind)},
+			Attrs: map[string]string{"format": string(f.Kind)},
+		}
+		byKind := make(map[string][]string)
+		for _, c := range f.Contracts {
+			byKind[c.Kind] = append(byKind[c.Kind], c.Name)
+		}
+		for _, k := range sortedKeys(byKind) {
+			n.Attrs[k] = strings.Join(sortedUnique(byKind[k]), ", ")
+		}
+		if f.Module.Name != "" {
+			n.Attrs["package"] = f.Module.Name
+		}
+		if f.Incomplete {
+			n.Tags = append(n.Tags, "partial-extraction")
+		}
+		n.Description = interfaceDescription(f, byKind)
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addData creates one data-store node per table a migration touches.
+//
+// The table, not the migration file, is the durable concept: a migration is an event
+// and a table is a thing that exists afterwards. Grouping by table is also what makes
+// the history readable — every change to `things`, in order, on one page.
+func (b *builder) addData() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	type tbl struct {
+		migrations  []string
+		destructive bool
+		files       []string
+	}
+	byTable := make(map[string]*tbl)
+	for _, f := range b.in.Manifests.Facts {
+		for _, m := range f.Migrations {
+			for _, t := range m.Tables {
+				a, ok := byTable[t]
+				if !ok {
+					a = &tbl{}
+					byTable[t] = a
+				}
+				label := m.Version
+				if m.Name != "" {
+					label = strings.TrimSpace(m.Version + " " + m.Name)
+				}
+				a.migrations = append(a.migrations, label)
+				a.destructive = a.destructive || m.Destructive
+				a.files = append(a.files, f.Path)
+			}
+		}
+	}
+	for _, name := range sortedKeys(byTable) {
+		a := byTable[name]
+		id := b.ids.assign(prefixData, name, name)
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindDataStore,
+			Title: name,
+			Files: sortedUnique(a.files),
+			Attrs: map[string]string{
+				"table":      name,
+				"migrations": strconv.Itoa(len(a.migrations)),
+			},
+			Tags: []string{"table"},
+		}
+		// Migration order is the schema's history and is preserved: the caller
+		// established it by sorted path, and re-sorting would misreport the sequence.
+		n.Attrs["history"] = strings.Join(a.migrations, "; ")
+		n.Description = "Table " + name + ", changed by " + plural(len(a.migrations), "migration")
+		if a.destructive {
+			// The class of change an agent should never make casually, and the flag a
+			// reader most needs before touching this table.
+			n.Tags = append(n.Tags, "destructive-history")
+			n.Description += "; at least one dropped a table or column"
+		}
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addDocuments creates a node per human-authored input that states a constraint.
+//
+// ADRs and agent-rules files only. An ordinary README is a document, but it makes no
+// binding claim, and a document node per markdown file would swamp the index with
+// prose nobody is bound by. A stated constraint is different in kind: it is the thing
+// an agent must not violate, and §4.5 names it as the highest-value non-code input.
+func (b *builder) addDocuments() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	for _, f := range b.in.Manifests.Facts {
+		switch f.Kind {
+		case manifest.KindADR, manifest.KindAgentRules:
+		default:
+			continue
+		}
+		if len(f.Rules) == 0 {
+			continue
+		}
+		id := b.ids.assign(prefixReference, f.Path, documentName(f))
+		n := &graph.Node{
+			ID:    id,
+			Kind:  graph.KindDocument,
+			Title: documentName(f),
+			Path:  f.Path,
+			Files: []string{f.Path},
+			Tags:  []string{string(f.Kind), "constraint"},
+			Attrs: map[string]string{"rules": strconv.Itoa(len(f.Rules))},
+		}
+		if f.Kind == manifest.KindADR {
+			// The status is what decides whether a decision still binds. A superseded
+			// ADR read as current is worse than an unread one.
+			if st := adrStatus(f); st != "" {
+				n.Attrs["status"] = st
+				n.Tags = append(n.Tags, strings.ToLower(st))
+			}
+			if f.Module.Version != "" {
+				n.Attrs["number"] = f.Module.Version
+			}
+		}
+		var headings []string
+		for _, r := range f.Rules {
+			if r.Heading != "" {
+				headings = append(headings, r.Heading)
+			}
+		}
+		setJoined(n.Attrs, "sections", headings)
+		n.Description = documentDescription(f)
+		if err := b.g.AddNode(n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addImportEdges draws one edge per resolved import.
+func (b *builder) addImportEdges() {
+	if b.in.Source == nil {
+		return
+	}
+	for _, f := range b.in.Source.Facts {
+		from := b.res.moduleAt(dirOf(f.Path))
+		if from == "" {
+			continue
+		}
+		for _, im := range f.Imports {
+			to, internal := b.res.resolveImport(f.Lang, f.Path, im.Raw)
+			if to == "" {
+				if !internal && !isStdlib(f.Lang, im.Raw) {
+					// Counted per specifier, so a repo importing one unresolvable
+					// package from forty files reports one gap, not forty.
+					b.unresolved[string(f.Lang)+" "+im.Raw]++
+				}
+				continue
+			}
+			b.g.AddEdge(graph.Edge{
+				From: from, To: to,
+				Kind: graph.EdgeImports,
+				Conf: graph.Extracted,
+				// Weight counts importing files, which is how strongly two modules
+				// are coupled — one shared helper is not the same as thirty call
+				// sites, and the difference is what a reader wants to see.
+				Weight: 1,
+				Source: f.Path,
+			})
+		}
+	}
+}
+
+// addDeclaredDepEdges links the module owning a manifest to what that manifest declares.
+//
+// Without this, a repository that declares forty dependencies and imports them from
+// files signpost could not fully resolve would show forty orphan reference nodes — the
+// supply chain present in the bundle but disconnected from the code, which is the one
+// view §2 needs to be able to read. The manifest's directory is the scope it declares
+// for, so the edge lands on the module there, or on the nearest ancestor holding one:
+// a `package.json` at the repo root very often sits in a directory with no source of
+// its own.
+func (b *builder) addDeclaredDepEdges() {
+	if b.in.Manifests == nil {
+		return
+	}
+	for _, f := range b.in.Manifests.Facts {
+		from := b.nearestModule(dirOf(f.Path))
+		if from == "" {
+			continue
+		}
+		for _, d := range f.Deps {
+			to := b.ids.lookup(prefixReference, d.Ecosystem+"\x00"+d.Name)
+			if to == "" {
+				continue
+			}
+			// `configures` rather than `imports`: the manifest states a dependency
+			// exists, which is not the same claim as a file importing it. An imports
+			// edge already comes from the source, and conflating the two would lose
+			// the distinction between "declared" and "actually used" — the pair that
+			// finds both unused dependencies and undeclared ones.
+			b.g.AddEdge(graph.Edge{
+				From: from, To: to, Kind: graph.EdgeConfigures,
+				Conf: graph.Extracted, Source: f.Path,
+			})
+		}
+	}
+}
+
+// nearestModule returns the module node covering a directory, walking up until one is
+// found. Used where a file's own directory holds no source.
+func (b *builder) nearestModule(dir string) string {
+	for {
+		if id := b.res.moduleAt(dir); id != "" {
+			return id
+		}
+		if dir == "" {
+			return ""
+		}
+		dir = dirOf(dir)
+	}
+}
+
+// addTestEdges links a module to the module holding its tests.
+//
+// The edge points from the code to its tests, matching the kind's name: `tested_by`.
+//
+// Placement decides the subject, and imports are consulted only when placement does
+// not. A test file sitting beside the code tests the code it sits beside — that is
+// what Go's `_test.go`, Python's `test_x.py` next to `x.py`, and a `.test.ts` beside
+// its component all mean — so the edge is a self-edge and the graph drops it. The
+// imports of such a file are fixture machinery, not a statement of subject:
+// `assemble_test.go` imports the graph package to assert against it, which does not
+// make the graph package tested by assemble. Reading imports there produces edges
+// that are confidently wrong, which is worse than the absent edge, because a
+// self-edge's absence loses nothing that the directory did not already say.
+//
+// A test in a directory of its own — a `tests/` tree, `__tests__/`, a Rust
+// integration test — is the case where placement says nothing, and there the imports
+// are the only available statement of what is under test.
+func (b *builder) addTestEdges() {
+	if b.in.Source == nil {
+		return
+	}
+	for _, f := range b.in.Source.Facts {
+		if !b.isTest(f.Path) {
+			continue
+		}
+		dir := dirOf(f.Path)
+		if b.hasProdSource[dir] {
+			continue
+		}
+		testMod := b.res.moduleAt(dir)
+		if testMod == "" {
+			continue
+		}
+		for _, im := range f.Imports {
+			to, internal := b.res.resolveImport(f.Lang, f.Path, im.Raw)
+			if to == "" || !internal {
+				continue
+			}
+			b.g.AddEdge(graph.Edge{
+				From: to, To: testMod,
+				Kind: graph.EdgeTestedBy, Conf: graph.Extracted,
+				Weight: 1, Source: f.Path,
+			})
+		}
+	}
+}
+
+// addServiceEdges draws the edges only deployment files can supply.
+func (b *builder) addServiceEdges() {
+	if b.in.Manifests == nil {
+		return
+	}
+	for _, f := range b.in.Manifests.Facts {
+		for _, s := range f.Services {
+			from := b.ids.lookup(prefixService, s.Name)
+			if from == "" {
+				continue
+			}
+			// depends_on is startup ordering and runtime coupling stated by a human.
+			// No source-level import can supply it, which is what makes it valuable.
+			for _, dep := range s.DependsOn {
+				if to := b.ids.lookup(prefixService, dep); to != "" {
+					b.g.AddEdge(graph.Edge{
+						From: from, To: to, Kind: graph.EdgeDeploys,
+						Conf: graph.Extracted, Source: f.Path,
+					})
+				}
+			}
+			// A build context names the directory whose code the service runs, which
+			// is the one link from a deployment back to the source that implements it.
+			if s.Build != "" {
+				if to := b.res.moduleAt(buildContextDir(f.Path, s.Build)); to != "" {
+					b.g.AddEdge(graph.Edge{
+						From: from, To: to, Kind: graph.EdgeDeploys,
+						Conf: graph.Extracted, Source: f.Path,
+					})
+				}
+			}
+		}
+		// A contract file in a repository with exactly one service is that service's
+		// interface. With several, which service implements it is not stated anywhere
+		// this package can read, and guessing would be inference wearing extracted
+		// confidence — so the edge is drawn only where it is unambiguous.
+		if id := b.ids.lookup(prefixInterface, f.Path); id != "" {
+			if svcs := b.g.NodesOfKind(graph.KindService); len(svcs) == 1 {
+				b.g.AddEdge(graph.Edge{
+					From: svcs[0].ID, To: id, Kind: graph.EdgeImplements,
+					Conf: graph.Extracted, Source: f.Path,
+				})
+			}
+		}
+	}
+}
+
+// addDocEdges links an agent-rules file to the modules it governs.
+//
+// Placement is the scope: an `AGENTS.md` applies to the directory it sits in and
+// everything beneath it, which is how every tool that reads one treats it. That makes
+// the edge extracted rather than inferred — the file's location is the statement.
+//
+// ADRs get no such edge. A decision record's subject is stated in its prose, not in
+// its path, and `docs/adr/0007-tokens-are-opaque.md` sits nowhere near the code it
+// binds. Linking it to a module would require reading what it says, which is the
+// semantic pass's job (§4.5) and is exactly the doc-to-code linking it names as its
+// highest-value output.
+func (b *builder) addDocEdges() {
+	if b.in.Manifests == nil {
+		return
+	}
+	for _, f := range b.in.Manifests.Facts {
+		if f.Kind != manifest.KindAgentRules {
+			continue
+		}
+		from := b.ids.lookup(prefixReference, f.Path)
+		if from == "" {
+			continue
+		}
+		scope := dirOf(f.Path)
+		for _, n := range b.g.NodesOfKind(graph.KindModule) {
+			if scope != "" && n.Path != scope && !strings.HasPrefix(n.Path, scope+"/") {
+				continue
+			}
+			b.g.AddEdge(graph.Edge{
+				From: from, To: n.ID, Kind: graph.EdgeDocuments,
+				Conf: graph.Extracted, Source: f.Path,
+			})
+		}
+	}
+}
+
+// addOwnerEdges draws ownership from CODEOWNERS onto the modules a pattern covers.
+//
+// Only patterns that name a directory prefix are used. A glob like `*.go` covers the
+// whole repository and would attach every module to one owner, which says nothing;
+// full gitignore-style matching lives in internal/discover and is not worth
+// duplicating here for a signal this coarse.
+func (b *builder) addOwnerEdges() {
+	if b.in.Manifests == nil {
+		return
+	}
+	for _, f := range b.in.Manifests.Facts {
+		for _, o := range f.Owners {
+			dir, ok := ownerDir(o.Pattern)
+			if !ok {
+				continue
+			}
+			for _, n := range b.g.NodesOfKind(graph.KindModule) {
+				if n.Path != dir && !strings.HasPrefix(n.Path, dir+"/") {
+					continue
+				}
+				// Recorded as an attribute rather than an owner node: a team is not a
+				// concept in the bundle, and a page per GitHub team would be a page
+				// with nothing on it.
+				if cur := n.Attrs["owners"]; cur == "" {
+					n.Attrs["owners"] = strings.Join(o.Owners, ", ")
+				} else {
+					n.Attrs["owners"] = strings.Join(sortedUnique(append(strings.Split(cur, ", "), o.Owners...)), ", ")
+				}
+			}
+		}
+	}
+}
+
+// ownerDir reduces a CODEOWNERS pattern to a directory prefix, reporting false for
+// patterns that are not a plain path.
+func ownerDir(pat string) (string, bool) {
+	p := strings.TrimSpace(pat)
+	if p == "" || p == "*" || strings.ContainsAny(p, "*?[]!") {
+		return "", false
+	}
+	p = strings.TrimPrefix(p, "/")
+	p = strings.TrimSuffix(p, "/")
+	if p == "" {
+		return "", false
+	}
+	return p, true
+}
+
+// buildContextDir resolves a compose build context against the file declaring it.
+func buildContextDir(manifestPath, ctx string) string {
+	ctx = strings.TrimSpace(ctx)
+	if ctx == "" {
+		return ""
+	}
+	// A Containerfile path rather than a directory names the directory it sits in.
+	if strings.Contains(strings.ToLower(path.Base(ctx)), "dockerfile") ||
+		strings.Contains(strings.ToLower(path.Base(ctx)), "containerfile") {
+		ctx = path.Dir(ctx)
+	}
+	return cleanDir(path.Join(dirOf(manifestPath), ctx))
+}
