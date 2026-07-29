@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.0.1] — 2026-07-30
+
+First tagged release. Deliberately **not** v0.1.0: v0.1 is the deterministic core
+*complete*, and `signpost build`, `signpost verify`, and git signal extraction
+have not landed. Publishing 0.1.0 now would claim a milestone the status table on
+the same commit says is unmet. What is here — `graph` and `export` over the full
+extraction pipeline — is finished and tested; the version number says only that
+the surface is still moving.
+
 ### Added
 
 #### 2026-07-29
