@@ -1,0 +1,42 @@
+# Binaries
+signpost
+signpost.exe
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials
+credentials.json
+*_rsa
+*_ed25519
+
+# signpost's own semantic cache (bundle markdown IS committed; cache is not)
+.signpost/cache/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Scratch
+/tmp/
+/.tmp/

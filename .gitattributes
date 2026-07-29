@@ -1,0 +1,18 @@
+# Normalize to LF in the repository. signpost emits markdown that CI commits,
+# so byte-stability across platforms is a correctness property here, not taste:
+# a Windows contributor and a Linux runner must produce identical bundles.
+* text=auto eol=lf
+
+*.go     text eol=lf
+*.md     text eol=lf
+*.mod    text eol=lf
+*.sum    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.json   text eol=lf
+
+*.png    binary
+*.jpg    binary
+*.gif    binary
+*.pdf    binary
+*.scip   binary
