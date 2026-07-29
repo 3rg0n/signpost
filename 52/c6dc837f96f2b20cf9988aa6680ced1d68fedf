@@ -1,0 +1,63 @@
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_7baeb97f75b443 136-138,140-178
+  s_f6c0b1ac81cb95::t_a422af8a93dde8 45-47
+  s_f6c0b1ac81cb95::t_3acc8c77919618 373-382
+  s_f6c0b1ac81cb95::t_1450e4b6a41f09 30-34
+  s_f6c0b1ac81cb95::t_22be964041e99f 66-68
+  s_f6c0b1ac81cb95::t_dd4bad1e3b19e7 428
+  s_f6c0b1ac81cb95::t_54588a7dacdd1c 1-29,35-44,48-65,69-135,139,179-372,383-427,429-500
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_66c811d709d8ea 116,119
+  s_f6c0b1ac81cb95::t_ea30940f2b98f8 88-91
+  s_f6c0b1ac81cb95::t_d8eb563e1921cd 128,131-137
+  s_f6c0b1ac81cb95::t_bc26b922654874 84-87
+  s_f6c0b1ac81cb95::t_6ecac92ace6e9f 689-702,711-715
+  s_f6c0b1ac81cb95::t_2ba38172d84e8c 493,495,516
+  s_f6c0b1ac81cb95::t_6b093d8878b05e 636-685
+  s_f6c0b1ac81cb95::t_b77cce6a4b2236 780-815
+  s_f6c0b1ac81cb95::t_ea0534862b0338 129,145-147
+  s_f6c0b1ac81cb95::t_93cd422930eefd 1-83,92-115,117-118,120-127,130,138-144,148-492,494,496-515,517-635,686-688,703-710,716-779,816-876
+internal/export/mermaid.go
+  s_f6c0b1ac81cb95::t_c20453a1860a41 87
+  s_f6c0b1ac81cb95::t_d4a47a2533a668 1-86,88-190
+internal/export/graphml.go
+  s_f6c0b1ac81cb95::t_8b14a35051b5ea 1-148
+internal/export/json.go
+  s_f6c0b1ac81cb95::t_3bdbc143241855 1-75,78-91
+  s_f6c0b1ac81cb95::t_28ea083e7abb9a 76-77
+internal/export/dot.go
+  s_f6c0b1ac81cb95::t_ffac5062cb5d81 1-165
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_2ba38172d84e8c 10,41,58
+  s_f6c0b1ac81cb95::t_02dece5a707556 1-9,11-40,42-57,59-297
+internal/assemble/id.go
+  s_f6c0b1ac81cb95::t_e1648fa0d9f785 1-93
+internal/export/export.go
+  s_f6c0b1ac81cb95::t_02a2144db4da75 1-65
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_6f9fa53259d67f 521-523
+  s_f6c0b1ac81cb95::t_d1f1a4aae05a9a 510-520,524-536
+  s_f6c0b1ac81cb95::t_76ed02b39a11fb 17,19-25,28,35-45
+  s_f6c0b1ac81cb95::t_d24cc428ca0c7d 5-6,184-188,221-223,249-251,277-278,465-466,475-477,602,686
+  s_f6c0b1ac81cb95::t_0fc11bbb8a2dee 1-4,7-16,18,26-27,29-34,46-135,137-183,189-192,201-220,224-234,236-248,252-257,259-262,264-276,279-442,444-449,451-452,454-464,467,469-474,478-509,537-601,603-685,687-700
+  s_f6c0b1ac81cb95::t_2ff2231f9a66fe 193-200
+  s_f6c0b1ac81cb95::t_936de1ac4e69ae 136,235,258,263,443,450,453,468
+internal/export/export_test.go
+  s_f6c0b1ac81cb95::t_0f8700c640ed3a 1-381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "52c6dc837f96f2b20cf9988aa6680ced1d68fedf",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
