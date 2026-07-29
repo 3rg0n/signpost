@@ -656,10 +656,49 @@ stable because of the cache.
 | `codeatlas` | Code intelligence service. SCIP symbols, call graphs, BM25 retrieval, co-change, over GraphQL/MCP. | **Pattern reference**, and an optional enrichment source when an index happens to exist. Never a dependency, and no code is lifted from it. |
 | `thlibo` | Compresses tool output at the agent boundary. | **Pattern reference only.** Validates the architecture — deterministic handling first, local model for the residue only — and the fail-open-when-the-backend-is-down discipline. signpost implements its own inferd client against the protocol spec. |
 | `inferd` | Local inference daemon. Warm model, IPC, schema-constrained sampling. | A backend, for local and self-hosted execution. |
+| `microsoft/agentrc` | Scores AI-readiness across nine pillars on a five-level maturity model, then generates instruction files through the Copilot SDK. | Overlaps on **signals**, not on output. See §9.1. |
 
 The division of labor is deliberate: readiness *measures*, signpost *writes*,
 codeatlas *serves*. Merging any two of them would produce a tool that is worse at
 both jobs.
+
+### 9.1 Repository-practice signals belong in the bundle
+
+The nine pillars a readiness scorer looks for — a linter config, a declared build
+command, a declared test command, docs, a lockfile, a formatter, observability
+libraries, `LICENSE`/`CODEOWNERS`/`SECURITY.md`/Dependabot, and agent
+configuration — are almost entirely **facts already extracted by §4.1**. Workflow
+reading infers the gates, `repo.go` reads CODEOWNERS and ADRs and Makefile
+targets, the dependency readers see whether an OpenTelemetry library is present,
+and discovery classifies docs and lock files. An earlier draft of this section
+routed those facts to a separate tool. That was wrong: the extraction is already
+done here, and a fact an agent needs is a page in the bundle regardless of which
+tool first thought to look for it.
+
+So v0.1 emits them, as ordinary graph content with ordinary provenance: a
+`practices` page recording what the repository declares about how it is built,
+tested, gated, and owned — and, more usefully, what it does not. "No test command
+is declared for `internal/export`" is exactly the kind of thing an agent should
+know before it offers to add a test, and it is a fact with a file and a line
+behind it.
+
+**What signpost does not emit is the score.** A 1–5 maturity level is a rubric,
+and a rubric is an opinion that has to be defended, re-tuned, and argued about
+per repository, with no durable truth underneath it. It also invites the failure
+this whole design is built against: a repository at "level 2" reads as *measured*
+when it has only been *judged*. The finding is the durable artifact; the ranking
+belongs to whoever is deciding what to work on. This is the same reason §12
+reports cycles and bridges rather than a "code health" number.
+
+Two constraints make this ours to do rather than a case for adopting the other
+tool. Its detection is npm-shaped — build and test commands are looked for in
+`package.json`, lockfiles in the npm/pnpm/yarn/bun set — so a Go, Rust, or Python
+repository scores badly for reasons that are artifacts of the scorer rather than
+facts about the repository, and signpost is polyglot at the extractor layer by
+construction. And it carries nine direct npm dependencies (including React and a
+terminal UI framework) plus a vendor-specific generation SDK and a Node runtime,
+against the posture in §2: signpost is one static binary whose `go.mod` has no
+`require` block, and this feature adds none.
 
 **On the pattern references:** codeatlas and thlibo are cited for architecture, not
 for code. signpost is a standalone repo with its own client implementations, its
