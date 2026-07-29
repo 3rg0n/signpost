@@ -323,6 +323,44 @@ local model inventing plausible architecture.
 Per-node, budget-bounded, and cached by content hash — an unchanged file is never
 re-summarized.
 
+#### Repository content is untrusted input
+
+This is a security boundary, and it was missing from the first draft of this
+design. The semantic pass reads files out of a repository and puts them in a
+prompt. Anyone who can land a comment in that repository — a dependency vendored
+into the tree, a fork, a contributor, a PR that has not merged yet — can write
+text that is addressed to the model rather than to a human reader. The output of
+that model is then **committed to the repo and read by agents that act on it**.
+That makes prompt injection here a supply-chain path into the artifact agents
+trust, not a curiosity.
+
+Three mechanisms, all cheap and all in the deterministic part of the code:
+
+1. **Delimited, hash-stamped blocks.** Every file goes into the prompt wrapped as
+   `<untrusted_source path="..." sha256="...">` … `</untrusted_source>`. The
+   system prompt states that content inside such a block is data to be analysed
+   and never instructions to follow, and that instructions found inside one are to
+   be ignored rather than obeyed.
+2. **Sentinel defanging.** Before wrapping, neutralise — by inserting a
+   zero-width space rather than deleting, so offsets and analysis stay usable —
+   any sequence a hostile file could use to forge a role turn or break out of the
+   wrapper: our own opening and closing delimiter, chat-template control tokens
+   (`<|im_start|>`, `<|system|>`, `<|endoftext|>` and friends), `<<SYS>>`,
+   `[INST]`, and lines that are nothing but `### System:` / `### Instruction:`.
+   Without this, a file containing a premature `</untrusted_source>` smuggles
+   instructions into the trusted region and the wrapper is decorative.
+3. **The grounding rule and the schema do the rest.** Schema-constrained sampling
+   means a successful injection still cannot change the *shape* of the output, and
+   the grounding rule means an injected claim with no resolvable citation is
+   dropped at emit. Defence in depth: the wrapper is the fence, and grounding is
+   what catches whatever gets over it.
+
+Prompt hardening is mitigation, not proof — a sufficiently clever injection inside
+a delimiter block can still influence a summary. What bounds the damage is that the
+model's only reachable output is schema-shaped, citation-checked prose in a page a
+human can review, and that `generated.by` records what produced it. Worth stating
+plainly in §11 as well: signpost reduces this risk, it does not eliminate it.
+
 ### 4.6 Emit and verify
 
 Emit the bundle. Then `signpost verify` checks:
@@ -539,6 +577,41 @@ different `generated.by`.
 **PR check** — `signpost verify` runs on pull requests and fails when the bundle
 is stale relative to the diff. Non-zero exit, surfaced in the PR.
 
+### 8.0 The bundle must not create merge conflicts
+
+Committing generated files to a repository with parallel branches has an obvious
+consequence that the first draft of this design did not address: two branches that
+both touch `.signpost/` conflict, and a knowledge tool that makes merges painful
+gets deleted. Three decisions handle it, in order of how much they matter:
+
+1. **The bundle is not built on branches.** `signpost.yml` runs on push to the
+   default branch only. Feature branches never regenerate the bundle, so the
+   common case produces no conflict at all — the branch simply does not touch
+   `.signpost/`. The PR check *verifies*; it does not write. This is the whole
+   reason the artifact is generated post-merge rather than per-PR.
+2. **One page per concept, so conflicts stay small and mergeable.** The bundle is
+   many small markdown files rather than one large graph blob. Two branches that
+   genuinely both regenerate it collide only on the pages they both changed, and a
+   markdown page with sorted frontmatter and a managed prose region is something a
+   human can resolve by reading it. A single serialised graph file is not — which
+   is why a tool that ships one needs a custom merge driver to union it. Choosing
+   many small files is choosing not to need that driver.
+3. **Regeneration is the tiebreaker, and `index.md` is generated last.** Any
+   conflict in a generated region is resolvable by discarding both sides and
+   re-running `signpost build` at the merge commit, because the deterministic pass
+   is a pure function of the tree. That is documented as the remedy. The one thing
+   this must never do is resolve a conflict inside a human region — `## Notes` and
+   `verified:` blocks conflict like any other hand-written text and are the
+   author's to reconcile.
+
+We ship no custom git merge driver in v0.1. A merge driver requires every
+contributor to configure it locally (`.gitattributes` names it; only
+`git config merge.*.driver` activates it), and an unconfigured contributor
+silently gets default behaviour — so a driver is a fragile place to put
+correctness. If real usage produces conflict pain that (1)–(3) do not cover, the
+driver is the v0.3 answer, with "regenerate at the merge commit" as the always-available
+fallback that needs no local setup.
+
 **Dependency governance**, enabled on the first commit in both repos, because the
 posture in §2 is a commitment to remediate rather than a claim to have no exposure:
 
@@ -561,7 +634,9 @@ commit produces commit churn, and commit churn kills adoption faster than any
 missing feature. So:
 
 - sorted iteration everywhere; no map-order dependence
-- fixed seeds in label propagation
+- clustering deterministic by construction — no seeds, no randomised restarts
+  (§4.4); a seeded algorithm is reproducible only as long as nobody touches the
+  seed, whereas sorted traversal is reproducible because there is nothing to touch
 - temperature 0 on every model call
 - semantic output cached by content hash, so unchanged input is never
   regenerated and therefore cannot drift
@@ -652,10 +727,15 @@ silently stale knowledge artifact is worse than none — it is confidently wrong
 it burns trust in the tool permanently. This gets first-class treatment rather than
 a hook that exits zero on failure.
 
-**5. Byte-level determinism.** Sorted iteration, fixed seeds, temperature 0,
+**5. Byte-level determinism.** Sorted iteration, no seeds, temperature 0,
 content-hash caching, byte-stability asserted in CI (§8.1). Because CI commits the
 bundle, non-determinism means commit churn, and commit churn kills adoption faster
-than any missing feature.
+than any missing feature. Worth noting that this is a known pain point in
+tooling of this kind, not a hypothetical: model-generated cluster labels vary
+between runs on the same input, so the same conceptual group gets a different name
+and its page becomes an orphan — a real tool in this space deletes every generated
+markdown file at the start of each export specifically to stop the orphans piling
+up. Deterministic labels are what make committing the artifact viable at all.
 
 **6. Grounding enforced, not requested.** Every semantic claim cites a
 `sources[]` entry that is verified to resolve before emit; ungrounded claims are
@@ -668,6 +748,52 @@ generator** — impressive one-shot output, regenerated each time. This is desig
 as a **maintained artifact** — versioned, reviewed, trust-graded, and correct at a
 known commit or loudly stale. The second is harder to build and much more useful
 at month six.
+
+### 12.1 What is not a differentiator
+
+Reviewed against the current state of the reference implementation rather than
+against a write-up of it, because a list of advantages that turn out to be
+table stakes is how a project talks itself into building the wrong thing.
+
+**Backend flexibility is not a differentiator.** Bedrock, OpenAI, Anthropic,
+Gemini, DeepSeek and local Ollama backends already exist there, as does a
+schema-shaped extraction prompt with `EXTRACTED` / `INFERRED` / `AMBIGUOUS`
+confidence on every edge — the same three-tier vocabulary `internal/graph` uses.
+Our §5 is the right design and inferd-over-IPC is genuinely ours, but "runs
+against whatever model you have" is parity, not an edge.
+
+**Prompt-injection hardening is not a differentiator — it is catch-up.** The
+reference implementation ships delimiter blocks, forged-marker defanging, SSRF
+allowlisting, fetch size caps, path-traversal confinement, and HTML escaping. It
+had this before we did. §4.5's hardening exists because *we were missing a control
+a comparable tool already had*, and that is the honest framing.
+
+**Not overlapping as much as it first appears: machine-written learnings.** The
+reference tool accumulates model-generated lessons into a file. That is not the
+same thing as differentiator 1 — generated notes are regenerable and unreviewed,
+whereas the point of managed markers is that a *human* correction survives a
+rebuild and carries a `verified:` attribution. But it does mean "the knowledge
+compounds" is a contested claim rather than an obvious one, and the argument has to
+rest specifically on human review surviving.
+
+**What does survive scrutiny:** OKF as the on-disk contract (their outputs are
+bespoke formats — Obsidian vaults, wikis, `graph.json`, Cypher — so nothing else
+reads them without adapters); human-review preservation *inside* a file rather
+than file-level ownership manifests; per-page graded trust with the producing model
+recorded; staleness that exits non-zero; byte determinism; manifest and
+infrastructure extraction; and a single static binary with a dependency tree we
+can bump ourselves. That list is shorter than six items and it is the real one.
+
+**The dependency argument is unchanged and remains the strongest one.** The
+reference implementation's lockfile resolves to roughly 200 packages — including a
+JIT compiler, an ONNX runtime, speech-to-text, a media downloader, plotting
+libraries, and 26 parser grammars — for a tool whose job is to read a repository
+and write markdown. Its direct dependencies are declared with no version
+constraints at all. None of that is a criticism of the tool; it is the arithmetic
+of §2. A CVE anywhere in that tree, in a tool we adopted rather than a library we
+depend on, is a patch we carry or an upstream PR we hope lands. That is the
+remediation path we are declining, and it does not depend on any feature comparison
+being favourable.
 
 ---
 
@@ -693,6 +819,17 @@ place to live and a reason to be written down once.
 **Small repos do not need this.** Under a few dozen files, the value is a
 structural sanity check, not orientation. The tool earns its keep where structural
 complexity exceeds what a person or a model holds in working memory.
+
+**Prompt injection is mitigated, not solved.** §4.5 fences untrusted repository
+content, defangs forged markers, constrains output to a schema, and drops
+ungrounded claims. A determined injection inside a delimiter block can still bias a
+summary — nobody has a proof against that. What the design guarantees is narrower
+and worth stating exactly: the blast radius is schema-shaped, citation-checked
+prose on a reviewable page with the producing model recorded in `generated.by`. The
+deterministic pass, which carries the structural load, never sends anything to a
+model and so is not exposed at all. A repo whose threat model cannot tolerate the
+residual risk should run with no backend configured, which is a supported mode and
+still produces the complete structural bundle.
 
 **A local 12B is not a frontier model.** Schema constraints and the grounding rule
 keep it honest about *form* and *citation*, and the deterministic pass carries the
