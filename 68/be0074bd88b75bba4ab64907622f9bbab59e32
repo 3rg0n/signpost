@@ -1,0 +1,68 @@
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_afba55885cdd23 1-11,16,18,21-70,75,88-300
+  s_f6c0b1ac81cb95::t_d7934c2dba44d3 12-15,17,19-20,71-74,76-87
+internal/discover/ignore.go
+  s_f6c0b1ac81cb95::t_3427aed8bc48ee 1-184,189-195,197-200,244-271
+  s_f6c0b1ac81cb95::t_1fc5812044f1f4 185-188,196,201-243
+docs/design.md
+  s_f6c0b1ac81cb95::t_9952d47d36b289 580-614
+  s_f6c0b1ac81cb95::t_197ffc9d8a394c 730,733-738
+  s_f6c0b1ac81cb95::t_07fe23b7dddefa 637-639
+  s_f6c0b1ac81cb95::t_f8560991d2867b 752-797
+  s_f6c0b1ac81cb95::t_ba1ecaba86b563 326-363
+  s_f6c0b1ac81cb95::t_3e9d63fd478b56 823-833
+internal/extract/extract_test.go
+  s_f6c0b1ac81cb95::t_23afbac23d29be 1-257,261-287
+  s_f6c0b1ac81cb95::t_dc8d4a9bb8f215 258-260
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_d7934c2dba44d3 48-59,61-65,129-137,287-289,390-392,425-426
+  s_f6c0b1ac81cb95::t_9ec0915413be1d 1-47,60,66-128,138-286,290-389,393-424,427-471
+internal/extract/score_test.go
+  s_f6c0b1ac81cb95::t_61c7f7c6405afc 1-296
+internal/extract/golang.go
+  s_f6c0b1ac81cb95::t_ae108de07a25b8 1-39,47-53,55-248
+  s_f6c0b1ac81cb95::t_a55f9058f4b464 54
+  s_f6c0b1ac81cb95::t_69859846971c31 40-46
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_41b77f647b097e 320-321,323-329
+  s_f6c0b1ac81cb95::t_f45bd941d321ef 1-319,322,330-333,336-337,339-341,343-347,385
+  s_f6c0b1ac81cb95::t_f31898e317048f 334-335
+  s_f6c0b1ac81cb95::t_f88fb1df383cf4 338,342,348-384
+internal/discover/ignore_test.go
+  s_f6c0b1ac81cb95::t_d86aaf05e2ccac 1-222
+internal/discover/discover.go
+  s_f6c0b1ac81cb95::t_ab1753aa1b50a4 1-376,382-386,392-448
+  s_f6c0b1ac81cb95::t_496df6693f5706 377-381,387-391
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_523a89f64d55a2 38-80
+  s_f6c0b1ac81cb95::t_a66b5866218841 82-111
+  s_3353e3fc32f86e::t_f0d4cecf190217 81
+internal/extract/score.go
+  s_f6c0b1ac81cb95::t_30929eb813acc1 1-268
+internal/extract/golang_test.go
+  s_f6c0b1ac81cb95::t_908d779a20d142 1-516
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "68be0074bd88b75bba4ab64907622f9bbab59e32",
+  "prompts": {},
+  "sessions": {
+    "s_3353e3fc32f86e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7fd9719-4a69-4c7b-8545-947b153113cb",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Ergon Copeland <196864108+ecopelan_cisco@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Ergon Copeland <196864108+ecopelan_cisco@users.noreply.github.com>"
+    }
+  }
+}
