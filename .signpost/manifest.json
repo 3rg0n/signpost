@@ -1,0 +1,43 @@
+{
+  "okf_version": "0.2",
+  "generator": "signpost/dev",
+  "resource": "git://github.com/3rg0n/signpost@bfb37bbb0393a166ac08989c6e107b2cef1d6298",
+  "date": "2026-07-30",
+  "counts": {
+    "nodes": 23,
+    "edges": 27,
+    "clusters": 16
+  },
+  "confidence": {
+    "ambiguous": 0,
+    "extracted": 27,
+    "inferred": 0
+  },
+  "pages": [
+    "index.md",
+    "log.md",
+    "modules/assemble.md",
+    "modules/discover.md",
+    "modules/export.md",
+    "modules/extract.md",
+    "modules/graph.md",
+    "modules/manifest.md",
+    "modules/okf.md",
+    "modules/signpost.md",
+    "modules/vcs.md",
+    "references/adr-0001-hand-written-tolerant-yaml-reader.md",
+    "references/adr-0002-patchable-dependencies-not-zero-dependencies.md",
+    "references/adr-0003-directory-granularity-for-module-nodes.md",
+    "references/adr-0004-confidence-is-a-first-class-field.md",
+    "references/adr-0005-commit-the-bundle-to-the-repository.md",
+    "references/adr-0006-generator-and-viewer-are-separate-repositories.md",
+    "references/adr-0007-the-bundle-names-the-commit-it-describes.md",
+    "references/github-actions-actions-checkout.md",
+    "references/github-actions-actions-configure-pages.md",
+    "references/github-actions-actions-deploy-pages.md",
+    "references/github-actions-actions-setup-go.md",
+    "references/github-actions-actions-upload-pages-artifact.md",
+    "references/github-actions-golangci-golangci-lint-action.md",
+    "references/readme-md.md"
+  ]
+}
