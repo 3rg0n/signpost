@@ -2,7 +2,7 @@
 type: Module
 title: internal/discover
 description: 5 go files; 57 exported symbols.
-resource: git://github.com/3rg0n/signpost@bfb37bbb0393a166ac08989c6e107b2cef1d6298/internal/discover
+resource: git://github.com/3rg0n/signpost@1fc38be2aa4a6970091541506bd34191928da885/internal/discover
 generated: { by: signpost/dev, at: "2026-07-30" }
 attributes:
   - { name: commits, value: "2" }
