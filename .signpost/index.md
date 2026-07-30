@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 23 concepts, 27 relationships."
-resource: git://github.com/3rg0n/signpost@1fc38be2aa4a6970091541506bd34191928da885
+description: "Structural map of this repository: 25 concepts, 27 relationships."
+resource: git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339
 generated: { by: signpost/dev, at: "2026-07-30" }
 ---
 # Repository map
@@ -31,6 +31,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/manifest](/modules/manifest.md) — 21 go files; 218 exported symbols.
 - [internal/okf](/modules/okf.md) — 13 go files; 166 exported symbols.
 - [cmd/signpost](/modules/signpost.md) — 10 go files; 31 exported symbols; entrypoint main; package main.
+- [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
 
 ### Documents
@@ -40,8 +41,9 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0003: directory granularity for module nodes](/references/adr-0003-directory-granularity-for-module-nodes.md) — Architecture decision (Accepted), 18 rules read from 0003-directory-granularity-for-module-nodes.md.
 - [ADR 0004: confidence is a first class field](/references/adr-0004-confidence-is-a-first-class-field.md) — Architecture decision (Accepted), 24 rules read from 0004-confidence-is-a-first-class-field.md.
 - [ADR 0005: commit the bundle to the repository](/references/adr-0005-commit-the-bundle-to-the-repository.md) — Architecture decision (Accepted), 22 rules read from 0005-commit-the-bundle-to-the-repository.md.
-- [ADR 0006: generator and viewer are separate repositories](/references/adr-0006-generator-and-viewer-are-separate-repositories.md) — Architecture decision (Accepted), 21 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
+- [ADR 0006: generator and viewer are separate repositories](/references/adr-0006-generator-and-viewer-are-separate-repositories.md) — Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
 - [ADR 0007: the bundle names the commit it describes](/references/adr-0007-the-bundle-names-the-commit-it-describes.md) — Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md.
+- [ADR 0008: the viewer lives in this repository](/references/adr-0008-the-viewer-lives-in-this-repository.md) — Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md.
 - [README.md](/references/readme-md.md) — Architecture decision, 10 rules read from README.md.
 
 ### External dependencies

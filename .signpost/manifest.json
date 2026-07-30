@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@1fc38be2aa4a6970091541506bd34191928da885",
+  "resource": "git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339",
   "date": "2026-07-30",
   "counts": {
-    "nodes": 23,
+    "nodes": 25,
     "edges": 27,
-    "clusters": 16
+    "clusters": 18
   },
   "confidence": {
     "ambiguous": 0,
@@ -24,6 +24,7 @@
     "modules/manifest.md",
     "modules/okf.md",
     "modules/signpost.md",
+    "modules/site.md",
     "modules/vcs.md",
     "references/adr-0001-hand-written-tolerant-yaml-reader.md",
     "references/adr-0002-patchable-dependencies-not-zero-dependencies.md",
@@ -32,6 +33,7 @@
     "references/adr-0005-commit-the-bundle-to-the-repository.md",
     "references/adr-0006-generator-and-viewer-are-separate-repositories.md",
     "references/adr-0007-the-bundle-names-the-commit-it-describes.md",
+    "references/adr-0008-the-viewer-lives-in-this-repository.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",
     "references/github-actions-actions-deploy-pages.md",

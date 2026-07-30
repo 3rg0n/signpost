@@ -2,7 +2,7 @@
 type: External Dependency
 title: actions/setup-go
 description: github-actions dependency actions/setup-go (b7ad1dad31e06c5925ef5d2fc7ad053ef454303e)
-resource: git://github.com/3rg0n/signpost@1fc38be2aa4a6970091541506bd34191928da885
+resource: git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339
 tags: [direct, external, github-actions]
 generated: { by: signpost/dev, at: "2026-07-30" }
 attributes:
@@ -20,8 +20,9 @@ github-actions dependency actions/setup-go (b7ad1dad31e06c5925ef5d2fc7ad053ef454
 ## Structure
 
 <!-- signpost:managed:structure -->
-3 files:
+4 files:
 - `.github/workflows/ci.yml`
+- `.github/workflows/pages.yml`
 - `.github/workflows/release.yml`
 - `.github/workflows/signpost.yml`
 <!-- /signpost:managed:structure -->
