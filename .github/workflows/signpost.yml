@@ -151,7 +151,29 @@ jobs:
       # to let the push job regenerate the bundle after merge. The message is
       # printed either way, because a failing gate that does not say what it found
       # is a gate nobody can act on.
+      #
+      # The absent-bundle case is a skip rather than a failure, and the condition is
+      # narrower than it looks. A repository that has just adopted signpost has no
+      # bundle until the push job runs, and failing there would tell a contributor to
+      # run `signpost build` on their branch — the one thing §8.0 forbids. So the
+      # question asked is not "is there a bundle here" but "does the base branch have
+      # one": a pull request that *deletes* the bundle still fails, because the base
+      # has it and this tree does not. An unresolvable base ref is a fault in the
+      # checkout rather than a fact about the repository, so it fails loudly instead
+      # of skipping — a gate that quietly skips when it cannot see is the false pass
+      # this whole command exists to prevent.
       - name: Verify the bundle
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
+          if ! git rev-parse --verify --quiet "refs/remotes/origin/${BASE}" >/dev/null; then
+            echo "cannot resolve origin/${BASE}; the checkout is wrong, not the bundle" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "origin/${BASE}:.signpost/manifest.json" 2>/dev/null; then
+            echo "no bundle on ${BASE} yet, so there is nothing to compare against."
+            echo "the push job writes the first one; §8.0 keeps branches from writing it."
+            exit 0
+          fi
           ./signpost verify -as-of-bundle -repo "github.com/${GITHUB_REPOSITORY}" .
