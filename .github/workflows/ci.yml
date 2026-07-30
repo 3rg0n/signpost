@@ -96,7 +96,53 @@ jobs:
         # it, so it is linted as POSIX sh rather than bash.
         run: shellcheck --shell=sh install.sh
 
-      - name: Parse install.ps1
+      - name: installers are pure ASCII
+        # Not style: PowerShell 5.1 decodes a BOM-less script as Windows-1252, so a
+        # UTF-8 em dash arrives as three characters ending in U+201D — a right double
+        # quotation mark the 5.1 parser accepts as a string terminator. The string
+        # closes early and the file fails to parse lines away from the real cause.
+        # This shipped once, in a script users pipe from the network into a shell,
+        # because the parse check below originally ran only under pwsh 7.
+        #
+        # No grep -P: it is unavailable in some builds and errors out under LC_ALL=C
+        # in others, and `if grep ...` reads that error as "nothing found" — a gate
+        # that cannot fail. The exit code is checked explicitly for the same reason:
+        # 1 is a clean file, 0 is a finding, anything else is a broken check.
+        run: |
+          set -uo pipefail
+          # A literal tab inside the bracket expression; everything else must be a
+          # printable ASCII character. Newlines are never part of a grep line.
+          LC_ALL=C grep -n '[^	 -~]' install.sh install.ps1 && rc=0 || rc=$?
+          case "$rc" in
+            1) echo "both installers are pure ASCII" ;;
+            0) echo "the lines above contain non-ASCII bytes; installers must stay ASCII"
+               exit 1 ;;
+            *) echo "the ASCII check itself failed with exit $rc"
+               exit 1 ;;
+          esac
+
+  installer:
+    name: installer parses (5.1 and 7)
+    # A Windows runner because that is the only place PowerShell 5.1 exists, and 5.1
+    # is what an `iex (irm ...)` line lands in on a default Windows box. Parsing only
+    # under pwsh 7 let a script through that 5.1 could not parse at all.
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Parse under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path ./install.ps1).Path, [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host "5.1: parsed clean"
+
+      - name: Parse under PowerShell 7
         shell: pwsh
         run: |
           $errors = $null
@@ -106,6 +152,7 @@ jobs:
             $errors | ForEach-Object { Write-Host "$($_.Extent.StartLineNumber): $($_.Message)" }
             exit 1
           }
+          Write-Host "7: parsed clean"
 
   security:
     name: security

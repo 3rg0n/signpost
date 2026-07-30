@@ -131,16 +131,25 @@ if [ -z "$VERSION" ]; then
 	# The redirect target of /releases/latest, rather than the API: no rate limit
 	# that a shared CI IP will hit, and no JSON to parse in sh.
 	if need curl; then
-		location="$(curl -fsSI -o /dev/null -w '%{url_effective}' \
+		# -L is what makes this work. %{url_effective} is the URL curl last
+		# requested, not the Location it was handed, so without -L a HEAD of
+		# /releases/latest reports /releases/latest back and the tag parses out as
+		# the literal string "latest". This shipped that way once.
+		location="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
 			"https://github.com/${REPO}/releases/latest")"
 	else
+		# wget follows redirects by default and -S prints each response's headers to
+		# stderr, so the last Location is the tag. The leading whitespace wget adds
+		# is not part of any specification, hence the tolerant match.
 		location="$(wget -qSO /dev/null "https://github.com/${REPO}/releases/latest" 2>&1 |
-			awk '/^  Location: /{print $2}' | tail -n1)"
+			awk '/^[ \t]*Location:/{print $2}' | tail -n1)"
 	fi
-	VERSION="${location##*/}"
+	# A header line ends CRLF, so the carriage return has to come off before the
+	# basename or the tag carries an invisible character into every URL below.
+	VERSION="$(printf '%s' "${location##*/}" | tr -d '\r')"
 	case "$VERSION" in
 	v*) ;;
-	*) die "could not determine the latest version; pass --version" ;;
+	*) die "could not determine the latest version (got '${VERSION}'); pass --version" ;;
 	esac
 fi
 
@@ -170,7 +179,7 @@ trap 'rm -rf "$tmp"' EXIT INT TERM
 
 info "downloading ${archive}"
 fetch "${base}/${archive}" "${tmp}/${archive}" ||
-	die "no release asset ${archive} for ${VERSION} — check the version and your platform"
+	die "no release asset ${archive} for ${VERSION} - check the version and your platform"
 
 info "downloading checksums.txt"
 fetch "${base}/checksums.txt" "${tmp}/checksums.txt" ||

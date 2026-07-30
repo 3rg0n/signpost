@@ -6,6 +6,41 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+#### 2026-07-30
+
+Both defects below were found by installing v0.0.1 from the published URLs the
+way a user would, not by reading the scripts. Neither is reachable by any check
+that does not actually run an install.
+
+- `install.ps1` could not be parsed by Windows PowerShell 5.1 at all — the
+  edition an `iex (irm ...)` line lands in on a default Windows box. 5.1 decodes
+  a BOM-less script as Windows-1252 rather than UTF-8, so a UTF-8 em dash
+  arrives as three characters whose last is U+201D, a right double quotation
+  mark the 5.1 parser accepts as a string terminator. The string closed early
+  and the file failed to parse several lines from the actual character. The file
+  is now pure ASCII and says so in its own `.NOTES`.
+- `install.sh` resolved the latest release to the literal string `latest` and
+  then refused to install anything. `curl`'s `%{url_effective}` reports the URL
+  curl last requested, not the `Location` it was handed, so the `HEAD` of
+  `/releases/latest` needed `-L` to actually follow the redirect. The tag is
+  also stripped of the trailing carriage return a header line carries, and the
+  failure message now prints what it parsed instead of only that it failed.
+
+### Changed
+
+#### 2026-07-30
+
+- CI gates both installers as pure ASCII and parses `install.ps1` under
+  **Windows PowerShell 5.1 as well as pwsh 7**, on a Windows runner. The
+  previous check ran only under pwsh 7, which defaults to UTF-8 and parsed the
+  broken file happily — a gate that passed on a script the majority shell could
+  not run. The ASCII check avoids `grep -P`, which is absent from some builds
+  and errors out under `LC_ALL=C` in others, and it branches on the exit code
+  explicitly: 1 is clean, 0 is a finding, anything else means the check itself
+  broke. An `if grep ...` would have read that error as "nothing found".
+
 ## [0.0.1] — 2026-07-30
 
 First tagged release. Deliberately **not** v0.1.0: v0.1 is the deterministic core

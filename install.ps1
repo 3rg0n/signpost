@@ -12,9 +12,21 @@
     iex "& { $(irm https://raw.githubusercontent.com/3rg0n/signpost/main/install.ps1) }"
 
 .EXAMPLE
-    # Pinning a version, which iex cannot pass arguments to — download and run it:
+    # Pinning a version, which iex cannot pass arguments to - download and run it:
     irm https://raw.githubusercontent.com/3rg0n/signpost/main/install.ps1 -OutFile install.ps1
     .\install.ps1 -Version v0.1.0
+
+.NOTES
+    This file must stay pure ASCII. PowerShell 5.1 - still the default shell on
+    Windows and the one an `iex (irm ...)` line most often lands in - decodes a
+    BOM-less script as Windows-1252, not UTF-8. An em dash then arrives as three
+    mojibake characters, the last of which is U+201D, a right double quotation
+    mark that the 5.1 parser accepts as a string terminator. The string closes
+    early and the whole file fails to parse, several lines away from the actual
+    character. pwsh 7 defaults to UTF-8 and parses it fine, so this does not
+    reproduce under the modern shell. Adding a BOM would also fix it, but ASCII
+    costs nothing and cannot be lost by an editor. CI parses this file under both
+    editions for exactly this reason.
 #>
 [CmdletBinding()]
 param(
@@ -103,7 +115,7 @@ try {
         Invoke-WebRequest -Uri "$base/$archive" -OutFile $archivePath -UseBasicParsing
     }
     catch {
-        throw "no release asset $archive for $Version — check the version and your platform"
+        throw "no release asset $archive for $Version - check the version and your platform"
     }
 
     $sumsPath = Join-Path $tmp 'checksums.txt'
