@@ -10,6 +10,49 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-30
 
+- Git history is read and folded into the graph. `internal/vcs` walks
+  `git log --numstat` and yields per-file and per-directory churn, first and last
+  author dates, author concentration, and co-change pairs: two directories that
+  keep appearing in the same commit. That last one is why the package exists — a
+  handler and the migration it depends on, a proto and its generated client, a
+  config key and the code that reads it are all coupled, and none of them is an
+  import edge any static read can see. Co-change becomes a `co_changes` edge
+  carrying the commit count as its weight; churn becomes attributes on the module
+  node. New flags: `-no-history` and `-max-commits`.
+
+  Four properties shape the implementation:
+
+  - **Absence is reported, never fatal.** A missing git, a directory that is not
+    a repository, an empty history, and a shallow clone are all facts rather than
+    errors — the structural bundle is complete without any of this, and CI
+    asserts it is byte-identical under `-no-history` apart from the co-change
+    edges. What is refused is silence: a shallow clone yields real but truncated
+    signals, and "no co-change found" and "no history to look at" are different
+    claims, so the coverage report always states which one it is.
+  - **A rename keeps one history.** `--find-renames` marks a rename only in the
+    commit that performed it and does not rewrite the older commits, which still
+    name the old path; `--follow` would, but git accepts it for a single pathspec
+    only, so it is unavailable to a whole-history walk. Without folding the old
+    path forward, a moved file's history splits in two and the current path's
+    churn reads as though the code were new. Chains (`a → b → c`) are followed
+    transitively. Found by an integration test against real git — every
+    fixture-level parse test passed while the behaviour was wrong.
+  - **History annotates the map, never decides what is on it.** Both passes run
+    last and touch only nodes the structural pass already created. A directory
+    with history and no source is not a module: deleted code still has history,
+    and a node for it would be a page about something that is not there.
+  - **Bounded, and safe against a hostile repository.** Commits are capped, and a
+    commit touching an implausible number of directories contributes churn but no
+    co-change — a formatter rollout or an initial import relates everything to
+    everything and says nothing. Paths are read under `-z`, because line-oriented
+    git output C-quotes any path containing a space, a quote, or a non-ASCII byte,
+    and a filename is the part of an untrusted repository most likely to be
+    adversarial. The repository path is the subprocess's working directory rather
+    than a git argument, so a directory named `--upload-pack=...` cannot become a
+    flag, and config is hardened per-invocation with `-c` rather than by
+    environment, since `GIT_CONFIG_NOSYSTEM` suppresses system and global config
+    but `.git/config` belongs to the repository being analysed.
+
 - CI runs signpost on signpost. The binary analyses this repository on every
   push, and the job asserts what the run produced rather than that it exited 0 —
   `export` exits 0 on a completely empty graph, so an exit-code check would go
@@ -21,7 +64,10 @@ All notable changes to this project are documented here. Format follows
   its own gaps. The floors are counted through `jq` rather than by grepping the
   JSON, because attribute keys come from the analysed repository and a repo with
   an attribute named `id` would inflate a grep count — parsing is also the only
-  check here that the export is valid JSON.
+  check here that the export is valid JSON. It also asserts history was actually
+  read: the job checks out with `fetch-depth: 0` specifically so it can be, and
+  without an assertion a regression that stopped reading git would leave the job
+  green while the bundle silently lost churn and co-change.
 
 ### Fixed
 

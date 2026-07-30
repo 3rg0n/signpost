@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -40,7 +41,7 @@ func runExport(args []string, out, errOut io.Writer) error {
 		return err
 	}
 
-	a, err := analyse(path, pf)
+	a, err := analyse(context.Background(), path, pf)
 	if err != nil {
 		return err
 	}

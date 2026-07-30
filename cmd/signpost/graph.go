@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -39,7 +40,9 @@ func runGraph(args []string, out, errOut io.Writer) error {
 		return err
 	}
 
-	a, err := analyse(path, pf)
+	// context.Background() rather than a cancellable one: this process has nothing to
+	// cancel from, and the only subprocess in the pipeline carries its own timeout.
+	a, err := analyse(context.Background(), path, pf)
 	if err != nil {
 		return err
 	}

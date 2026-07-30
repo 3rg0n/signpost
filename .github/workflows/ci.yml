@@ -186,7 +186,7 @@ jobs:
 
       # Not a smoke test. `graph` exits 0 on an empty graph, so asserting the exit
       # code alone would pass if extraction silently stopped working. The floors
-      # are deliberately well under the current numbers (14 nodes, 13 edges) so
+      # are deliberately well under the current numbers (15 nodes, 17 edges) so
       # ordinary growth never touches them and a collapse always does.
       #
       # Counted through jq rather than by grepping for '"id":', because attribute
@@ -261,6 +261,59 @@ jobs:
             exit 1
           fi
           echo "coverage report is well-formed and names its gaps"
+
+      # The checkout above sets fetch-depth: 0 specifically so history can be read.
+      # Without an assertion that it was, a regression that stopped reading git —
+      # or a future change to the checkout — would leave this job green while the
+      # bundle silently lost churn and co-change. That is the §4.2 failure mode:
+      # the absence of a measurement reading as a clean bill of health.
+      #
+      # The commit count is asserted rather than the co-change count. A repository
+      # legitimately may have no pair reaching the two-commit threshold, but one
+      # that reports zero commits was not read at all.
+      - name: History was read
+        run: |
+          set -euo pipefail
+          if grep -qE '^  history not read' coverage.txt; then
+            echo "history was not read despite fetch-depth: 0"
+            cat coverage.txt
+            exit 1
+          fi
+          # A shallow clone yields real but truncated signals, and the warning names
+          # the fix. It must never appear here, because the checkout is unshallow.
+          if grep -q 'fetch-depth' coverage.txt; then
+            echo "history read as shallow despite fetch-depth: 0"
+            cat coverage.txt
+            exit 1
+          fi
+          commits="$(sed -n 's/^  history: \([0-9]*\) commits.*/\1/p' coverage.txt)"
+          echo "commits=${commits:-<none>}"
+          if [ -z "$commits" ] || [ "$commits" -lt 1 ]; then
+            echo "no history line, or zero commits, in the coverage report"
+            cat coverage.txt
+            exit 1
+          fi
+          echo "history read across ${commits} commit(s)"
+
+      # -no-history must produce a complete structural bundle: history is additive
+      # (§4.4), so the deterministic core cannot depend on it. Asserted by node
+      # count rather than exit code, because a run that silently produced an empty
+      # graph would also exit 0.
+      - name: Structure is complete without history
+        run: |
+          set -euo pipefail
+          ./signpost export -format json -quiet -no-history . > nohist.json
+          nodes="$(jq '.nodes | length' nohist.json)"
+          full="$(jq '.nodes | length' graph.json)"
+          echo "nodes without history=${nodes}, with=${full}"
+          [ "$nodes" -eq "$full" ] || {
+            echo "history changed the node count; it must only annotate"
+            exit 1
+          }
+          # Co-change is the one thing that should disappear, which is also the check
+          # that the flag does something rather than being silently ignored.
+          co="$(jq '[.edges[] | select(.kind == "co_changes")] | length' nohist.json)"
+          [ "$co" -eq 0 ] || { echo "${co} co-change edge(s) survived -no-history"; exit 1; }
 
   security:
     name: security

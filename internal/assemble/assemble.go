@@ -29,6 +29,7 @@ import (
 	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/vcs"
 )
 
 // Input is everything the earlier stages produced.
@@ -36,6 +37,10 @@ type Input struct {
 	Discovered *discover.Result
 	Source     *extract.RunResult
 	Manifests  *manifest.RunResult
+	// History is what git said, or nil when there was no history to read. Optional by
+	// design: §4.4's deterministic core is complete without it, so every consumer of this
+	// field guards on nil rather than the caller having to synthesise an empty value.
+	History *vcs.Signals
 }
 
 // Result is the assembled graph plus what assembly could not account for.
@@ -118,6 +123,12 @@ func (b *builder) run() error {
 	b.addServiceEdges()
 	b.addDocEdges()
 	b.addOwnerEdges()
+	// History last of all, and only onto nodes the structural pass already created: it
+	// annotates the map rather than deciding what is on it. A directory with history but
+	// no source is not a module — deleted code still has history, and a node for it would
+	// be a page about something that is not there.
+	b.addHistory()
+	b.addCoChangeEdges()
 	b.dropped = b.g.DropDangling()
 	return nil
 }
@@ -842,6 +853,123 @@ func (b *builder) addOwnerEdges() {
 					n.Attrs["owners"] = strings.Join(sortedUnique(append(strings.Split(cur, ", "), o.Owners...)), ", ")
 				}
 			}
+		}
+	}
+}
+
+// addHistory annotates existing nodes with what git said about their directory.
+//
+// Attributes rather than nodes or edges, for the same reason CODEOWNERS ownership is an
+// attribute: churn is a property of a module, not a concept deserving a page of its own.
+//
+// Only module nodes are annotated. An external dependency has no directory in this
+// repository, and a service or interface node is named by a manifest whose own churn says
+// nothing about the code that implements it.
+func (b *builder) addHistory() {
+	h := b.in.History
+	if h == nil || !h.Available {
+		return
+	}
+	for _, n := range b.g.NodesOfKind(graph.KindModule) {
+		d := h.Dirs[n.Path]
+		if d == nil {
+			continue
+		}
+		n.Attrs["commits"] = strconv.Itoa(d.Commits)
+		// Insertions and deletions kept separate rather than netted: +900/-880 and +20/-0
+		// net the same and describe entirely different modules.
+		n.Attrs["lines_added"] = strconv.Itoa(d.Insertions)
+		n.Attrs["lines_removed"] = strconv.Itoa(d.Deletions)
+		if d.First != "" {
+			n.Attrs["first_commit"] = d.First
+		}
+		if d.Last != "" {
+			n.Attrs["last_commit"] = d.Last
+		}
+		if name, share := d.TopAuthor(); name != "" {
+			n.Attrs["top_author"] = name
+			// Rounded to a whole percent. The precision beyond that is spurious — it is a
+			// ratio of small integers — and it would put a long decimal in a committed file
+			// that changes whenever a single commit lands.
+			n.Attrs["top_author_share"] = strconv.Itoa(int(share*100+0.5)) + "%"
+		}
+	}
+}
+
+// addCoChangeEdges draws the coupling that imports do not show.
+//
+// This is §4.1's stated reason for reading history at all: two modules that always change
+// together are coupled whether or not either imports the other, and no static read can see
+// it. A handler and the migration it depends on, a proto and its generated client, a config
+// key and the code that reads it — none are import edges, and all matter to an agent about
+// to change one of them.
+//
+// The edge is Extracted, not Inferred, and the distinction is worth being precise about:
+// what is extracted is the fact that these two directories appeared in the same commits N
+// times, which is read from git and not guessed. The reason for the coupling is not
+// extracted and the edge does not claim one. Weight carries N so a consumer can weigh a
+// pair that changed together thrice against one that did so ninety times.
+//
+// Edges are drawn in both directions because co-change is symmetric and the graph is
+// directed: a single direction would make the edge's meaning depend on which module's page
+// a reader happened to open.
+func (b *builder) addCoChangeEdges() {
+	h := b.in.History
+	if h == nil || !h.Available {
+		return
+	}
+	// Directory pairs are folded onto module pairs before any edge is drawn, because two
+	// distinct pairs can resolve to the same one: `internal/auth/testdata <-> internal/db`
+	// and `internal/auth <-> internal/db` both become `internal/auth <-> internal/db`.
+	// AddEdge would sum their weights, and since one commit can appear in both pairs the
+	// sum can exceed the number of commits that actually touched both modules. The maximum
+	// is taken instead: it is a true lower bound on the real count, which a sum is not.
+	type modPair struct{ from, to string }
+	weights := make(map[modPair]int)
+	var order []modPair
+	for _, p := range h.CoChange {
+		// nearestModule rather than moduleAt: a commit touching `internal/auth/testdata`
+		// is a commit touching `internal/auth`, and the directory holding the file need not
+		// itself hold source. Where neither resolves — a docs-only or deleted directory —
+		// there is no node to attach to and the pair is dropped.
+		from, to := b.nearestModule(p.A), b.nearestModule(p.B)
+		if from == "" || to == "" || from == to {
+			continue
+		}
+		if from > to {
+			from, to = to, from
+		}
+		k := modPair{from, to}
+		if _, seen := weights[k]; !seen {
+			order = append(order, k)
+		}
+		if p.Commits > weights[k] {
+			weights[k] = p.Commits
+		}
+	}
+	// h.CoChange arrives sorted, so first-seen order is deterministic; sorting again keeps
+	// it so regardless of what a future caller hands over.
+	sort.Slice(order, func(i, j int) bool {
+		if order[i].from != order[j].from {
+			return order[i].from < order[j].from
+		}
+		return order[i].to < order[j].to
+	})
+
+	for _, k := range order {
+		// Both directions, because co-change is symmetric and the graph is directed: a
+		// single direction would make the edge's meaning depend on which module's page a
+		// reader happened to open.
+		for _, e := range [2]graph.Edge{
+			{From: k.from, To: k.to},
+			{From: k.to, To: k.from},
+		} {
+			e.Kind = graph.EdgeCoChanges
+			e.Conf = graph.Extracted
+			e.Weight = weights[k]
+			// No Source: the provenance is the repository's history rather than any file
+			// in the tree, and naming a file here would misattribute it.
+			b.g.AddEdge(e)
 		}
 	}
 }

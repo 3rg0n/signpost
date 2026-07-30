@@ -12,6 +12,7 @@ import (
 	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/vcs"
 )
 
 // build runs the whole pipeline over a repository written to a temp directory.
@@ -24,6 +25,14 @@ import (
 // The cost is that a failure here can be an extractor's fault, which the per-package
 // tests separate out.
 func build(t *testing.T, files map[string]string) *Result {
+	t.Helper()
+	return buildWithHistory(t, files, nil)
+}
+
+// buildWithHistory is build with git signals supplied. Separate rather than a variadic
+// on build, so the twenty-odd callers that have nothing to say about history do not
+// have to say it.
+func buildWithHistory(t *testing.T, files map[string]string, h *vcs.Signals) *Result {
 	t.Helper()
 	root := t.TempDir()
 	paths := make([]string, 0, len(files))
@@ -48,6 +57,7 @@ func build(t *testing.T, files map[string]string) *Result {
 		Discovered: res,
 		Source:     extract.DefaultRegistry().Run(res),
 		Manifests:  manifest.DefaultRegistry().Run(res),
+		History:    h,
 	})
 	if err != nil {
 		t.Fatalf("Build: %v", err)

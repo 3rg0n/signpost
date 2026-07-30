@@ -82,6 +82,16 @@ and GraphQL SDL for contracts; SQL migrations, CODEOWNERS, ADRs, and Makefiles
 for the rest. Secrets are recorded as *references* — a name and its key names,
 never a value — because the bundle gets committed.
 
+It also reads the repository's own history. Churn, first and last commit dates,
+and author concentration land on each module; directories that keep changing in
+the same commit become a co-change edge weighted by how often. That is the one
+kind of coupling no static read can find — a handler and the migration it
+depends on, a proto and its generated client, a config key and the code that
+reads it are all coupled, and none of them is an import. Pass `-no-history` to
+skip it, `-max-commits` to change how far back the walk goes. In CI, check out
+with `fetch-depth: 0`: a shallow clone yields real but truncated signals, and
+signpost says so rather than presenting them as the whole history.
+
 ## Status
 
 **v0.1 in progress — deterministic core.** No model required, no network.
@@ -95,7 +105,7 @@ never a value — because the bundle gets committed.
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |
 | `signpost graph`, `signpost export` | done |
-| Git signals (co-change, churn, ownership) | in progress |
+| Git signals (co-change, churn, ownership) | done |
 | `signpost build` — OKF emit with edit preservation | in progress |
 | `signpost verify` | in progress |
 | Semantic pass (local IPC, or any OpenAI-compatible endpoint) | v0.2 |

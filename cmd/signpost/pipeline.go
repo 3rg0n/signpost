@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/vcs"
 )
 
 // analysis is the deterministic pipeline's output: design §4.0 through §4.4, with
@@ -25,6 +27,7 @@ type analysis struct {
 	Discovered *discover.Result
 	Source     *extract.RunResult
 	Manifests  *manifest.RunResult
+	History    *vcs.Signals
 	Assembled  *assemble.Result
 }
 
@@ -34,6 +37,8 @@ func (a *analysis) Graph() *graph.Graph { return a.Assembled.Graph }
 type pipelineFlags struct {
 	includeVendored bool
 	ignore          stringList
+	noHistory       bool
+	maxCommits      int
 }
 
 func (p *pipelineFlags) register(fs *flag.FlagSet) {
@@ -41,6 +46,15 @@ func (p *pipelineFlags) register(fs *flag.FlagSet) {
 		"analyse vendored third-party code instead of only recording it")
 	fs.Var(&p.ignore, "ignore",
 		"additional .gitignore-syntax pattern to skip; repeatable")
+	// Opt-out rather than opt-in: history is the signal §4.1 calls the cheapest way to
+	// find coupling imports do not show, so defaulting it off would mean most bundles
+	// never get it. The flag exists for the cases where it is the wrong thing to read —
+	// a freshly filtered repository whose history describes code that is no longer there,
+	// or a shallow CI checkout that cannot be deepened.
+	fs.BoolVar(&p.noHistory, "no-history", false,
+		"skip git history, analysing only the files on disk")
+	fs.IntVar(&p.maxCommits, "max-commits", vcs.DefaultMaxCommits,
+		"how many commits of history to read")
 }
 
 // stringList collects a repeatable flag. flag.Value rather than a comma-split
@@ -54,8 +68,8 @@ func (s *stringList) Set(v string) error {
 	return nil
 }
 
-// analyse walks, extracts, reads manifests, and assembles the graph.
-func analyse(path string, pf pipelineFlags) (*analysis, error) {
+// analyse walks, extracts, reads manifests, reads history, and assembles the graph.
+func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, error) {
 	disc, err := discover.Walk(path, discover.Options{
 		IncludeVendored: pf.includeVendored,
 		ExtraIgnores:    pf.ignore,
@@ -65,15 +79,31 @@ func analyse(path string, pf pipelineFlags) (*analysis, error) {
 	}
 	src := extract.DefaultRegistry().Run(disc)
 	mans := manifest.DefaultRegistry().Run(disc)
+
+	var hist *vcs.Signals
+	if !pf.noHistory {
+		// An error here is a real git fault — vcs reports a missing git, a non-repository,
+		// an empty history, and a shallow clone as facts rather than errors, so anything
+		// that reaches this branch is worth failing on rather than swallowing.
+		hist, err = vcs.Read(ctx, path, vcs.Options{MaxCommits: pf.maxCommits})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	built, err := assemble.Build(assemble.Input{
 		Discovered: disc,
 		Source:     src,
 		Manifests:  mans,
+		History:    hist,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &analysis{Discovered: disc, Source: src, Manifests: mans, Assembled: built}, nil
+	return &analysis{
+		Discovered: disc, Source: src, Manifests: mans,
+		History: hist, Assembled: built,
+	}, nil
 }
 
 // reportCoverage prints what the analysis could not account for.
@@ -106,11 +136,46 @@ func reportCoverage(w io.Writer, a *analysis) {
 		p.printf("  %d import(s) unresolved across %d specifier(s): %s\n",
 			n, len(a.Assembled.Unresolved), topUnresolved(a.Assembled.Unresolved, 5))
 	}
+	reportHistory(p, a)
 	// A dropped edge means assemble created an edge to a node it never created,
 	// which is a bug in assemble rather than a fact about the repository.
 	if a.Assembled.DroppedEdges > 0 {
 		p.printf("  warning: %d edge(s) dropped as dangling; please report this\n",
 			a.Assembled.DroppedEdges)
+	}
+}
+
+// reportHistory says what git contributed, and says so even when the answer is nothing.
+//
+// This is the §4.2 rule applied to the one signal whose absence is easiest to mistake for
+// a finding: a bundle built from a shallow clone shows no co-change, and so does a
+// repository that genuinely has none. Without a line here the two are indistinguishable,
+// and the reader would take the first for the second.
+func reportHistory(p *printer, a *analysis) {
+	if a.History == nil {
+		p.printf("  history not read (-no-history)\n")
+		return
+	}
+	if !a.History.Available {
+		p.printf("  history not read: %s\n", a.History.Reason)
+		return
+	}
+	pairs := 0
+	for _, e := range a.Graph().Edges() {
+		if e.Kind == graph.EdgeCoChanges {
+			pairs++
+		}
+	}
+	// Halved because addCoChangeEdges draws each symmetric coupling in both directions.
+	p.printf("  history: %d commits, %d co-change pair(s)\n", a.History.Commits, pairs/2)
+	if a.History.Reason != "" {
+		// Shallow or truncated. Reported as a warning rather than a note: it is the case
+		// where the numbers above are real but describe less history than the reader will
+		// assume, and the Reason names the fix.
+		p.printf("  warning: %s\n", a.History.Reason)
+	}
+	if n := a.History.SkippedBulkCommits; n > 0 {
+		p.printf("  %d commit(s) too broad for co-change (churn still counted)\n", n)
 	}
 }
 
