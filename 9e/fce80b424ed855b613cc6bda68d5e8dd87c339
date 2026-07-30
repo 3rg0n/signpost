@@ -1,0 +1,73 @@
+site/style.css
+  s_f6c0b1ac81cb95::t_f695767511896b 191,523-740,754-785,789-793,797-916,931-932
+  s_f6c0b1ac81cb95::t_a9965aaa8f05ba 1,3-4
+  s_f6c0b1ac81cb95::t_4816563ab96fe3 741-753
+  s_f6c0b1ac81cb95::t_9ba2ae4b8e0ae3 786-788,794-796
+  s_f6c0b1ac81cb95::t_0ef11a5f3d8c83 128-134,152-190
+  s_f6c0b1ac81cb95::t_603a73bfc1f97e 917-930
+  s_f6c0b1ac81cb95::t_353297c1eefab7 192
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_c2870c0c9a7f91 287-339
+  s_f6c0b1ac81cb95::t_b67303d67f0900 411-421
+docs/adr/0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_75d858e06da4ae 5-9
+docs/adr/0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_29555262f4ed7a 1-127
+site/graph.js
+  s_f6c0b1ac81cb95::t_e49bb680fc07e2 172-194,196-297,300-308,310-331,335,337-339,342-345,347,356-357,375-379,391-392,398-401,404,411-424
+  s_f6c0b1ac81cb95::t_10bf293634e62c 860-870
+  s_f6c0b1ac81cb95::t_1bfa5383351293 618-641
+  s_f6c0b1ac81cb95::t_639a3de1218499 69-71
+  s_f6c0b1ac81cb95::t_0e004b8eae4158 1-68,72-171,195,298-299,309,332-334,336,340-341,346,348-355,358-374,380-390,393-397,402-403,405-410,425-586,591-617,642-731,733-859,871-874,876
+  s_f6c0b1ac81cb95::t_0fcc49e5a702e9 587-590
+  s_f6c0b1ac81cb95::t_087b93e90a8fdc 732
+  s_3f706e3f4b4643::t_df8d243980438a 875,877-936
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_b7bdca861abd7e 25,27
+docs/design.md
+  s_f6c0b1ac81cb95::t_7ad7805083cdec 512,514-516,518-528
+  s_f6c0b1ac81cb95::t_2a9507aec5b965 13-15
+  s_f6c0b1ac81cb95::t_b05f4161ab8382 559-586
+  s_f6c0b1ac81cb95::t_190fddb45a2bd2 649-650,652-654
+  s_f6c0b1ac81cb95::t_af98df57288281 763-765
+  s_f6c0b1ac81cb95::t_61cef30471b2f3 94,98-100
+README.md
+  s_f6c0b1ac81cb95::t_c2edf44636f3b1 234-239
+  s_f6c0b1ac81cb95::t_645e501965f33c 212,214
+.github/workflows/pages.yml
+  s_f6c0b1ac81cb95::t_cd73329b62ab56 3,6-14,18-22
+  s_f6c0b1ac81cb95::t_5246029ff5f6e4 49-75
+.gitignore
+  s_f6c0b1ac81cb95::t_4f07c1f437b1c3 35-41
+site/graph.html
+  s_f6c0b1ac81cb95::t_17d9f979e5cef3 1-40,49-130
+  s_f6c0b1ac81cb95::t_489e00bc8ef81d 41-48
+site/index.html
+  s_f6c0b1ac81cb95::t_2b90ba7aecc7bf 37-46
+  s_f6c0b1ac81cb95::t_c4a648c415070c 326-331,333
+  s_f6c0b1ac81cb95::t_eee386bb5851e9 72,74,76,79-82,84,88-89,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "9efce80b424ed855b613cc6bda68d5e8dd87c339",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
