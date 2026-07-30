@@ -1,0 +1,45 @@
+docs/adr/0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_757256cfe86ebb 1-96
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_254489fbc9a819 58-64,69-83
+  s_f6c0b1ac81cb95::t_fec3359591545b 84
+docs/adr/0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_43fd6ebb35f265 1-118
+docs/design.md
+  s_f6c0b1ac81cb95::t_e25e52cd3c3bfe 51-53
+  s_f6c0b1ac81cb95::t_fa3e00b5da53b0 493-506
+  s_f6c0b1ac81cb95::t_be38324e91ee08 89
+  s_f6c0b1ac81cb95::t_ed4ef432b46cea 272-274
+  s_f6c0b1ac81cb95::t_bdaf504cecb1c1 652-655
+  s_f6c0b1ac81cb95::t_9744abe3c3a81a 512-513
+  s_f6c0b1ac81cb95::t_d1501b10151e15 104-108
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_ebdf2b71432354 1-47
+README.md
+  s_f6c0b1ac81cb95::t_b0f680b7cb458d 119-122
+  s_f6c0b1ac81cb95::t_c78e3b4ba891e8 127-130
+docs/adr/0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_ea97f9bf0bb330 1-95
+docs/adr/0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_0aa0d246f40b5c 1-92
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_50817fb0f005ee 13-24
+docs/adr/0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_526fa5ad13114e 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6deb884159d55aef544401c4f13f4ef7f2b986c7",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
