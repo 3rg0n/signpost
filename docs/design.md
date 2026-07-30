@@ -48,6 +48,9 @@ Two properties follow from that framing and drive every decision below:
 
 ## 2. Supply-chain posture
 
+> Recorded as ADR [0002](adr/0002-patchable-dependencies-not-zero-dependencies.md), which
+> is the authoritative statement of this decision and of the alternatives rejected.
+
 This is the reason signpost gets built rather than procured, so it is a design
 constraint and not a footnote. The distinction that matters is **direct
 dependencies we can patch versus transitive dependencies we inherit through
@@ -83,7 +86,7 @@ Which yields:
 | Other-language parsing | Hand-written extractors (§4.2). A tree-sitter binding is the fallback if accuracy demands it — that is a library decision, not a tool decision, and it is ours to bump. |
 | Graph algorithms | Hand-written (§4.4). Roughly 600 lines, all textbook — genuinely cheaper than a dependency. |
 | Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4). |
-| YAML | `gopkg.in/yaml.v3` for reading (round-tripping human edits is where hand-rolling gets risky); hand-written emitter for byte-stable output (§6.3). |
+| YAML | Hand-written tolerant reader and hand-written emitter, both ours. Helm templates are not YAML and a conforming parser rejects them outright, so a library would not have covered the files that matter (ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). |
 | Model access | Two backends behind one interface (§5). Both first-party over stdlib `net` and `net/http`. |
 | SCIP enrichment | `google.golang.org/protobuf` under a build tag — Google-published, heavily audited, already in codeatlas. |
 | Generator output | Markdown and JSON only. Nothing executable. |
@@ -98,7 +101,11 @@ protected branch and cannot break a merge.
 
 ## 3. What it produces
 
-An OKF-conformant bundle at `.signpost/`, committed to the repo.
+An OKF-conformant bundle at `.signpost/`, committed to the repo — recorded as ADR
+[0005](adr/0005-commit-the-bundle-to-the-repository.md), which is where the "why committed"
+argument and its consequences live. One module page per *directory* holding source, per ADR
+[0003](adr/0003-directory-granularity-for-module-nodes.md); the page path is also the graph
+node's ID.
 
 ```
 .signpost/
@@ -262,7 +269,9 @@ Typed edges: `imports`, `calls`, `implements`, `defines`, `configures`, `deploys
 
 Every edge carries `confidence`: `extracted` (found in source or manifest),
 `inferred` (derived by the model), `ambiguous` (model was unsure). An agent can
-therefore weight what it trusts, and a reviewer can audit what was guessed.
+therefore weight what it trusts, and a reviewer can audit what was guessed. Recorded as
+ADR [0004](adr/0004-confidence-is-a-first-class-field.md), which also states what the
+field does *not* claim.
 
 Metrics, all hand-written and all deterministic:
 
@@ -481,15 +490,26 @@ mappings, block sequences of flow mappings. Trivial to emit and byte-stable, whi
 a general-purpose library does not guarantee across versions. Byte-stability is a
 hard requirement (§8.1), so this is worth owning.
 
-**Reading** uses `gopkg.in/yaml.v3`. Parsing frontmatter a *human* has edited is
-where hand-rolling gets risky: people add comments, anchors, block scalars, odd
-quoting, and multi-line strings. Silently mangling someone's `verified:` block or
-their notes is the exact failure that destroys trust in the tool. This is a
-mainstream, well-maintained library, and Renovate keeps it current.
+**Reading** uses the hand-written tolerant reader in `internal/manifest`
+(ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). An earlier draft of this
+design specified `gopkg.in/yaml.v3` here, on the argument that parsing frontmatter a
+*human* has edited is where hand-rolling gets risky — people add comments, anchors, block
+scalars, odd quoting, and multi-line strings, and silently mangling someone's `verified:`
+block is the exact failure that destroys trust in the tool. That argument stands, and the
+reader is built to it: anchors, aliases, merge keys, both quoting styles with escapes, and
+block scalars with all three chomping modes are supported, and an unreadable region is
+reported as a diagnostic rather than dropped.
+
+What changed the decision is that the same reader has to read Helm templates, which are not
+YAML at all — a conforming parser rejects the whole document, so the library would have left
+the deployment surface unread. Owning one tolerant reader covers both cases; a library plus
+a hand-written template path would have been two.
 
 ---
 
 ## 7. Two repos: generator and viewer
+
+> Recorded as ADR [0006](adr/0006-generator-and-viewer-are-separate-repositories.md).
 
 The generator and the visual are separate products with different audiences,
 different dependency trees, and different risk profiles. Splitting them is what
@@ -628,6 +648,10 @@ posture in §2 is a commitment to remediate rather than a claim to have no expos
 - GitHub Actions **pinned by commit SHA**, not tag.
 
 ### 8.1 Determinism is a hard requirement
+
+> A consequence of committing the bundle, recorded as ADR
+> [0005](adr/0005-commit-the-bundle-to-the-repository.md) along with the merge-conflict
+> handling in §8.0.
 
 Because CI commits the bundle, a run that produces different bytes for the same
 commit produces commit churn, and commit churn kills adoption faster than any

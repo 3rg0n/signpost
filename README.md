@@ -116,12 +116,18 @@ command that wrote an incomplete bundle would be worse than one that is not
 offered, because the bundle is what agents trust.
 
 See [docs/design.md](docs/design.md) for the full design, including the
-supply-chain posture that motivates it.
+supply-chain posture that motivates it, and [docs/adr/](docs/adr/) for the
+decisions that bind it — why the dependency list is empty, why module nodes are
+directories, why confidence is a field on every edge, and why the bundle is
+committed.
 
 ## Build from source
 
 Requires Go 1.26+. There are no third-party dependencies — `go.mod` has no
-`require` block.
+`require` block. That is an outcome of the policy in
+[ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md), not the
+policy itself: the rule is that every dependency must be one we can bump
+ourselves, and the bar is high enough that nothing has cleared it.
 
 ```bash
 go build ./cmd/signpost

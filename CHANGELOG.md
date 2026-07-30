@@ -10,6 +10,18 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-30
 
+- Five ADRs and an index at `docs/adr/README.md`. Only the narrowest decision in
+  the project had one; everything foundational was prose in `docs/design.md`,
+  which is a different genre — design.md describes what the system *is*, while an
+  ADR records that alternatives were weighed and rejected and is immutable once
+  accepted. A reader of design.md could not tell which of its statements were
+  decisions. Now recorded: patchable dependencies rather than zero dependencies
+  (0002), directory granularity for module nodes and the public contract its IDs
+  form (0003), confidence as a first-class field on every node and edge (0004),
+  committing the bundle and the determinism requirement that follows (0005), and
+  the generator/viewer repository split (0006). The index also lists the four
+  decisions still owed one, so the gap is visible rather than discovered later.
+
 - Git history is read and folded into the graph. `internal/vcs` walks
   `git log --numstat` and yields per-file and per-directory churn, first and last
   author dates, author concentration, and co-change pairs: two directories that

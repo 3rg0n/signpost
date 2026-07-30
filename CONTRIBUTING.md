@@ -55,14 +55,32 @@ change legitimately moves the node or edge counts below the floors in
 
 ## Dependencies
 
-**A new direct dependency requires an ADR** in `docs/adr/`, and the bar is
-high. The policy is not zero dependencies but *patchable* ones: each direct
-dependency must be something we can bump ourselves, and there must be few enough
-that bumping stays routine. A dependency whose own tree we cannot patch means
-waiting on an upstream maintainer to fix a CVE in a tool people run in CI.
+**A new direct dependency requires an ADR** in [`docs/adr/`](docs/adr/), and the
+bar is high. The policy is not zero dependencies but *patchable* ones: each
+direct dependency must be something we can bump ourselves, and there must be few
+enough that bumping stays routine. A dependency whose own tree we cannot patch
+means waiting on an upstream maintainer to fix a CVE in a tool people run in CI.
+The full argument, including the alternatives rejected, is
+[ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md).
 
 Write the ADR before the code, in Nygard short form, naming what the dependency
 buys and what the stdlib alternative costs.
+
+## Decisions
+
+Read [`docs/adr/`](docs/adr/) before proposing anything structural. Six decisions
+are recorded there and they bind changes rather than describe them — notably that
+confidence is a first-class field on every node and edge
+([0004](docs/adr/0004-confidence-is-a-first-class-field.md)), that module nodes
+are one per directory and their IDs are a public contract
+([0003](docs/adr/0003-directory-granularity-for-module-nodes.md)), and that the
+bundle is committed, which is why determinism is a correctness property here
+([0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)).
+
+An ADR is immutable once accepted. A change that reverses one adds a new ADR that
+supersedes it rather than editing the old file — `docs/design.md` described a
+dependency ADR 0001 had already removed, which is exactly the rot the immutability
+rule exists to prevent.
 
 ## What a change should look like
 
