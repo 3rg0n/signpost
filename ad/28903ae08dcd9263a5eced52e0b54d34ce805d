@@ -1,0 +1,26 @@
+.github/dependabot.yml
+  s_f6c0b1ac81cb95::t_c37c906b5502d4 22-33
+  s_f6c0b1ac81cb95::t_1ef568cd54533e 52-57
+renovate.json
+  s_f6c0b1ac81cb95::t_3b607ac6122501 44,48
+  s_f6c0b1ac81cb95::t_bf6cb39f45a784 20-23
+  s_f6c0b1ac81cb95::t_1dd19ca7e3bda6 19
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_ce8d5ba4146463 338-348
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "ad28903ae08dcd9263a5eced52e0b54d34ce805d",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
