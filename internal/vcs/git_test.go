@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/3rg0n/signpost/internal/okf"
 )
 
 // These tests build throwaway repositories and run the real git binary against them.
@@ -360,5 +362,86 @@ func TestReadRespectsCancelledContext(t *testing.T) {
 	// erroring. Either is acceptable; what is not is a hang or a claim of complete history.
 	if err == nil && s.Available && s.Commits > 0 {
 		t.Error("a cancelled context produced a full history read")
+	}
+}
+
+// The identity must not move when a commit only rewrote the bundle.
+//
+// This is the property that lets the artifact converge at all. The bundle is committed, so
+// committing it advances HEAD; if the identity followed HEAD, every bundle would name the
+// commit before its own and `verify` would fail on every committed bundle forever. Tested
+// through real git because the behaviour is entirely a claim about what a pathspec does.
+// bundleDir is duplicated from okf to avoid an import cycle, so the duplication is what
+// gets tested. Without this, a future rename of the bundle directory would leave the
+// exclusion pointing at a path that no longer exists and the convergence property above
+// would silently stop holding.
+func TestBundleDirMatchesTheEmitters(t *testing.T) {
+	if bundleDir != okf.BundleDir {
+		t.Errorf("bundleDir is %q but okf.BundleDir is %q; the exclusion in readHead no "+
+			"longer names the bundle", bundleDir, okf.BundleDir)
+	}
+}
+
+func TestHeadIgnoresCommitsThatOnlyTouchTheBundle(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "internal/a/a.go", "package a\n")
+	gitCommit(t, dir, "the code")
+	code := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	write(t, dir, bundleDir+"/index.md", "# generated\n")
+	gitCommit(t, dir, "bundle [skip ci]")
+	head := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+	if head == code {
+		t.Fatal("the second commit did not land; the test proves nothing")
+	}
+
+	s, err := Read(context.Background(), dir, Options{})
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if s.Head.SHA != code {
+		t.Errorf("identity is %s, want %s: a commit that only regenerated the description "+
+			"did not change the code being described", s.Head.Short(), code[:7])
+	}
+}
+
+// A commit that changes code *and* the bundle is a code change, and the identity moves to
+// it. The exclusion is about commits with nothing else in them, not about ignoring the
+// bundle wherever it appears.
+func TestHeadFollowsACommitThatChangesCodeAndTheBundle(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "internal/a/a.go", "package a\n")
+	write(t, dir, bundleDir+"/index.md", "# generated\n")
+	gitCommit(t, dir, "first")
+
+	write(t, dir, "internal/a/a.go", "package a\n\nfunc A() {}\n")
+	write(t, dir, bundleDir+"/index.md", "# regenerated\n")
+	gitCommit(t, dir, "second")
+	want := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	s, err := Read(context.Background(), dir, Options{})
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if s.Head.SHA != want {
+		t.Errorf("identity is %s, want HEAD %s", s.Head.Short(), want[:7])
+	}
+}
+
+// A repository containing nothing but a bundle still gets stamped. git reports an
+// all-excluded pathspec as empty output and exit 0, which is not an error and must not be
+// read as one — an unstamped page would claim less than the tool knows.
+func TestHeadFallsBackWhenEveryCommitIsBundleOnly(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, bundleDir+"/index.md", "# generated\n")
+	gitCommit(t, dir, "bundle only")
+	want := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	s, err := Read(context.Background(), dir, Options{})
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if s.Head.SHA != want {
+		t.Errorf("identity is %q, want the HEAD fallback %s", s.Head.SHA, want[:7])
 	}
 }

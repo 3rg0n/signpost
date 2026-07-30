@@ -40,6 +40,17 @@ func runVerify(args []string, out, errOut io.Writer) error {
 	// reports a difference that is real and describes the invocation rather than the bundle.
 	repo := fs.String("repo", "",
 		"repository name for the resource URI; must match the build's")
+	// What a pull-request check needs, and why it is a flag rather than the default. The
+	// bundle is built on the default branch only (§8.0), so anywhere else its commit stamp is
+	// behind by construction and a strict verify calls every page stale on a pull request that
+	// changed no code. It is also the only way a single developer can build locally and commit
+	// the bundle with the code: that commit's own sha does not exist when the stamp is written.
+	//
+	// The default stays strict because on the default branch signpost *writes* the stamp, so
+	// something has to check that what it wrote is true. See okf.Options.AsOfBundle.
+	asOf := fs.Bool("as-of-bundle", false,
+		"compare content as of the commit the bundle records, rather than this tree's "+
+			"(for branches and pull requests, where the bundle is older by design)")
 	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -57,7 +68,9 @@ func runVerify(args []string, out, errOut io.Writer) error {
 	}
 	a.Graph().Clusters()
 
-	res, err := okf.Verify(a.Discovered.Root, a.Graph(), buildOptions(a, *repo))
+	opts := buildOptions(a, *repo)
+	opts.AsOfBundle = *asOf
+	res, err := okf.Verify(a.Discovered.Root, a.Graph(), opts)
 	if err != nil {
 		return err
 	}

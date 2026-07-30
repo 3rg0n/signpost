@@ -1,6 +1,7 @@
 package okf
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -453,6 +454,172 @@ func TestStripCodeSpansLeavesLengthAndUnterminatedRuns(t *testing.T) {
 		}
 		if got := stripCodeSpans(in); len(got) != len(in) {
 			t.Errorf("stripCodeSpans(%q) changed length: %d to %d", in, len(in), len(got))
+		}
+	}
+}
+
+// The tests below cover AsOfBundle, and the property they exist to protect is that it
+// relaxes provenance without relaxing the staleness check. Both directions are asserted on
+// every one of them: a bundle whose only difference is the commit passes, and a bundle whose
+// content differs still fails.
+
+// The case that forces the mode to exist. A bundle built at one commit and verified at a
+// later one, with no change to the code in between, is what every branch and every pull
+// request looks like — the bundle is built on the default branch only (§8.0), so its stamp is
+// older by construction and a strict verify calls every page stale.
+func TestVerifyAsOfBundlePassesWhenOnlyTheCommitMoved(t *testing.T) {
+	root, _, g := write(t)
+
+	// What verifying at a later commit means: the same tree, a different sha. Nothing on
+	// disk is touched, so any finding below is about provenance and nothing else.
+	later := demoOptions()
+	later.Resource = "git://example.com/repo@deadbee"
+	later.Date = "2026-08-15"
+
+	strict, err := Verify(root, g, later)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if strict.OK() {
+		t.Fatal("strict verify passed at a later commit, so this test proves nothing about " +
+			"what AsOfBundle changes")
+	}
+
+	later.AsOfBundle = true
+	res, err := Verify(root, g, later)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !res.OK() {
+		t.Fatalf("a bundle whose only difference is the commit did not verify:%s", findings(res))
+	}
+	// The pass covered the whole bundle. A relaxation that also stopped checking pages would
+	// look identical from the exit code alone.
+	if nodes, _ := g.Counts(); res.Checked.Pages != nodes+2 {
+		t.Errorf("checked %d pages, want %d: the mode must relax provenance, not coverage",
+			res.Checked.Pages, nodes+2)
+	}
+	// Announced, never silent. This is the check whose quiet success would destroy the
+	// tool's value, so the run that relaxes it says which commit it judged against.
+	joined := strings.Join(res.Skipped, " ")
+	if !strings.Contains(joined, "provenance") {
+		t.Errorf("the adoption was not reported as skipped: %v", res.Skipped)
+	}
+	if !strings.Contains(joined, "8f2a1c9") {
+		t.Errorf("the skip does not name the commit that was judged against: %v", res.Skipped)
+	}
+}
+
+// The property that makes the mode safe to enable on every pull request: it is still a gate.
+func TestVerifyAsOfBundleStillFailsOnStaleContent(t *testing.T) {
+	root, _, g := write(t)
+	const page = "modules/internal-auth.md"
+	// A change to the description is what a code change looks like by the time it reaches a
+	// page: the same node, different counted facts.
+	edit(t, root, page, func(s string) string {
+		return strings.Replace(s, "description:", "description: stale ", 1)
+	})
+
+	later := demoOptions()
+	later.Resource = "git://example.com/repo@deadbee"
+	later.AsOfBundle = true
+
+	res, err := Verify(root, g, later)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if res.OK() {
+		t.Fatalf("stale content passed under AsOfBundle, so the mode is not a gate:%s",
+			findings(res))
+	}
+	if !has(res.Findings, FindingOutOfDate, page) {
+		t.Errorf("want an out-of-date finding on %s, got:%s", page, findings(res))
+	}
+}
+
+// A missing page is a content difference, not a provenance one. This is the shape a pull
+// request adding a package takes, and it must fail: the bundle genuinely does not describe
+// the repository any more.
+func TestVerifyAsOfBundleFailsOnAMissingPage(t *testing.T) {
+	root, _, g := write(t)
+	const page = "modules/internal-auth.md"
+	if err := os.Remove(filepath.Join(root, BundleDir, filepath.FromSlash(page))); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := demoOptions()
+	opts.AsOfBundle = true
+	res, err := Verify(root, g, opts)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !has(res.Findings, FindingMissingPage, page) {
+		t.Errorf("want a missing-page finding on %s, got:%s", page, findings(res))
+	}
+}
+
+// A bundle that cannot say what it describes adopts nothing, and the strict comparison it
+// falls back to then reports the manifest. Inventing provenance to make the gate pass is the
+// false pass this file exists to prevent, so the mode must not become an escape hatch for a
+// bundle with no record at all.
+func TestVerifyAsOfBundleDoesNotRescueAnUnreadableManifest(t *testing.T) {
+	root, _, g := write(t)
+	edit(t, root, ManifestFile, func(string) string { return "{ not json" })
+
+	opts := demoOptions()
+	opts.AsOfBundle = true
+	res, err := Verify(root, g, opts)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if res.OK() {
+		t.Fatalf("an unparseable manifest passed under AsOfBundle:%s", findings(res))
+	}
+	if !has(res.Findings, FindingConformance, ManifestFile) {
+		t.Errorf("want a conformance finding on the manifest, got:%s", findings(res))
+	}
+}
+
+// The other half of that guard, and the one an implementation is most likely to get wrong.
+// A manifest that parses but records no resource has no provenance to adopt, and adopting an
+// empty one would blank every page's `resource:` — which would then match a fresh render
+// that also has none, turning a bundle that cannot say what it describes into a pass. The
+// strict comparison has to stay in place and report it.
+func TestVerifyAsOfBundleDoesNotRescueAResourcelessManifest(t *testing.T) {
+	root, _, g := write(t)
+	edit(t, root, ManifestFile, func(src string) string {
+		var man map[string]any
+		if err := json.Unmarshal([]byte(src), &man); err != nil {
+			t.Fatal(err)
+		}
+		man["resource"] = ""
+		out, err := json.Marshal(man)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(out)
+	})
+
+	opts := demoOptions()
+	opts.AsOfBundle = true
+	res, err := Verify(root, g, opts)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if res.OK() {
+		t.Fatalf("a manifest recording no resource passed under AsOfBundle:%s", findings(res))
+	}
+	// stale-resource rather than conformance: the file parsed, so the defect is what it
+	// records, not whether it can be read. Conformance is reserved for a manifest no reader
+	// can get a field out of at all.
+	if !has(res.Findings, FindingStaleResource, ManifestFile) {
+		t.Errorf("want a stale-resource finding on the manifest, got:%s", findings(res))
+	}
+	// Nothing was adopted, so nothing is announced. A skip naming an empty commit would be
+	// exactly the false reassurance this test exists to rule out.
+	for _, s := range res.Skipped {
+		if strings.Contains(s, "provenance") {
+			t.Errorf("adopted provenance from a manifest that has none: %q", s)
 		}
 	}
 }

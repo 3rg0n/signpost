@@ -23,6 +23,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0004](0004-confidence-is-a-first-class-field.md) | Confidence is a first-class field on every node and edge | Accepted |
 | [0005](0005-commit-the-bundle-to-the-repository.md) | Commit the bundle to the repository | Accepted |
 | [0006](0006-generator-and-viewer-are-separate-repositories.md) | Generator and viewer are separate repositories | Accepted |
+| [0007](0007-the-bundle-names-the-commit-it-describes.md) | The bundle names the commit it describes, and staleness is a content comparison | Accepted |
 
 ## Decisions still owed one
 

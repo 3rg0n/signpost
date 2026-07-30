@@ -196,6 +196,94 @@ All notable changes to this project are documented here. Format follows
   without an assertion a regression that stopped reading git would leave the job
   green while the bundle silently lost churn and co-change.
 
+- The `signpost` workflow rebuilds the bundle on push to the default branch and
+  checks it on pull requests, which is what makes the committed artifact useful in
+  a repository where nobody installed signpost ([ADR 0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)).
+  Two jobs with deliberately different strictness, because §8.0 keeps the bundle
+  off branches so two branches cannot conflict inside `.signpost/`:
+
+  - **build**, on push to `main`, is the only place the bundle is ever written. It
+    builds the binary from this repository rather than installing a release — a
+    repository that analyses itself must use the code it currently contains, or the
+    bundle describes one thing while being produced by another — then verifies
+    *strictly*, and commits only when the bytes changed. A run that committed
+    regardless would put a no-op commit on the default branch for every push.
+  - **verify**, on pull requests, checks the bundle's content and writes nothing.
+
+  All three loop guards [ADR 0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)
+  requires are present, since a workflow that commits to the repository triggering
+  it will otherwise trigger itself: `paths-ignore` on `.signpost/**`, a skip when
+  the actor is the bot, and `[skip ci]` on the bot's commit. The actor is tested
+  rather than the commit message, because a message is content a contributor can
+  copy by accident. Convergence was rehearsed against real git rather than
+  reasoned about: five consecutive runs produced one commit, two no-ops, then one
+  commit for a code change and one more no-op.
+
+  The pull-request job skips when the *base branch* has no bundle yet, which is the
+  state every repository is in on the day it adopts signpost. Found by opening the
+  pull request that added the workflow — the only way it could have been found — where
+  the gate failed telling a contributor to run `signpost build`, the one thing §8.0
+  forbids on a branch. The condition is deliberately narrower than "is there a bundle
+  here": a pull request that *deletes* the bundle still fails, because the base has it
+  and the tree does not. An unresolvable base ref fails loudly rather than skipping,
+  since that is a fault in the checkout rather than a fact about the repository, and a
+  gate that quietly skips when it cannot see is the false pass `verify` exists to
+  prevent.
+
+  Two details are load-bearing and neither is obvious. The commit step stages
+  before it asks, because `git diff` reports modifications to tracked files and
+  says nothing about new ones — on a first-ever run, when the whole bundle is
+  untracked, a plain `git diff --quiet` reports no change and the bundle would
+  never be committed at all. And the push is `--force-with-lease`: concurrency
+  queues runs but does not stop a human pushing between this job's checkout and
+  its push, and overwriting someone's commit to land generated markdown would be
+  the worst possible trade. Both jobs check out with `fetch-depth: 0`, because a
+  bundle built from a shallow clone records thinner history than the repository
+  has while carrying an identical commit stamp.
+
+- `signpost verify -as-of-bundle` compares the bundle's content while taking
+  provenance from the bundle's own record, which is what a pull-request check
+  needs and what lets a single developer build locally and commit the bundle with
+  their code. Recorded as [ADR 0007](docs/adr/0007-the-bundle-names-the-commit-it-describes.md),
+  because it is a public contract about what `verify` promises.
+
+  It exists because a consequence of §8.0 is not optional. The bundle is built on
+  the default branch only, so on a branch its committed stamp names an older commit
+  *by construction* — and the stamp is part of every page's bytes, so a strict
+  verify calls every page stale on every pull request, including one that changed
+  no code at all. Measured on a documentation-only branch: exit 1, five problems,
+  and the only difference in the diff was the sha. A gate that is red on a typo is
+  a gate people switch off, after which the staleness check this tool is built
+  around is gone. The single-developer pattern is blocked the same way and worse:
+  building locally and committing the bundle alongside the code stamps the
+  *parent*, because the sha of the commit carrying the stamp does not exist when
+  the stamp is written.
+
+  It does not weaken the gate. Only the two provenance fields come from
+  `manifest.json`; content is still compared byte for byte against a fresh render,
+  so a branch that changes what the map says still fails — measured on a branch
+  adding a package: `modules/b.md: the repository has this concept and the bundle
+  has no page for it`. Provenance is read from the manifest rather than from a page
+  because the manifest is the one file in the bundle no human has a claim on, and a
+  missing or unparseable one adopts nothing and leaves the strict comparison in
+  place, which then reports it. Nothing validates the recorded sha against git: the
+  manifest reaches the tree the same way every other file does, through a commit,
+  which makes it exactly as authoritative as the source being analysed — and a
+  forged stamp can mislabel which commit produced a page but cannot hide a stale
+  one, because the content comparison runs either way.
+
+  It is a flag rather than the default, and it names the commit it judged against
+  in the run's `skipped:` output. The default stays strict because on the default
+  branch signpost is the thing that *writes* the stamp, so something has to check
+  that what it wrote is true — which is not hypothetical, per the fix below.
+
+  One boundary is documented rather than worked around: a bundle built locally and
+  committed atomically with its code still shows drift in history attributes, since
+  a directory inside the pending commit gains a commit once it lands. You cannot
+  record a commit's history before making it. Build with `-no-history` for a
+  structure-only bundle that verifies clean atomically, or commit the code first
+  and the bundle second, which is what CI does.
+
 ### Fixed
 
 #### 2026-07-30
@@ -217,6 +305,31 @@ that does not actually run an install.
   `/releases/latest` needed `-L` to actually follow the redirect. The tag is
   also stripped of the trailing carriage return a header line carries, and the
   failure message now prints what it parsed instead of only that it failed.
+
+- The bundle stamped the wrong commit, one behind, forever. The identity came from
+  `HEAD`, and committing the bundle advances `HEAD` — so a committed bundle named
+  the commit before the one carrying it, the next run re-stamped, and that commit
+  moved `HEAD` again. The artifact never converged: `verify` failed on every
+  committed bundle and the workflow committed on every push in perpetuity, which is
+  precisely the commit churn [ADR 0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)
+  identifies as the fastest way to kill adoption.
+
+  The identity is now the newest commit that changed something other than the
+  bundle, per [ADR 0007](docs/adr/0007-the-bundle-names-the-commit-it-describes.md).
+  A commit whose only effect was regenerating the description did not change the
+  code being described; one that changed code *and* the bundle is a code change and
+  does move it. A repository containing nothing but a bundle falls back to `HEAD`,
+  since git reports an all-excluded pathspec as empty output and exit 0 rather than
+  as an error, and an unstamped page would claim less than the tool knows.
+
+  Found by the strict `verify` in CI, which is the argument for keeping it strict
+  on the branch that writes the stamp: a content-only comparison would have had
+  both sides wrong in the same way and reported nothing. The bundle directory name
+  is now load-bearing in `internal/vcs`, which cannot import `internal/okf` — it
+  reads the graph `vcs` feeds — so the constant is duplicated with a test that
+  fails if the two ever disagree. A silent rename would otherwise leave the
+  exclusion pointing at a path that no longer exists and stop convergence with
+  every test still green.
 
 ### Changed
 
