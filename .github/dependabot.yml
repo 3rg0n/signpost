@@ -19,6 +19,18 @@ updates:
       time: "06:00"
       timezone: Etc/UTC
     open-pull-requests-limit: 5
+    # A version has to have existed for a week before Dependabot proposes it. The
+    # threat this addresses is not a bad release, it is a hostile one: an account
+    # takeover publishes a malicious version, and the window between publication and
+    # the ecosystem noticing is measured in hours. A tool whose whole posture is
+    # "dependencies we can patch ourselves" should not be the fastest adopter of a
+    # version nobody has looked at yet.
+    #
+    # Security advisories are exempt by design — Dependabot ignores cooldown for
+    # them, which is the correct asymmetry: a known CVE is a reason to move faster,
+    # not to wait.
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
     commit-message:
@@ -37,6 +49,12 @@ updates:
       time: "06:00"
       timezone: Etc/UTC
     open-pull-requests-limit: 5
+    # Same week, and it matters more here than for Go modules. An action runs with
+    # write access on this repository, so a hijacked tag is not a dependency problem
+    # but a direct supply-chain position — the case the SHA pinning above already
+    # assumes will happen, since it has.
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - ci

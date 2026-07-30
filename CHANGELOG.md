@@ -335,6 +335,17 @@ that does not actually run an install.
 
 #### 2026-07-30
 
+- Dependabot and Renovate both wait seven days before proposing a version. The
+  threat this addresses is not a bad release but a hostile one: an account takeover
+  publishes a malicious version, and the window between publication and the ecosystem
+  noticing is measured in hours. A tool whose whole posture is "dependencies we can
+  patch ourselves"
+  ([ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md)) should
+  not also be the fastest adopter of a version nobody has looked at yet. Security
+  advisories are exempt in both tools, which is the right asymmetry — a known CVE is a
+  reason to move faster, not to wait. Both were flagged by `semgrep --config=auto`,
+  which is now clean.
+
 - CI gates both installers as pure ASCII and parses `install.ps1` under
   **Windows PowerShell 5.1 as well as pwsh 7**, on a Windows runner. The
   previous check ran only under pwsh 7, which defaults to UTF-8 and parsed the
