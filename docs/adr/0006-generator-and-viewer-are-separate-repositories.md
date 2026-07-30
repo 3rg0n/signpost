@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0008](0008-the-viewer-lives-in-this-repository.md).
+
+The record below stays as written. Its first premise — that a viewer worth using needs a
+JavaScript dependency tree — did not survive contact with the generator's real output, and
+0008 records what replaced it.
 
 ## Context
 

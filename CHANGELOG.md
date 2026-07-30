@@ -284,6 +284,59 @@ All notable changes to this project are documented here. Format follows
   structure-only bundle that verifies clean atomically, or commit the code first
   and the bundle second, which is what CI does.
 
+- A graph viewer at [`/graph.html`](https://3rg0n.github.io/signpost/graph.html),
+  and a switch in the top bar of both pages for moving between the overview and
+  it. The graph is the thing the tool produces and the landing page could only
+  describe it, so the page that advertises the tool now shows its actual output on
+  its own repository: every node, edge, attribute, and file path comes from
+  `signpost export -format json`, generated at deploy time and never committed
+  (`site/graph.json` is gitignored). Nodes are filterable by kind, edges by kind,
+  and selecting one shows what signpost read about it — attributes, files linked
+  to the repository, and incident edges.
+
+  It lives in `site/` with **no `package.json`, no lockfile, and no JavaScript
+  dependencies**, which is [ADR 0008](docs/adr/0008-the-viewer-lives-in-this-repository.md)
+  superseding [ADR 0006](docs/adr/0006-the-generator-and-the-viewer-are-separate-repositories.md).
+  0006 split the viewer into its own repository on the premise that anything worth
+  using needs a dependency tree the generator cannot afford to govern. The real
+  export is 25 nodes and 27 edges across three node kinds; a node-link view over
+  that is hand-written SVG, and the premise did not survive the measurement. A
+  real graph library would need a new ADR, at which point the split becomes live
+  again — "just one small dependency" is how the property in ADR 0002 decays.
+
+  Four decisions worth knowing, each of which is a defect if it goes the other
+  way:
+
+  - **Every string in the viewer came out of a repository**, which is a real
+    injection surface. There is no `innerHTML` anywhere in `graph.js`: nodes are
+    built with `createElement` and `textContent`, class and attribute values are
+    restricted to `[a-z0-9-]`, and file paths are `encodeURI`d before going into
+    an `href`. The CSP (`default-src 'none'`, no `unsafe-inline` in `script-src`)
+    is the backstop for a bug in that discipline, not the defence itself.
+  - **Layout runs per connected component.** A single force pass cannot place a
+    node with no edges — nothing balances the repulsion, so the 16 edgeless nodes
+    pushed to the frame edge and collapsed the connected core into a corner. The
+    nodes with edges get a force layout; the nodes without get a captioned band
+    that says so. "signpost read no edges here" is a finding, and a tidy labelled
+    row states it where a scatter around the rim looks like an accident.
+  - **Co-change edges have no arrowheads.** The relation is symmetric — two
+    directories changed in the same commits — and the generator records it as a
+    pair of directed edges. Drawing a head, or listing both directions in the
+    detail panel, would assert a direction the data does not carry, so reciprocal
+    same-kind edges fold to `↔`.
+  - **The arrangement is deterministic.** A seeded generator, never
+    `Math.random()`: someone who reloads and sees a different picture cannot tell
+    whether the repository changed.
+
+  The Pages workflow now builds the binary, exports the graph, and fails rather
+  than publishing an empty one. It checks out with `fetch-depth: 0` because
+  co-change comes from `git log` — a shallow clone would publish a graph quietly
+  missing an entire edge kind. It deploys on every push rather than on a `paths:`
+  filter: the graph derives from the whole tree, so a filter naming source
+  directories goes stale the first time one is added. This workflow is still not a
+  required check, so a broken deploy cannot fail a merge — the isolation ADR 0006
+  wanted is this workflow's topology, not a repository boundary.
+
 ### Fixed
 
 #### 2026-07-30
@@ -354,6 +407,17 @@ that does not actually run an install.
   and errors out under `LC_ALL=C` in others, and it branches on the exit code
   explicitly: 1 is clean, 0 is a finding, anything else means the check itself
   broke. An `if grep ...` would have read that error as "nothing found".
+
+- The landing page's hero and status table were describing a repository two weeks
+  behind the one they sit in — 11 nodes and 13 edges against a real 25 and 27 —
+  and the table still advertised the viewer as a separate repository. Both now
+  match `signpost graph .`, which matters more than it did: the numbers are one
+  click away from the rendered graph that would contradict them.
+
+- Below the viewer's three-column breakpoint the plot scrolls horizontally against
+  a minimum width rather than scaling to fit. The whole picture is one viewBox, so
+  a phone-width column shrank the 11px node labels to about 5px, which is not
+  reading. A graph you pan is usable; a graph whose labels you cannot read is not.
 
 ## [0.0.1] — 2026-07-30
 

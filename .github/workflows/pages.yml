@@ -1,18 +1,25 @@
 name: pages
 
-# Deploys the landing page in site/ to GitHub Pages.
+# Deploys the landing page and the graph viewer in site/ to GitHub Pages.
 #
 # Deliberately separate from ci.yml and off the merge path (design §7): if this
-# workflow breaks, merges keep working and the binary is unaffected. There is no
-# build step and nothing to install — site/ is hand-written HTML and CSS, so the
-# job uploads the directory as it stands. The interactive viewer, and every JS
-# dependency in this project, lives in the separate signpost-view repository.
+# workflow breaks, merges keep working and the binary is unaffected. That
+# separation is what lets the viewer live in this repository at all — ADR 0008
+# supersedes 0006, and the isolation it relies on is this workflow's topology, not
+# a repository boundary. This is never a required check.
+#
+# site/ is hand-written HTML, CSS, and JavaScript with no dependencies, so there
+# is nothing to install. The one build step is signpost itself: the viewer reads
+# graph.json, which is generated here rather than committed, because it has no
+# value without the page that reads it.
 on:
   push:
     branches: [main]
-    paths:
-      - "site/**"
-      - ".github/workflows/pages.yml"
+    # Deliberately unfiltered. The graph is derived from the whole tree, so any
+    # commit can change what this publishes, and a paths: list naming source
+    # directories would go stale the first time a new one was added. The
+    # bundle-rebuild commit cannot serve as the trigger instead: it carries
+    # [skip ci] by design (ADR 0005), which suppresses every workflow.
   workflow_dispatch:
 
 permissions:
@@ -39,6 +46,33 @@ jobs:
       # Pinned by commit SHA rather than tag: a tag is mutable, and these actions
       # run in a job that can publish to a public URL.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Required, not a precaution: co-change edges come from git log, so a
+          # shallow clone publishes a graph quietly missing an entire edge kind
+          # rather than one that fails.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The viewer's data. Generated here and never committed (ADR 0008): a
+      # committed copy would be a second artifact that can go stale, in a project
+      # whose central claim is that stale fails loudly.
+      - name: Generate the graph the viewer reads
+        run: |
+          set -euo pipefail
+          go build -o signpost ./cmd/signpost
+          ./signpost export -format json -o site/graph.json .
+          # A viewer fed an empty graph renders an empty frame and looks like it
+          # works, so the deploy fails here instead.
+          node_count=$(grep -c '"id":' site/graph.json)
+          echo "graph.json carries ${node_count} node(s)"
+          if [ "${node_count}" -lt 1 ]; then
+            echo "the export produced no nodes; not publishing an empty graph" >&2
+            exit 1
+          fi
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

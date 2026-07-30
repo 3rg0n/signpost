@@ -209,8 +209,9 @@ moves, and it verifies clean.
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
+| [Graph viewer](https://3rg0n.github.io/signpost/graph.html) — in `site/`, no JS dependencies | done |
 | Semantic pass (local IPC, or any OpenAI-compatible endpoint) | v0.2 |
-| `signpost-view` — GitHub Pages viewer | v0.4, separate repo |
+| Viewer: search, diff between commits, deep links to source | v0.4 |
 
 The deterministic core is usable end-to-end: build a bundle, commit it, and CI keeps
 it honest. What v0.2 adds is the semantic pass — the summaries that say what a module
@@ -229,6 +230,12 @@ Requires Go 1.26+. There are no third-party dependencies — `go.mod` has no
 [ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md), not the
 policy itself: the rule is that every dependency must be one we can bump
 ourselves, and the bar is high enough that nothing has cleared it.
+
+The same holds for the site in `site/`, which carries the landing page and the
+graph viewer: hand-written HTML, CSS, and JavaScript, with no `package.json` and no
+lockfile ([ADR 0008](docs/adr/0008-the-viewer-lives-in-this-repository.md)). It is
+published by a workflow that is off the merge path, so a broken deploy cannot fail
+a build.
 
 ```bash
 go build ./cmd/signpost

@@ -1,20 +1,20 @@
 ---
 type: Document
 title: "ADR 0006: generator and viewer are separate repositories"
-description: Architecture decision (Accepted), 21 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
-resource: git://github.com/3rg0n/signpost@1fc38be2aa4a6970091541506bd34191928da885/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
-tags: [accepted, adr, constraint]
+description: Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
+resource: git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
+tags: [adr, constraint, superseded]
 generated: { by: signpost/dev, at: "2026-07-30" }
 attributes:
   - { name: number, value: "0006" }
-  - { name: rules, value: "21" }
+  - { name: rules, value: "22" }
   - { name: sections, value: 6. Generator and viewer are separate repositories / Consequences, 6. Generator and viewer are separate repositories / Context, 6. Generator and viewer are separate repositories / Decision, 6. Generator and viewer are separate repositories / Status }
-  - { name: status, value: Accepted }
+  - { name: status, value: Superseded }
 ---
 # ADR 0006: generator and viewer are separate repositories
 
 <!-- signpost:managed:summary -->
-Architecture decision (Accepted), 21 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
+Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
 <!-- /signpost:managed:summary -->
 
 ## Structure
