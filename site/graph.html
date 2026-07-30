@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>signpost — the graph of this repository</title>
+    <meta
+      name="description"
+      content="The module graph signpost extracts from its own repository, rendered from graph.json. Nodes are directories, edges are imports and co-change."
+    />
+
+    <!-- Design §7.2 and ADR 0008: the page interpolates strings that came out of a
+         repository, which is the one real vulnerability class here. `default-src
+         'none'` plus no `unsafe-inline` in script-src means an injected <script>
+         does not execute even if a bug puts one in the DOM. The script builds
+         every node with createElement and textContent; there is no innerHTML in
+         graph.js. `connect-src 'self'` allows exactly one fetch: graph.json. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f151d" />
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="topbar__lead">
+        <span class="topbar__mark">signpost</span>
+        <nav class="views" aria-label="view">
+          <a class="views__item" href="index.html">overview</a>
+          <a class="views__item" href="graph.html" aria-current="page">graph</a>
+        </nav>
+      </div>
+      <nav class="topbar__nav" aria-label="sections">
+        <a href="https://github.com/3rg0n/signpost">repository</a>
+      </nav>
+    </header>
+
+    <main id="main" class="viewer">
+      <div class="viewer__head">
+        <h1 class="viewer__title">The graph of this repository</h1>
+        <p class="viewer__sub">
+          Every node and edge below was read out of the repository by
+          <code>signpost export -format json</code> at deploy time. Nodes are
+          directories; edges are imports and files that change together.
+        </p>
+      </div>
+
+      <!-- Populated by graph.js. The fallback text is what a reader sees if the
+           fetch fails or scripting is off, and it says what to run instead
+           rather than only that something is missing. -->
+      <div class="viewer__stage">
+        <div class="viewer__controls" hidden data-controls>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">show</legend>
+            <div class="ctl__set" data-kind-filters></div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">edges</legend>
+            <div class="ctl__set" data-edge-filters></div>
+          </fieldset>
+          <p class="ctl__count" data-count aria-live="polite"></p>
+        </div>
+
+        <figure class="plot" data-plot>
+          <p class="plot__fallback" data-fallback>
+            Loading <code>graph.json</code>. If nothing appears, the graph can be
+            read without this page: run
+            <code>signpost graph .</code> for the text findings, or
+            <code>signpost export -format graphml .</code> and open it in yEd.
+          </p>
+        </figure>
+
+        <aside class="detail" data-detail hidden>
+          <p class="detail__hint" data-detail-hint>
+            Select a node to see what signpost read about it.
+          </p>
+          <div data-detail-body hidden>
+            <h2 class="detail__title" data-detail-title></h2>
+            <p class="detail__kind" data-detail-kind></p>
+            <p class="detail__desc" data-detail-desc></p>
+            <dl class="detail__attrs" data-detail-attrs></dl>
+            <div data-detail-files hidden>
+              <h3 class="detail__sub">files</h3>
+              <ul class="detail__list" data-detail-filelist></ul>
+            </div>
+            <div data-detail-edges hidden>
+              <h3 class="detail__sub">edges</h3>
+              <ul class="detail__list" data-detail-edgelist></ul>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <p class="viewer__note">
+        <span class="u-key" aria-hidden="true"></span>
+        A dashed edge is inferred rather than read. Everything in this graph is
+        currently solid, which is signpost reporting that it has not guessed —
+        not that there is nothing left to find.
+      </p>
+    </main>
+
+    <footer class="foot">
+      <p class="foot__line">
+        <a href="https://github.com/3rg0n/signpost">github.com/3rg0n/signpost</a>
+        <span class="foot__sep" aria-hidden="true">·</span>
+        <a href="https://github.com/3rg0n/signpost/blob/main/docs/design.md">design</a>
+        <span class="foot__sep" aria-hidden="true">·</span>
+        <a href="https://github.com/3rg0n/signpost/blob/main/CONTRIBUTING.md">contributing</a>
+      </p>
+      <p class="foot__line foot__line--quiet">MIT · 3rg0n</p>
+    </footer>
+
+    <script src="graph.js"></script>
+  </body>
+</html>

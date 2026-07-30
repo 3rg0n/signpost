@@ -1,7 +1,7 @@
-/* signpost — landing page.
+/* signpost — the landing page and the graph viewer.
  *
- * Hand-written CSS, no build step, no JavaScript. Every JS dependency in this
- * project lives in the separate signpost-view repository (design §7): the page
+ * Hand-written CSS, no build step. The viewer's JavaScript is hand-written too,
+ * and there are no JS dependencies anywhere in this project (ADR 0008): the page
  * that advertises a tool with no dependencies should not itself ship a tree of
  * them.
  *
@@ -125,6 +125,13 @@ code {
   color: var(--ink-faint);
 }
 
+.topbar__lead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.5rem;
+  align-items: baseline;
+}
+
 .topbar__nav {
   display: flex;
   flex-wrap: wrap;
@@ -140,6 +147,47 @@ code {
 
 .topbar__nav a:hover {
   color: var(--ink);
+}
+
+/* --- the view switch ------------------------------------------------------- */
+
+/* Two views, drawn as one segmented control rather than two adjacent links: the
+   pair is a single choice with a current state, and a reader should be able to
+   see which one they are on without reading the URL. */
+.views {
+  display: flex;
+  border: 1px solid var(--rule);
+}
+
+.views__item {
+  padding: 0.3rem 0.85rem;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.views__item + .views__item {
+  border-left: 1px solid var(--rule);
+}
+
+.views__item:hover {
+  color: var(--ink);
+  background: var(--raised);
+}
+
+/* The current view is filled rather than coloured. Amber is reserved for the
+   unverified and a link is never the thing the page is pleased about, so the
+   only signal available is weight. */
+.views__item[aria-current="page"] {
+  color: var(--ground);
+  background: var(--ink);
+}
+
+.views__item[aria-current="page"]:hover {
+  color: var(--ground);
+  background: var(--ink);
 }
 
 /* --- hero ------------------------------------------------------------------ */
@@ -470,6 +518,416 @@ code {
 
 .status .is-open td {
   color: var(--unsure);
+}
+
+/* --- the graph viewer ------------------------------------------------------ */
+
+.viewer {
+  padding: clamp(2.25rem, 6vw, 3.5rem) var(--gutter) 0;
+}
+
+.viewer__title {
+  margin: 0;
+  max-width: 24ch;
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.viewer__sub {
+  margin: 1.1rem 0 0;
+  max-width: var(--measure);
+  color: var(--ink-dim);
+  font-size: 0.95rem;
+}
+
+/* Controls, plot, detail. The plot takes the free space; the two side columns
+   are fixed, because a filter list that reflows as the window moves is harder to
+   use than one that does not. */
+.viewer__stage {
+  display: grid;
+  grid-template-columns: 13.5rem minmax(0, 1fr) 17rem;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  margin: clamp(1.75rem, 4vw, 2.5rem) 0 0;
+  align-items: start;
+}
+
+.viewer__controls {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.ctl {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ctl__legend {
+  padding: 0;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ctl__set {
+  display: grid;
+  gap: 1px;
+  margin-top: 0.7rem;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.ctl__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--ground);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+}
+
+.ctl__item:hover {
+  background: var(--raised);
+}
+
+.ctl__box {
+  flex: none;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.ctl__swatch {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 1px solid var(--ink-dim);
+}
+
+/* Node kinds get a fill, edge kinds get a line — the same grammar the plot uses,
+   so the legend is readable against the picture rather than beside it. */
+.ctl__item[data-mark="module"] .ctl__swatch {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.ctl__item[data-mark="document"] .ctl__swatch {
+  background: transparent;
+  border-color: var(--ink);
+}
+
+.ctl__item[data-mark="external-dependency"] .ctl__swatch {
+  background: var(--ink-faint);
+  border-color: var(--ink-faint);
+  border-radius: 50%;
+}
+
+.ctl__item[data-mark="imports"] .ctl__swatch,
+.ctl__item[data-mark="co-changes"] .ctl__swatch {
+  width: 1.1rem;
+  height: 0;
+  border: 0;
+  border-top: 2px solid var(--ink-dim);
+  background: none;
+}
+
+.ctl__item[data-mark="co-changes"] .ctl__swatch {
+  border-top-style: dotted;
+}
+
+.ctl__name {
+  flex: 1 1 auto;
+  color: var(--ink);
+}
+
+.ctl__num {
+  flex: none;
+  color: var(--ink-faint);
+}
+
+.ctl__count {
+  margin: 0;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.plot {
+  margin: 0;
+  border: 1px solid var(--rule);
+  background: var(--raised);
+}
+
+.plot__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.plot__fallback {
+  margin: 0;
+  padding: clamp(2rem, 6vw, 4rem) 1.25rem;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Edges sit under the nodes and are quiet until something is selected. A graph
+   where every edge is as loud as every node reads as a mesh. */
+.plot__edge {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.plot__edge--co-changes {
+  stroke-dasharray: 1 3;
+}
+
+/* Inferred: amber and dashed, the same distinction the exports draw. */
+.plot__edge--u {
+  stroke: var(--unsure);
+  stroke-dasharray: 5 4;
+}
+
+.plot__edge.is-lit {
+  stroke: var(--ink);
+  opacity: 1;
+}
+
+.plot__edge.is-dim {
+  opacity: 0.12;
+}
+
+.plot__head {
+  fill: var(--ink-faint);
+}
+
+.plot__head--u {
+  fill: var(--unsure);
+}
+
+.plot__dot {
+  fill: var(--ink);
+  stroke: var(--raised);
+  stroke-width: 1.5;
+}
+
+.plot__node--document .plot__dot {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.plot__node--external-dependency .plot__dot {
+  fill: var(--ink-faint);
+}
+
+.plot__label {
+  fill: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.plot__rule {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.plot__band {
+  fill: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plot__node {
+  cursor: pointer;
+}
+
+.plot__node:hover .plot__dot {
+  stroke: var(--ink);
+}
+
+.plot__node:hover .plot__label {
+  fill: var(--ink);
+}
+
+.plot__node.is-sel .plot__dot {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.plot__node.is-sel .plot__label {
+  fill: var(--ink);
+}
+
+.plot__node.is-dim {
+  opacity: 0.22;
+}
+
+.plot__node:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* --- the detail panel ------------------------------------------------------ */
+
+/* The panel scrolls rather than growing. A node with fifty files would otherwise
+   stretch the page far past the plot it belongs to, leaving the graph stranded at
+   the top of a mostly empty screen. */
+.detail {
+  padding: 1.1rem 1.15rem 1.35rem;
+  border: 1px solid var(--rule);
+  background: var(--raised);
+  font-size: 0.86rem;
+  max-height: 41rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.detail__hint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.detail__title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.detail__kind {
+  margin: 0.35rem 0 0;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.detail__desc {
+  margin: 0.9rem 0 0;
+  color: var(--ink-dim);
+}
+
+.detail__desc:empty {
+  display: none;
+}
+
+.detail__attrs {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  margin: 1.1rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+
+.detail__attrs dt {
+  color: var(--ink-faint);
+}
+
+.detail__attrs dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.detail__sub {
+  margin: 1.35rem 0 0.55rem;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.detail__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  line-height: 1.85;
+}
+
+.detail__list li {
+  overflow-wrap: anywhere;
+  color: var(--ink-dim);
+}
+
+.detail__list a {
+  color: var(--ink-dim);
+}
+
+.detail__list a:hover {
+  color: var(--ink);
+}
+
+.detail__list code {
+  color: var(--ink-faint);
+}
+
+.detail__edgekind {
+  color: var(--ink-faint);
+}
+
+.detail__u {
+  margin-left: 0.4rem;
+  color: var(--unsure);
+}
+
+.viewer__note {
+  display: flex;
+  gap: 0.85rem;
+  margin: clamp(1.5rem, 3vw, 2rem) 0 0;
+  max-width: 44rem;
+  color: var(--ink-dim);
+  font-size: 0.86rem;
+}
+
+/* Under about 68rem the three columns stop fitting: the plot gets too narrow for
+   the labels before the side columns get too narrow for their content. */
+@media (max-width: 68rem) {
+  .viewer__stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .viewer__controls {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    align-items: start;
+  }
+
+  /* The plot is one 1000-unit viewBox, so a narrow column scales the entire
+     picture down — labels included. At phone width that puts the 11px node
+     labels at about 5px, which is not reading, it is guessing. Below this
+     breakpoint the plot keeps a floor and scrolls sideways instead: a graph you
+     pan is usable, a graph whose labels you cannot read is not. */
+  .plot {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .plot__svg {
+    min-width: 52rem;
+  }
 }
 
 /* --- footer ---------------------------------------------------------------- */

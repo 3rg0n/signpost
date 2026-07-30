@@ -10,8 +10,9 @@ command, output is markdown.
 - **Status:** design, pre-implementation
 - **Language:** Go, single static binary
 - **Output format:** [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
-- **Shape:** two repos — `signpost` (generator, runs in CI) and `signpost-view`
-  (viewer, publishes to GitHub Pages). See §7.
+- **Shape:** one repo. The Go generator runs in CI; the viewer is hand-written
+  HTML/CSS/JS in `site/`, published to GitHub Pages by a workflow off the merge
+  path. See §7.
 
 ---
 
@@ -90,12 +91,13 @@ Which yields:
 | Model access | Two backends behind one interface (§5). Both first-party over stdlib `net` and `net/http`. |
 | SCIP enrichment | `google.golang.org/protobuf` under a build tag — Google-published, heavily audited, already in codeatlas. |
 | Generator output | Markdown and JSON only. Nothing executable. |
-| Viewer | Separate repo, separate dependency tree, separate blast radius (§7). |
+| Viewer | Hand-written HTML, CSS, and JavaScript in `site/`. Zero JS dependencies, so there is no second dependency tree to govern (§7, ADR [0008](adr/0008-the-viewer-lives-in-this-repository.md)). |
 
 Nothing in the generator path executes or renders untrusted input. The output is
 markdown; the worst a hostile repo can do is put ugly strings in a `.md` file.
-Every JS dependency lives in the viewer repo, which never runs in CI on a
-protected branch and cannot break a merge.
+The viewer does render repo strings into a page, which is a real vulnerability
+class — contained by the rules in §7.2 and by a deploy workflow that cannot break
+a merge.
 
 ---
 
@@ -507,14 +509,23 @@ a hand-written template path would have been two.
 
 ---
 
-## 7. Two repos: generator and viewer
+## 7. One repo: generator and viewer
 
-> Recorded as ADR [0006](adr/0006-generator-and-viewer-are-separate-repositories.md).
+> Recorded as ADR [0008](adr/0008-the-viewer-lives-in-this-repository.md), superseding
+> [0006](adr/0006-generator-and-viewer-are-separate-repositories.md), which put the
+> viewer in a second repository.
 
-The generator and the visual are separate products with different audiences,
-different dependency trees, and different risk profiles. Splitting them is what
-lets the viewer be genuinely good without putting a JS dependency tree anywhere
-near a protected branch.
+The generator and the visual are separate products with different audiences and
+different risk profiles, but they do not need separate repositories to stay apart.
+What has to stay off the merge path is the *deploy*, and that is a property of the
+workflow topology: `pages.yml` has its own trigger, its own concurrency group, and
+its own permissions, and is never a required check.
+
+The dependency tree the split was protecting against is not needed. Measured on
+this repository, the graph is 23 nodes and 27 edges across three node kinds — a
+node-link view over that is hand-written SVG, not a graph library. So the viewer
+lives in `site/` with **zero JavaScript dependencies**, and the generator's
+posture is unchanged.
 
 ### 7.1 `signpost` — the generator
 
@@ -545,31 +556,34 @@ The structural findings — hubs, cycles, bridges, orphans, doc/code islands —
 written as **text** in `index.md`, because that is what an agent consumes. A
 picture is for the human skim; the prose is the load-bearing artifact.
 
-### 7.2 `signpost-view` — the viewer
+### 7.2 `site/` — the landing page and the viewer
 
-A static site generator that consumes `graph.json` and publishes to **GitHub
-Pages**. Each repo gets a browsable graph at its Pages URL — no install, no local
-server, nothing to run. The interactive view lives at a URL a person can bookmark
-and paste into a review.
+Hand-written HTML, CSS, and JavaScript, published to **GitHub Pages** by
+`pages.yml`. Two pages sharing one stylesheet and one top bar: the landing page,
+and `graph.html` — a browsable node-link view of this repository's own graph. No
+install, no local server, nothing to run, and a URL a person can paste into a
+review.
 
-Why this split is strictly better than bundling an `HTML` output into the
-generator:
+The seam is `graph.json`, produced by `signpost export -format json` in the deploy
+job and **not committed**: it has no value without the page that reads it, and a
+committed copy would be a second artifact that can go stale.
 
-- **Blast radius.** Every JS dependency lives here. A CVE in the graph library is
-  a bump in a repo that publishes a static site, not in the binary that gates
-  merges. The generator's dependency tree stays auditable on its own terms.
-- **Not in the merge path.** Pages deploy is a separate workflow. If the viewer
-  build breaks, merges keep working and the bundle is still correct.
-- **The dangerous part becomes tractable.** The known vulnerability class here is
-  interpolating untrusted repo strings into a page. Isolated in a viewer, that is
-  one repo with one job: escape everything, no `innerHTML`, a strict CSP, no
-  network egress from the page, and `graph.json` treated as untrusted input even
-  though we generated it. That is a reviewable security boundary rather than a
-  feature buried in a general-purpose tool.
-- **It can be properly good.** Freed from "must not add deps to the thing that
-  gates merges," the viewer can have real filtering, search, diff-between-commits,
-  and deep links to source. A generator that also renders HTML can never afford
-  any of that.
+The constraints, which are the whole reason this can live here:
+
+- **Zero JavaScript dependencies.** No `package.json`, no lockfile, no npm or
+  pnpm anywhere in this repository. The layout is a hand-written
+  Fruchterman-Reingold pass; the rest is filtering and a detail panel. If the
+  viewer ever genuinely needs a graph library, that is a new ADR and the
+  two-repository split becomes the live option again.
+- **Not in the merge path.** `pages.yml` is a separate workflow with its own
+  trigger and permissions, and is never a required check. A viewer that breaks
+  fails a deploy, not a merge, and the bundle is still correct.
+- **The injection surface is contained by rule.** The known vulnerability class is
+  interpolating untrusted repo strings — paths, module names, authors — into a
+  page. The rule for `site/`: escape everything, **no `innerHTML`**, a strict CSP
+  (`default-src 'none'`, no `unsafe-inline` in `script-src`), no network egress
+  beyond the same-origin `graph.json`, and that JSON treated as untrusted input
+  even though we generated it.
 
 The viewer is optional. A team can adopt the generator, read `index.md` and the
 Mermaid graphs in GitHub, open the GraphML in yEd, and never deploy a site.
@@ -632,11 +646,12 @@ correctness. If real usage produces conflict pain that (1)–(3) do not cover, t
 driver is the v0.3 answer, with "regenerate at the merge commit" as the always-available
 fallback that needs no local setup.
 
-**Dependency governance**, enabled on the first commit in both repos, because the
-posture in §2 is a commitment to remediate rather than a claim to have no exposure:
+**Dependency governance**, enabled on the first commit, because the posture in §2 is
+a commitment to remediate rather than a claim to have no exposure:
 
-- **Dependabot** — security alerts and automated patch PRs, both repos, Go modules
-  and (for the viewer) npm.
+- **Dependabot** — security alerts and automated patch PRs. Go modules and GitHub
+  Actions only; there is no npm ecosystem to cover, because the viewer has no JS
+  dependencies (§7.2).
 - **Renovate** — grouped non-security updates on a weekly cadence, so routine
   bumps do not arrive as a stream of individual PRs.
 - **CI dependency gate** — a new *direct* dependency fails the build unless an ADR
@@ -745,9 +760,9 @@ content-hash cache, human-review preservation, `signpost-semantic.yml`.
 **v0.3 — enrichment and query.** SCIP reader, codeatlas bridge, `why` and `path`,
 GraphML/DOT/JSON export.
 
-**v0.4 — `signpost-view`.** Separate repo. Static site from `graph.json`, GitHub
-Pages deploy, filtering and search, diff-between-commits, deep links to source.
-Hardened per §7.2.
+**v0.4 — the viewer, deepened.** The node-link view in `site/graph.html` ships with
+v0.1; v0.4 adds what it does not yet have — search, diff-between-commits, and deep
+links to source. Still zero JS dependencies, still hardened per §7.2.
 
 **v0.5 — MCP server.** stdio JSON-RPC so an agent queries the bundle instead of
 reading files. Hand-rolled, following the pattern codeatlas already proved with
