@@ -17,6 +17,11 @@
   },
   "packageRules": [
     {
+      "description": "A version has to have existed for a week before it is proposed. The threat is not a bad release but a hostile one: an account takeover publishes a malicious version, and the window between publication and the ecosystem noticing is measured in hours. A tool whose posture is 'dependencies we can patch ourselves' should not be the fastest adopter of a version nobody has looked at. vulnerabilityAlerts above is unaffected, which is the right asymmetry — a known CVE is a reason to move faster.",
+      "matchPackageNames": ["*"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "description": "Routine Go bumps arrive as one grouped pull request. Design §8: the point of a weekly cadence is that bumping stays routine, and five separate patch PRs a week is how routine becomes ignored.",
       "matchManagers": ["gomod"],
       "matchUpdateTypes": ["minor", "patch"],
@@ -36,10 +41,11 @@
       "pinDigests": true
     },
     {
-      "description": "The Go toolchain in go.mod moves on its own schedule and gates every job in CI, so it is never grouped with a library bump.",
+      "description": "The Go toolchain in go.mod moves on its own schedule and gates every job in CI, so it is never grouped with a library bump. The release-age wait is restated rather than inherited: this rule is the last match for the toolchain, and a reader checking whether the wait applies here should not have to reason about rule precedence to find out.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["golang"],
       "groupName": null,
+      "minimumReleaseAge": "7 days",
       "labels": ["dependencies", "toolchain"]
     }
   ]
