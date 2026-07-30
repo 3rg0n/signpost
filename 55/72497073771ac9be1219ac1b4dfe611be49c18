@@ -1,0 +1,73 @@
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_142119b6787609 5-6,34,44,46
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_765f534e0cfd71 13,15
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_a064ebee3286b2 4,7,9,27,36
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_97283587d8ff1a 5
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_a29b06cbe25e7a 5
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_f9d872f7f9cfde 5
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_0d411677d7ba7d 5
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_2af17eb6bc37bb 5
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_14bae43ffcc0d0 5
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_162fcb184f9c8d 5
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_6f6aa13bec6028 5
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_1478a72699e87a 5
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_80dd10c117589d 5
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_8a31e2cf2587e4 5
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_bc7f0d88e32873 5
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_558ddfc2cf8cfc 5
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_cebe2de0789dd2 5
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_2b671d9548f5ac 4-6,10,12,17
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_556179a3c5c65c 5
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_7b69de6397c309 5
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_6485ecc2c552a0 5
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_b5e8c3dcb51ace 5
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_67b7f11cb2c5e1 5,23,25
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_4ae6f4f25f2630 5
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_974770584ccdb9 5
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_a5cfe9e014689f 5
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_09113a01fcc1ad 1-33
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_1dc1a11b14253a 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "5572497073771ac9be1219ac1b4dfe611be49c18",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
