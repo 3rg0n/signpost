@@ -46,6 +46,29 @@ type Options struct {
 	// Date is the `generated.at` value, YYYY-MM-DD. Taken from the commit rather than the
 	// clock, per vcs.Commit.Date, so a re-run at the same commit produces the same bytes.
 	Date string
+	// AsOfBundle makes Verify compare content while taking provenance from the bundle's own
+	// record instead of from this tree. Ignored everywhere else: a build always writes the
+	// commit it actually describes.
+	//
+	// Required by a consequence of §8.0 that is not optional. The bundle is built on the
+	// default branch only, so on a branch or a pull request its stamp names an older commit
+	// *by construction* — and the stamp is part of every page's bytes, so a strict verify
+	// reports every page as out of date on every pull request, including one that changed no
+	// code at all. It is also the only way the single-developer pattern can work: building
+	// locally and committing the bundle alongside the code stamps the parent commit, because
+	// the sha of the commit carrying the stamp does not exist until after it is written.
+	//
+	// This does not weaken the staleness check. Content is still compared byte for byte
+	// against a fresh render, so a change to the code still fails; only the two provenance
+	// fields are taken from the bundle. Nor does it rest on trusting the manifest: the
+	// manifest can only reach the tree through a commit, which makes a hand-edited stamp a
+	// reviewable diff in a machine-generated file, and forging one cannot hide stale content
+	// because the content comparison runs either way.
+	//
+	// The adoption is announced in Skipped rather than applied silently. This is the check
+	// whose quiet success would destroy the tool's value, so a run that relaxes it says which
+	// commit it judged against.
+	AsOfBundle bool
 }
 
 // pageFor renders one node as the page a first run would write.

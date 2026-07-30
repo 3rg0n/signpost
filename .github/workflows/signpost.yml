@@ -1,0 +1,157 @@
+# The workflow that makes the bundle useful without anyone installing signpost.
+#
+# Two jobs with deliberately different strictness, because the bundle is committed
+# (ADR 0005) and that fixes where it can be written:
+#
+#   build  — on push to the default branch. Rebuilds the bundle, verifies it
+#            strictly, commits it only if the bytes changed. This is the only
+#            place the bundle is ever written.
+#   verify — on pull requests. Checks the bundle's content, taking provenance as
+#            of the commit the bundle records. Writes nothing.
+#
+# The split is design §8.0's rule about merge conflicts: branches never regenerate
+# the bundle, so two branches cannot collide in `.signpost/`. Its consequence is
+# that on a pull request the committed stamp names an older commit *by
+# construction*, so the pull-request job passes `-as-of-bundle`. Without it the
+# gate is red on every pull request including one that changed no code, and a gate
+# that is red on a documentation typo is a gate people switch off — at which point
+# the staleness check this tool is built around is gone.
+name: signpost
+
+on:
+  push:
+    branches: [main]
+    # Loop guard 1 of 3. This workflow commits to the repository it is triggered
+    # by, so without this its own commit starts it again.
+    paths-ignore:
+      - ".signpost/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Not cancel-in-progress on the default branch: this job pushes a commit, and
+  # cancelling it halfway leaves the bundle describing neither commit. Queued
+  # instead, so a burst of merges produces one bundle per push in order.
+  group: signpost-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: rebuild the bundle
+    # Loop guard 2 of 3 is the actor test. A push whose actor is the bot is this
+    # job's own commit arriving back: paths-ignore already covers the normal case,
+    # and this covers a bot commit that also touched something outside `.signpost`,
+    # which paths-ignore would let through.
+    #
+    # Tested on the actor rather than on the commit message, because a message is
+    # content a contributor can copy by accident and an actor is not.
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    permissions:
+      # The one job in this repository that writes. Scoped here rather than at the
+      # top of the file so every other job stays read-only.
+      contents: write
+    steps:
+      # Actions pinned by commit SHA, not tag (§8 dependency governance). A tag is
+      # mutable and has been moved in a real supply-chain compromise.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Git signals read history. A default checkout is depth 1, which would
+          # make co-change and churn silently thin rather than absent — signpost
+          # reports the shallowness, but a bundle committed from a shallow clone
+          # would still record thinner numbers than the repository has.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      # Built from source in this repository rather than installed from a release.
+      # A repository that analyses itself must use the binary it currently
+      # contains, or the bundle describes the code while being produced by
+      # something else.
+      - name: Build signpost
+        run: go build -o signpost ./cmd/signpost
+
+      - name: Rebuild the bundle
+        run: |
+          set -euo pipefail
+          ./signpost build -repo "github.com/${GITHUB_REPOSITORY}" .
+
+      # Strict, with no -as-of-bundle. This is the job that *writes* the stamp, so
+      # this is the only place that can check the stamp it just wrote is true.
+      # That is not hypothetical: the identity was stamped one commit off until a
+      # bug in readHead was found, and nothing in CI would have caught it.
+      - name: Verify strictly
+        run: |
+          set -euo pipefail
+          ./signpost verify -repo "github.com/${GITHUB_REPOSITORY}" .
+
+      # Committed only when the bytes changed. A run that committed regardless
+      # would put a no-op commit on the default branch for every push, which is
+      # the commit churn §8.1 calls the fastest way to kill adoption.
+      #
+      # Loop guard 3 of 3 is the `[skip ci]` in the message: it stops the other
+      # workflows in this repository from running on a commit that changed only
+      # generated markdown.
+      - name: Commit the bundle if it changed
+        run: |
+          set -euo pipefail
+          # Staged first, then asked. `git diff` reports modifications to tracked
+          # files and says nothing about new ones, so on the first run — when the
+          # whole bundle is untracked — a plain `git diff --quiet` would report no
+          # change and the bundle would never be committed at all. `git add` then
+          # `diff --cached` covers both cases with one comparison.
+          git add .signpost
+          if git diff --quiet --cached -- .signpost; then
+            echo "the bundle is unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Rebuild the signpost bundle [skip ci]"
+          # --force-with-lease rather than a plain push: concurrency queues runs
+          # but does not stop a human pushing between this job's checkout and
+          # here, and overwriting their commit to land generated markdown would
+          # be the worst possible trade.
+          git push --force-with-lease
+
+  verify:
+    name: the bundle still describes this tree
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Build signpost
+        run: go build -o signpost ./cmd/signpost
+
+      # -as-of-bundle, for the reason at the top of this file: on a pull request
+      # the bundle's stamp is older by design, so provenance is taken from the
+      # bundle's own record and content is compared byte for byte against a fresh
+      # render. A pull request that changes what the map says still fails here; one
+      # that only moves the commit does not.
+      #
+      # The remedy when this fails is *not* to run `signpost build` on the branch —
+      # §8.0 keeps `.signpost/` off branches so two branches cannot conflict in it.
+      # It is to check whether the diff really changed the structure, and if it did,
+      # to let the push job regenerate the bundle after merge. The message is
+      # printed either way, because a failing gate that does not say what it found
+      # is a gate nobody can act on.
+      - name: Verify the bundle
+        run: |
+          set -euo pipefail
+          ./signpost verify -as-of-bundle -repo "github.com/${GITHUB_REPOSITORY}" .

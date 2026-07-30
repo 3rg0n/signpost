@@ -153,6 +153,12 @@ func Verify(root string, g *graph.Graph, opts Options) (*VerifyResult, error) {
 		return res, nil
 	}
 
+	if opts.AsOfBundle {
+		// Adopted before rendering, so everything below is a comparison of content. See
+		// Options.AsOfBundle for why a branch has no other honest answer.
+		opts = adoptProvenance(res, dir, opts)
+	}
+
 	// What a build would write now. Built before anything is compared so that a graph the
 	// emitter cannot render fails as a render error rather than as a bundle defect.
 	fresh, err := renderAll(g, opts)
@@ -540,6 +546,57 @@ func lineLinks(line string) []string {
 // The manifest is checked first and separately, because it is the one place the bundle
 // states its commit once. When it disagrees, every page disagrees too, and reporting
 // eighty pages would bury the one fact that explains all of them.
+// adoptProvenance replaces the commit being verified with the one the bundle records, and
+// says so in Skipped.
+//
+// Read from manifest.json rather than from a page because the manifest is the one file in the
+// bundle no human has a claim on: every field in it is a machine record of the run that wrote
+// it. Taking provenance from a page would mean taking it from a file people are invited to
+// edit.
+//
+// Nothing here validates the recorded commit against git, and that is deliberate. The
+// manifest reaches the tree the same way every other file does — through a commit — so it is
+// exactly as authoritative as the source being analysed. Proving it names a commit in this
+// branch's history would also fail on a squash merge or a rebase, where the recorded sha no
+// longer exists but the content is perfectly current, and it would buy nothing: the content
+// comparison runs either way, so a wrong stamp can mislabel which commit produced a page but
+// cannot hide a stale one.
+//
+// A missing, unparseable, or resource-less manifest adopts nothing and leaves the strict
+// comparison in place, which then reports it. A bundle that cannot say what it describes has
+// no provenance at all, and inventing some to make the gate pass is the false pass this file
+// exists to prevent.
+func adoptProvenance(res *VerifyResult, dir string, opts Options) Options {
+	man, err := readManifest(dir)
+	if err != nil || man.Resource == "" {
+		return opts
+	}
+	// The base only. Every page appends its own path to it, so each page's stamp stays derived
+	// rather than copied: a page whose resource does not follow from the bundle's own base is
+	// still reported by the content comparison below.
+	opts.Resource = man.Resource
+	opts.Date = man.Date
+	res.Skipped = append(res.Skipped, fmt.Sprintf(
+		"provenance not compared against this tree: content was checked as of the commit the "+
+			"bundle records (%s). The bundle is built on the default branch only, so elsewhere "+
+			"its stamp is older by construction; it is compared exactly there",
+		man.Resource))
+	return opts
+}
+
+// readManifest reads and parses the bundle's run record.
+func readManifest(dir string) (*bundleManifest, error) {
+	src, err := os.ReadFile(filepath.Join(dir, ManifestFile)) // #nosec G304 -- a fixed name under the bundle
+	if err != nil {
+		return nil, err
+	}
+	var man bundleManifest
+	if err := json.Unmarshal(src, &man); err != nil {
+		return nil, err
+	}
+	return &man, nil
+}
+
 func checkStaleResource(res *VerifyResult, dir string, disk *onDisk,
 	fresh map[string]string, opts Options) {
 	if opts.Resource == "" {
@@ -555,15 +612,11 @@ func checkStaleResource(res *VerifyResult, dir string, disk *onDisk,
 	// Read from disk rather than from disk.pages, which holds markdown only. The manifest is
 	// the one file in the bundle a human has no claim on — every field in it is a machine
 	// record of a run — so it is read whole rather than parsed as a page.
-	src, err := os.ReadFile(filepath.Join(dir, ManifestFile)) // #nosec G304 -- a fixed name under the bundle
+	man, err := readManifest(dir)
 	if err != nil {
 		res.fail(FindingConformance, ManifestFile,
-			"missing or unreadable; a bundle records the commit it describes here")
-		return
-	}
-	var man bundleManifest
-	if err := json.Unmarshal(src, &man); err != nil {
-		res.fail(FindingConformance, ManifestFile, "does not parse as JSON: %v", err)
+			"missing, unreadable, or not JSON; a bundle records the commit it describes here: %v",
+			err)
 		return
 	}
 	if man.Resource != want {

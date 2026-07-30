@@ -43,10 +43,10 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 	commits := parseLog(out)
 	s := aggregate(commits, opts)
 	s.Truncated = len(commits) >= opts.MaxCommits
-	// Asked for separately rather than taken from commits[0], which is not necessarily
-	// HEAD: the walk passes --no-merges, so on a repository whose tip is a merge the
-	// newest entry is one of its parents. The bundle's resource: field would then name a
-	// commit whose tree is not the one that was read.
+	// Asked for separately rather than taken from commits[0], which is neither HEAD nor
+	// the commit being described: the walk passes --no-merges, so on a repository whose
+	// tip is a merge the newest entry is one of its parents, and it counts bundle-only
+	// commits that readHead deliberately looks past. See readHead for why that matters.
 	s.Head = readHead(ctx, dir, opts)
 
 	if isShallow(ctx, dir, opts) {
@@ -106,7 +106,19 @@ func isShallow(ctx context.Context, dir string, opts Options) bool {
 	return err == nil && strings.TrimSpace(out) == "true"
 }
 
-// readHead resolves HEAD's hash and author date.
+// readHead resolves the commit the analysis describes.
+//
+// Not HEAD, when HEAD only rewrote generated output. The bundle is committed (ADR 0005),
+// so committing it advances HEAD — and if the identity were HEAD, the bundle would name
+// the commit before its own and `verify` would fail on every bundle ever committed,
+// forever. That is not a hypothetical: it is what the workflow does on every push.
+//
+// So the identity is the newest commit that changed something other than the bundle. That
+// is the right answer rather than a convenient one: the resource: field exists so a reader
+// can tell whether a page still describes the code in front of them, and a commit that
+// only regenerated the description did not change the code being described. Two commits
+// with the same tree-outside-the-bundle get the same identity, which is exactly the
+// property that makes the artifact converge.
 //
 // A failure here yields the zero Commit rather than an error. Every caller has already
 // established that this is a repository with commits, so a failure is a git fault — but
@@ -114,16 +126,37 @@ func isShallow(ctx context.Context, dir string, opts Options) bool {
 // whole bundle over an unstamped page would be the wrong trade. The emitter omits the
 // field when it is empty rather than writing a hash it does not have.
 func readHead(ctx context.Context, dir string, opts Options) Commit {
-	out, err := run(ctx, dir, opts, "--no-pager", "log", "-1",
-		"--date=short", "--pretty=format:%H"+fieldSep+"%ad")
+	if c, ok := logOne(ctx, dir, opts, ".", ":(exclude)"+bundleDir); ok {
+		return c
+	}
+	// Every commit touched only the bundle, which git reports as empty output and exit 0
+	// rather than as an error. Falling back to HEAD keeps a repository that is nothing but
+	// a bundle stamped, and the fallback cannot loop: there is no earlier commit to prefer.
+	c, _ := logOne(ctx, dir, opts, ".")
+	return c
+}
+
+// bundleDir is the path readHead excludes when deciding which commit is being described.
+//
+// Duplicated from internal/okf rather than imported: okf reads the graph this package
+// feeds, so importing it here would be a cycle. A literal in one place with a test that
+// fails if the two ever disagree is the cheaper of the two bad options.
+const bundleDir = ".signpost"
+
+// logOne reads one commit's hash and date under a pathspec, reporting whether git named
+// one at all. Empty output is not a failure: it means no commit matched.
+func logOne(ctx context.Context, dir string, opts Options, pathspec ...string) (Commit, bool) {
+	args := append([]string{"--no-pager", "log", "-1",
+		"--date=short", "--pretty=format:%H" + fieldSep + "%ad", "--"}, pathspec...)
+	out, err := run(ctx, dir, opts, args...)
 	if err != nil {
-		return Commit{}
+		return Commit{}, false
 	}
 	sha, date, ok := strings.Cut(strings.TrimSpace(out), fieldSep)
 	if !ok {
-		return Commit{}
+		return Commit{}, false
 	}
-	return Commit{SHA: sha, Date: date}
+	return Commit{SHA: sha, Date: date}, true
 }
 
 // hasCommits reports whether HEAD resolves, which separates an empty repository from a

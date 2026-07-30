@@ -157,6 +157,41 @@ Pass verify the same flags as the build it is checking. `-repo` feeds every page
 `resource:`, so a mismatch there reports a real difference that describes the
 invocation rather than the bundle.
 
+## Running it in CI
+
+Copy [`.github/workflows/signpost.yml`](.github/workflows/signpost.yml). It is the
+workflow this repository uses on itself, and it is the setup that makes the bundle
+useful to a team where nobody installed signpost: CI builds the map, commits it, and
+everyone reads markdown.
+
+Two jobs, with deliberately different strictness:
+
+- **On push to the default branch**, rebuild the bundle, verify it strictly, and
+  commit it only if the bytes changed. This is the only place the bundle is written.
+- **On a pull request**, run `signpost verify -as-of-bundle` and write nothing.
+
+The `-as-of-bundle` flag is not optional there, and the reason is worth knowing
+before you delete it. The bundle is only ever built on the default branch, so on a
+branch its committed `resource:` stamp names an older commit *by construction* — and
+that stamp is part of every page's bytes. A strict verify therefore calls every page
+stale on every pull request, including one that only fixed a typo in a docs file.
+`-as-of-bundle` takes the two provenance fields from the bundle's own
+`manifest.json` and compares content byte for byte, so a branch that changes what
+the map says still fails; it names the commit it judged against in its output.
+[ADR 0007](docs/adr/0007-the-bundle-names-the-commit-it-describes.md) records the
+full contract.
+
+Check out with `fetch-depth: 0` in both jobs. A shallow clone produces a bundle with
+thinner history than the repository has while carrying an identical commit stamp.
+
+**Building locally instead.** If you would rather not run signpost in CI, build the
+bundle yourself and commit it — but commit the code first and the bundle second. A
+single commit carrying both stamps its own parent, because the sha of the commit
+carrying the stamp does not exist when the stamp is written, and the history
+attributes for a directory inside that commit change once it lands. If you need one
+atomic commit, build with `-no-history`: a structure-only bundle has nothing that
+moves, and it verifies clean.
+
 ## Status
 
 **v0.1 in progress — deterministic core.** No model required, no network.
@@ -173,12 +208,13 @@ invocation rather than the bundle.
 | Git signals (co-change, churn, ownership) | done |
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |
+| `signpost.yml` — rebuild on push, gate pull requests | done |
 | Semantic pass (local IPC, or any OpenAI-compatible endpoint) | v0.2 |
 | `signpost-view` — GitHub Pages viewer | v0.4, separate repo |
 
-The one thing still missing before this is usable end-to-end in CI is the workflow
-that runs it: a `signpost.yml` that rebuilds the bundle on push and fails a pull
-request whose bundle has gone stale.
+The deterministic core is usable end-to-end: build a bundle, commit it, and CI keeps
+it honest. What v0.2 adds is the semantic pass — the summaries that say what a module
+is *for*, which no deterministic read can honestly produce.
 
 See [docs/design.md](docs/design.md) for the full design, including the
 supply-chain posture that motivates it, and [docs/adr/](docs/adr/) for the

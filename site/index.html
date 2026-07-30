@@ -293,17 +293,21 @@ disconnected components (5)
                 <th scope="row"><code>signpost graph</code>, <code>signpost export</code></th>
                 <td>done</td>
               </tr>
-              <tr class="is-open">
+              <tr class="is-done">
                 <th scope="row">Git signals: co-change, churn, ownership</th>
-                <td>in progress</td>
+                <td>done</td>
               </tr>
-              <tr class="is-open">
+              <tr class="is-done">
                 <th scope="row"><code>signpost build</code> — OKF emit, edit preservation</th>
-                <td>in progress</td>
+                <td>done</td>
               </tr>
-              <tr class="is-open">
+              <tr class="is-done">
                 <th scope="row"><code>signpost verify</code></th>
-                <td>in progress</td>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row"><code>signpost.yml</code> — rebuild on push, gate pull requests</th>
+                <td>done</td>
               </tr>
               <tr class="is-open">
                 <th scope="row">Semantic pass: local IPC, or any OpenAI-compatible endpoint</th>
@@ -317,10 +321,11 @@ disconnected components (5)
           </table>
 
           <p class="prose">
-            <code>build</code> is deliberately absent from the binary until the
-            emitter lands. A command that wrote an incomplete bundle would be
-            worse than one that is not offered yet, because the bundle is the
-            thing agents trust.
+            The deterministic core is usable end-to-end: build a bundle, commit
+            it, and the workflow keeps it honest. What v0.2 adds is the summary
+            that says what a module is <em>for</em> — the one thing no
+            deterministic read can honestly produce, and so the one thing left
+            as a placeholder rather than guessed at.
           </p>
         </div>
       </section>
