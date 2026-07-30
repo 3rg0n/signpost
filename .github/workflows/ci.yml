@@ -372,6 +372,58 @@ jobs:
           [ -z "$exec" ] || { echo "executable files in the bundle:"; echo "$exec"; exit 1; }
           echo "bundle: markdown and JSON only, nothing executable"
 
+      # verify's only interface is its exit code, so this step asserts both
+      # directions of it. The positive case alone would pass on a `verify` that
+      # returned 0 unconditionally, which is precisely the failure design §4.6
+      # calls worse than having no check: a staleness gate that cannot fail
+      # teaches people to trust a bundle nobody validated.
+      #
+      # Runs on the bundle the previous step left behind, human sentinel edit
+      # included — a verify that went red on someone's notes is a verify they
+      # disable, and then the staleness check goes with it.
+      - name: Verify passes on a current bundle, and fails on a stale one
+        run: |
+          set -euo pipefail
+          repo="github.com/${GITHUB_REPOSITORY}"
+          # Output goes outside the checkout, as in the step above: a file written
+          # into the tree is content signpost discovers, so it would be part of
+          # the tree being verified but not of the bundle being verified against.
+          out="${RUNNER_TEMP}/verify1.txt"
+          # `|| ok=$?` rather than a bare call: under `set -e` a failing verify
+          # would abort the step before the output is printed, and then the log
+          # says a gate failed without saying what it found.
+          ok=0
+          ./signpost verify -quiet -repo "$repo" . >"$out" || ok=$?
+          cat "$out"
+          [ "$ok" -eq 0 ] || {
+            echo "verify failed on the bundle this job just built"
+            exit 1
+          }
+          # The counts are the evidence the pass means something. "ok" over zero
+          # pages and "ok" over every page read the same in a log, so the floor
+          # is asserted rather than assumed.
+          pages="$(sed -n 's/^  checked \([0-9]*\) page(s).*/\1/p' "$out")"
+          [ -n "$pages" ] && [ "$pages" -ge 10 ] || {
+            echo "verify reported ${pages:-no} page(s) checked; a pass over nothing is not a pass"
+            exit 1
+          }
+          echo "verify: ${pages} page(s) checked, exit 0"
+
+          # Now make the bundle wrong and require a non-zero exit. A new package
+          # is a concept the bundle has no page for, which is the exact case a
+          # pull request creates and the reason the check exists.
+          mkdir -p internal/ciprobe
+          printf 'package ciprobe\n\n// Probe exists to make the bundle stale.\nfunc Probe() {}\n' \
+            >internal/ciprobe/ciprobe.go
+          if ./signpost verify -quiet -repo "$repo" . >"${RUNNER_TEMP}/verify2.txt"; then
+            echo "verify exited 0 on a stale bundle — the gate cannot fail, so it is not a gate"
+            cat "${RUNNER_TEMP}/verify2.txt"
+            exit 1
+          fi
+          cat "${RUNNER_TEMP}/verify2.txt"
+          rm -rf internal/ciprobe
+          echo "verify: non-zero on a stale bundle"
+
   security:
     name: security
     runs-on: ubuntu-24.04

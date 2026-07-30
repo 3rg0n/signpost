@@ -2,9 +2,11 @@
 // before it starts work.
 //
 // `signpost build` writes the bundle to .signpost/, which is the output the rest of
-// the design is about. `graph` and `export` run the same pipeline and report or
-// render what it found rather than committing it — useful on their own, and the way
-// to check the pipeline against a real repository without writing to it.
+// the design is about, and `signpost verify` is what makes it trustworthy: it exits
+// non-zero when the committed bundle no longer matches the tree. `graph` and `export`
+// run the same pipeline and report or render what it found rather than committing it —
+// useful on their own, and the way to check the pipeline against a real repository
+// without writing to it.
 //
 // Every command shares one analysis path (see pipeline.go), deliberately: a command
 // that analysed the repository differently from `build` would report something
@@ -38,6 +40,7 @@ type command struct {
 func commands() []command {
 	return []command{
 		{"build", "write the knowledge bundle to .signpost/", runBuild},
+		{"verify", "check .signpost/ against the repository; non-zero if stale", runVerify},
 		{"graph", "analyse a repository and report its structure", runGraph},
 		{"export", "render the graph as mermaid, dot, graphml, or json", runExport},
 		{"version", "print the version", runVersion},

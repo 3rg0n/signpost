@@ -12,6 +12,7 @@ the repo.
 
 ```bash
 signpost build .                      # write the bundle to .signpost/ — the point of the tool
+signpost verify .                     # is the committed bundle still true? non-zero if not
 signpost graph .                      # report structure: hubs, cycles, bridges, islands
 signpost export --format mermaid .    # render the graph for a diagram or another tool
 ```
@@ -124,6 +125,38 @@ URL is a property of your checkout, and a fork's remote names the upstream.
 Without it, pages carry a commit-only resource, which is still enough to tell
 whether a page describes the code in front of you.
 
+## What it checks
+
+`signpost verify` answers one question — is the committed bundle still true of
+this tree? — and answers it with an exit code, so CI can gate on it:
+
+```bash
+signpost verify -repo example.com/org/repo .   # 0 if it holds, 1 if it does not
+```
+
+Five checks, per [design §4.6](docs/design.md): frontmatter parses and carries a
+`type`, with the reserved filenames used correctly; every `edges[].to`,
+`sources[].resource`, and prose link resolves to a page in the bundle; every
+`resource:` names the commit being described; and a rebuild would change nothing.
+That last one is checked by re-running the emitter and merging against what is on
+disk, which is also how a page whose managed marker got broken by hand — and so
+quietly stopped regenerating — gets caught.
+
+Two things are deliberate about the output:
+
+- **It says what it checked, on a pass as well as a failure.** "ok" over zero
+  pages and "ok" over eighty read the same in a CI log, and only one of them is a
+  result. Any check that could not run is named as skipped — an unreported skip is
+  the false pass the command exists to prevent.
+- **Warnings are not failures.** A page describing a directory that no longer
+  exists, and a `verified:` block that has gone stale, are reported and exit zero.
+  Neither makes the bundle wrong, and a gate that went red on the litter it is
+  designed to leave behind is a gate people switch off.
+
+Pass verify the same flags as the build it is checking. `-repo` feeds every page's
+`resource:`, so a mismatch there reports a real difference that describes the
+invocation rather than the bundle.
+
 ## Status
 
 **v0.1 in progress — deterministic core.** No model required, no network.
@@ -139,13 +172,13 @@ whether a page describes the code in front of you.
 | `signpost graph`, `signpost export` | done |
 | Git signals (co-change, churn, ownership) | done |
 | `signpost build` — OKF emit with edit preservation | done |
-| `signpost verify` | in progress |
+| `signpost verify` — conformance, links, staleness | done |
 | Semantic pass (local IPC, or any OpenAI-compatible endpoint) | v0.2 |
 | `signpost-view` — GitHub Pages viewer | v0.4, separate repo |
 
-`verify` is deliberately absent from the binary until it can actually fail. A
-`verify` that exited zero because it had nothing to check would train people to
-trust a bundle nobody validated.
+The one thing still missing before this is usable end-to-end in CI is the workflow
+that runs it: a `signpost.yml` that rebuilds the bundle on push and fails a pull
+request whose bundle has gone stale.
 
 See [docs/design.md](docs/design.md) for the full design, including the
 supply-chain posture that motivates it, and [docs/adr/](docs/adr/) for the

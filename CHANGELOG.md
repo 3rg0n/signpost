@@ -59,6 +59,52 @@ All notable changes to this project are documented here. Format follows
   worked around — entries read oldest-first, and two runs on the same date
   collapse into one entry.
 
+- `signpost verify` checks a committed bundle against the tree it describes and
+  exits non-zero when it no longer holds. That exit code is the whole interface:
+  the failure mode design §4.6 names as worse than having no bundle is a
+  staleness check that exits zero, because a bundle that is silently stale is
+  confidently wrong and spends trust that does not come back. New
+  `internal/okf.Verify`; new `verify` subcommand taking the same flags as
+  `build`.
+
+  Five checks: frontmatter parses and carries a `type`, with the reserved
+  filenames `index.md` and `log.md` typed correctly and no other page claiming
+  those types; every `edges[].to`, `sources[].resource`, and prose link resolves
+  to a page that exists; every `resource:` names the commit being described; and
+  a rebuild would change nothing.
+
+  Four properties, and the first is what makes the rest trustworthy:
+
+  - **Verify re-renders rather than comparing hashes.** It calls the same
+    renderer and the same merge `build` does, so "verify passes" means exactly
+    "a build would change nothing" — there is no second opinion about what a
+    page should contain that could drift from the emitter's and leave neither
+    obviously wrong. It also catches the one cost the merge deliberately
+    accepts: a managed marker broken by hand makes that region stop
+    regenerating, and this is what makes that visible rather than permanent.
+  - **A check that did not run is named.** "No findings" from a check that never
+    executed has the same shape as a pass and only one of them is one, so an
+    unresolvable relative link and a staleness comparison with no commit to
+    compare against are both reported. When the manifest already says the whole
+    bundle describes another commit, the per-page comparison is suppressed and
+    said to be — otherwise every page restates the one line that explains all of
+    them.
+  - **A pass says what it covered.** Pages, edges, sources, and prose links
+    resolved are printed before the verdict and are not hidden by `-quiet`. "ok"
+    over zero pages and "ok" over eighty read identically in a CI log.
+  - **Warnings are not failures.** An orphan page and a stale `verified:` block
+    are reported and exit zero. Neither makes the bundle untrue, and both are
+    litter the never-delete rule is designed to leave behind — a gate that went
+    red on a rename with no supported way to fix it is a gate people switch off,
+    taking the staleness check with it.
+
+  Two consequences worth knowing. Verify must be given the same flags as the
+  build it checks: `-repo` feeds every page's `resource:`, so a mismatch there
+  reports a real difference that describes the invocation rather than the
+  bundle. And a stale bundle exits 1 while a bad command line exits 2, because a
+  CI job has to tell a problem a rebuild fixes from one that will fail
+  identically forever.
+
 - Five ADRs and an index at `docs/adr/README.md`. Only the narrowest decision in
   the project had one; everything foundational was prose in `docs/design.md`,
   which is a different genre — design.md describes what the system *is*, while an
@@ -124,6 +170,15 @@ All notable changes to this project are documented here. Format follows
   writes into the checkout, and the scratch copy it diffs against goes to
   `RUNNER_TEMP` rather than the tree — a copy left in the repository is content
   the second run would discover, which would change the thing being measured.
+
+- The dogfood job also asserts both directions of `verify`'s exit code: zero on
+  the bundle it just built, and non-zero after a new package is added. A gate
+  that has only ever been observed passing has not been shown to be able to
+  fail, and the direction that matters is the one nobody exercises by accident.
+  The pass is required to report at least ten pages checked, since a pass over
+  nothing is not a pass, and the verify output is printed before the assertion
+  rather than after — under `set -e` a failing command would otherwise abort the
+  step first, leaving a log that says a gate failed without saying what it found.
 
 - CI runs signpost on signpost. The binary analyses this repository on every
   push, and the job asserts what the run produced rather than that it exited 0 —
