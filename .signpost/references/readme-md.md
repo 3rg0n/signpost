@@ -2,7 +2,7 @@
 type: Document
 title: README.md
 description: Architecture decision, 10 rules read from README.md.
-resource: git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339/docs/adr/README.md
+resource: git://github.com/3rg0n/signpost@2cd4f8bc004339d2aea2ae4fb417b773e0bf044d/docs/adr/README.md
 tags: [adr, constraint]
 generated: { by: signpost/dev, at: "2026-07-30" }
 attributes:

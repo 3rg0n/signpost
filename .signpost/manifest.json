@@ -1,7 +1,7 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@9efce80b424ed855b613cc6bda68d5e8dd87c339",
+  "resource": "git://github.com/3rg0n/signpost@2cd4f8bc004339d2aea2ae4fb417b773e0bf044d",
   "date": "2026-07-30",
   "counts": {
     "nodes": 25,
