@@ -11,6 +11,7 @@ embeddings, no server. One binary, one command, output is markdown committed to
 the repo.
 
 ```bash
+signpost build .                      # write the bundle to .signpost/ — the point of the tool
 signpost graph .                      # report structure: hubs, cycles, bridges, islands
 signpost export --format mermaid .    # render the graph for a diagram or another tool
 ```
@@ -92,6 +93,37 @@ skip it, `-max-commits` to change how far back the walk goes. In CI, check out
 with `fetch-depth: 0`: a shallow clone yields real but truncated signals, and
 signpost says so rather than presenting them as the whole history.
 
+## What it writes
+
+`signpost build` writes `.signpost/`: an `index.md` to start from, one page per
+concept under `modules/`, `interfaces/`, `references/` and so on, a `log.md`
+recording each date signpost ran, and a `manifest.json` for tools that would
+rather not parse markdown. Commit it — that is the whole point, and
+[ADR 0005](docs/adr/0005-commit-the-bundle-to-the-repository.md) records why.
+
+Two rules govern rewriting, and they are why the bundle is safe to hand-edit:
+
+- **Only the managed regions are regenerated.** Generated prose sits between
+  `<!-- signpost:managed:name -->` markers. Everything else on the page — a
+  `## Notes` section, a paragraph correcting the summary, a key you added to the
+  frontmatter — is carried across byte-for-byte, and the run reports how many
+  pages it carried notes on.
+- **Nothing is deleted.** A page describing a directory that no longer exists is
+  reported as stale and left alone, because a rename would otherwise silently
+  delete the notes somebody wrote on it.
+- **A review that no longer applies says so.** If you add a `verified:` block
+  recording that you checked a page, and the commit it described has since
+  changed, the block is kept and the page gains `status: stale-verification`. Your
+  name and date are the audit trail; the status is the part that stops the page
+  from claiming a human vouched for code they never saw. Re-review, record the
+  page's current `resource:`, and the next run clears it.
+
+Pass `-repo example.com/org/repo` to name the repository in each page's
+`resource:` URI. It is asked for rather than derived from a git remote: a remote
+URL is a property of your checkout, and a fork's remote names the upstream.
+Without it, pages carry a commit-only resource, which is still enough to tell
+whether a page describes the code in front of you.
+
 ## Status
 
 **v0.1 in progress — deterministic core.** No model required, no network.
@@ -106,14 +138,14 @@ signpost says so rather than presenting them as the whole history.
 | Mermaid / DOT / GraphML / JSON export | done |
 | `signpost graph`, `signpost export` | done |
 | Git signals (co-change, churn, ownership) | done |
-| `signpost build` — OKF emit with edit preservation | in progress |
+| `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` | in progress |
 | Semantic pass (local IPC, or any OpenAI-compatible endpoint) | v0.2 |
 | `signpost-view` — GitHub Pages viewer | v0.4, separate repo |
 
-`build` is deliberately absent from the binary until the emitter lands. A
-command that wrote an incomplete bundle would be worse than one that is not
-offered, because the bundle is what agents trust.
+`verify` is deliberately absent from the binary until it can actually fail. A
+`verify` that exited zero because it had nothing to check would train people to
+trust a bundle nobody validated.
 
 See [docs/design.md](docs/design.md) for the full design, including the
 supply-chain posture that motivates it, and [docs/adr/](docs/adr/) for the

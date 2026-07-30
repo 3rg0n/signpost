@@ -315,6 +315,63 @@ jobs:
           co="$(jq '[.edges[] | select(.kind == "co_changes")] | length' nohist.json)"
           [ "$co" -eq 0 ] || { echo "${co} co-change edge(s) survived -no-history"; exit 1; }
 
+      # Last, because it writes into the checkout. The three properties asserted
+      # here are the ones that make a committed bundle safe to adopt, and each is
+      # a defect a unit test could pass while the binary got wrong:
+      #
+      #   - Byte-stability across two runs of the real binary. §8.1: the bundle is
+      #     committed, so unstable output is a diff in someone else's repository on
+      #     every build.
+      #   - A human edit outside the managed markers survives a rebuild. This is
+      #     the mechanism the whole design compounds on; if it breaks, the tool
+      #     teaches people to stop correcting it.
+      #   - Markdown and JSON only, nothing executable. CI writing into a
+      #     repository is a supply-chain position in every repository that adopts
+      #     signpost, and ADR 0005 bounds the worst case to ugly strings in a .md.
+      - name: Bundle is stable, preserves edits, and ships nothing executable
+        run: |
+          set -euo pipefail
+          # The same flags on every run below. -repo feeds each page's resource:
+          # URI, so a second run without it would legitimately produce different
+          # bytes and the diff would report a determinism failure that is really a
+          # difference in what was asked for.
+          repo="github.com/${GITHUB_REPOSITORY}"
+          ./signpost build -quiet -repo "$repo" . >build1.txt
+          cat build1.txt
+          # Outside the checkout: a copy left in the tree is content the second run
+          # would discover, so the comparison would change the thing it measures.
+          cp -r .signpost "${RUNNER_TEMP}/first"
+          ./signpost build -quiet -repo "$repo" . >/dev/null
+          if ! diff -r "${RUNNER_TEMP}/first" .signpost; then
+            echo "the bundle is not byte-identical across two runs"
+            exit 1
+          fi
+          echo "bundle: identical across two runs"
+
+          # A glob rather than `ls | head`: the shell sorts it, so the page picked
+          # is the same on every run, and no filename is passed through a pipe.
+          set -- .signpost/modules/*.md
+          page="$1"
+          note='SENTINEL: a human wrote this outside the managed markers.'
+          printf '\n%s\n' "$note" >>"$page"
+          ./signpost build -quiet -repo "$repo" . >build3.txt
+          grep -qF "$note" "$page" || {
+            echo "a human edit to ${page} was lost by a rebuild"
+            exit 1
+          }
+          grep -q 'human notes, carried across' build3.txt || {
+            echo "the run did not report carrying an edit:"
+            cat build3.txt
+            exit 1
+          }
+          echo "bundle: human edit preserved and reported"
+
+          bad="$(find .signpost -type f ! -name '*.md' ! -name '*.json' -print)"
+          [ -z "$bad" ] || { echo "non-markdown files in the bundle:"; echo "$bad"; exit 1; }
+          exec="$(find .signpost -type f -perm -u+x -print)"
+          [ -z "$exec" ] || { echo "executable files in the bundle:"; echo "$exec"; exit 1; }
+          echo "bundle: markdown and JSON only, nothing executable"
+
   security:
     name: security
     runs-on: ubuntu-24.04

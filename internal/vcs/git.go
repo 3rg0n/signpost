@@ -43,6 +43,11 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 	commits := parseLog(out)
 	s := aggregate(commits, opts)
 	s.Truncated = len(commits) >= opts.MaxCommits
+	// Asked for separately rather than taken from commits[0], which is not necessarily
+	// HEAD: the walk passes --no-merges, so on a repository whose tip is a merge the
+	// newest entry is one of its parents. The bundle's resource: field would then name a
+	// commit whose tree is not the one that was read.
+	s.Head = readHead(ctx, dir, opts)
 
 	if isShallow(ctx, dir, opts) {
 		s.Shallow = true
@@ -99,6 +104,26 @@ func isRepo(ctx context.Context, dir string, opts Options) bool {
 func isShallow(ctx context.Context, dir string, opts Options) bool {
 	out, err := run(ctx, dir, opts, "rev-parse", "--is-shallow-repository")
 	return err == nil && strings.TrimSpace(out) == "true"
+}
+
+// readHead resolves HEAD's hash and author date.
+//
+// A failure here yields the zero Commit rather than an error. Every caller has already
+// established that this is a repository with commits, so a failure is a git fault — but
+// the identity is a provenance stamp on an otherwise complete analysis, and losing the
+// whole bundle over an unstamped page would be the wrong trade. The emitter omits the
+// field when it is empty rather than writing a hash it does not have.
+func readHead(ctx context.Context, dir string, opts Options) Commit {
+	out, err := run(ctx, dir, opts, "--no-pager", "log", "-1",
+		"--date=short", "--pretty=format:%H"+fieldSep+"%ad")
+	if err != nil {
+		return Commit{}
+	}
+	sha, date, ok := strings.Cut(strings.TrimSpace(out), fieldSep)
+	if !ok {
+		return Commit{}
+	}
+	return Commit{SHA: sha, Date: date}
 }
 
 // hasCommits reports whether HEAD resolves, which separates an empty repository from a

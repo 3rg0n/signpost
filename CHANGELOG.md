@@ -10,6 +10,55 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-30
 
+- `signpost build` writes the knowledge bundle to `.signpost/`, which is the
+  output the rest of the project exists to produce: an `index.md`, one page per
+  concept, a `log.md`, and a `manifest.json`, all Open Knowledge Format markdown
+  that agents and people read without signpost installed. New `internal/okf`
+  package; new `-repo` flag naming the repository in each page's `resource:` URI.
+
+  Four properties, each of which is a defect if it fails:
+
+  - **Human edits are never touched.** Generated prose lives between
+    `<!-- signpost:managed:name -->` markers; a rebuild replaces those regions
+    and carries everything else across byte-for-byte, including frontmatter keys
+    a human added — held as raw source lines rather than parsed and re-emitted,
+    so their comments, quoting, and key order survive exactly. Every ambiguous
+    case in the merge resolves toward "this is human text": the cost of guessing
+    wrong that way is a region that stops regenerating, which `verify` reports,
+    where the cost of guessing the other way is an invisible deletion. The run
+    says how many pages it carried notes on, because a mechanism nobody can see
+    working is one nobody trusts.
+  - **Nothing is deleted.** A page describing a concept the graph no longer
+    contains is reported as stale and left on disk. A renamed directory would
+    otherwise silently delete the page somebody had written notes on, and that
+    is exactly the page worth keeping.
+  - **The same commit produces the same bytes.** `generated.at` is the commit's
+    author date, not the wall clock — ADR 0005 commits the bundle, so a
+    timestamp would make every CI run a diff. It also answers the right
+    question: when the code was written is a fact about the code, when CI ran is
+    a fact about CI. A repository with no readable history gets no `resource:`
+    and no `generated:` at all rather than a stamp naming a commit nobody can
+    check.
+  - **A human's verification is downgraded, not preserved and not dropped.**
+    `verified:` stands only when the reviewer recorded *which* resource they
+    reviewed and it is the one being described now. Otherwise the block is kept —
+    the reviewer's name and date are the audit trail — and the page gains a
+    generated `status: stale-verification` key saying the claim no longer holds.
+    Written into the page rather than only reported on stdout, because the bundle
+    is read by people and agents who never ran signpost, and a downgrade that
+    exists only in a closed terminal is one nobody acts on. Silently retaining it
+    would leave a page asserting a human checked code that has since changed,
+    with nobody knowing to look; deleting it would lose the reviewer's name.
+    Because `status` is generated, a re-review that records the current resource
+    clears the mark on the next run with nobody editing it — the downgrade is
+    recoverable in one step, which is what makes it the safe default.
+
+  The log page accumulates rather than being rewritten: each date owns a region
+  named `log-<date>`, and a later run does not generate that name, so the merge
+  keeps it verbatim and appends. Two consequences are accepted rather than
+  worked around — entries read oldest-first, and two runs on the same date
+  collapse into one entry.
+
 - Five ADRs and an index at `docs/adr/README.md`. Only the narrowest decision in
   the project had one; everything foundational was prose in `docs/design.md`,
   which is a different genre — design.md describes what the system *is*, while an
@@ -64,6 +113,17 @@ All notable changes to this project are documented here. Format follows
     flag, and config is hardened per-invocation with `-c` rather than by
     environment, since `GIT_CONFIG_NOSYSTEM` suppresses system and global config
     but `.git/config` belongs to the repository being analysed.
+
+- The dogfood job builds a bundle from this repository and asserts the three
+  properties that make a committed one safe to adopt: byte-identical across two
+  runs of the real binary, a note appended outside the managed markers survives a
+  rebuild and is reported as carried, and nothing in the output is other than
+  markdown or JSON or carries an executable bit. All three are already covered by
+  unit tests; none of them was covered end-to-end through the binary, which is
+  where both v0.0.1 installer bugs lived. It runs last in the job because it
+  writes into the checkout, and the scratch copy it diffs against goes to
+  `RUNNER_TEMP` rather than the tree — a copy left in the repository is content
+  the second run would discover, which would change the thing being measured.
 
 - CI runs signpost on signpost. The binary analyses this repository on every
   push, and the job asserts what the run produced rather than that it exited 0 —

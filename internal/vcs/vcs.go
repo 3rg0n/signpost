@@ -188,6 +188,38 @@ type Signals struct {
 	// whose history is mostly sweeps has a co-change signal built from very little, and
 	// a consumer should be able to say that.
 	SkippedBulkCommits int
+
+	// Head identifies the commit the analysis describes. Zero when Available is false.
+	Head Commit
+}
+
+// Commit identifies the commit an analysis describes.
+//
+// Read even though the history walk already has HEAD in it, because the two answer
+// different questions: the walk says what changed over time, and this says which tree
+// was on disk. A bundle records the second in every page's `resource:` field, so that a
+// reader can tell whether the page describes the code they are looking at.
+type Commit struct {
+	// SHA is the full 40-character hash. Full rather than abbreviated: an abbreviation
+	// is only unique until the repository grows, and the field is written into a
+	// committed artifact that outlives the run.
+	SHA string
+	// Date is the commit's author date as YYYY-MM-DD.
+	//
+	// This is what the emitter stamps as `generated.at`, in place of the wall clock. A
+	// wall-clock timestamp would make every run of the same commit produce different
+	// bytes, which is precisely the commit churn ADR 0005 forbids — and it would be
+	// answering the wrong question anyway. "When was this written" is a fact about the
+	// code; "when did CI happen to run" is a fact about CI.
+	Date string
+}
+
+// Short returns the conventional 7-character abbreviation, for display only.
+func (c Commit) Short() string {
+	if len(c.SHA) < 7 {
+		return c.SHA
+	}
+	return c.SHA[:7]
 }
 
 // PathsSorted returns the per-file signals in path order.
