@@ -154,6 +154,114 @@ jobs:
           }
           Write-Host "7: parsed clean"
 
+  dogfood:
+    name: signpost analyses signpost
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Git signals read history. A shallow clone would make co-change and
+          # churn silently thin rather than absent, which is the failure mode
+          # this repository is built to refuse.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Build
+        run: go build -o signpost ./cmd/signpost
+
+      # Running the binary on this repository is the only check that exercises
+      # discovery, extraction, manifest reading, resolution, clustering, and
+      # export together against a real tree rather than a fixture. Every unit
+      # test here passed on both installer bugs shipped in v0.0.1, because a
+      # test suite only covers what someone thought to assert.
+      - name: Analyse this repository
+        run: |
+          set -euo pipefail
+          ./signpost graph . 2>coverage.txt
+          cat coverage.txt
+
+      # Not a smoke test. `graph` exits 0 on an empty graph, so asserting the exit
+      # code alone would pass if extraction silently stopped working. The floors
+      # are deliberately well under the current numbers (14 nodes, 13 edges) so
+      # ordinary growth never touches them and a collapse always does.
+      #
+      # Counted through jq rather than by grepping for '"id":', because attribute
+      # keys come from the analysed repository: a repo with an attr named `id`
+      # would inflate a grep count. jq failing is also the check that the export
+      # is valid JSON, which no other step here establishes.
+      - name: Coverage floors hold
+        run: |
+          set -euo pipefail
+          ./signpost export -format json -quiet . > graph.json
+          nodes="$(jq '.nodes | length' graph.json)"
+          edges="$(jq '.edges | length' graph.json)"
+          echo "nodes=${nodes} edges=${edges}"
+          fail=0
+          [ "$nodes" -ge 10 ] || { echo "only ${nodes} nodes; extraction has regressed"; fail=1; }
+          [ "$edges" -ge 8 ] || { echo "only ${edges} edges; resolution has regressed"; fail=1; }
+          # Module nodes specifically, because the total would stay above its floor
+          # on manifest-derived nodes alone even if source discovery stopped
+          # walking entirely. Five against a current seven: enough headroom that
+          # merging two packages is not a build failure, low enough that losing
+          # source discovery is.
+          mods="$(jq '[.nodes[] | select(.kind == "Module")] | length' graph.json)"
+          echo "module nodes=${mods}"
+          [ "$mods" -ge 5 ] || { echo "only ${mods} module nodes; discovery has regressed"; fail=1; }
+          # Confidence is the distinction the whole tool rests on. Nothing in the
+          # deterministic pass may emit an inferred edge (§4.4); only the semantic
+          # pass is permitted to, and it does not run here.
+          guessed="$(jq '[.edges[] | select(.confidence != "extracted")] | length' graph.json)"
+          [ "$guessed" -eq 0 ] || {
+            echo "${guessed} edge(s) are not 'extracted' in a run with no model:"
+            jq '[.edges[] | select(.confidence != "extracted")]' graph.json
+            fail=1
+          }
+          exit "$fail"
+
+      # The property §8.1 rests on: the bundle gets committed, so identical
+      # input producing different bytes is commit churn in someone else's
+      # repository. Tested in-process by several packages; this runs the whole
+      # binary twice, which is what a user actually does.
+      - name: Output is byte-identical across runs
+        run: |
+          set -euo pipefail
+          for fmt in mermaid dot graphml json; do
+            ./signpost export -format "$fmt" -quiet . > "a.${fmt}"
+            ./signpost export -format "$fmt" -quiet . > "b.${fmt}"
+            if ! cmp -s "a.${fmt}" "b.${fmt}"; then
+              echo "${fmt} export is not deterministic:"
+              diff "a.${fmt}" "b.${fmt}" | head -20
+              exit 1
+            fi
+            echo "${fmt}: identical across two runs"
+          done
+
+      # signpost reports what it could not read, and that report is load-bearing
+      # (§4.2). A coverage line claiming zero unresolved imports in a repository
+      # that has them would be the tool lying about its own gaps, so the shape of
+      # the report is checked rather than assumed.
+      - name: Coverage report names its gaps
+        run: |
+          set -euo pipefail
+          if ! grep -q '^analysed [0-9]* files: [0-9]* nodes, [0-9]* edges$' coverage.txt; then
+            echo "coverage report is missing or malformed:"
+            cat coverage.txt
+            exit 1
+          fi
+          # This repository has one .sh and one .ps1, neither of which signpost
+          # has an extractor for. It must say so. If someone adds those
+          # extractors, this line is the reminder to update the assertion.
+          if ! grep -q 'no extractor for' coverage.txt; then
+            echo "expected an unhandled-language line for install.sh/install.ps1"
+            cat coverage.txt
+            exit 1
+          fi
+          echo "coverage report is well-formed and names its gaps"
+
   security:
     name: security
     runs-on: ubuntu-24.04

@@ -38,6 +38,21 @@ else's repo. Several packages have tests that render the same graph five times
 and compare bytes; a change that makes output depend on map iteration order
 fails there.
 
+CI also runs signpost on signpost, which is the only check that exercises
+discovery, extraction, manifest reading, resolution, clustering, and export
+together against a real tree instead of a fixture. Run it yourself the same way:
+
+```bash
+go build -o signpost ./cmd/signpost
+./signpost graph .
+./signpost export -format json -quiet . | jq '.nodes | length, (.edges | length)'
+```
+
+That job asserts what the run produced, not that it exited 0 — `export` exits 0
+on an empty graph, so an exit-code check would pass on a total collapse. If a
+change legitimately moves the node or edge counts below the floors in
+`.github/workflows/ci.yml`, move the floor in the same commit and say why.
+
 ## Dependencies
 
 **A new direct dependency requires an ADR** in `docs/adr/`, and the bar is

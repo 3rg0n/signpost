@@ -6,6 +6,23 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+#### 2026-07-30
+
+- CI runs signpost on signpost. The binary analyses this repository on every
+  push, and the job asserts what the run produced rather than that it exited 0 —
+  `export` exits 0 on a completely empty graph, so an exit-code check would go
+  green on a total pipeline collapse. It holds floors on node, edge, and module
+  counts, set well under current values so ordinary growth never trips them;
+  requires every edge in a no-model run to carry `extracted` confidence, since
+  only the semantic pass may infer; renders all four export formats twice and
+  compares bytes; and checks the coverage report is well-formed and still names
+  its own gaps. The floors are counted through `jq` rather than by grepping the
+  JSON, because attribute keys come from the analysed repository and a repo with
+  an attribute named `id` would inflate a grep count — parsing is also the only
+  check here that the export is valid JSON.
+
 ### Fixed
 
 #### 2026-07-30
