@@ -219,6 +219,17 @@ All notable changes to this project are documented here. Format follows
   reasoned about: five consecutive runs produced one commit, two no-ops, then one
   commit for a code change and one more no-op.
 
+  The pull-request job skips when the *base branch* has no bundle yet, which is the
+  state every repository is in on the day it adopts signpost. Found by opening the
+  pull request that added the workflow — the only way it could have been found — where
+  the gate failed telling a contributor to run `signpost build`, the one thing §8.0
+  forbids on a branch. The condition is deliberately narrower than "is there a bundle
+  here": a pull request that *deletes* the bundle still fails, because the base has it
+  and the tree does not. An unresolvable base ref fails loudly rather than skipping,
+  since that is a fault in the checkout rather than a fact about the repository, and a
+  gate that quietly skips when it cannot see is the false pass `verify` exists to
+  prevent.
+
   Two details are load-bearing and neither is obvious. The commit step stages
   before it asks, because `git diff` reports modifications to tracked files and
   says nothing about new ones — on a first-ever run, when the whole bundle is
