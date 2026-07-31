@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 25 concepts, 27 relationships."
-resource: git://github.com/3rg0n/signpost@2cd4f8bc004339d2aea2ae4fb417b773e0bf044d
-generated: { by: signpost/dev, at: "2026-07-30" }
+description: "Structural map of this repository: 27 concepts, 28 relationships."
+resource: git://github.com/3rg0n/signpost@696d9013e36610d6f9244e9847b980d76717fbe1
+generated: { by: signpost/dev, at: "2026-07-31" }
 ---
 # Repository map
 
@@ -15,7 +15,7 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](/modules/signpost.md) — 12 relationships (2 in, 10 out)
+- [cmd/signpost](/modules/signpost.md) — 13 relationships (2 in, 11 out)
 - [internal/okf](/modules/okf.md) — 8 relationships (4 in, 4 out)
 - [internal/vcs](/modules/vcs.md) — 7 relationships (4 in, 3 out)
 - [internal/assemble](/modules/assemble.md) — 6 relationships (1 in, 5 out)
@@ -29,8 +29,9 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/extract](/modules/extract.md) — 14 go files; 186 exported symbols.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 21 go files; 218 exported symbols.
+- [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
 - [internal/okf](/modules/okf.md) — 13 go files; 166 exported symbols.
-- [cmd/signpost](/modules/signpost.md) — 10 go files; 31 exported symbols; entrypoint main; package main.
+- [cmd/signpost](/modules/signpost.md) — 12 go files; 41 exported symbols; entrypoint main; package main.
 - [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
 
@@ -44,6 +45,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0006: generator and viewer are separate repositories](/references/adr-0006-generator-and-viewer-are-separate-repositories.md) — Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
 - [ADR 0007: the bundle names the commit it describes](/references/adr-0007-the-bundle-names-the-commit-it-describes.md) — Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md.
 - [ADR 0008: the viewer lives in this repository](/references/adr-0008-the-viewer-lives-in-this-repository.md) — Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md.
+- [ADR 0009: the semantic pass is opt in and egress is explicit](/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md) — Architecture decision (Accepted), 25 rules read from 0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md.
 - [README.md](/references/readme-md.md) — Architecture decision, 10 rules read from README.md.
 
 ### External dependencies
