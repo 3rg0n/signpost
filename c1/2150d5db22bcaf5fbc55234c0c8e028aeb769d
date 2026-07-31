@@ -1,0 +1,103 @@
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_0566d252f2c355 350
+  s_f6c0b1ac81cb95::t_b3b461c3e1de81 410
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_26266a14278786 469-506
+  s_f6c0b1ac81cb95::t_13a5f7e1b48d40 13-72
+  s_f6c0b1ac81cb95::t_498e274f2d4104 507-525
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 5,18,20,34,54
+  s_f6c0b1ac81cb95::t_7c0a95336ed0d4 33
+.github/workflows/signpost-semantic.yml
+  s_f6c0b1ac81cb95::t_64d9ba97503f5f 1-192
+internal/semantic/semantic.go
+  s_f6c0b1ac81cb95::t_82dae76eb07cef 65-71
+  s_f6c0b1ac81cb95::t_6317499be2613c 446-449
+  s_f6c0b1ac81cb95::t_1fea4518fc31ee 486
+  s_f6c0b1ac81cb95::t_3480b32e9bc74d 480-482
+  s_f6c0b1ac81cb95::t_75fc1894dd53b4 168
+  s_f6c0b1ac81cb95::t_408d3f116ef356 1-64,72-167,169-445,450-459,463-470,472-479,483-485,487-491
+  s_f6c0b1ac81cb95::t_f16994275b4e1d 460-462
+  s_f6c0b1ac81cb95::t_054151ecfe05d9 471
+README.md
+  s_f6c0b1ac81cb95::t_aff89d51a4003a 269-271,275-279
+  s_f6c0b1ac81cb95::t_6afe6286856f45 160-202,208-215
+  s_f6c0b1ac81cb95::t_19cee91c6b9d02 203-207
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_7c0a95336ed0d4 4,9,27
+internal/okf/emit.go
+  s_f6c0b1ac81cb95::t_1b4eba9382eac6 33-47
+  s_f6c0b1ac81cb95::t_47597449ac42da 128-132,140,142-146
+  s_f6c0b1ac81cb95::t_7c1acd4291e3e6 293
+  s_f6c0b1ac81cb95::t_be10d72da10f00 7
+  s_f6c0b1ac81cb95::t_4124f43dc59d97 315-319
+  s_f6c0b1ac81cb95::t_1d897d52e42388 133-139,141
+  s_f6c0b1ac81cb95::t_2a81f9274d0feb 301-314,320-323
+  s_f6c0b1ac81cb95::t_4831c6d45af71c 88-98
+  s_f6c0b1ac81cb95::t_ad67d7fd92cb6b 324-355,365
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 23,27
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 1-29
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 1-35
+internal/semantic/semantic_test.go
+  s_f6c0b1ac81cb95::t_06037dd939a26a 236
+  s_f6c0b1ac81cb95::t_8d2bc295c87786 1-162,205-235,237-621
+  s_f6c0b1ac81cb95::t_561b3effc1f075 163-204
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 27,30,59
+internal/okf/page.go
+  s_f6c0b1ac81cb95::t_e11e53a647daaf 347-348,350-372
+  s_f6c0b1ac81cb95::t_803371e15b617f 395-404,406
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 20
+internal/okf/bundle_test.go
+  s_f6c0b1ac81cb95::t_5207709a1c9a18 193-308
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_1801d450f91767 7-9,13,27,40
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_1ca113b92fb414 6
+  s_f6c0b1ac81cb95::t_220505856ef89d 47-60,80-94,102-116,120-143
+  s_f6c0b1ac81cb95::t_097d53a74249a1 8-9,11,13
+  s_f6c0b1ac81cb95::t_d64065b74dfe40 117-119
+  s_f6c0b1ac81cb95::t_7230a741f529ff 144
+docs/design.md
+  s_f6c0b1ac81cb95::t_45846f50be5bd6 773-798
+  s_f6c0b1ac81cb95::t_a20302d79ec598 765-768
+  s_f6c0b1ac81cb95::t_e628c144f6df27 426-443,463
+  s_f6c0b1ac81cb95::t_2757814c887bed 616-617
+  s_f6c0b1ac81cb95::t_0dee99a6fbde27 337-381
+  s_f6c0b1ac81cb95::t_b4ff71a5e5b07f 444-462
+  s_f6c0b1ac81cb95::t_3f2bb1d1b82ee2 464-477
+internal/semantic/prompt.go
+  s_f6c0b1ac81cb95::t_d8c4fe6375f99d 225-239
+  s_f6c0b1ac81cb95::t_ef8f367e5cd9a8 262
+  s_f6c0b1ac81cb95::t_3c5b98fceeb12a 1-187,203-224,240-261,263,266-308
+  s_f6c0b1ac81cb95::t_a6ef593ecec81c 188-202
+  s_f6c0b1ac81cb95::t_487a6fa73b2be2 264-265
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_1801d450f91767 23,27
+internal/okf/emit_test.go
+  s_f6c0b1ac81cb95::t_97cae62a59b206 317-344,355-357,391-429
+  s_f6c0b1ac81cb95::t_9b780c0ac4baaf 269-316
+  s_f6c0b1ac81cb95::t_ad91d1dc041c0a 358-390
+  s_f6c0b1ac81cb95::t_eb358b18016d63 345-354
+  s_f6c0b1ac81cb95::t_b7b149802d6a76 481-550
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "c12150d5db22bcaf5fbc55234c0c8e028aeb769d",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
