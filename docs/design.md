@@ -639,9 +639,13 @@ The constraints, which are the whole reason this can live here:
 
 - **Zero JavaScript dependencies.** No `package.json`, no lockfile, no npm or
   pnpm anywhere in this repository. The layout is a hand-written
-  Fruchterman-Reingold pass; the rest is filtering and a detail panel. If the
-  viewer ever genuinely needs a graph library, that is a new ADR and the
-  two-repository split becomes the live option again.
+  Fruchterman-Reingold pass followed by an overlap pass that separates nodes by
+  the footprint their label occupies rather than by the distance between their
+  centres, inside a frame whose height is computed from those footprints so the
+  separation pass has somewhere to move them to; the rest is filtering, a detail
+  panel, and zoom and pan on an SVG transform group. If the viewer ever genuinely
+  needs a graph library, that is a new ADR and the two-repository split becomes
+  the live option again.
 - **Not in the merge path.** `pages.yml` is a separate workflow with its own
   trigger and permissions, and is never a required check. A viewer that breaks
   fails a deploy, not a merge, and the bundle is still correct.

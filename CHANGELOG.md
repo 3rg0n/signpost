@@ -10,6 +10,21 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-31
 
+- Zoom and pan in the graph viewer: wheel to zoom, drag to move, `+` / `−` /
+  reset buttons, and the arrow keys to pan from the keyboard. Everything drawn
+  sits inside one SVG transform group, so node and edge coordinates stay in
+  layout space and a magnified view is the same picture rather than a second
+  layout that could disagree with the first.
+
+  Hand-rolled, as ADR 0008 requires — the viewer has no dependencies and this did
+  not change that. The details that make it usable rather than merely present:
+  zooming holds the point under the cursor, so what you were looking at does not
+  slide away; the view is clamped so the frame stays covered and there is no
+  panning into empty space; the wheel is only claimed while zoomed in, so page
+  scrolling still works over a graph at 100%; a drag that moves does not also
+  select the node it ended on; and the transform is held outside the render path,
+  so toggling a filter no longer discards the reader's position.
+
 - Model backends for the semantic pass, behind one `Backend` interface: `inferd`
   over local IPC, `openai` against any OpenAI-compatible endpoint, and `none`.
   New `internal/model` package. Both implementations are first-party code over
@@ -390,6 +405,72 @@ All notable changes to this project are documented here. Format follows
 ### Fixed
 
 #### 2026-07-31
+
+- The graph viewer crowded its nodes into the middle of the frame and let their
+  labels overlap. Two separate causes, both measured against the rendered page
+  rather than guessed at:
+
+  - Fitting a component into its cell preserved aspect ratio, so the shorter axis
+    always bound. The force pass settles this repository's one connected component
+    roughly square, the cell it goes into is much wider than it is tall, and the
+    height bound: ten nodes were drawn across 320 of 1000 available units, with
+    680 units of width left empty. The axes are now scaled separately, bounded to
+    2.6× apart so a wide cell cannot flatten a component into a line. This is
+    sound specifically because the force pass spaces node *centres* and has no
+    notion of the label — the aspect ratio it happens to settle into is not a fact
+    about the graph, while which nodes are near which is, and that survives.
+  - Nothing anywhere in the layout knew how wide a label is. Neighbouring nodes
+    settled 51–52 units apart while `internal/assemble` renders at about 113
+    units, so the text had no room not to collide. Spacing is now decided on the
+    footprint a node and its label occupy together, and a final pass measures
+    every pair directly and separates any that overlap along whichever axis is
+    closer to clear.
+
+  Zoom was not the fix for this and could not have been: scaling magnifies the
+  dot and the text together, so two labels that overlap at 100% overlap
+  identically at 600%. Zoom makes a graph navigable; only spacing makes it
+  legible.
+
+- The graph viewer's frame was a fixed height that a larger repository than
+  signpost's own overflowed, silently. Both halves of the frame were affected and
+  both are now sized to what they hold, growing the picture rather than crushing
+  its contents:
+
+  - A repository with enough edgeless nodes needed a band taller than the whole
+    frame. Subtracting it left a negative main area, and from there negative cell
+    heights, negative scale factors, a section rule drawn 208 units above the top
+    edge, and — measured on a graph of 86 nodes — 26 nodes placed at negative
+    coordinates, outside the viewBox, where a browser draws nothing at all. Those
+    nodes were not crowded or misplaced; they were absent, with no indication that
+    anything was missing.
+  - Many small components each got a cell too small to hold them: sixteen
+    six-node components were given cells 191 by 108 units, which fit three
+    long-name footprints and were asked to fit six. Separating overlapping labels
+    can only move them into space that exists, so no amount of it resolved this —
+    measured at 64 overlapping label pairs, now 0. The height needed is computed
+    from the footprints before anything is placed.
+  - The number of columns those cells were arranged in ignored label width. A
+    square-ish grid put a hundred components in ten columns, each cell 55 units
+    wide holding a 136-unit label, and growing the frame downwards cannot fix a
+    cell that is too narrow — the frame's width is the page's and does not grow.
+    Measured on 500 nodes: 386 overlapping pairs, now 0. Columns are now capped
+    at what a cell wide enough for the widest label allows, and the rows follow.
+
+  The two functions that decide the grid — one asking how tall the frame must be,
+  one placing the nodes in it — now derive it from a single shared function. They
+  previously each computed it, which is a correctness requirement rather than a
+  tidiness one: a height computed for a grid other than the one drawn is not an
+  answer about the drawing.
+
+  The width stays fixed at the page's width; only the height grows, and the SVG
+  scales to its container as before. Nothing about the rendering of signpost's own
+  graph changes — same 660-unit frame, same coordinates to the byte.
+
+- Clicking a node did nothing after panning the view and zooming back out. The
+  flag that stops a drag from selecting whatever node it ended on was only ever
+  cleared by a node click, so a drag ending on empty space left it set and
+  swallowed the next real one. It is now cleared by any press on the graph,
+  whether or not that press can begin a drag.
 
 - Four extractor defects, found by scoring the Rust and TypeScript extractors
   against independent reference parsers over real third-party source rather than

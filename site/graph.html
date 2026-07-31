@@ -73,7 +73,40 @@
             <legend class="ctl__legend">edges</legend>
             <div class="ctl__set" data-edge-filters></div>
           </fieldset>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">view</legend>
+            <!-- Inside [data-controls], which stays hidden until graph.js has
+                 loaded the graph: buttons that do nothing because the script
+                 never ran are worse than no buttons. -->
+            <div class="zoom" data-zoom>
+              <button
+                class="zoom__btn"
+                type="button"
+                aria-label="Zoom out"
+                data-zoom-out
+              >
+                −
+              </button>
+              <span class="zoom__level" aria-live="polite" data-zoom-level>100%</span>
+              <button
+                class="zoom__btn"
+                type="button"
+                aria-label="Zoom in"
+                data-zoom-in
+              >
+                +
+              </button>
+              <button class="zoom__reset" type="button" data-zoom-reset>
+                reset
+              </button>
+            </div>
+          </fieldset>
+
           <p class="ctl__count" data-count aria-live="polite"></p>
+          <p class="ctl__hint">
+            Scroll to zoom, drag to move. From the keyboard, the buttons above
+            zoom and the arrow keys move.
+          </p>
         </div>
 
         <figure class="plot" data-plot>
