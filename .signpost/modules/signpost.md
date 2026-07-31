@@ -2,7 +2,7 @@
 type: Module
 title: cmd/signpost
 description: 12 go files; 41 exported symbols; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@c12150d5db22bcaf5fbc55234c0c8e028aeb769d/cmd/signpost
+resource: git://github.com/3rg0n/signpost@cb0af6dcd84b9e883e45085820d243db3370528a/cmd/signpost
 tags: [entrypoint]
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
@@ -16,7 +16,7 @@ attributes:
   - { name: lines_removed, value: "16" }
   - { name: package, value: main }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 71% }
+  - { name: top_author_share, value: 57% }
 edges:
   - { kind: imports, to: /modules/assemble.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
   - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
