@@ -8,6 +8,56 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-07-31
+
+- Model backends for the semantic pass, behind one `Backend` interface: `inferd`
+  over local IPC, `openai` against any OpenAI-compatible endpoint, and `none`.
+  New `internal/model` package. Both implementations are first-party code over
+  the standard library — no SDK, so the empty `require` block ADR 0002 records
+  stays empty.
+
+  **The default is `none`, and a credential alone never changes it.** Enabling a
+  backend takes explicit configuration. Inferring one from a stray environment
+  variable would mean a build that silently spends tokens and ships repository
+  content to a third party because something unrelated was set;
+  `AWS_BEARER_TOKEN_BEDROCK` is exactly that kind of variable. Credentials are
+  read from the environment and never from a file, because `.signpost.yml` is
+  committed and a config format with a place to put an API key eventually has
+  one in it. See ADR 0009.
+
+- `signpost model check` sends one probe through the whole path — system prompt,
+  wrapped untrusted source, defanging, JSON Schema, response parse — and exits
+  non-zero when the backend does not work. It exists because the semantic pass
+  fails open by design, which is right for a build and useless for someone
+  trying to find out why their bundle has no semantic pages. It reports three
+  separate facts rather than a bare "ok": which model answered, that the schema
+  held, and that the model reported the probe's embedded injection attempt as an
+  observation instead of complying.
+
+- Prompt-injection fencing for repository content. Files reach a model inside
+  delimited `<untrusted_source path= sha256=>` blocks with signpost's own
+  delimiters and chat-template control tokens neutralised by an inserted
+  zero-width space — inserted rather than deleted, because a summary built from
+  text with holes in it describes a file that does not exist. Markers that occur
+  legitimately mid-sentence, like `### System:`, are defanged only when alone on
+  a line, so an honest file documenting a prompt format is not corrupted. The
+  grounding rule at emit remains the backstop.
+
+  Anyone who can land a comment in a repository can write text addressed to the
+  model rather than to a human reader, and the output is committed and read by
+  agents that act on it. That makes this a supply-chain path, not a curiosity.
+
+- Bedrock reached without the AWS SDK, verified live. A Bedrock API key is
+  minted from an IAM principal and sent as `Authorization: Bearer`, so SigV4 is
+  not needed and `net/http` is sufficient. Four findings are recorded in
+  `docs/design.md` §5 because none is guessable: the working path is
+  `/openai/v1` rather than `/v1`; `bedrock-runtime` and `bedrock-mantle` are
+  separately authorised, and bedrock-runtime is what an ordinary account already
+  has; no Amazon generative model is on the Chat Completions surface at all, so
+  Titan and Nova are not options there; and model ids reject both the `:0`
+  suffix and the `global.` cross-region prefix, so the configured id is passed
+  through verbatim.
+
 #### 2026-07-30
 
 - `signpost build` writes the knowledge bundle to `.signpost/`, which is the
@@ -338,6 +388,43 @@ All notable changes to this project are documented here. Format follows
   wanted is this workflow's topology, not a repository boundary.
 
 ### Fixed
+
+#### 2026-07-31
+
+- Sentinel defanging matched case-sensitively, so `</UNTRUSTED_SOURCE>` in a
+  repository file passed through intact and closed the wrapper — landing
+  everything after it in the trusted region of the prompt, which is exactly the
+  escape the wrapper exists to prevent, spelled in capitals. Matching is now
+  case-insensitive across every sentinel, and the casing a file used is preserved
+  when the match is rewritten, so defanging stays invisible to a human reading
+  the generated page.
+
+  The forged-role-heading rule had the same shape of gap: it compared each line
+  against a fixed list of exact strings, so `## System:`, `###  System:` with two
+  spaces, and `### system` without a colon all survived. It now matches the
+  line's shape — hashes, optional space, a role word, optional colon — and still
+  leaves an ordinary Markdown heading alone. Found by probing the implementation
+  rather than by reading it; the old code leaked all 15 cases the new tests
+  assert.
+
+- `internal/vcs`'s test repositories no longer inherit the machine's git
+  configuration. They pinned identity and dates already but not hooks or
+  maintenance, and both leaked: a global `core.hooksPath` is inherited by any
+  repository created under it, so a developer with a secret-scanning pre-commit
+  hook paid that scan on every commit the suite makes — enough to take the
+  package from seconds to past the test timeout under `-count=2`. Separately,
+  `git commit` starts `git maintenance run --auto` detached, and on Windows the
+  handles it holds under `.git` block the directory removal `t.TempDir`
+  registers, so cleanup failed with "The directory is not empty" against
+  whichever test finished first. That presented as a flaky assertion and was
+  neither flaky nor an assertion. Isolation is now set through the environment
+  rather than `git config`, because the shallow-clone test runs git against a
+  directory the helper never touched.
+
+- The test timeout in CI and release is raised to 30 minutes from the 10-minute
+  default. `internal/vcs` runs the real git binary for every case, twice, and a
+  Windows runner is slow enough at process creation that the default left no
+  margin. Raised rather than removed, so a genuine hang still fails the job.
 
 #### 2026-07-30
 

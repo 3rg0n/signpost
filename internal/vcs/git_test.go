@@ -37,16 +37,40 @@ func gitRepo(t *testing.T) string {
 	return dir
 }
 
+// gitEnv isolates every git invocation these tests make from the machine's git
+// configuration. Two concrete failures, both found by running the suite on a developer
+// machine rather than only in CI:
+//
+// A global core.hooksPath is inherited by any repository created under it, so a
+// secret-scanning pre-commit hook runs on every commit the tests make — measured at ~4s
+// each, enough to take this package from seconds to the 10-minute test timeout under
+// -count=2. And `git commit` starts `git maintenance run --auto` detached, which outlives
+// the command and keeps handles open under .git; on Windows an open handle blocks the
+// removal t.TempDir registers, so cleanup fails with "The directory is not empty" against
+// whichever test finished first. That looked like a flake in the assertions and was not.
+//
+// Set here rather than with `git config` in gitRepo because the clone test runs git
+// against a directory gitRepo never touched, and a per-repository setting would not
+// reach it.
+func gitEnv() []string {
+	return append(os.Environ(),
+		// Dates are pinned so the assertions are about parsing rather than about what day
+		// the suite happened to run.
+		"GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
+		"GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
+		"GIT_CONFIG_GLOBAL="+os.DevNull,
+		"GIT_CONFIG_SYSTEM="+os.DevNull,
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=gc.auto", "GIT_CONFIG_VALUE_0=0",
+		"GIT_CONFIG_KEY_1=maintenance.auto", "GIT_CONFIG_VALUE_1=false",
+	)
+}
+
 func gitRun(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	// Dates are pinned so the assertions below are about parsing rather than about what
-	// day the suite happened to run.
-	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
-		"GIT_COMMITTER_DATE=2026-01-01T00:00:00Z",
-	)
+	cmd.Env = gitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)

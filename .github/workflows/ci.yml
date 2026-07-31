@@ -51,8 +51,13 @@ jobs:
       # nondeterministic output is commit churn in someone else's repo. Several
       # packages render freshly built graphs five times and compare bytes; a second
       # run exercises them under a different map seed.
+      #
+      # The timeout is raised from the 10-minute default because internal/vcs shells out
+      # to the real git binary for every case, twice, and a Windows runner is slow enough
+      # at process creation that the default is not a comfortable margin. A hang should
+      # still fail rather than run to the job limit, so this is raised, not removed.
       - name: Test
-        run: go test -count=2 ./...
+        run: go test -count=2 -timeout 30m ./...
 
       - name: Test with the race detector
         # Linux only, once. The pipeline is single-goroutine today, so this guards a

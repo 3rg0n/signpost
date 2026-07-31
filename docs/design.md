@@ -357,9 +357,21 @@ Three mechanisms, all cheap and all in the deterministic part of the code:
    any sequence a hostile file could use to forge a role turn or break out of the
    wrapper: our own opening and closing delimiter, chat-template control tokens
    (`<|im_start|>`, `<|system|>`, `<|endoftext|>` and friends), `<<SYS>>`,
-   `[INST]`, and lines that are nothing but `### System:` / `### Instruction:`.
+   `[INST]`, and lines that are nothing but a heading naming a chat role.
    Without this, a file containing a premature `</untrusted_source>` smuggles
    instructions into the trusted region and the wrapper is decorative.
+
+   Two properties of the *matching* are load-bearing, both established by an
+   escape that got through a first implementation. Matching is **case-insensitive**:
+   `</UNTRUSTED_SOURCE>` closes the block for a model reading rendered text exactly
+   as well as the lower-case spelling, and a case-sensitive replace passed it
+   through untouched. And the role-heading rule matches the line's **shape** rather
+   than a fixed list of strings, because `## System:`, `###  System:` with two
+   spaces, and `### system` without a colon all imitate a chat transcript just as
+   well as the canonical spelling. Casing is preserved when a match is rewritten —
+   defanging is meant to be invisible to a human reading the generated page, and
+   silently down-casing a line of someone's source is a visible edit to the file
+   being described.
 3. **The grounding rule and the schema do the rest.** Schema-constrained sampling
    means a successful injection still cannot change the *shape* of the output, and
    the grounding rule means an injected claim with no resolvable citation is
@@ -427,12 +439,40 @@ against any OpenAI-compatible `/v1/chat/completions` with
 vLLM, LiteLLM, and Ollama with one implementation and no SDK. Credentials come
 from the environment; base URL and model id are config.
 
-**`none`.** Deterministic-only. Not an error state — a supported mode.
+Bedrock is worth documenting precisely, because none of it is guessable and all of
+it was verified live rather than read off a doc page:
+
+- **The path is `/openai/v1`, not `/v1`.** `https://bedrock-runtime.<region>.amazonaws.com/openai/v1/chat/completions`
+  serves; the `/v1` spelling answers `UnknownOperationException`.
+- **`bedrock-runtime` rather than the newer `bedrock-mantle` endpoint**, even though
+  AWS recommends mantle. The two are separately authorised — mantle gates on
+  `bedrock-mantle:*` against its own `project/default` resource, bedrock-runtime on
+  `bedrock:CallWithBearerToken` — and a role permitted to call one can be denied the
+  other. bedrock-runtime is the surface an account with ordinary Bedrock access
+  already has.
+- **A bearer token replaces SigV4, which is what keeps the dependency list empty.**
+  A Bedrock API key is not an IAM access key: it is minted from an IAM principal
+  and sent as `Authorization: Bearer`, so `net/http` reaches Bedrock with no AWS
+  SDK (ADR 0002).
+- **No Amazon generative model is on this surface.** Every Titan text model there
+  is now an embeddings model, and the Nova family supports Invoke and Converse but
+  not Chat Completions. "Use a cheap Amazon model" is not an option on an
+  OpenAI-compatible path.
+- **Model ids carry no version suffix and reject `global.`** — `google.gemma-3-12b-it`
+  works, the `:0`-suffixed and `global.`-prefixed forms return 400. Gemma's model
+  card lists Geo and Global inference as unsupported. So the configured id is passed
+  through verbatim; any normalisation would rewrite a working id into a 400.
+
+**`none`.** Deterministic-only, and the default. Not an error state — a supported
+mode, and the one most runs use. Inferring a backend from a stray environment
+variable would mean a build that silently spends tokens and ships repository
+content to a third party because something unrelated was set, so the semantic pass
+is opt-in and nothing but explicit configuration turns it on.
 
 Configuration, `.signpost.yml` or environment:
 
 ```yaml
-backend: inferd            # inferd | openai | none
+backend: inferd            # inferd | openai | none (default none)
 model:   auto              # backend-resolved; stamped into generated.by
 budget:  { max_calls: 400, max_tokens: 2000000 }
 openai:
@@ -445,6 +485,32 @@ unreachable, signpost emits the deterministic bundle, records the skip in
 `manifest.json` with what was lost, and exits 0. A broken model backend must never
 break a merge.
 
+The consequence is that a misconfigured backend is invisible during a build, which
+is right for a build and wrong for someone trying to find out why their bundle has
+no semantic pages. **`signpost model check` is where that question gets a straight
+answer**: it sends one probe through the whole path — system prompt, wrapped
+untrusted source, schema, response parse — and exits non-zero when the backend does
+not work. It reports three separate facts, because a bare "ok" proves none of them:
+that the schema held, that the model identified the source, and that it reported
+the probe's embedded injection attempt as an observation rather than complying.
+
+**Two findings from running that probe live, both of which generalise to the whole
+semantic pass.** First, a `description` saying "one sentence" is a hint a model may
+ignore, while `maxLength` is a constraint the sampler enforces — Gemma 3 answered
+correctly and then elaborated until it hit the token cap. Second, a response that
+hits the cap arrives as `finish_reason: "length"`, and it is reported as a failure
+rather than parsed: a truncated claim is usually still valid JSON, and committing
+one as complete is exactly the confidently-wrong output §4.6 refuses to emit.
+Bounding the prose fields is the fix; raising the token cap only moves the cliff.
+
+**Not every model on an OpenAI-compatible endpoint returns the constrained object
+alone.** A model with a reasoning channel emits its trace into the same `content`
+string as the answer — gpt-oss on Bedrock returns `<reasoning>…</reasoning>{…}`
+under a strict `json_schema` — so the object is located rather than assumed. That
+is documented recovery for a known model behaviour, not blanket permissiveness: the
+result must still parse as an object. It is also why the default model is one
+without a reasoning channel.
+
 ---
 
 ## 6. Commands
@@ -456,6 +522,7 @@ signpost verify [path]         # conformance + link + staleness; non-zero on fai
 signpost why "<question>"      # traverse the bundle and answer, citing pages
 signpost path <A> <B>          # shortest typed path between two concepts
 signpost export --mermaid|--dot|--graphml
+signpost model check           # prove the configured backend works; non-zero if not
 signpost install-hooks         # optional local post-commit hook
 ```
 

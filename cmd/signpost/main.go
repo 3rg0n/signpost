@@ -43,6 +43,7 @@ func commands() []command {
 		{"verify", "check .signpost/ against the repository; non-zero if stale", runVerify},
 		{"graph", "analyse a repository and report its structure", runGraph},
 		{"export", "render the graph as mermaid, dot, graphml, or json", runExport},
+		{"model", "check the configured model backend", runModel},
 		{"version", "print the version", runVersion},
 	}
 }

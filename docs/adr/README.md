@@ -25,6 +25,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0006](0006-generator-and-viewer-are-separate-repositories.md) | Generator and viewer are separate repositories | Superseded by [0008](0008-the-viewer-lives-in-this-repository.md) |
 | [0007](0007-the-bundle-names-the-commit-it-describes.md) | The bundle names the commit it describes, and staleness is a content comparison | Accepted |
 | [0008](0008-the-viewer-lives-in-this-repository.md) | The viewer lives in this repository, with no JavaScript dependencies | Accepted |
+| [0009](0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md) | The semantic pass is opt-in, and egress is explicit | Accepted |
 
 ## Decisions still owed one
 
