@@ -433,6 +433,18 @@ Three mechanisms, all cheap and all in the deterministic part of the code:
    as complete is the confidently-wrong output this design exists to avoid. A
    cached entry is re-grounded when it is read, because a cache file is a file in
    a working tree and so is exactly as untrustworthy as a fresh response.
+
+   A schema bound being *enforced* is not the same as the answer being *complete*,
+   and the difference is a real observed failure rather than a hypothetical. A
+   backend may honour `maxLength` by cutting the string at it and returning the
+   prefix — valid JSON, of a legal length, with `finish_reason: "stop"` — which
+   passes every check above while putting a sentence that stops mid-word on the
+   page. So completeness is checked separately from length: prose that ran to the
+   cap *and* did not finish a sentence was stopped by the backend rather than
+   ended by the model, and is refused. Neither signal alone would do. A model that
+   uses its whole budget and finishes is answering well, and prose flattened from
+   a list legitimately ends without a full stop, so refusing on either signal by
+   itself would drop good summaries over a matter of style.
 4. **Model prose cannot alter the page it lands in.** The text is written inside a
    managed region, and regions are found by matching marker lines textually — so
    prose containing `<!-- /signpost:managed:role -->` would close its own region,
@@ -599,6 +611,19 @@ hits the cap arrives as `finish_reason: "length"`, and it is reported as a failu
 rather than parsed: a truncated claim is usually still valid JSON, and committing
 one as complete is exactly the confidently-wrong output §4.6 refuses to emit.
 Bounding the prose fields is the fix; raising the token cap only moves the cliff.
+
+**A third finding, from the first live run of the full pass rather than the probe,
+completes that picture and is the least guessable of the three.** Bounding the
+prose field does not by itself guarantee a complete answer, because `maxLength` and
+`finish_reason` do not cover the case where the *backend* satisfies the bound on the
+model's behalf: an OpenAI-compatible server cut each over-long summary at exactly
+the cap and returned the prefix with `finish_reason: "stop"`. Five of twelve modules
+on this repository, each ending mid-word. Nothing in the response says it happened —
+the JSON is well-formed, the length is legal, the stop reason is the normal one — so
+the only place to catch it is in the text, by asking whether the sentence finished.
+The general lesson is the one worth carrying: a constraint the *protocol* reports as
+satisfied may have been satisfied by truncation, and a pass that commits prose to
+somebody's repository has to check the prose rather than the protocol.
 
 **Not every model on an OpenAI-compatible endpoint returns the constrained object
 alone.** A model with a reasoning channel emits its trace into the same `content`
