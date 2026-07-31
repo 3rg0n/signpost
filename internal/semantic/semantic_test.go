@@ -282,6 +282,68 @@ func TestOverlongProseIsRefusedNotTruncated(t *testing.T) {
 	}
 }
 
+func TestProseCutToFitTheSchemaIsRefused(t *testing.T) {
+	// The failure the over-long check above cannot see, and the one that actually happened:
+	// a backend that enforces maxLength by cutting the string returns a legal-length answer
+	// with finish_reason "stop", so nothing upstream reports a fault and the page gets a
+	// sentence ending mid-word. Reproduces the observed shape — exactly maxSummaryChars, no
+	// terminal punctuation.
+	in := fixture(t, map[string]string{"internal/auth/auth.go": "package auth\n"})
+	cut := strings.Repeat("word ", 200)[:maxSummaryChars]
+	if len(cut) != maxSummaryChars {
+		t.Fatalf("fixture is %d characters, wanted %d", len(cut), maxSummaryChars)
+	}
+	in.Backend = &fake{replies: []reply{{answer: answer{
+		Role:  cut,
+		Cites: []string{"internal/auth/auth.go"},
+	}}}}
+
+	res := Run(context.Background(), in)
+	if len(res.Summaries) != 0 {
+		t.Fatalf("kept a truncated summary: %+v", res.Summaries)
+	}
+	if !skippedMentions(res, "mid-sentence") {
+		t.Errorf("skip did not say the prose was cut: %v", res.Skipped)
+	}
+}
+
+func TestAFullLengthSummaryThatFinishesIsKept(t *testing.T) {
+	// The other side of the truncation check, and the reason it is not a length test alone: a
+	// model that uses its whole budget and finishes the sentence has answered the question
+	// well, and refusing that would drop the most complete summaries in the bundle.
+	in := fixture(t, map[string]string{"internal/auth/auth.go": "package auth\n"})
+	full := strings.Repeat("word ", 200)[:maxSummaryChars-1] + "."
+	in.Backend = &fake{replies: []reply{{answer: answer{
+		Role:  full,
+		Cites: []string{"internal/auth/auth.go"},
+	}}}}
+
+	s := Run(context.Background(), in).Summaries["/modules/auth"]
+	if s.Text == "" {
+		t.Fatalf("refused a complete summary that used the whole budget: %v",
+			Run(context.Background(), in).Skipped)
+	}
+	if len(s.Text) != maxSummaryChars {
+		t.Errorf("text = %d characters, wanted %d", len(s.Text), maxSummaryChars)
+	}
+}
+
+func TestShortProseWithoutAFullStopIsKept(t *testing.T) {
+	// A summary nowhere near the cap was not cut to fit it, whatever it ends on. Asserted
+	// because the truncation check keys on two signals and this is the one that keeps it from
+	// refusing prose over punctuation — a stylistic judgement §4.5 does not authorise.
+	in := fixture(t, map[string]string{"internal/auth/auth.go": "package auth\n"})
+	in.Backend = &fake{replies: []reply{{answer: answer{
+		Role:  "Issues and verifies auth tokens",
+		Cites: []string{"internal/auth/auth.go"},
+	}}}}
+
+	if s := Run(context.Background(), in).Summaries["/modules/auth"]; s.Text == "" {
+		t.Errorf("refused short prose for lacking a full stop: %v",
+			Run(context.Background(), in).Skipped)
+	}
+}
+
 // --- the fence ---
 
 func TestFileContentIsWrappedAndPathsAreQuoted(t *testing.T) {

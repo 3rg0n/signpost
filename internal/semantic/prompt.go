@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/model"
@@ -26,7 +27,7 @@ import (
 // would produce different text from the same files. Without it, a cache written by an
 // older signpost serves a summary written to a question this version no longer asks —
 // and the summary would look perfectly fine, which is what makes it worth a constant.
-const promptVersion = "role/1"
+const promptVersion = "role/2"
 
 // Bounds on the response, enforced by the schema rather than requested in prose.
 //
@@ -219,7 +220,59 @@ func ground(s Summary, srcs []model.Source) (Summary, error) {
 		return Summary{}, fmt.Errorf("the summary was %d characters, over the %d the "+
 			"schema allows, so the backend did not enforce it", len(text), maxSummaryChars)
 	}
+	if looksTruncated(text) {
+		// The other way a backend enforces maxLength, and the one the check above cannot
+		// see: rather than refusing an over-long answer, it cuts the string at the limit and
+		// returns the prefix. That arrives as valid JSON of a legal length with
+		// finish_reason "stop", so every check to here passes and the page gets a sentence
+		// that stops mid-word — which reads as though the module's purpose were genuinely
+		// undescribed past that point rather than as a fault.
+		//
+		// Observed, not hypothesised: an OpenAI-compatible local server returned exactly
+		// maxSummaryChars characters for 5 of 12 modules on this repository, each ending
+		// mid-word ("edge confidens", "dependencies that are v").
+		return Summary{}, fmt.Errorf("the summary stopped mid-sentence at %d of the %d "+
+			"characters the schema allows, so the backend truncated it to fit rather than "+
+			"refusing it", len(text), maxSummaryChars)
+	}
 	return Summary{Text: text, Cites: cites, Actor: s.Actor}, nil
+}
+
+// truncationSlack is how far below the cap a cut string may land and still be read as one.
+//
+// Not zero, because a backend does not necessarily cut at exactly the limit: one that
+// reserves a byte for a terminator, counts UTF-16 units rather than bytes, or trims the
+// trailing space left by the cut lands a few characters short of the cap while having done
+// the same thing.
+const truncationSlack = 16
+
+// looksTruncated reports whether prose was cut to fit the schema rather than finished.
+//
+// Two signals together, because neither alone is sound. Length near the cap is not enough: a
+// model that genuinely uses its whole budget and ends on a full stop has answered the
+// question, and refusing that would throw away the most complete summaries. Missing terminal
+// punctuation is not enough either — the two sanitise tests in this package cover prose that
+// legitimately ends on a flattened list item or a heading, and §4.5 asks for a *dropped*
+// summary to be a real fault rather than a stylistic one.
+//
+// Their conjunction is specific to the failure: text that ran to the cap *and* did not
+// finish a sentence is text the backend stopped writing, not text a model chose to end. A
+// closing quote or bracket after the stop is allowed, since a summary may end on a quoted
+// name.
+func looksTruncated(s string) bool {
+	if len(s) < maxSummaryChars-truncationSlack {
+		return false
+	}
+	trimmed := strings.TrimRight(s, `"'”’)]}`)
+	r, size := utf8.DecodeLastRuneInString(trimmed)
+	if size == 0 {
+		return true
+	}
+	switch r {
+	case '.', '!', '?', '…', '。', '！', '？':
+		return false
+	}
+	return true
 }
 
 // citableForRegion reports whether a path can be written into a managed region as-is.

@@ -138,7 +138,11 @@ func reportSemantic(p *printer, r *semantic.Result) {
 		p.printf("  %d summarised from part of the module: the input caps applied\n", r.Truncated)
 	}
 	for _, s := range r.Skipped {
-		p.printf("  not summarised: %s\n", s)
+		// Printed as-is. Every entry semantic.Run writes is already a full sentence naming
+		// what it did not do — "X not summarised: …", "the semantic pass stopped at X: …" —
+		// so prefixing them here produced "not summarised: X not summarised: …" and, for the
+		// stopped-early and cache-write lines, a prefix that was simply untrue.
+		p.printf("  %s\n", s)
 	}
 }
 

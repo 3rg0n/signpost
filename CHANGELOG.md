@@ -40,8 +40,8 @@ All notable changes to this project are documented here. Format follows
   drops the whole summary rather than the citation — a summary with a bad citation
   removed reads exactly like one that was grounded all along. Bounds are schema
   constraints, not requests in prose, because `maxLength` is enforced by the
-  sampler where "one or two sentences" is a hint; over-long prose is refused, not
-  truncated. Cached entries are re-grounded when read, since a cache file is a
+  sampler where "one or two sentences" is a hint; prose that came back over the
+  bound, or cut off at it, is refused rather than repaired. Cached entries are re-grounded when read, since a cache file is a
   file in a working tree. And every HTML comment is stripped from the prose before
   it is written: text containing a region's own close marker would otherwise close
   that region, turning everything after it into human text signpost then refuses
@@ -465,6 +465,51 @@ All notable changes to this project are documented here. Format follows
 ### Fixed
 
 #### 2026-07-31
+
+- A truncated model summary was committed as though it were complete. Found by
+  running the semantic pass against a live OpenAI-compatible backend for the first
+  time — the pass shipped wired but exercised only against a fake, and this is what
+  the first real run turned up.
+
+  The schema bounds `role` with `maxLength`, and the response path already refuses
+  a summary that comes back over it or with `finish_reason: "length"`. But a
+  backend has a third option nobody had accounted for: enforce the bound by
+  *cutting the string at it* and returning the prefix. That arrives as valid JSON,
+  of a legal length, with `finish_reason: "stop"` — so grounding passed, the length
+  check passed, and the page got a sentence ending mid-word. Five of twelve modules
+  on this repository, each landing at exactly the 400-character cap, ending on
+  `edge confidens` and `dependencies that are v`. A reader sees prose that stops,
+  which reads as a module whose purpose is genuinely undescribed past that point
+  rather than as a fault — and §4.5 promises a summary is dropped rather than
+  softened.
+
+  Refused now, on two signals together rather than either alone. Length near the
+  cap is not enough: a model that uses its whole budget and finishes its sentence
+  has answered well, and refusing that would throw away the most complete summaries
+  in the bundle. Missing terminal punctuation is not enough either — prose
+  flattened from a list legitimately ends on a list item, and refusing over
+  punctuation is a stylistic judgement §4.5 does not authorise. Their conjunction
+  is specific to the failure: text that ran to the cap *and* did not finish a
+  sentence is text the backend stopped writing. The threshold carries slack rather
+  than testing the exact cap, because a backend that reserves a byte for a
+  terminator or counts UTF-16 units cuts near the limit rather than on it, and a
+  check keyed to the exact number would pass all of those through.
+
+  `promptVersion` is bumped to `role/2`, so a cache written before the fix is not
+  served past it — the cache key is what keeps a truncated summary from outliving
+  the check that would now refuse it.
+
+  Verified against the live backend: the six modules whose summaries finished are
+  kept and unchanged, the six that were cut are refused and named on stderr. No
+  truncated prose ever reached a commit; the bad run was local only.
+
+- Every skipped-module line in the semantic pass printed its reason twice — `not
+  summarised: /modules/okf not summarised: …`. `semantic.Run` writes entries that
+  are already complete sentences naming what it did not do, and the CLI prefixed
+  them again. Worse on the other two kinds of entry, where the added prefix was
+  simply false: a pass that stopped early, and a cache that could not be written,
+  are not modules that were not summarised. The prefix is gone and the entries
+  print as written.
 
 - A filename could take permanent control of a bundle page. Managed regions are
   found by matching a line against a marker, and a POSIX filename may contain a
