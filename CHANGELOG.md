@@ -391,6 +391,38 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-31
 
+- Four extractor defects, found by scoring the Rust and TypeScript extractors
+  against independent reference parsers over real third-party source rather than
+  against hand-written fixtures. Fixtures only test the forms someone thought to
+  write down; every one of these is a form that occurs in ordinary code and that
+  no fixture contained.
+
+  - Rust: a re-export with restricted visibility was dropped entirely.
+    `pub(super) use wire::{A, B}` and `pub(crate) use x::Y` are imports, and the
+    dispatch matched a literal `use ` / `pub use ` prefix, which cannot see a
+    parenthesized visibility clause. It now goes through the same keyword
+    classifier every other item uses, so the visibility form is irrelevant to
+    whether the line is recognised.
+  - Rust: `const unsafe fn f()` reported a constant named `unsafe`. `const` is
+    both an item keyword and a function modifier, and it was treated as a
+    modifier only when the literal word `fn` came next — so `const unsafe fn` and
+    `const extern "C" fn` were read as const items named after the intervening
+    modifier. This is the failure the line-oriented design cares about most: not
+    a missed declaration but an invented one, a symbol the file never wrote.
+  - TypeScript: a dynamic `import("m").then(...)` at the start of a line lost the
+    dependency. The statement branch claimed any line beginning with `import`,
+    the statement parser correctly rejected it as an expression, and the line was
+    consumed before the expression form could run. The branch now tries both.
+  - TypeScript: `declare module 'ext' { }` reported nothing at all. An ambient
+    module names its target with a string literal rather than an identifier, so
+    the name was rejected as not an identifier — meaning a `.d.ts` whose entire
+    purpose is to type an untyped package came back with an empty surface. The
+    recovered declaration is public surface whether or not it carries `export`,
+    because a quoted name makes it an ambient *external* module: it types the
+    package for every file in the program by existing, nothing imports it, and
+    `export` does not apply. A bare identifier is a namespace instead and keeps
+    the ordinary rule.
+
 - Sentinel defanging matched case-sensitively, so `</UNTRUSTED_SOURCE>` in a
   repository file passed through intact and closed the wrapper — landing
   everything after it in the trusted region of the prompt, which is exactly the

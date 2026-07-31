@@ -309,6 +309,14 @@ func TestRustUseForms(t *testing.T) {
 		{"glob", "use std::io::*;", "std::io"},
 		{"self in group", "use a::b::{self, c};", "a::b,a::b::c"},
 		{"pub use", "pub use crate::inner::Thing;", "crate::inner::Thing"},
+		{"pub(super) use", "pub(super) use wire::Thing;", "wire::Thing"},
+		{"pub(crate) use", "pub(crate) use crate::a::B;", "crate::a::B"},
+		{"pub(in path) use", "pub(in crate::x) use crate::a::B;", "crate::a::B"},
+		{
+			"pub(super) use wrapped",
+			"pub(super) use wire::{\n    ChatRequest,\n    ChatMessage,\n};",
+			"wire::ChatMessage,wire::ChatRequest",
+		},
 		{"crate relative", "use crate::graph::Node;", "crate::graph::Node"},
 		{"super relative", "use super::helper;", "super::helper"},
 		{"wrapped", "use std::collections::{\n    HashMap,\n    BTreeMap,\n};", "std::collections::BTreeMap,std::collections::HashMap"},
@@ -512,6 +520,37 @@ func TestRustConstItemVersusConstFn(t *testing.T) {
 	}
 	if kinds["COUNTER"] != SymConst {
 		t.Errorf("COUNTER kind = %q, want const", kinds["COUNTER"])
+	}
+}
+
+// `const` is a modifier when a function follows, and what follows is not always
+// the literal word `fn`. Testing only for an immediate `fn` reports a const item
+// named after the intervening modifier — a symbol the file never declared, which
+// is the worse failure of the two per the precision-over-recall stance.
+func TestRustConstModifierBeforeAnotherModifier(t *testing.T) {
+	fa := extractRust(t, "a.rs", `
+const unsafe fn cu() {}
+pub const unsafe fn pcu() {}
+const extern "C" fn ce() {}
+const async fn ca() {}
+const MAX: usize = 1;
+`)
+	kinds := map[string]SymbolKind{}
+	for _, s := range fa.Symbols {
+		kinds[s.Name] = s.Kind
+	}
+	for _, n := range []string{"unsafe", "extern", "async"} {
+		if _, ok := kinds[n]; ok {
+			t.Errorf("invented a symbol named %q from a modifier stack", n)
+		}
+	}
+	for _, n := range []string{"cu", "pcu", "ce", "ca"} {
+		if kinds[n] != SymFunc {
+			t.Errorf("%s kind = %q, want func — a const fn is a function", n, kinds[n])
+		}
+	}
+	if kinds["MAX"] != SymConst {
+		t.Errorf("MAX kind = %q, want const", kinds["MAX"])
 	}
 }
 
