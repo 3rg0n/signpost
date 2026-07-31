@@ -2,7 +2,7 @@
 type: Module
 title: internal/semantic
 description: 3 go files; 35 exported symbols.
-resource: git://github.com/3rg0n/signpost@19d2472eb3d5aa16b3a58299d11f382ed69ffe59/internal/semantic
+resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/internal/semantic
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
   - { name: commits, value: "2" }
@@ -13,8 +13,8 @@ attributes:
   - { name: lines_added, value: "1536" }
   - { name: lines_removed, value: "1" }
   - { name: package, value: semantic }
-  - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 50% }
+  - { name: top_author, value: Ergon Copeland }
+  - { name: top_author_share, value: 100% }
 edges:
   - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 2, source: internal/semantic/semantic.go }
   - { kind: imports, to: /modules/graph.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
