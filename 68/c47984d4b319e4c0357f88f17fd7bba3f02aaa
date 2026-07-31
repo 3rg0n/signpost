@@ -1,0 +1,35 @@
+internal/extract/rust.go
+  s_f6c0b1ac81cb95::t_808b5a2b1e1ef1 358,360-365,368
+  s_f6c0b1ac81cb95::t_b2095d4cb7bf8c 64-67
+internal/extract/rust_test.go
+  s_f6c0b1ac81cb95::t_ee0c1cea090a60 312-319
+  s_f6c0b1ac81cb95::t_258c579d2c4cce 526-556
+internal/extract/typescript_test.go
+  s_f6c0b1ac81cb95::t_06711f70ddfe43 456-463
+  s_f6c0b1ac81cb95::t_ee03a9fe96d0a6 475-536
+  s_f6c0b1ac81cb95::t_acfef6383b33b4 383
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_f01907fe267326 394-418,425
+  s_f6c0b1ac81cb95::t_45d5c5cecde008 419-424
+internal/extract/typescript.go
+  s_f6c0b1ac81cb95::t_7a922b30af472e 341-346,348
+  s_f6c0b1ac81cb95::t_dc49cedf402d62 425-456
+  s_f6c0b1ac81cb95::t_66012abc584b7c 63-68
+  s_f6c0b1ac81cb95::t_d926667ef1bcb2 336-340,347,349-351
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "68c47984d4b319e4c0357f88f17fd7bba3f02aaa",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
