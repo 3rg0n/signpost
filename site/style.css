@@ -660,6 +660,82 @@ code {
   line-height: 1.5;
 }
 
+.ctl__hint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* --- zoom ------------------------------------------------------------------ */
+
+/* The same bordered-grid grammar as .ctl__set, so the view controls read as part
+   of the same panel rather than as a widget dropped into it. */
+.zoom {
+  display: flex;
+  margin-top: 0.7rem;
+  border: 1px solid var(--rule);
+  font-family: var(--mono);
+}
+
+.zoom__btn,
+.zoom__reset {
+  padding: 0.4rem 0;
+  border: 0;
+  background: var(--ground);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.zoom__btn {
+  flex: none;
+  width: 2rem;
+}
+
+.zoom__reset {
+  flex: none;
+  padding: 0.4rem 0.6rem;
+  border-left: 1px solid var(--rule);
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+}
+
+.zoom__btn:hover,
+.zoom__reset:hover {
+  background: var(--raised);
+}
+
+/* Disabled at a limit rather than hidden: a control that disappears at 100% makes
+   the reader wonder what they did. */
+.zoom__btn:disabled,
+.zoom__reset:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.zoom__btn:disabled:hover,
+.zoom__reset:disabled:hover {
+  background: var(--ground);
+}
+
+.zoom__level {
+  flex: 1 1 auto;
+  padding: 0.4rem 0;
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  background: var(--ground);
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: center;
+  /* The percentage changes width as it ticks through 100/135/182; a fixed
+     advance stops the two buttons shifting under the cursor mid-zoom. */
+  font-variant-numeric: tabular-nums;
+}
+
 .plot {
   margin: 0;
   border: 1px solid var(--rule);
@@ -670,6 +746,20 @@ code {
   display: block;
   width: 100%;
   height: auto;
+  /* Clipped to the frame, so a panned view does not spill over the border. */
+  overflow: hidden;
+}
+
+/* Only draggable once there is somewhere to drag to. Claiming touch gestures is
+   part of that: at 1× a swipe belongs to the page — and below 68rem, to the
+   sideways scroll on .plot — so the grab only takes effect while zoomed. */
+.plot__svg.is-pannable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.plot__svg.is-panning {
+  cursor: grabbing;
 }
 
 .plot__fallback {

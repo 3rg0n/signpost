@@ -21,7 +21,25 @@
   // The plot's own coordinate space. The SVG scales to its container through
   // viewBox, so nothing here depends on the rendered pixel size.
   var W = 1000;
-  var H = 660;
+
+  // The height a repository of signpost's own shape gets, and the height layout()
+  // grows from. It is a floor rather than a fixed size: a repository with enough
+  // edgeless nodes needs a band taller than this, and the alternative to growing
+  // was subtracting a band bigger than the frame and rendering those nodes at
+  // negative coordinates, outside the viewBox, where they are not drawn at all.
+  var H_BASE = 660;
+
+  // Set by layout() to H_BASE or more. Everything downstream — the viewBox, the
+  // pan clamp, the arrow-key step, the pixel-to-unit conversion — reads it, so the
+  // taller frame is consistent by construction rather than by remembering to
+  // update each of them.
+  var H = H_BASE;
+
+  // What the connected part of the graph keeps even when the band has taken
+  // everything else. Below roughly this the cells are too short to lay a component
+  // out in, and 2 * PAD of it is padding.
+  var MAIN_MIN = 260;
+
   var PAD = 46;
 
   // Node kinds signpost emits, in the order they should appear in the legend:
@@ -57,6 +75,11 @@
     detailFileList: document.querySelector("[data-detail-filelist]"),
     detailEdges: document.querySelector("[data-detail-edges]"),
     detailEdgeList: document.querySelector("[data-detail-edgelist]"),
+    zoom: document.querySelector("[data-zoom]"),
+    zoomIn: document.querySelector("[data-zoom-in]"),
+    zoomOut: document.querySelector("[data-zoom-out]"),
+    zoomReset: document.querySelector("[data-zoom-reset]"),
+    zoomLevel: document.querySelector("[data-zoom-level]"),
   };
 
   var state = {
@@ -69,6 +92,18 @@
     // Set by layout(): how the frame was divided between the connected graph and
     // the band of nodes with no edges.
     zones: null,
+    // The view transform, in viewBox units: a point of the drawing at g lands at
+    // view.x + view.k * g. Held here rather than in render() because render()
+    // rebuilds the whole svg, and a filter toggle that threw away the reader's
+    // position would make the filters unusable at any zoom above 1.
+    view: { k: 1, x: 0, y: 0 },
+    // The <g> currently carrying that transform, so a drag can move the picture
+    // without rebuilding 25 nodes per pointer event.
+    viewG: null,
+    drag: null,
+    // Set when a drag actually moved, and read by the node click handler: a drag
+    // that starts on a node must not also select it.
+    suppressClick: false,
   };
 
   fetch("graph.json", { credentials: "omit" })
@@ -150,6 +185,7 @@
 
     layout();
     buildFilters();
+    bindZoomControls();
     el.controls.hidden = false;
     el.detail.hidden = false;
     render();
@@ -175,9 +211,25 @@
   // and in the detail panel, so nothing is lost, only shortened.
   var LABEL_MAX = 22;
 
-  // Half the widest label, near enough at 11px mono. Nodes are kept this far from
-  // the frame edge so a centred label cannot be clipped.
-  var LABEL_PAD = 68;
+  // Measured off the rendered page rather than assumed: `.plot__label` is 11px
+  // Spline Sans Mono, whose advance came out at 6.60–6.67 units per character, so
+  // `internal/assemble` is about 113 units wide. Rounded up, because the fallback
+  // when the webfont has not loaded is the platform monospace and that is not
+  // guaranteed to be narrower. Every spacing decision below is expressed in terms
+  // of this: the thing that must not overlap is the label, not the dot.
+  var CHAR_W = 6.8;
+
+  // The label's baseline sits this far below the node's rim, and 11px text
+  // descends about 3 units below its own baseline.
+  var LABEL_DY = 14;
+  var LABEL_DESC = 3;
+
+  // Clear space demanded between two node footprints.
+  var GAP = 7;
+
+  // How far the axes may be scaled differently from each other when a component
+  // is fitted into its cell. See normalise().
+  var STRETCH_MAX = 2.6;
 
   // layout is two layouts, because this graph is two different things.
   //
@@ -214,7 +266,23 @@
     var cols = Math.min(5, Math.max(1, alone.length));
     var gridRows = Math.ceil(alone.length / cols);
     var band = alone.length ? gridRows * 52 + 26 : 0;
-    var mainH = H - band - (band ? 18 : 0);
+    var split = band ? 18 : 0;
+
+    // The frame grows rather than the band eating the graph. Sixteen rows of
+    // edgeless nodes need 858 units of band, which is more than the 660 the frame
+    // starts with; subtracting that gave a negative main area, and from there
+    // negative cell heights, a band rule at y=-208, and a quarter of the nodes
+    // placed off-canvas where the browser simply does not draw them. Growing keeps
+    // the drawing correct at the cost of a taller picture, which is the right way
+    // round: the page scales the SVG to its container either way.
+    //
+    // It grows for the connected part too, and for the same reason. `separate` can
+    // only push nodes apart into space that exists: sixteen six-node components
+    // give each a cell 191 by 108 units, which holds three footprints of a
+    // long-named module and is asked to hold six, and no pass budget resolves that.
+    // Measured before this: 64 overlapping label pairs.
+    var mainH = Math.max(MAIN_MIN, H_BASE - band - split, mainNeeded(linked));
+    H = mainH + band + split;
 
     // The ids, not the count: the caption has to say how many are *drawn*, and a
     // filter changes that. A number fixed at layout time would keep claiming 16
@@ -277,6 +345,70 @@
     return out;
   }
 
+  /* How the components are arranged into a grid of cells.
+   *
+   * One function, called by both mainNeeded and placeLinked, because the first
+   * answers "how tall must the frame be for this grid" and the second answers
+   * "where does each node go in it". Two copies of this arithmetic that drifted
+   * apart would mean a height computed for a layout that is not the one drawn, and
+   * a square-root of the component count in each was exactly that risk.
+   *
+   * Square-ish, then narrowed until a cell is at least as wide as the widest
+   * footprint it has to hold. The frame cannot grow sideways — W is the page's
+   * width — so columns are the constrained axis and rows are the free one: at 100
+   * components, ten columns gave each cell 55 units for a 136-unit label and no
+   * arrangement inside it could be made legible. Fewer, wider columns and more
+   * rows can be. */
+  function grid(comps) {
+    var widest = 0;
+    comps.forEach(function (comp) {
+      comp.forEach(function (n) {
+        widest = Math.max(widest, 2 * halfW(n) + GAP);
+      });
+    });
+
+    // The cell inset placeLinked applies, so this compares like with like.
+    var fits = Math.floor((W - 2 * PAD) / (widest + 36));
+    var cols = Math.min(Math.ceil(Math.sqrt(comps.length)), Math.max(1, fits));
+    return { cols: cols, rows: Math.ceil(comps.length / cols) };
+  }
+
+  /* The main area's height, if every component is to have room for its nodes'
+   * footprints without overlap.
+   *
+   * A grid of footprints is a lower bound rather than a prediction: the force pass
+   * does not place nodes on a grid, and separate() moves them from wherever it
+   * does place them. So this is padded, and separate() remains the thing that
+   * actually guarantees no overlap. What this removes is the case where no
+   * arrangement could have. */
+  function mainNeeded(comps) {
+    if (comps.length === 0) {
+      return 0;
+    }
+    var g = grid(comps);
+    var bw = (W - 2 * PAD) / g.cols - 36;
+
+    var tallest = 0;
+    comps.forEach(function (comp) {
+      var fw = 0;
+      var fh = 0;
+      comp.forEach(function (n) {
+        fw = Math.max(fw, 2 * halfW(n) + GAP);
+        fh = Math.max(fh, 2 * halfH(n) + GAP);
+      });
+      // At least one per row even when a single footprint is wider than the cell:
+      // that node is already as clamped as contain() can make it, and dividing by
+      // a non-positive number here would put NaN or Infinity into every
+      // coordinate. grid() makes this the exception rather than the common case.
+      var across = bw > 0 && fw > 0 ? Math.max(1, Math.floor((bw + GAP) / fw)) : 1;
+      var deep = Math.ceil(comp.length / across);
+      // A quarter more than the grid needs, because the nodes do not arrive on one.
+      tallest = Math.max(tallest, deep * fh * 1.25);
+    });
+
+    return Math.ceil(g.rows * (tallest + 34) + 2 * PAD);
+  }
+
   // Each component is laid out on its own and then normalised into a cell. One
   // component takes the whole area; several share a grid. Packing them tighter
   // than a grid would buy space this graph does not need.
@@ -284,8 +416,9 @@
     if (comps.length === 0) {
       return;
     }
-    var cols = Math.ceil(Math.sqrt(comps.length));
-    var rows = Math.ceil(comps.length / cols);
+    var g = grid(comps);
+    var cols = g.cols;
+    var rows = g.rows;
     var cellW = (W - 2 * PAD) / cols;
     var cellH = (mainH - 2 * PAD) / rows;
 
@@ -295,8 +428,33 @@
       var cy = PAD + Math.floor(i / cols) * cellH;
       // The inset keeps a component's labels inside its own cell rather than
       // running into the neighbouring one.
-      normalise(comp, cx + 18, cy + 10, cellW - 36, cellH - 34);
+      var bx = cx + 18;
+      var by = cy + 10;
+      var bw = cellW - 36;
+      var bh = cellH - 34;
+      normalise(comp, bx, by, bw, bh);
+      separate(comp, bx, by, bw, bh);
     });
+  }
+
+  /* The footprint of a node — the box its dot and its label occupy together.
+   *
+   * Spacing is decided in these terms rather than in distances between centres,
+   * which is the distinction the first version of this file missed. Two nodes 52
+   * units apart are comfortably separated as dots and unreadable as labels, and
+   * the label is the part carrying the name. */
+  function halfW(n) {
+    return Math.max(radius(n), (shorten(n.title).length * CHAR_W) / 2);
+  }
+
+  function halfH(n) {
+    return radius(n) + (LABEL_DY + LABEL_DESC) / 2;
+  }
+
+  // The footprint's vertical centre is below the dot's, because the label hangs
+  // underneath it.
+  function midY(n) {
+    return n.y + (LABEL_DY + LABEL_DESC) / 2;
   }
 
   // A grid, ordered the way the legend is: modules, then documents, then
@@ -404,8 +562,20 @@
     }
   }
 
-  // Fit a component's settled coordinates into a box, preserving aspect so the
-  // layout is not stretched into whatever shape the cell happens to be.
+  // Fit a component's settled coordinates into a box.
+  //
+  // The two axes are scaled separately, within a bound. Preserving aspect is what
+  // the first version did, and on this repository it cost most of the frame: the
+  // force pass settles a component roughly square, the cell is far wider than it
+  // is tall, so the height bound and 680 of the 1000 units of width went unused —
+  // ten nodes crowded into a third of the picture.
+  //
+  // Scaling the axes apart is legitimate here specifically because `force` has no
+  // notion of label size: it spaces centres, so the aspect ratio it happens to
+  // settle into is not a fact about the graph and stretching does not destroy one.
+  // What it does carry is which nodes are near which, and that survives. The bound
+  // is there because an unbounded stretch would flatten a component into a line
+  // the moment the cell is much wider than tall.
   function normalise(comp, bx, by, bw, bh) {
     var xs = comp.map(function (n) {
       return n.x;
@@ -419,19 +589,93 @@
     var maxY = Math.max.apply(null, ys);
     var spanX = Math.max(1, maxX - minX);
     var spanY = Math.max(1, maxY - minY);
-    var s = Math.min(bw / spanX, bh / spanY);
 
-    // Centred in the box: with aspect preserved one axis has slack, and leaving it
-    // all on one side would push the drawing against an edge.
-    var offX = bx + (bw - spanX * s) / 2;
-    var offY = by + (bh - spanY * s) / 2;
+    var fitX = bw / spanX;
+    var fitY = bh / spanY;
+    var fit = Math.min(fitX, fitY);
+    var sx = Math.min(fitX, fit * STRETCH_MAX);
+    var sy = Math.min(fitY, fit * STRETCH_MAX);
+
+    // Centred in the box: the axis that hit the stretch bound still has slack, and
+    // leaving it all on one side would push the drawing against an edge.
+    var offX = bx + (bw - spanX * sx) / 2;
+    var offY = by + (bh - spanY * sy) / 2;
 
     comp.forEach(function (n) {
-      n.x = offX + (n.x - minX) * s;
-      n.y = offY + (n.y - minY) * s;
-      // The clamp is what guarantees a centred label stays inside the viewBox.
-      n.x = Math.max(LABEL_PAD, Math.min(W - LABEL_PAD, n.x));
+      n.x = offX + (n.x - minX) * sx;
+      n.y = offY + (n.y - minY) * sy;
+      contain(n, bx, by, bw, bh);
     });
+  }
+
+  /* Push overlapping footprints apart until none overlap, or the pass budget runs
+   * out.
+   *
+   * This is the guarantee, and normalise is only the thing that makes it cheap to
+   * satisfy. Spreading a component across the frame leaves most pairs clear, but
+   * "most" is not a property worth shipping: whether two labels collide depends on
+   * how long they are, and the force pass never looked. So overlap is measured
+   * directly, on the footprint boxes, and resolved.
+   *
+   * A pair is separated along whichever axis is closer to clear — measured as a
+   * fraction of what that axis needs, not in units, so a pair that is nearly clear
+   * horizontally is not shoved vertically past three other nodes to fix it. */
+  function separate(comp, bx, by, bw, bh) {
+    var n = comp.length;
+    for (var pass = 0; pass < 90; pass++) {
+      var overlapping = false;
+      for (var i = 0; i < n; i++) {
+        for (var j = i + 1; j < n; j++) {
+          var a = comp[i];
+          var b = comp[j];
+          var needX = halfW(a) + halfW(b) + GAP;
+          var needY = halfH(a) + halfH(b) + GAP;
+          var vx = b.x - a.x;
+          var vy = midY(b) - midY(a);
+          var overX = needX - Math.abs(vx);
+          var overY = needY - Math.abs(vy);
+          // Clear on either axis is clear: these are boxes, not circles.
+          if (overX <= 0 || overY <= 0) {
+            continue;
+          }
+          overlapping = true;
+          if (overX / needX <= overY / needY) {
+            // Coincident on this axis: part them deterministically rather than
+            // with a random jitter, so the same graph still draws the same way.
+            var dirX = vx === 0 ? (i % 2 === 0 ? 1 : -1) : vx > 0 ? 1 : -1;
+            a.x -= (dirX * overX) / 2;
+            b.x += (dirX * overX) / 2;
+          } else {
+            var dirY = vy === 0 ? (i % 2 === 0 ? 1 : -1) : vy > 0 ? 1 : -1;
+            a.y -= (dirY * overY) / 2;
+            b.y += (dirY * overY) / 2;
+          }
+          contain(a, bx, by, bw, bh);
+          contain(b, bx, by, bw, bh);
+        }
+      }
+      if (!overlapping) {
+        return;
+      }
+    }
+  }
+
+  /* Hold a node inside its box, footprint included. This is what keeps a label
+   * from being clipped by the frame or from running into the neighbouring cell.
+   *
+   * A label wider than the box it is in cannot satisfy both edges, so it is
+   * centred instead — off the edge by the same amount on both sides beats hard
+   * against one of them. */
+  function contain(n, bx, by, bw, bh) {
+    var hw = halfW(n);
+    var hh = halfH(n);
+    n.x = 2 * hw >= bw ? bx + bw / 2 : Math.max(bx + hw, Math.min(bx + bw - hw, n.x));
+    // The dot's own y, offset back out of the footprint's centre.
+    var off = (LABEL_DY + LABEL_DESC) / 2;
+    n.y =
+      2 * hh >= bh
+        ? by + bh / 2 - off
+        : Math.max(by + hh, Math.min(by + bh - hh, midY(n))) - off;
   }
 
   /* --- filters ------------------------------------------------------------- */
@@ -593,13 +837,23 @@
 
     svg.appendChild(arrowDefs());
 
+    // Everything drawn goes inside one group, and zooming and panning is that
+    // group's transform. Nothing else in the file knows the view exists: node and
+    // edge coordinates stay in layout space, so what a reader sees at 3× is the
+    // same picture magnified rather than a second layout that might disagree with
+    // the first.
+    var view = document.createElementNS(SVG, "g");
+    view.setAttribute("class", "plot__view");
+    state.viewG = view;
+    svg.appendChild(view);
+
     var aloneShown = state.zones
       ? state.zones.alone.filter(function (id) {
           return state.kindOn[state.byID[id].kind];
         }).length
       : 0;
     if (aloneShown > 0) {
-      svg.appendChild(bandRule(aloneShown));
+      view.appendChild(bandRule(aloneShown));
     }
 
     var gEdges = document.createElementNS(SVG, "g");
@@ -607,16 +861,232 @@
     edges.forEach(function (e) {
       gEdges.appendChild(edgeLine(e));
     });
-    svg.appendChild(gEdges);
+    view.appendChild(gEdges);
 
     var gNodes = document.createElementNS(SVG, "g");
     gNodes.setAttribute("class", "plot__nodes");
     nodes.forEach(function (n) {
       gNodes.appendChild(nodeMark(n));
     });
-    svg.appendChild(gNodes);
+    view.appendChild(gNodes);
 
+    applyView();
+    bindView(svg);
     el.plot.appendChild(svg);
+  }
+
+  /* --- zoom and pan --------------------------------------------------------- */
+
+  // 1 is the fitted view. Below it the labels stop being readable, and past 6×
+  // there is nothing left to look at on a graph this size.
+  var ZOOM_MIN = 1;
+  var ZOOM_MAX = 6;
+  var ZOOM_STEP = 1.35;
+
+  function applyView() {
+    if (!state.viewG) {
+      return;
+    }
+    var v = state.view;
+    state.viewG.setAttribute(
+      "transform",
+      "translate(" + fixed(v.x) + " " + fixed(v.y) + ") scale(" + fixed(v.k) + ")"
+    );
+    // classList on an SVGElement is supported everywhere the rest of this file is.
+    state.viewG.parentNode.classList.toggle("is-pannable", v.k > ZOOM_MIN);
+    if (el.zoomLevel) {
+      el.zoomLevel.textContent = Math.round(v.k * 100) + "%";
+    }
+    if (el.zoomReset) {
+      el.zoomReset.disabled = v.k === 1 && v.x === 0 && v.y === 0;
+    }
+    if (el.zoomIn) {
+      el.zoomIn.disabled = v.k >= ZOOM_MAX;
+    }
+    if (el.zoomOut) {
+      el.zoomOut.disabled = v.k <= ZOOM_MIN;
+    }
+  }
+
+  // Zoom about a fixed point of the drawing, so what is under the cursor stays
+  // under the cursor. Zooming about the origin instead is what makes a viewer feel
+  // like it is fighting you: the thing you were looking at slides off-screen.
+  function zoomAbout(k, px, py) {
+    var v = state.view;
+    var next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, k));
+    if (next === v.k) {
+      return;
+    }
+    v.x = px - ((px - v.x) * next) / v.k;
+    v.y = py - ((py - v.y) * next) / v.k;
+    v.k = next;
+    clampView();
+    applyView();
+  }
+
+  // At every zoom level the frame stays covered by the drawing. Panning to empty
+  // space is the other way a hand-rolled viewer goes wrong — a reader who drags
+  // too far is left looking at nothing with no indication of which way back.
+  function clampView() {
+    var v = state.view;
+    var slackX = W * (v.k - 1);
+    var slackY = H * (v.k - 1);
+    v.x = Math.max(-slackX, Math.min(0, v.x));
+    v.y = Math.max(-slackY, Math.min(0, v.y));
+  }
+
+  function zoomBy(factor) {
+    // No pointer involved, so hold the centre of the frame.
+    var v = state.view;
+    zoomAbout(v.k * factor, (W / 2 - v.x) / v.k, (H / 2 - v.y) / v.k);
+  }
+
+  function resetView() {
+    state.view = { k: 1, x: 0, y: 0 };
+    applyView();
+  }
+
+  // Client pixels to viewBox units. The svg scales to its container, so the ratio
+  // is whatever the current rendered width happens to be — reading it from the
+  // element rather than assuming it is what makes wheel-zoom land where the cursor
+  // is at every window size.
+  function toPlot(svg, ev) {
+    var r = svg.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) {
+      return { x: W / 2, y: H / 2 };
+    }
+    var v = state.view;
+    return {
+      x: (((ev.clientX - r.left) / r.width) * W - v.x) / v.k,
+      y: (((ev.clientY - r.top) / r.height) * H - v.y) / v.k,
+    };
+  }
+
+  function bindView(svg) {
+    svg.addEventListener(
+      "wheel",
+      function (ev) {
+        // Only claim the wheel while zoomed in or zooming in. Swallowing it at 1×
+        // on a downward scroll would trap the page scroll on a graph that has
+        // nowhere to go.
+        var into = ev.deltaY < 0;
+        if (!into && state.view.k <= ZOOM_MIN) {
+          return;
+        }
+        ev.preventDefault();
+        var p = toPlot(svg, ev);
+        zoomAbout(state.view.k * (into ? ZOOM_STEP : 1 / ZOOM_STEP), p.x, p.y);
+      },
+      { passive: false }
+    );
+
+    svg.addEventListener("pointerdown", function (ev) {
+      // Cleared here rather than after the guard below, and before the node click
+      // handler gets a chance to read it: a drag that ends over empty space sets
+      // the flag and no node click ever consumes it, so it must be disarmed by
+      // the next press whether or not that press can start a drag. Clearing it
+      // after the guard left click-to-select broken at 1× after any pan.
+      state.suppressClick = false;
+      if (!ev.isPrimary || state.view.k <= ZOOM_MIN) {
+        return;
+      }
+      state.drag = {
+        id: ev.pointerId,
+        cx: ev.clientX,
+        cy: ev.clientY,
+        x: state.view.x,
+        y: state.view.y,
+        moved: false,
+      };
+      svg.classList.add("is-panning");
+      // Capture keeps the drag alive when the pointer leaves the frame, which is
+      // most drags at 6×. It is an improvement rather than a requirement — the
+      // svg's own pointermove drives the pan either way — and it throws if the
+      // pointer is already gone, so a failure here must not abandon the drag with
+      // the class still applied and the graph following an unpressed cursor.
+      try {
+        svg.setPointerCapture(ev.pointerId);
+      } catch (e) {
+        /* the drag still works, it just stops at the frame edge */
+      }
+    });
+
+    svg.addEventListener("pointermove", function (ev) {
+      var d = state.drag;
+      if (!d || ev.pointerId !== d.id) {
+        return;
+      }
+      var r = svg.getBoundingClientRect();
+      if (r.width === 0) {
+        return;
+      }
+      var dx = ev.clientX - d.cx;
+      var dy = ev.clientY - d.cy;
+      // A few pixels of travel is a click with a shaky hand, not a drag.
+      if (!d.moved && Math.abs(dx) + Math.abs(dy) > 3) {
+        d.moved = true;
+      }
+      state.view.x = d.x + (dx / r.width) * W;
+      state.view.y = d.y + (dy / r.height) * H;
+      clampView();
+      applyView();
+    });
+
+    ["pointerup", "pointercancel"].forEach(function (kind) {
+      svg.addEventListener(kind, function (ev) {
+        var d = state.drag;
+        if (!d || ev.pointerId !== d.id) {
+          return;
+        }
+        // The click that ends a drag would otherwise select whatever node the
+        // pointer came to rest on.
+        state.suppressClick = d.moved;
+        state.drag = null;
+        svg.classList.remove("is-panning");
+      });
+    });
+  }
+
+  // Both mouse gestures need a keyboard equivalent. The wheel gets one for free:
+  // a real <button> is operable by Enter and Space with nothing added here. The
+  // drag does not, so the arrow keys pan while focus is anywhere in this group —
+  // otherwise a reader who zooms in from the keyboard can reach the middle of the
+  // graph and nothing else.
+  //
+  // The controls sit beside the plot rather than inside it because the plot's own
+  // focusable children are the nodes, and claiming the arrow keys there would
+  // interfere with moving between them.
+  function bindZoomControls() {
+    if (!el.zoom) {
+      return;
+    }
+    el.zoomIn.addEventListener("click", function () {
+      zoomBy(ZOOM_STEP);
+    });
+    el.zoomOut.addEventListener("click", function () {
+      zoomBy(1 / ZOOM_STEP);
+    });
+    el.zoomReset.addEventListener("click", resetView);
+
+    var STEPS = {
+      ArrowLeft: [1, 0],
+      ArrowRight: [-1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1],
+    };
+    el.zoom.addEventListener("keydown", function (ev) {
+      var step = STEPS[ev.key];
+      if (!step || state.view.k <= ZOOM_MIN) {
+        return;
+      }
+      ev.preventDefault();
+      // A twelfth of the frame per press: enough to cross the picture in a few
+      // presses at 2×, small enough to aim with at 6×.
+      state.view.x += (step[0] * W) / 12;
+      state.view.y += (step[1] * H) / 12;
+      clampView();
+      applyView();
+    });
   }
 
   // Two markers, because the confidence distinction has to survive into the
@@ -756,6 +1226,10 @@
     g.appendChild(t);
 
     g.addEventListener("click", function () {
+      if (state.suppressClick) {
+        state.suppressClick = false;
+        return;
+      }
       select(n.id);
     });
     g.addEventListener("keydown", function (ev) {
