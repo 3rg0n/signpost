@@ -344,9 +344,32 @@ func NewPage(frontmatter string, body ...Region) *Page {
 }
 
 // managedRegion builds a managed region, ensuring its text ends in exactly one newline
-// so the close marker lands on its own line.
+// so the close marker lands on its own line — and that nothing inside it can be read as a
+// marker.
 func managedRegion(name, text string) Region {
-	return Region{Name: name, Text: ensureTrailingNewline(text)}
+	return Region{Name: name, Text: ensureTrailingNewline(escapeMarkers(text))}
+}
+
+// escapeMarkers makes generated text unable to alter the region it lands in.
+//
+// This is the invariant that makes the rest of this file's guarantees hold, and it belongs
+// here because this is the one function every generated managed region passes through.
+// Almost everything the emitter writes into a region is assembled from counted facts, but
+// some of it is repository content — a file path, a directory-derived title — and a path on
+// POSIX may contain a newline. So a filename can put a line of its own choosing inside a
+// managed region, and a line that reads as a close marker ends the region early. Everything
+// after it becomes human text, which signpost then refuses to overwrite: a permanent
+// foothold in the bundle, from a filename, needing no model in the loop at all.
+//
+// Every `<!--` is escaped rather than only the ones that would parse as markers. An
+// allowlist would be a second copy of parseMarker's rules to keep in sync — the failure
+// this file's parse rules are written against — and no generated region has a legitimate
+// use for an HTML comment. `&lt;` renders as `<` in prose, so a reader sees the text that
+// was intended; inside a code span it shows literally, which for a filename containing
+// marker syntax is the more honest reading anyway. The replacement contains no `<!--`, so
+// this cannot recurse.
+func escapeMarkers(text string) string {
+	return strings.ReplaceAll(text, "<!--", "&lt;!--")
 }
 
 // ensureTrailingNewline collapses trailing blank lines to exactly one line break.
@@ -369,6 +392,16 @@ func ensureTrailingNewline(s string) string {
 func humanRegion(text string) Region { return Region{Text: text} }
 
 // heading renders a markdown heading with the blank line that must follow it.
+//
+// The text is folded to a single line and stripped of marker syntax. Both are needed, and
+// for a reason escapeMarkers does not cover: a heading is emitted as *human* text — a title
+// belongs to whoever wrote the directory name and a reader may rewrite it — so it does not
+// pass through managedRegion. A node's title is derived from a directory name, and a
+// directory name may contain a newline, which lets a title put an *opening* marker on a
+// line of human text. The parser then reads a region starting there, and the real region
+// below it becomes that region's content: the placeholder stops regenerating and the page
+// silently goes stale, which is the failure page.go's parse rules are written against
+// arriving through the heading instead of through the markers.
 func heading(level int, text string) string {
-	return strings.Repeat("#", level) + " " + text + "\n\n"
+	return strings.Repeat("#", level) + " " + escapeMarkers(foldWhitespace(text)) + "\n\n"
 }

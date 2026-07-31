@@ -1,0 +1,192 @@
+# The scheduled half of the bundle: model-written module summaries.
+#
+# Separate from signpost.yml, and the separation is the design (§8.1) rather than
+# tidiness. The deterministic pass is genuinely deterministic — same commit in,
+# same bytes out — so it can run on every push without ever producing a no-op
+# commit. The semantic pass is only stable because of its cache, which means a
+# per-push semantic build would put model prose churn into somebody's history,
+# and commit churn is the fastest way to get a committed artifact deleted.
+#
+# So this workflow runs on a schedule, and `signpost build -semantic` is opt-in
+# twice over: a backend has to be configured *and* the flag has to be passed.
+# signpost.yml passes neither. That puts the difference between the two passes in
+# a workflow file rather than in an environment variable someone can set
+# repository-wide by accident.
+#
+# It writes to the same place signpost.yml does, so it shares that workflow's
+# concurrency group: a scheduled run queues behind a push rebuild instead of
+# racing it for the ref.
+name: signpost-semantic
+
+on:
+  schedule:
+    # Weekly, Monday, deliberately off the hour. GitHub's own guidance is that
+    # runs scheduled on the hour are the most likely to be delayed or dropped,
+    # and a dropped run here is a week without summaries.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # The same group as signpost.yml, for the reason at the top: both jobs commit
+  # to the default branch, and two pushes to `.signpost/` in flight at once is a
+  # force-with-lease failure at best.
+  group: signpost-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  semantic:
+    name: summarise modules with a model
+    runs-on: ubuntu-24.04
+    # A bound on the whole job as well as on the pass. `-semantic-timeout` stops
+    # the pass and reports what it has; this stops a runner wedged somewhere
+    # else, and 40 leaves room for the 30-minute pass plus checkout and build.
+    timeout-minutes: 40
+    permissions:
+      # Written only after a strict verify, in the last step.
+      contents: write
+    steps:
+      # Actions pinned by commit SHA, not tag (§8 dependency governance). A tag
+      # is mutable and has been moved in a real supply-chain compromise.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The deterministic half of this build reads git history for co-change
+          # and churn, exactly as signpost.yml does. A depth-1 checkout would
+          # make those numbers thin rather than absent.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      # Is there a backend at all? Asked as a step rather than a job-level `if`
+      # because the `secrets` context is not available there.
+      #
+      # A missing backend is a skip with a message, not a failure. A fork
+      # inherits this schedule and has no secrets, and a red weekly cron in
+      # somebody else's fork of a knowledge tool is noise they did not ask for.
+      # The signpost binary itself takes the opposite line — `-semantic` with no
+      # backend is exit 2 — because there the flag is an explicit request.
+      - name: Is a model backend configured?
+        id: backend
+        env:
+          BACKEND: ${{ vars.SIGNPOST_BACKEND }}
+          API_KEY: ${{ secrets.SIGNPOST_OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKEND}" ]; then
+            echo "no SIGNPOST_BACKEND variable set on this repository; nothing to run."
+            echo "set the repository variable to 'openai' and add the"
+            echo "SIGNPOST_OPENAI_API_KEY secret to turn the semantic pass on."
+            echo "configured=false" >>"${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          if [ "${BACKEND}" = "openai" ] && [ -z "${API_KEY}" ]; then
+            echo "SIGNPOST_BACKEND=openai but no SIGNPOST_OPENAI_API_KEY secret" >&2
+            echo "is set. That is a misconfiguration rather than a choice, so it fails" >&2
+            echo "instead of skipping — a cron that reports success while summarising" >&2
+            echo "nothing is the failure mode this whole workflow guards against." >&2
+            exit 1
+          fi
+          echo "configured=true" >>"${GITHUB_OUTPUT}"
+
+      # The cache is what makes this affordable and what makes it stable. Entries
+      # are keyed by a content hash of the sources that were sent, so a week where
+      # nothing changed costs nothing, and a module whose files did not change
+      # gets the same prose it had — which is why this pass produces no diff to
+      # commit most weeks.
+      #
+      # Restored by prefix: the exact key never hits (it carries this commit's
+      # sha), so every run restores the newest previous entry set and saves a
+      # superset. `.signpost/cache/` is gitignored, so this is the only place it
+      # persists between runs.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.backend.outputs.configured == 'true'
+        with:
+          path: .signpost/cache
+          key: signpost-summary-${{ github.sha }}
+          restore-keys: |
+            signpost-summary-
+
+      # Built from this repository's source, not installed from a release: a
+      # repository that analyses itself must use the binary it currently
+      # contains, or the bundle describes the code while being produced by
+      # something else.
+      - name: Build signpost
+        if: steps.backend.outputs.configured == 'true'
+        run: go build -o signpost ./cmd/signpost
+
+      # The credential reaches the process through the environment and nowhere
+      # else — internal/model reads no config file, deliberately, because
+      # .signpost.yml is committed and a config format with a place for an API
+      # key eventually has one in it.
+      #
+      # Long-lived AWS access keys are not used here and must not be added. The
+      # openai backend speaks to any OpenAI-compatible endpoint, so pointing
+      # SIGNPOST_OPENAI_BASE_URL at one and supplying its own key keeps AWS
+      # credentials out of Actions entirely. Bedrock over OIDC is not wired up:
+      # the bearer-token path this backend uses is gated on
+      # `bedrock:CallWithBearerToken`, which the OIDC role pattern does not
+      # grant, and a role that cannot make the call is worse than no role.
+      #
+      # The pass fails open by construction (§5): semantic.Run returns no error,
+      # a backend that goes away stops the pass and names what was lost, and a
+      # response that cannot be grounded is dropped. So this step failing means
+      # the deterministic build failed, not that a model did.
+      - name: Rebuild the bundle with summaries
+        if: steps.backend.outputs.configured == 'true'
+        env:
+          SIGNPOST_BACKEND: ${{ vars.SIGNPOST_BACKEND }}
+          SIGNPOST_MODEL: ${{ vars.SIGNPOST_MODEL }}
+          SIGNPOST_OPENAI_BASE_URL: ${{ vars.SIGNPOST_OPENAI_BASE_URL }}
+          SIGNPOST_OPENAI_API_KEY: ${{ secrets.SIGNPOST_OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          ./signpost build -semantic -semantic-timeout 30m \
+            -repo "github.com/${GITHUB_REPOSITORY}" .
+
+      # Strict, with no -as-of-bundle. This job writes the stamp, so it is one of
+      # the two places that can check the stamp it just wrote is true.
+      #
+      # It is also the check that a role region does not break byte-stability: a
+      # fresh render produces no `role`, the merge against disk carries the one
+      # this run wrote, and the comparison has to still come out equal. If that
+      # ever stops holding, the failure lands here rather than as a red staleness
+      # gate on the next contributor's pull request.
+      - name: Verify strictly
+        if: steps.backend.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          ./signpost verify -repo "github.com/${GITHUB_REPOSITORY}" .
+
+      # Committed only when the bytes changed, same as signpost.yml, and for the
+      # same reason: a weekly no-op commit on the default branch is the churn
+      # §8.1 says kills adoption. With the cache warm and no source changes, the
+      # expected outcome of this step is "nothing to commit".
+      #
+      # `[skip ci]` keeps the other workflows off a commit that changed only
+      # generated markdown; signpost.yml's own paths-ignore and actor test cover
+      # the rest of the loop.
+      - name: Commit the summaries if they changed
+        if: steps.backend.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          # Staged first, then asked: `git diff` says nothing about untracked
+          # files, so on a repository whose bundle is new a plain diff would
+          # report no change and the summaries would never be committed.
+          git add .signpost
+          if git diff --quiet --cached -- .signpost; then
+            echo "the bundle is unchanged; nothing to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update the signpost module summaries [skip ci]"
+          # --force-with-lease rather than a plain push: the concurrency group
+          # queues runs but does not stop a human pushing between this job's
+          # checkout and here, and overwriting their commit to land generated
+          # prose would be the worst possible trade.
+          git push --force-with-lease

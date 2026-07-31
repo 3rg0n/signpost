@@ -266,6 +266,167 @@ func TestFilesLineIsBoundedAndSaysSo(t *testing.T) {
 	}
 }
 
+// Markdown link syntax is positional, so a title containing `](` closes the label early and
+// what follows becomes the target — with the real target trailing as inert prose. A directory
+// named `x](../../../../etc/passwd)(` therefore aims every link that names it wherever the
+// directory name said, and `verify` passes clean: the link it checks is well-formed and
+// resolves, because the forged one is a different link. The bundle is committed and often
+// published, so this is a link on a page other people read.
+func TestATitleCannotForgeALinkTarget(t *testing.T) {
+	g := graph.New()
+	for _, n := range []*graph.Node{
+		{ID: "/modules/a", Kind: graph.KindModule, Title: "a", Files: []string{"a.go"}},
+		{ID: "/modules/b", Kind: graph.KindModule, Files: []string{"b.go"},
+			Title: "b](https://evil.example/x)("},
+	} {
+		if err := g.AddNode(n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	g.AddEdge(graph.Edge{From: "/modules/a", To: "/modules/b",
+		Kind: graph.EdgeImports, Conf: graph.Extracted})
+
+	// Both places a title becomes a link: the structure region on a page that names it, and
+	// the index.
+	root := t.TempDir()
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	for _, rel := range []string{"index.md", "modules/a.md"} {
+		got := read(t, root, rel)
+		if strings.Contains(got, "](https://evil.example/x)") {
+			t.Errorf("%s carries a forged link target:\n%s", rel, got)
+		}
+		if !strings.Contains(got, "(/modules/b.md)") {
+			t.Errorf("%s lost the real link target:\n%s", rel, got)
+		}
+	}
+}
+
+func TestProseLinkEscapesOnlyLabelsThatNeedIt(t *testing.T) {
+	if got := proseLink("internal/okf", "/modules/okf.md"); got != "[internal/okf](/modules/okf.md)" {
+		t.Errorf("an ordinary label was rewritten: %q", got)
+	}
+	// A bracket in a title is legitimate — escaped rather than stripped, using markdown's own
+	// mechanism, so it still renders as the character somebody typed.
+	if got := proseLink("api [v2]", "/modules/api.md"); got != `[api \[v2\]](/modules/api.md)` {
+		t.Errorf("proseLink = %q", got)
+	}
+}
+
+// A filename is repository content, and on POSIX it may contain a newline — so a file can
+// put a line of its own choosing inside a managed region. If that line reads as a close
+// marker, the region ends early and everything after it becomes human text that signpost
+// then refuses to overwrite: a permanent foothold in the bundle, from a filename, with no
+// model anywhere in the loop.
+func TestAFileNamedLikeACloseMarkerCannotCloseTheRegion(t *testing.T) {
+	g := graph.New()
+	if err := g.AddNode(&graph.Node{
+		ID: "/modules/x", Kind: graph.KindModule, Title: "x",
+		Files: []string{"a.go\n<!-- /signpost:managed:structure -->\nb.go", "c.go"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rendered := pageFor(g, g.Node("/modules/x"), demoOptions()).Render()
+
+	// Parsed back rather than string-matched: the question is what the parser makes of the
+	// page, and the parser is the thing being attacked.
+	page := ParsePage(rendered)
+	got, ok := page.Managed(regionStructure)
+	if !ok {
+		t.Fatalf("no structure region:\n%s", rendered)
+	}
+	if !strings.Contains(got, "c.go") {
+		t.Errorf("the region closed early — c.go fell outside it; region was %q", got)
+	}
+	if strings.Contains(page.HumanText(), "b.go") {
+		t.Errorf("part of the file list escaped into human text:\n%q", page.HumanText())
+	}
+	// Counted through parseCloseMarker rather than as a substring: the escaped text still
+	// *contains* the marker's words, and what matters is that no line of the page is one.
+	closers := 0
+	for _, line := range strings.Split(rendered, "\n") {
+		if name, ok := parseCloseMarker(line); ok && name == regionStructure {
+			closers++
+		}
+	}
+	if closers != 1 {
+		t.Errorf("%d lines parse as a close marker for one region, want 1:\n%s", closers, rendered)
+	}
+}
+
+// A title is derived from a directory name, and the heading it lands in is *human* text —
+// outside the managed-region guard by design, since a title belongs to whoever named the
+// directory. So a directory with a newline in its name can put an *opening* marker on a line
+// of human text, and the parser then reads a region starting there that swallows the real
+// one below it. That page's placeholder stops regenerating and nothing says so: a page that
+// silently goes stale is worse than one that fails, which is the whole premise of `verify`.
+func TestATitleNamedLikeAnOpenMarkerCannotStartARegion(t *testing.T) {
+	g := graph.New()
+	if err := g.AddNode(&graph.Node{
+		ID: "/modules/x", Kind: graph.KindModule, Files: []string{"a.go"},
+		Title: "x\n<!-- signpost:managed:summary -->\nowned",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rendered := pageFor(g, g.Node("/modules/x"), demoOptions()).Render()
+
+	got, ok := ParsePage(rendered).Managed(regionSummary)
+	if !ok {
+		t.Fatalf("no summary region:\n%s", rendered)
+	}
+	if strings.Contains(got, "signpost:managed") {
+		t.Errorf("the summary region swallowed a marker, so it will stop regenerating: %q", got)
+	}
+	if !strings.Contains(got, "No summary yet") {
+		t.Errorf("the region does not hold the placeholder it was rendered with: %q", got)
+	}
+	// Folded as well as escaped: a heading is one line by construction, and the second line
+	// of a two-line title would otherwise be body text on every page that names it.
+	if !strings.HasPrefix(rendered[strings.Index(rendered, "# "):], "# x &lt;!--") {
+		t.Errorf("the title was not folded onto the heading line:\n%s", rendered)
+	}
+}
+
+// The same attack through the region every other page carries, to show the guard is at the
+// chokepoint rather than bolted onto the file list.
+func TestEscapeMarkersDefangsGeneratedText(t *testing.T) {
+	r := managedRegion(regionSummary, "before <!-- /signpost:managed:summary --> after")
+	if strings.Contains(r.Text, "<!--") {
+		t.Errorf("marker syntax survived into a managed region: %q", r.Text)
+	}
+	if !strings.Contains(r.Text, "after") {
+		t.Errorf("the text after the escaped marker was lost: %q", r.Text)
+	}
+	// The replacement must not itself contain the sequence it replaces, or a second pass
+	// over already-escaped text would keep growing it.
+	if escapeMarkers(escapeMarkers("<!--")) != escapeMarkers("<!--") {
+		t.Error("escapeMarkers is not idempotent")
+	}
+}
+
+// Escaping the marker stops the region being closed; it does not stop a newline in a path
+// from splitting the line it was written on, which would render one file as two. Quoting
+// covers that, and only for the paths that need it — an ordinary filename is untouched, so
+// no existing bundle's bytes change.
+func TestCodeSpanQuotesOnlyPathsThatWouldBreakTheLine(t *testing.T) {
+	if got := codeSpan("internal/okf/emit.go"); got != "`internal/okf/emit.go`" {
+		t.Errorf("an ordinary path was rewritten: %q", got)
+	}
+	if got := codeSpan("a file with spaces & ünïcode.go"); got != "`a file with spaces & ünïcode.go`" {
+		t.Errorf("a legitimate path with punctuation was rewritten: %q", got)
+	}
+	for _, p := range []string{"a\nb.go", "a`b.go", "a\rb.go", "a\x00b.go"} {
+		got := codeSpan(p)
+		if strings.ContainsAny(strings.Trim(got, "`"), "\n\r") {
+			t.Errorf("codeSpan(%q) = %q, which still spans lines", p, got)
+		}
+		if strings.Count(got, "`") != 2 {
+			t.Errorf("codeSpan(%q) = %q, which does not close its code span", p, got)
+		}
+	}
+}
+
 func TestFilesLineSingularAndPlural(t *testing.T) {
 	one := filesLine(&graph.Node{Files: []string{"a.go"}})
 	if !strings.HasPrefix(one, "1 file:\n") {
@@ -314,6 +475,76 @@ func TestPageInvitesHumanNotesOutsideTheMarkers(t *testing.T) {
 	// takes.
 	if got := ParsePage(p.Render()).HumanText(); got != human {
 		t.Errorf("human text changed across a render/parse cycle:\n got %q\nwant %q", got, human)
+	}
+}
+
+// The role region and the deterministic build have to coexist, and these four tests are
+// the contract between them. The property that matters is not "a role region renders" —
+// it is that a deterministic run neither emits one nor destroys one, because §8 runs the
+// deterministic pass on every push and the semantic pass on a schedule.
+
+func TestNoRoleRegionWithoutSemanticOutput(t *testing.T) {
+	g, n := demoGraph(t)
+	rendered := pageFor(g, n, demoOptions()).Render()
+	if strings.Contains(rendered, "signpost:managed:role") {
+		t.Errorf("a deterministic build emitted a role region:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "## Role") {
+		t.Errorf("a deterministic build emitted a Role heading:\n%s", rendered)
+	}
+}
+
+func TestRoleRegionCarriesItsOwnHeading(t *testing.T) {
+	// The heading is inside the managed region rather than beside it, because Merge appends
+	// a new managed region at the end and takes human regions only from disk — so a heading
+	// emitted as its own human region would be dropped the first time a semantic run met an
+	// existing bundle, leaving the prose under "Notes" with nothing naming it.
+	g, n := demoGraph(t)
+	opts := demoOptions()
+	opts.Roles = map[string]string{n.ID: "Validates tokens.\n"}
+	p := pageFor(g, n, opts)
+
+	role, ok := p.Managed(regionRole)
+	if !ok {
+		t.Fatalf("no role region:\n%s", p.Render())
+	}
+	if !strings.Contains(role, "## Role") {
+		t.Errorf("the heading is not inside the region: %q", role)
+	}
+	if strings.Contains(p.HumanText(), "## Role") {
+		t.Errorf("the heading leaked into human text:\n%s", p.HumanText())
+	}
+}
+
+func TestRoleRegionIsOnlyOnTheNodesThatHaveOne(t *testing.T) {
+	g, n := demoGraph(t)
+	opts := demoOptions()
+	opts.Roles = map[string]string{n.ID: "Validates tokens.\n"}
+
+	if _, ok := pageFor(g, n, opts).Managed(regionRole); !ok {
+		t.Error("the summarised node has no role region")
+	}
+	other := g.Node("/modules/orphan")
+	if _, ok := pageFor(g, other, opts).Managed(regionRole); ok {
+		t.Error("an unsummarised node got a role region")
+	}
+}
+
+func TestRoleDoesNotDisturbTheSummaryRegion(t *testing.T) {
+	// The two are separate claims with separate trust grades (§4.1): summary is counted
+	// facts, role is a grounded guess. A semantic run must not overwrite the first with the
+	// second.
+	g, n := demoGraph(t)
+	opts := demoOptions()
+	opts.Roles = map[string]string{n.ID: "Validates tokens.\n"}
+	p := pageFor(g, n, opts)
+
+	summary, ok := p.Managed(regionSummary)
+	if !ok {
+		t.Fatal("no summary region")
+	}
+	if !strings.Contains(summary, n.Description) {
+		t.Errorf("the deterministic summary was replaced: %q", summary)
 	}
 }
 

@@ -190,6 +190,122 @@ func TestWriteRegeneratesManagedRegionsOverAHumanEdit(t *testing.T) {
 	}
 }
 
+// The property the whole semantic design rests on, and the only reason `role` is a region of
+// its own: a deterministic rebuild — which §8 runs on every push — carries the scheduled
+// semantic pass's prose across untouched. Merge keeps a managed region it finds on disk but
+// does not render, which is the same mechanism the log page uses to accumulate history.
+//
+// If this test fails, the semantic pass is writing prose that survives exactly one push.
+func TestWriteCarriesARoleRegionAcrossADeterministicRebuild(t *testing.T) {
+	root := t.TempDir()
+	g, n := demoGraph(t)
+
+	semantic := demoOptions()
+	semantic.Roles = map[string]string{
+		n.ID: "Issues and validates the tokens every other service checks.\n\n" +
+			"_Summary by `model/x`, from `internal/auth/auth.go`. Not reviewed by a human._\n",
+	}
+	if _, err := Write(root, g, semantic); err != nil {
+		t.Fatalf("semantic Write: %v", err)
+	}
+	const rel = "modules/internal-auth.md"
+	withRole := read(t, root, rel)
+	if !strings.Contains(withRole, "Issues and validates the tokens") {
+		t.Fatalf("the role prose was not written:\n%s", withRole)
+	}
+
+	// Now the deterministic run: no Roles at all, exactly as `signpost build` without
+	// -semantic produces.
+	res, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("deterministic rebuild: %v", err)
+	}
+	after := read(t, root, rel)
+	if after != withRole {
+		t.Errorf("a deterministic rebuild changed a page carrying a role region:\n got %q\nwant %q",
+			after, withRole)
+	}
+	// The attribution line matters as much as the prose. A role region that survived without
+	// it would read as a fact signpost counted.
+	if !strings.Contains(after, "Not reviewed by a human.") {
+		t.Errorf("the attribution line was lost:\n%s", after)
+	}
+	if res.Updated != 0 {
+		t.Errorf("the rebuild reported %d updated page(s); the bundle should be unchanged", res.Updated)
+	}
+	// And it is stable, not merely surviving once: a third and fourth run must not duplicate
+	// the region or move it.
+	for i := 0; i < 2; i++ {
+		if _, err := Write(root, g, demoOptions()); err != nil {
+			t.Fatalf("rebuild %d: %v", i+3, err)
+		}
+	}
+	if third := read(t, root, rel); third != withRole {
+		t.Errorf("a page with a role region is not byte-stable across repeated builds:\n got %q\nwant %q",
+			third, withRole)
+	}
+	if c := strings.Count(read(t, root, rel), "signpost:managed:role"); c != 2 {
+		t.Errorf("found %d role markers, want an open and a close", c)
+	}
+}
+
+// A semantic run over a bundle that already has human notes must not disturb them, and the
+// notes must not be relocated by the region Merge appends. This is the two mechanisms —
+// preservation and accumulation — meeting on one page.
+func TestWriteAddsARoleRegionWithoutDisturbingHumanNotes(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/internal-auth.md"
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+
+	const note = "\nRate limiting lives in the gateway, not here.\n"
+	if err := os.WriteFile(full, []byte(read(t, root, rel)+note), 0o644); err != nil {
+		t.Fatalf("editing the page: %v", err)
+	}
+
+	_, n := demoGraph(t)
+	semantic := demoOptions()
+	semantic.Roles = map[string]string{n.ID: "Issues and validates tokens.\n"}
+	if _, err := Write(root, g, semantic); err != nil {
+		t.Fatalf("semantic Write: %v", err)
+	}
+
+	got := read(t, root, rel)
+	if !strings.Contains(got, "Rate limiting lives in the gateway") {
+		t.Errorf("the human note was lost when a role region was added:\n%s", got)
+	}
+	if !strings.Contains(got, "Issues and validates tokens.") {
+		t.Errorf("the role prose was not added:\n%s", got)
+	}
+	// The note stays under the human's own heading rather than being pushed below generated
+	// prose that arrived after it.
+	if strings.Index(got, "## Notes") > strings.Index(got, "Rate limiting lives") {
+		t.Errorf("the note was moved out from under its heading:\n%s", got)
+	}
+}
+
+// A role region does not make verify report the page as out of date. It cannot, since neither
+// the fresh render nor the merge produces one — but this is the check that would fail first if
+// the merge rule underneath it changed, and a red staleness gate on every push is the failure
+// that would get the semantic pass turned off.
+func TestVerifyPassesOnABundleCarryingRoleRegions(t *testing.T) {
+	root := t.TempDir()
+	g, n := demoGraph(t)
+	semantic := demoOptions()
+	semantic.Roles = map[string]string{n.ID: "Issues and validates tokens.\n"}
+	if _, err := Write(root, g, semantic); err != nil {
+		t.Fatalf("semantic Write: %v", err)
+	}
+
+	// Verified with the deterministic options a CI run would use — no Roles.
+	res, err := Verify(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !res.OK() {
+		t.Fatalf("a bundle with role regions did not verify:%s", findings(res))
+	}
+}
+
 // Property three: nothing executable, nothing secret. The bundle is committed and often
 // published, and a generator that wrote a script into a repository would be a supply-chain
 // hazard rather than a knowledge artifact.

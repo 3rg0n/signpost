@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 27 concepts, 28 relationships."
-resource: git://github.com/3rg0n/signpost@fe07275e18182acb2132e975bd6666387bf8ef4a
+description: "Structural map of this repository: 29 concepts, 32 relationships."
+resource: git://github.com/3rg0n/signpost@c12150d5db22bcaf5fbc55234c0c8e028aeb769d
 generated: { by: signpost/dev, at: "2026-07-31" }
 ---
 # Repository map
@@ -15,11 +15,11 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](/modules/signpost.md) — 13 relationships (2 in, 11 out)
+- [cmd/signpost](/modules/signpost.md) — 14 relationships (2 in, 12 out)
 - [internal/okf](/modules/okf.md) — 8 relationships (4 in, 4 out)
+- [internal/discover](/modules/discover.md) — 7 relationships (6 in, 1 out)
 - [internal/vcs](/modules/vcs.md) — 7 relationships (4 in, 3 out)
 - [internal/assemble](/modules/assemble.md) — 6 relationships (1 in, 5 out)
-- [internal/discover](/modules/discover.md) — 6 relationships (5 in, 1 out)
 
 ### Modules
 
@@ -30,7 +30,8 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 21 go files; 218 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
-- [internal/okf](/modules/okf.md) — 13 go files; 166 exported symbols.
+- [internal/okf](/modules/okf.md) — 13 go files; 179 exported symbols.
+- [internal/semantic](/modules/semantic.md) — 3 go files; 32 exported symbols.
 - [cmd/signpost](/modules/signpost.md) — 12 go files; 41 exported symbols; entrypoint main; package main.
 - [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
@@ -50,6 +51,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 
 ### External dependencies
 
+- [actions/cache](/references/github-actions-actions-cache.md) — github-actions dependency actions/cache (55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
 - [actions/checkout](/references/github-actions-actions-checkout.md) — github-actions dependency actions/checkout (3d3c42e5aac5ba805825da76410c181273ba90b1)
 - [actions/configure-pages](/references/github-actions-actions-configure-pages.md) — github-actions dependency actions/configure-pages (45bfe0192ca1faeb007ade9deae92b16b8254a0d)
 - [actions/deploy-pages](/references/github-actions-actions-deploy-pages.md) — github-actions dependency actions/deploy-pages (cd2ce8fcbc39b97be8ca5fce6e763baed58fa128)

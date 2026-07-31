@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@fe07275e18182acb2132e975bd6666387bf8ef4a",
+  "resource": "git://github.com/3rg0n/signpost@c12150d5db22bcaf5fbc55234c0c8e028aeb769d",
   "date": "2026-07-31",
   "counts": {
-    "nodes": 27,
-    "edges": 28,
-    "clusters": 19
+    "nodes": 29,
+    "edges": 32,
+    "clusters": 21
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 28,
+    "extracted": 32,
     "inferred": 0
   },
   "pages": [
@@ -24,6 +24,7 @@
     "modules/manifest.md",
     "modules/model.md",
     "modules/okf.md",
+    "modules/semantic.md",
     "modules/signpost.md",
     "modules/site.md",
     "modules/vcs.md",
@@ -36,6 +37,7 @@
     "references/adr-0007-the-bundle-names-the-commit-it-describes.md",
     "references/adr-0008-the-viewer-lives-in-this-repository.md",
     "references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md",
+    "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",
     "references/github-actions-actions-deploy-pages.md",

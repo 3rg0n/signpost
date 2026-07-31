@@ -1,0 +1,42 @@
+---
+type: Module
+title: internal/semantic
+description: 3 go files; 32 exported symbols.
+resource: git://github.com/3rg0n/signpost@c12150d5db22bcaf5fbc55234c0c8e028aeb769d/internal/semantic
+generated: { by: signpost/dev, at: "2026-07-31" }
+attributes:
+  - { name: commits, value: "1" }
+  - { name: exported, value: "32" }
+  - { name: files, value: "3" }
+  - { name: first_commit, value: "2026-07-31" }
+  - { name: last_commit, value: "2026-07-31" }
+  - { name: lines_added, value: "1420" }
+  - { name: lines_removed, value: "0" }
+  - { name: package, value: semantic }
+  - { name: top_author, value: 3rg0n }
+  - { name: top_author_share, value: 100% }
+edges:
+  - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 2, source: internal/semantic/semantic.go }
+  - { kind: imports, to: /modules/graph.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
+  - { kind: imports, to: /modules/model.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
+---
+# internal/semantic
+
+<!-- signpost:managed:summary -->
+3 go files; 32 exported symbols.
+<!-- /signpost:managed:summary -->
+
+## Structure
+
+<!-- signpost:managed:structure -->
+3 files:
+- `internal/semantic/prompt.go`
+- `internal/semantic/semantic.go`
+- `internal/semantic/semantic_test.go`
+
+- **Imports**: [internal/discover](/modules/discover.md) ×2, [internal/graph](/modules/graph.md) ×3, [internal/model](/modules/model.md) ×3
+<!-- /signpost:managed:structure -->
+
+## Notes
+
+_Anything written here is yours. signpost rewrites only the regions between its managed markers, and never this section._

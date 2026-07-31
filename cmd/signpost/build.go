@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io"
+	"path/filepath"
+	"time"
 
+	"github.com/3rg0n/signpost/internal/model"
 	"github.com/3rg0n/signpost/internal/okf"
+	"github.com/3rg0n/signpost/internal/semantic"
 	"github.com/3rg0n/signpost/internal/vcs"
 )
 
@@ -39,6 +44,20 @@ func runBuild(args []string, out, errOut io.Writer) error {
 	// know.
 	repo := fs.String("repo", "",
 		"repository name for the resource URI, e.g. example.com/org/repo")
+	// The semantic pass is opt-in twice over: a backend has to be configured (§5 makes
+	// none the default) *and* this flag has to be set. Two gates rather than one because
+	// they answer different questions — the environment says a model is available, and the
+	// flag says this run should spend it. Without the flag, a developer who configured a
+	// backend for `signpost model check` would find every subsequent build calling it.
+	//
+	// It is also what keeps §8's split honest. signpost.yml runs on every push and must
+	// stay deterministic and byte-stable; signpost-semantic.yml runs on a schedule and
+	// passes this. Relying on the environment alone would put the difference in a variable
+	// somebody can set globally, where this puts it in the workflow file.
+	sem := fs.Bool("semantic", false,
+		"summarise modules with the configured model backend (§4.5); off by default")
+	semTimeout := fs.Duration("semantic-timeout", 10*time.Minute,
+		"how long the whole semantic pass may take before it stops and reports what it has")
 	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -58,12 +77,69 @@ func runBuild(args []string, out, errOut io.Writer) error {
 	// assignment is computed lazily.
 	a.Graph().Clusters()
 
-	res, err := okf.Write(a.Discovered.Root, a.Graph(), buildOptions(a, *repo))
+	opts := buildOptions(a, *repo)
+	if *sem {
+		sr, err := runSemantic(a, *semTimeout)
+		if err != nil {
+			return err
+		}
+		opts.Roles = sr.Regions()
+		// On stderr and not suppressed by -quiet. -quiet silences the coverage report,
+		// which is a routine summary; this is the §4.2 report of what a pass could not
+		// account for, and a fail-open pass whose failures are quiet is the one failure
+		// mode that looks like success.
+		reportSemantic(newPrinter(errOut), sr)
+	}
+
+	res, err := okf.Write(a.Discovered.Root, a.Graph(), opts)
 	if err != nil {
 		return err
 	}
 	reportBuild(newPrinter(out), a.Discovered.Root, res)
 	return nil
+}
+
+// runSemantic builds the backend and runs the pass.
+//
+// The error return covers configuration only — an unknown backend name, a missing base
+// URL — because that is a mistake in the invocation and failing open on it would mean a
+// typo silently producing a deterministic bundle. Everything that happens *after* the
+// backend is built fails open inside semantic.Run, per §5.
+func runSemantic(a *analysis, timeout time.Duration) (*semantic.Result, error) {
+	b, err := model.New(model.Config{Version: version})
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		// -semantic with no backend configured. An error, not a skip: the flag is a request
+		// to spend a model, and answering it with a silent deterministic build is how a
+		// scheduled workflow runs for a month producing nothing while reporting success.
+		return nil, fmt.Errorf("%w: -semantic needs a backend: set %s=inferd or %s=openai "+
+			"(run `signpost model check` to test one)",
+			errUsage, model.EnvBackend, model.EnvBackend)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return semantic.Run(ctx, semantic.Input{
+		Graph:      a.Graph(),
+		Discovered: a.Discovered,
+		Backend:    b,
+		CacheDir:   filepath.Join(a.Discovered.Root, okf.BundleDir, "cache", "summary"),
+	}), nil
+}
+
+// reportSemantic says what the pass did and what it could not do.
+func reportSemantic(p *printer, r *semantic.Result) {
+	p.printf("semantic pass: %d module(s) summarised (%d from cache, %d call(s), "+
+		"%d tokens in, %d out)\n",
+		len(r.Summaries), r.Cached, r.Calls, r.InputTokens, r.OutputTokens)
+	if r.Truncated > 0 {
+		p.printf("  %d summarised from part of the module: the input caps applied\n", r.Truncated)
+	}
+	for _, s := range r.Skipped {
+		p.printf("  not summarised: %s\n", s)
+	}
 }
 
 // buildOptions maps the analysis's provenance onto the emitter's.
