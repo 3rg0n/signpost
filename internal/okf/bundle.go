@@ -347,7 +347,7 @@ func indexBody(g *graph.Graph) string {
 		}
 		b.WriteString("\n" + heading(3, kindHeading(k)))
 		for _, n := range ns {
-			b.WriteString("- [" + n.Title + "](" + pagePath(n.ID) + ")")
+			b.WriteString("- " + proseLink(n.Title, pagePath(n.ID)))
 			if n.Description != "" {
 				b.WriteString(" — " + n.Description)
 			}
@@ -407,7 +407,7 @@ func hubLines(g *graph.Graph) string {
 		if n == nil {
 			continue
 		}
-		b.WriteString("- [" + n.Title + "](" + pagePath(n.ID) + ") — " +
+		b.WriteString("- " + proseLink(n.Title, pagePath(n.ID)) + " — " +
 			plural(d.Total, "relationship") + " (" + strconv.Itoa(d.In) + " in, " +
 			strconv.Itoa(d.Out) + " out)\n")
 	}

@@ -1,31 +1,27 @@
 ---
 type: External Dependency
-title: actions/checkout
-description: github-actions dependency actions/checkout (3d3c42e5aac5ba805825da76410c181273ba90b1)
+title: actions/cache
+description: github-actions dependency actions/cache (55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
 resource: git://github.com/3rg0n/signpost@fe07275e18182acb2132e975bd6666387bf8ef4a
 tags: [direct, external, github-actions]
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
   - { name: ecosystem, value: github-actions }
-  - { name: name, value: actions/checkout }
+  - { name: name, value: actions/cache }
   - { name: scope, value: build }
-  - { name: version, value: 3d3c42e5aac5ba805825da76410c181273ba90b1 }
+  - { name: version, value: 55cc8345863c7cc4c66a329aec7e433d2d1c52a9 }
 ---
-# actions/checkout
+# actions/cache
 
 <!-- signpost:managed:summary -->
-github-actions dependency actions/checkout (3d3c42e5aac5ba805825da76410c181273ba90b1)
+github-actions dependency actions/cache (55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
 <!-- /signpost:managed:summary -->
 
 ## Structure
 
 <!-- signpost:managed:structure -->
-5 files:
-- `.github/workflows/ci.yml`
-- `.github/workflows/pages.yml`
-- `.github/workflows/release.yml`
+1 file:
 - `.github/workflows/signpost-semantic.yml`
-- `.github/workflows/signpost.yml`
 <!-- /signpost:managed:structure -->
 
 ## Notes

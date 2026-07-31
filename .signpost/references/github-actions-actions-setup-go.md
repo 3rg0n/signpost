@@ -20,10 +20,11 @@ github-actions dependency actions/setup-go (b7ad1dad31e06c5925ef5d2fc7ad053ef454
 ## Structure
 
 <!-- signpost:managed:structure -->
-4 files:
+5 files:
 - `.github/workflows/ci.yml`
 - `.github/workflows/pages.yml`
 - `.github/workflows/release.yml`
+- `.github/workflows/signpost-semantic.yml`
 - `.github/workflows/signpost.yml`
 <!-- /signpost:managed:structure -->
 

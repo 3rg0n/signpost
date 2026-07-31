@@ -334,6 +334,51 @@ local model inventing plausible architecture.
 Per-node, budget-bounded, and cached by content hash — an unchanged file is never
 re-summarized.
 
+#### What is implemented, and how it lands on the page
+
+Output 1 only: role summaries. Invariant extraction, doc-to-code linking, and
+cluster labels are specified above and not attempted — and the third is the one
+worth the wait, so it should not be bolted onto a pass built for one-paragraph
+answers.
+
+The pass is **opt-in twice over**: a backend has to be configured — §5 makes
+`none` the default and nothing infers one — *and* `build -semantic` has to be
+passed. Two gates because they answer different questions. The environment says a
+model is available; the flag says this run should spend it. Without the second, a
+developer who configured a backend to try `signpost model check` would find every
+subsequent build calling it. It is also what keeps §8's split honest: the
+difference between the per-push build and the scheduled one lives in a workflow
+file rather than in an environment variable somebody can set repository-wide.
+
+`-semantic` with no backend configured is an error, not a skip. The flag is a
+request to spend a model, and answering it with a silent deterministic build is
+how a scheduled workflow runs for a month producing nothing while reporting
+success.
+
+Model prose lands in a **`role` region of its own**, beside the deterministic
+`summary` rather than replacing it. That follows from the merge rule §6.1
+describes: a managed region present on disk but absent from a fresh render is kept
+verbatim. So a deterministic build renders no `role`, finds the one the scheduled
+run wrote, and carries it through untouched — while writing into `summary` would
+put model prose in a region every build *does* render, and the next push would
+overwrite it with the placeholder. The separation also keeps the two kinds of
+claim visually apart, which §4.1's trust grading asks for: `summary` is counted
+facts, `role` is a grounded guess carrying an attribution line naming the model
+and the files it read.
+
+Everything after the backend is built **fails open**, and that is a compile-time
+fact rather than a convention — the pass has no error return. A backend that goes
+away stops the pass and names what was lost; a response that cannot be grounded
+drops that one summary. Neither can fail a build.
+
+What could not be summarised is reported on **stderr**, not recorded in the
+bundle. §4.2's rule is that a pass says what it could not account for, but
+`manifest.json` is regenerated wholesale, so a skip record there would change on
+every subsequent deterministic push and turn the staleness gate red on a fact
+about a run that is over. The report is deliberately not suppressed by `-quiet`,
+which silences the routine coverage summary: a fail-open pass whose failures are
+quiet is the one failure mode that looks like success.
+
 #### Repository content is untrusted input
 
 This is a security boundary, and it was missing from the first draft of this
@@ -377,6 +422,58 @@ Three mechanisms, all cheap and all in the deterministic part of the code:
    the grounding rule means an injected claim with no resolvable citation is
    dropped at emit. Defence in depth: the wrapper is the fence, and grounding is
    what catches whatever gets over it.
+
+   Two details of the enforcement are worth stating because neither is a matter
+   of taste. Every bound on the response — length, citation count — is a schema
+   constraint rather than a sentence in the prompt: a `description` saying "one or
+   two sentences" is a hint a model may ignore, and `maxLength` is a constraint
+   the sampler enforces. And an over-long or partly-grounded answer is **refused,
+   not repaired**: a summary with one invented citation removed reads exactly like
+   one that was grounded all along, and a summary cut mid-sentence and committed
+   as complete is the confidently-wrong output this design exists to avoid. A
+   cached entry is re-grounded when it is read, because a cache file is a file in
+   a working tree and so is exactly as untrustworthy as a fresh response.
+4. **Model prose cannot alter the page it lands in.** The text is written inside a
+   managed region, and regions are found by matching marker lines textually — so
+   prose containing `<!-- /signpost:managed:role -->` would close its own region,
+   and everything after it would become human text signpost then refuses to
+   overwrite. That is a permanent foothold for whoever can talk a model into
+   emitting one string. Every HTML comment is stripped from the prose before it is
+   written, not just the markers, and an unterminated `<!--` takes the rest of the
+   text with it.
+5. **Nor can a filename.** The prose is not the only untrusted text that reaches a
+   page. A summary names the files it rests on, and a path is repository content —
+   on POSIX a filename may contain a newline, so a file can put a line of its own
+   choosing inside the region that cites it, and a line that reads as a close
+   marker ends the region early. That needs no model in the loop at all: the
+   deterministic file list on every module page carries the same exposure, and so
+   does a `## Title` heading derived from a directory name, which is *human* text by
+   design and therefore outside the managed-region guard entirely.
+
+   Enforced at the two chokepoints all generated text passes through rather than at
+   each call site, so a region added later inherits the guard: `<!--` is escaped in
+   every managed region and every generated heading, and a heading is folded to one
+   line. A path that would break the code span it sits in is quoted rather than
+   dropped, because a filename containing a newline is a fact worth showing plainly.
+   The semantic pass *additionally* refuses a summary whose cite path carries marker
+   syntax — grounding checks that a path was one signpost sent, which a real file
+   with a crafted name passes — keeping refusal the rule on that side and escaping
+   the rule on the emitter's. The two are independent on purpose: neither is relied
+   on to be the only one.
+
+   The same reasoning covers a second, quieter case in the same family: markdown
+   link syntax is positional, so a directory named `x](https://evil.example/y)(`
+   closes the label of every link that names it and makes what follows the target.
+   `verify` passes, because the link it checks is well-formed and resolves — the
+   forged one is a different link. Every generated link's label is escaped through
+   one function; the target never needs it, being a node ID `assemble` built rather
+   than text from the tree.
+
+   The general rule this settles on: **any repository-derived string that reaches a
+   page is escaped at the point the page is assembled, not at the point it was
+   read.** A path, a title, a description and a summary arrive by different routes
+   and no single reader can vouch for all of them, while the emitter is one place
+   that sees all four.
 
 Prompt hardening is mitigation, not proof — a sufficiently clever injection inside
 a delimiter block can still influence a summary. What bounds the damage is that the
@@ -516,8 +613,8 @@ without a reasoning channel.
 ## 6. Commands
 
 ```
-signpost build [path]          # full pipeline; writes .signpost/
-signpost build --deterministic # skip the semantic pass entirely
+signpost build [path]          # deterministic pipeline; writes .signpost/
+signpost build -semantic       # and summarise modules with the configured backend
 signpost verify [path]         # conformance + link + staleness; non-zero on failure
 signpost why "<question>"      # traverse the bundle and answer, citing pages
 signpost path <A> <B>          # shortest typed path between two concepts
@@ -665,19 +762,40 @@ Mermaid graphs in GitHub, open the GraphML in yEd, and never deploy a site.
 
 Two workflows plus a PR check.
 
-**`signpost.yml`** — on push to the default branch. Runs
-`signpost build --deterministic` and `signpost verify` on a hosted runner. No
-model, no infra, on the order of seconds. Commits `.signpost/` only when the diff
-is non-empty.
+**`signpost.yml`** — on push to the default branch. Runs `signpost build` and
+`signpost verify` on a hosted runner. No model, no infra, on the order of seconds
+— there is no flag to opt out of the semantic pass because it is off unless asked
+for (§4.5). Commits `.signpost/` only when the diff is non-empty.
 
 Loop guard, all three: `paths-ignore: ['.signpost/**']`, a skip when the actor is
 the bot, and `[skip ci]` on the bot commit.
 
-**`signpost-semantic.yml`** — on schedule and `workflow_dispatch`. Full pipeline
-with a backend configured. On a self-hosted runner this is inferd over IPC with
-the model already warm. On a hosted runner it is Bedrock through the
-OpenAI-compatible endpoint with OIDC-issued credentials. Same binary, same schema,
-different `generated.by`.
+**`signpost-semantic.yml`** — on schedule and `workflow_dispatch`. Runs
+`signpost build -semantic`, which is the only place either of §4.5's two gates is
+opened: this workflow configures a backend and passes the flag, and `signpost.yml`
+passes neither. Same binary, same schema, different `generated.by`. On a
+self-hosted runner the backend is inferd over IPC with the model already warm; on
+a hosted runner it is any OpenAI-compatible endpoint, reached with a key from
+Actions secrets.
+
+Three properties of that job are not incidental. It shares `signpost.yml`'s
+**concurrency group**, because both commit to the default branch and two pushes to
+`.signpost/` in flight at once is a lease failure at best. The **summary cache is
+restored and saved by prefix key**, which is what makes the pass affordable and
+what makes it produce no diff most weeks — `.signpost/cache/` is gitignored, so
+the Actions cache is the only place it persists. And a **missing backend is a skip
+with a message**, unlike the binary, which exits non-zero: a fork inherits this
+schedule and has no secrets, and a red weekly cron in somebody else's fork is
+noise they did not ask for. A backend named but with no credential *does* fail,
+because that is a misconfiguration rather than a choice.
+
+Bedrock over OIDC is **not** wired up, and the reason is specific rather than a
+matter of effort: the OpenAI-compatible surface authenticates with a bearer token
+gated on `bedrock:CallWithBearerToken`, which the usual OIDC role pattern does not
+grant, so a role provisioned that way cannot make the call. Long-lived AWS access
+keys in Actions are not an acceptable substitute. Pointing the backend at another
+OpenAI-compatible endpoint keeps AWS credentials out of CI entirely, which is what
+the shipped workflow does.
 
 **PR check** — `signpost verify` runs on pull requests and fails when the bundle
 is stale relative to the diff. Non-zero exit, surfaced in the PR.

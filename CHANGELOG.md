@@ -10,6 +10,66 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-31
 
+- The semantic pass, wired into `build` and shipped: `signpost build -semantic`
+  summarises what each module is *for* with the configured model backend, and
+  writes the prose into the bundle. New `internal/semantic` package, new
+  `.github/workflows/signpost-semantic.yml` running it weekly. Design §4.5 and §8.
+
+  **Opt-in twice over.** A backend has to be configured — `none` is the default
+  and nothing infers one — *and* `-semantic` has to be passed. The two gates
+  answer different questions: the environment says a model is available, the flag
+  says this run should spend it. Without the second, anyone who configured a
+  backend to try `signpost model check` would find every subsequent build calling
+  it. It also keeps the per-push build byte-stable, because the difference between
+  the two CI workflows lives in a workflow file rather than in an environment
+  variable somebody can set repository-wide. `-semantic` with no backend is exit
+  2, not a silent deterministic build — a scheduled job that reports success while
+  summarising nothing is worse than one that fails.
+
+  **The prose lands in a `role` region of its own**, beside the deterministic
+  `summary` rather than replacing it, and that is what makes it survive. A managed
+  region present on disk but absent from a fresh render is kept verbatim, so a
+  deterministic build renders no `role` and carries the scheduled run's across
+  untouched — where writing into `summary` would put it in a region every build
+  does render, and the next push would overwrite it with the placeholder. The
+  separation also keeps counted facts and a grounded guess visually apart on the
+  page, the latter carrying a line naming the model and the files it read.
+
+  **A response is not trusted because it parsed.** Every claim cites files, the
+  citations are checked against the exact set that was sent, and one invented path
+  drops the whole summary rather than the citation — a summary with a bad citation
+  removed reads exactly like one that was grounded all along. Bounds are schema
+  constraints, not requests in prose, because `maxLength` is enforced by the
+  sampler where "one or two sentences" is a hint; over-long prose is refused, not
+  truncated. Cached entries are re-grounded when read, since a cache file is a
+  file in a working tree. And every HTML comment is stripped from the prose before
+  it is written: text containing a region's own close marker would otherwise close
+  that region, turning everything after it into human text signpost then refuses
+  to overwrite — a permanent foothold for whoever can talk a model into emitting
+  one string.
+
+  **It cannot fail a build**, and that is a compile-time fact rather than a
+  convention: the pass has no error return. A backend that goes away stops the
+  pass and names the modules that were never attempted; a response that cannot be
+  grounded drops only that one. What was skipped is reported on stderr and
+  deliberately not silenced by `-quiet` — a fail-open pass whose failures are
+  quiet is the one failure mode that looks like success. It is not recorded in the
+  bundle, because `manifest.json` is regenerated wholesale and a skip record there
+  would churn on every later push and turn the staleness gate red over a run that
+  is finished.
+
+  Scoped to role summaries only. Invariant extraction, doc-to-code linking, and
+  cluster labels remain specified and unimplemented; the second is the valuable
+  one and deserves better than being bolted onto a pass built for one-paragraph
+  answers.
+
+  The workflow keeps AWS credentials out of Actions, per the standing rule. It
+  reads an OpenAI-compatible endpoint and key from repository variables and
+  secrets; Bedrock over OIDC is not offered, because the bearer-token surface this
+  backend uses is gated on `bedrock:CallWithBearerToken`, which the usual OIDC
+  role pattern does not grant. A repository with no backend configured skips with
+  a message rather than failing, so a fork does not inherit a red weekly cron.
+
 - Zoom and pan in the graph viewer: wheel to zoom, drag to move, `+` / `−` /
   reset buttons, and the arrow keys to pan from the keyboard. Everything drawn
   sits inside one SVG transform group, so node and edge coordinates stay in
@@ -405,6 +465,63 @@ All notable changes to this project are documented here. Format follows
 ### Fixed
 
 #### 2026-07-31
+
+- A filename could take permanent control of a bundle page. Managed regions are
+  found by matching a line against a marker, and a POSIX filename may contain a
+  newline — so a file named
+  ``a.go\n<!-- /signpost:managed:structure -->\nb.go`` put a line of the
+  repository's choosing inside the region that lists it, closing that region
+  early. Everything below the injected marker became human text, which signpost
+  then refuses to overwrite: the page stopped regenerating, and nothing said so.
+  No model was involved; adding the file was enough.
+
+  Three findings, one cause — generated text reaching the page without the
+  assumption that it holds no marker ever being enforced:
+
+  - The file list on every module page, in shipped code, since the emitter
+    landed. This is the pre-existing half.
+  - A cite path in a role summary, in the semantic pass added the same day.
+    Grounding checks that a cited path is one signpost sent, and a path that
+    really is in the tree passes that check while still carrying the newline.
+  - A page's `## Title` heading, which is *human* text by design — a title comes
+    from a directory name and a reader may rewrite it — so it does not pass
+    through the managed-region guard at all. A directory named with a newline and
+    an **opening** marker made the parser read a region starting in human text,
+    which then swallowed the real region below it.
+
+  Fixed at the two chokepoints all generated text passes through rather than at
+  the call sites, so a future region inherits the guard instead of needing to
+  remember it: `<!--` is escaped in every managed region and in every generated
+  heading, and a heading is folded to one line. A path that would break the code
+  span it is written into — a newline, a backtick, a control character — is
+  quoted rather than dropped, because a filename with a newline in it is a fact
+  worth showing plainly. The semantic pass additionally *refuses* a summary whose
+  cite path carries marker syntax, keeping "dropped, not softened" the rule on
+  that side; the two checks are independent on purpose. The refusal is narrow —
+  control characters and backticks only — so paths with spaces, accents, and
+  ordinary punctuation are still cited.
+
+  Verified inert on real content: rebuilding this repository's own bundle
+  produces no escape artifact on any of its 32 pages, and `verify` passes.
+
+- A directory name could aim the bundle's links wherever it liked. Markdown link
+  syntax is positional, so a directory named `x](https://evil.example/y)(` closed
+  the label of every link that named it and turned what followed into the target,
+  leaving the real target trailing as inert prose. `verify` passed clean, because
+  the link it was asked to check is well-formed and resolves — the forged one is a
+  different link. This affected the index, the hub list, and the structure region
+  on every page that links to the directory; the bundle is committed and often
+  published, so these are links other people follow.
+
+  Every generated link now goes through one function that backslash-escapes
+  brackets and parentheses in the label. Escaped rather than stripped, using
+  markdown's own mechanism, so a title with a legitimate bracket in it — `api
+  [v2]` — still renders as what somebody typed. Only labels need it: a link's
+  target is a node ID that `assemble` builds, not text read from the tree.
+
+  The export formats were already correct here and are unchanged — Mermaid, DOT,
+  and GraphML each escape per-format, with a test covering exactly this class of
+  title.
 
 - The graph viewer crowded its nodes into the middle of the frame and let their
   labels overlap. Two separate causes, both measured against the rendered page

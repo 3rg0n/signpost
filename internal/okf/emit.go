@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/3rg0n/signpost/internal/graph"
 )
@@ -29,6 +30,21 @@ const (
 	regionSummary   = "summary"
 	regionStructure = "structure"
 	regionIndex     = "index"
+	// regionRole holds the semantic pass's prose, and it is a *separate* region from
+	// summary rather than a replacement for its placeholder. That is the one design
+	// decision in this file that is not obvious, and it follows from Merge:
+	//
+	// A managed region present on disk but absent from a render is kept verbatim
+	// (page.go), which is the same mechanism logPage relies on to accumulate history. So a
+	// deterministic build — every push, per §8 — renders no `role`, finds the one the
+	// scheduled semantic run wrote, and carries it through untouched. Writing model prose
+	// into `summary` instead would put it in a region every deterministic build *does*
+	// render, and the next push would overwrite it with the placeholder.
+	//
+	// It also keeps the two kinds of claim visually apart on the page, which §4.1's trust
+	// grading asks for: `summary` is counted facts, `role` is a guess with a citation
+	// line, and a reader can tell which is which without knowing how signpost works.
+	regionRole = "role"
 )
 
 // Actor is the OKF `generated.by` string.
@@ -69,6 +85,17 @@ type Options struct {
 	// whose quiet success would destroy the tool's value, so a run that relaxes it says which
 	// commit it judged against.
 	AsOfBundle bool
+
+	// Roles is the semantic pass's prose, keyed by node ID, already grounded and rendered
+	// by internal/semantic. Nil on every deterministic run, which is what keeps `build`
+	// byte-identical with no backend configured.
+	//
+	// A map of finished strings rather than anything the emitter composes. This package
+	// writes only what it can count (see this file's header), so the one honest way for it
+	// to carry a model's claim is to be handed the text and told which page it belongs on —
+	// keeping the emitter unable to invent prose even by accident, and keeping it free of
+	// any dependency on the model path.
+	Roles map[string]string
 }
 
 // pageFor renders one node as the page a first run would write.
@@ -97,10 +124,26 @@ func pageFor(g *graph.Graph, n *graph.Node, opts Options) *Page {
 	body := []Region{
 		humanRegion(heading(1, n.Title)),
 		managedRegion(regionSummary, summaryText(n)),
-		humanRegion("\n" + heading(2, "Structure") + ""),
-		managedRegion(regionStructure, structureText(g, n)),
-		humanRegion("\n" + heading(2, "Notes") + notesInvitation()),
 	}
+	// Emitted only when there is prose to put in it. An empty `role` region on every page
+	// of every deterministic bundle would be structure with nothing in it, and — because
+	// Merge keeps a region it finds on disk — it would also mean a semantic run's output
+	// landing in a region the next build renders empty, which is the overwrite regionRole
+	// exists to avoid.
+	//
+	// The heading goes *inside* the managed region, unlike every other section on this
+	// page. Merge takes human regions only from what is on disk and appends a new managed
+	// region at the end, so a heading emitted as its own human region would be dropped on
+	// the first semantic run over an existing bundle and the prose would land under
+	// "Notes" with nothing naming it. Self-contained, the region reads correctly wherever
+	// Merge puts it.
+	if role := opts.Roles[n.ID]; role != "" {
+		body = append(body, managedRegion(regionRole, "\n"+heading(2, "Role")+role))
+	}
+	body = append(body,
+		humanRegion("\n"+heading(2, "Structure")+""),
+		managedRegion(regionStructure, structureText(g, n)),
+		humanRegion("\n"+heading(2, "Notes")+notesInvitation()))
 	return NewPage(fm.String(), body...)
 }
 
@@ -247,10 +290,65 @@ func filesLine(n *graph.Node) string {
 		shown = shown[:maxFiles]
 	}
 	for _, f := range shown {
-		b.WriteString("- `" + f + "`\n")
+		b.WriteString("- " + codeSpan(f) + "\n")
 	}
 	if len(shown) < len(n.Files) {
 		b.WriteString("- and " + strconv.Itoa(len(n.Files)-len(shown)) + " more\n")
+	}
+	return b.String()
+}
+
+// codeSpan renders repository content — a path, a name — as a markdown code span.
+//
+// escapeMarkers in page.go already makes such a string unable to close the region it lands
+// in, which is the security property. This is the other half: a path may contain a newline
+// or a backtick, and either one breaks the span it is written into, so the list item that
+// was meant to name one file silently becomes two lines of something else. Quoted in that
+// case, using Go's own escaping, so the path stays on one line and stays readable — and a
+// filename with a newline in it is a fact worth showing plainly rather than rendering as
+// though it were two files.
+//
+// The common path — every ordinary filename — is untouched, so this does not change the
+// bytes of any bundle built from a tree without one.
+func codeSpan(s string) string {
+	if strings.ContainsAny(s, "`\n\r") || strings.ContainsFunc(s, unicode.IsControl) {
+		// strconv.Quote escapes the control characters but not a backtick, which is legal in
+		// a Go literal and would still end the span it is being put inside. `\x60` is the
+		// same character spelled as an escape Quote itself could have emitted, so the result
+		// is still a valid Go string literal a reader can paste somewhere and get the path.
+		return "`" + strings.ReplaceAll(strconv.Quote(s), "`", `\x60`) + "`"
+	}
+	return "`" + s + "`"
+}
+
+// proseLink renders a bundle link whose label is repository content.
+//
+// The label is a node title, which comes from a directory or file name, and markdown link
+// syntax is only positional — so a directory named `x](../../etc/passwd)(` closes the label
+// early and the text that follows becomes the target, with the real target trailing behind
+// as inert prose. Every link on the page then points wherever that directory name said, and
+// `verify` passes: the link it was asked to check is well-formed and resolves, because the
+// forged one is a different link.
+//
+// `]`, `[`, `(` and `)` are escaped with a backslash, which is markdown's own mechanism and
+// renders as the bare character — so a title containing a bracket still reads correctly.
+// Only the label needs this; the target is a node ID, built by assemble rather than read
+// from the tree.
+func proseLink(label, target string) string {
+	return "[" + escapeLinkLabel(label) + "](" + target + ")"
+}
+
+func escapeLinkLabel(s string) string {
+	if !strings.ContainsAny(s, "[]()") {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s) + 8)
+	for _, r := range s {
+		if strings.ContainsRune("[]()", r) {
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
 	}
 	return b.String()
 }
@@ -264,7 +362,7 @@ func edgeSentence(g *graph.Graph, es []graph.Edge) string {
 		if target != nil && target.Title != "" {
 			label = target.Title
 		}
-		s := "[" + label + "](" + pagePath(e.To) + ")"
+		s := proseLink(label, pagePath(e.To))
 		// The confidence marker is on the link itself rather than in a legend, because a
 		// reader scanning one line must be able to tell a parsed fact from a guess without
 		// scrolling. `extracted` is the silent default: annotating the common case would
