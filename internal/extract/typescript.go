@@ -60,6 +60,12 @@ func (TSExtractor) Extract(f discover.File) (Facts, error) {
 			joined, last := joinBraces(lines, i)
 			if im, ok := tsImport(joined); ok {
 				facts.Imports = append(facts.Imports, im)
+			} else if im, ok := tsRequire(joined); ok {
+				// A dynamic import can also open a statement, as in
+				// `import('./m').then(...)`. tsImport rejects it because it is an
+				// expression, so without this the branch claims the line and drops
+				// the dependency entirely.
+				facts.Imports = append(facts.Imports, im)
 			}
 			depth += netDepth(joinedTail(lines, i, last), "([{", ")]}")
 			i = last
@@ -327,6 +333,22 @@ func tsDeclaration(code string, cl codeLine, lines []codeLine, idx int, exported
 
 	kw, name := declKeywordAndName(code)
 	if name == "" {
+		// An ambient module declares the module it augments with a string literal
+		// rather than an identifier: `declare module 'ext' { .. }`. That literal is
+		// the declared name — a .d.ts whose whole purpose is to type a package
+		// otherwise reports nothing at all.
+		if n, ok := tsAmbientModuleName(code, cl); ok {
+			// Surface regardless of `export`. A quoted name makes this an ambient
+			// external module, which declares the shape of an entire package to every
+			// file in the program by existing — nothing imports it and no `export`
+			// keyword makes it reachable. `declare module Foo` with a bare identifier
+			// is a namespace instead, follows the ordinary export rules, and is not
+			// handled here.
+			return []Symbol{{
+				Name: n, Kind: SymType, Exported: true,
+				Doc: tsJSDoc(lines, idx), Line: cl.Num,
+			}}, true
+		}
 		// `export default function () {}` has a keyword but no name. It is still
 		// the module's default export and callers still import it, so it must not
 		// be dropped for lack of an identifier.
@@ -398,6 +420,38 @@ func declKeywordAndName(code string) (kw, name string) {
 		return kw, ""
 	}
 	return kw, name
+}
+
+// tsAmbientModuleName reads the module path out of `module 'x'` / `namespace 'x'`,
+// the ambient form whose name is a string literal.
+//
+// The path is read from Raw because the scanner blanks string bodies in Text.
+func tsAmbientModuleName(code string, cl codeLine) (string, bool) {
+	kw := ""
+	for _, k := range []string{"module", "namespace"} {
+		if strings.HasPrefix(code, k+" ") {
+			kw = k
+			break
+		}
+	}
+	if kw == "" {
+		return "", false
+	}
+	rest := strings.TrimSpace(code[len(kw):])
+	if rest == "" || (rest[0] != '"' && rest[0] != '\'' && rest[0] != '`') {
+		return "", false
+	}
+	// The offset into Text and into Raw agree: the scanner replaces a string's
+	// body character for character rather than removing it.
+	off := strings.Index(cl.Text, code)
+	if off < 0 {
+		off = 0
+	}
+	name, ok := stringAt(cl.Raw, rawOffset(cl, off+len(kw)))
+	if !ok || name == "" {
+		return "", false
+	}
+	return name, true
 }
 
 func startsWithDeclKeyword(code string) bool {

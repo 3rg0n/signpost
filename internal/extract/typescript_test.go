@@ -380,7 +380,7 @@ declare module "m" {}
 		"fn": SymFunc, "gen": SymFunc, "arrow": SymFunc, "asyncArrow": SymFunc,
 		"fnExpr": SymFunc, "value": SymConst, "mutable": SymVar, "old": SymVar,
 		"C": SymClass, "AC": SymClass, "I": SymInterface, "T": SymType,
-		"E": SymType, "NS": SymType,
+		"E": SymType, "NS": SymType, "m": SymType,
 	}
 	for name, w := range want {
 		if kinds[name] != w {
@@ -453,6 +453,14 @@ func TestTSRequireForms(t *testing.T) {
 		{"computed", `const x = require(name);`, ""},
 		{"interpolated template", "const x = require(`./${name}`);", ""},
 		{"plain template", "const x = require(`./static`);", "./static"},
+		// A dynamic import can open a statement, in which case the line looks like
+		// an import statement to the dispatcher. The statement branch claims it and
+		// tsImport correctly rejects it as an expression, so the dependency is lost
+		// unless the branch also tries the expression form.
+		{"leading dynamic import", `import("m").then((x) => x.default);`, "m"},
+		{"leading dynamic no chain", `import("m");`, "m"},
+		{"leading await import", `await import("m");`, "m"},
+		{"destructured default", `const { default: P } = await import("m");`, "m"},
 		// Not require.
 		{"identifier suffix", `const x = myRequire("m");`, ""},
 	}
@@ -460,6 +468,68 @@ func TestTSRequireForms(t *testing.T) {
 		fa := extractTS(t, "a.js", c.src)
 		if got := strings.Join(fa.ImportPaths(), ","); got != c.want {
 			t.Errorf("%s: imports = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// An ambient module names the package it types with a string literal rather than
+// an identifier. A .d.ts whose whole purpose is to declare types for an untyped
+// package consists of nothing else, so dropping the form reports an empty surface
+// for precisely the file that exists to declare one.
+func TestTSAmbientModuleDeclaration(t *testing.T) {
+	cases := []struct {
+		name, src, want string
+	}{
+		{"single quotes", "declare module 'ext' {\n}\n", "ext"},
+		{"double quotes", `declare module "ext" {}`, "ext"},
+		{"exported", "export declare module 'ext' {\n}\n", "ext"},
+		{"scoped package", `declare module "@scope/pkg" {}`, "@scope/pkg"},
+		{"wildcard path", `declare module "*.svg" {}`, "*.svg"},
+		{"identifier form still works", "declare module Foo {\n}\n", "Foo"},
+		// `declare global` augments the global scope and names no module.
+		{"global augmentation", "declare global {\n  interface Window {}\n}\n", ""},
+	}
+	for _, c := range cases {
+		fa := extractTS(t, "a.d.ts", c.src)
+		if got := strings.Join(fa.SymbolNames(), ","); got != c.want {
+			t.Errorf("%s: symbols = %q, want %q", c.name, got, c.want)
+		}
+		if len(fa.Imports) != 0 {
+			t.Errorf("%s: an ambient declaration declares, it does not import: %+v",
+				c.name, fa.Imports)
+		}
+	}
+}
+
+// A quoted name makes the declaration an ambient external module, which types a
+// whole package for every file in the program without anything importing it and
+// without an `export` keyword being available to it. So it is surface either way.
+// A bare identifier is a namespace and follows the ordinary rule, which is the
+// distinction that keeps `Exported` from being unconditionally true.
+func TestTSAmbientModuleIsSurfaceWithoutExport(t *testing.T) {
+	cases := []struct {
+		src      string
+		name     string
+		exported bool
+	}{
+		{`declare module "ext" {}`, "ext", true},
+		{`export declare module "ext" {}`, "ext", true},
+		{`declare module Foo {}`, "Foo", false},
+		{`export declare module Foo {}`, "Foo", true},
+		{`declare namespace Bar {}`, "Bar", false},
+		{`export declare namespace Bar {}`, "Bar", true},
+	}
+	for _, c := range cases {
+		fa := extractTS(t, "a.d.ts", c.src)
+		if len(fa.Symbols) != 1 {
+			t.Fatalf("%s: want exactly one symbol, got %+v", c.src, fa.Symbols)
+		}
+		s := fa.Symbols[0]
+		if s.Name != c.name {
+			t.Errorf("%s: name = %q, want %q", c.src, s.Name, c.name)
+		}
+		if s.Exported != c.exported {
+			t.Errorf("%s: exported = %v, want %v", c.src, s.Exported, c.exported)
 		}
 	}
 }

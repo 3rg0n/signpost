@@ -61,7 +61,10 @@ func (RustExtractor) Extract(f discover.File) (Facts, error) {
 		inImpl := implDepth >= 0 && depth > implDepth
 
 		switch {
-		case strings.HasPrefix(code, "use ") || strings.HasPrefix(code, "pub use "):
+		// rustIsItem rather than a prefix match on "use " / "pub use ", because a
+		// re-export can carry a restricted visibility: `pub(super) use wire::{A, B}`
+		// and `pub(crate) use x::Y` are imports, and a prefix match misses both.
+		case rustIsItem(code, "use"):
 			joined, last := joinBraces(lines, i)
 			facts.Imports = append(facts.Imports, rustUses(joined)...)
 			depth += netDepth(joinedTail(lines, i, last), "([{", ")]}")
@@ -352,13 +355,17 @@ func rustKeyword(code string) string {
 		w := firstWord(code)
 		switch w {
 		case "async", "unsafe", "const", "extern", "default", "move":
-			rest := strings.TrimSpace(code[len(w):])
+			rest := rustTrimABI(strings.TrimSpace(code[len(w):]))
 			// `const` is both a modifier (`const fn`) and an item keyword
-			// (`const X: u8`). It is a modifier only when `fn` follows.
-			if w == "const" && !strings.HasPrefix(rest, "fn") {
+			// (`const X: u8`). It is a modifier when what follows resolves to a
+			// function, which is not the same as `fn` following immediately:
+			// `const unsafe fn` and `const extern "C" fn` are both const functions,
+			// and testing only for a literal `fn` prefix classifies them as a const
+			// item named `unsafe` or `extern` — a symbol the file never declared.
+			if w == "const" && rustKeyword(rest) != "fn" {
 				return "const"
 			}
-			code = rustTrimABI(rest)
+			code = rest
 			continue
 		}
 		switch w {
