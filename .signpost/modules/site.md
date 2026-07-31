@@ -2,18 +2,18 @@
 type: Module
 title: site
 description: 1 javascript file.
-resource: git://github.com/3rg0n/signpost@55fea4b6f8546df1d8ab560eca846cd0ef22845e/site
+resource: git://github.com/3rg0n/signpost@fe07275e18182acb2132e975bd6666387bf8ef4a/site
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
-  - { name: commits, value: "3" }
+  - { name: commits, value: "4" }
   - { name: exported, value: "0" }
   - { name: files, value: "1" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-07-30" }
-  - { name: lines_added, value: "2447" }
-  - { name: lines_removed, value: "25" }
+  - { name: last_commit, value: "2026-07-31" }
+  - { name: lines_added, value: "3066" }
+  - { name: lines_removed, value: "47" }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 67% }
+  - { name: top_author_share, value: 75% }
 ---
 # site
 
