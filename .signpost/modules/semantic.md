@@ -2,12 +2,19 @@
 type: Module
 title: internal/semantic
 description: 3 go files; 32 exported symbols.
-resource: git://github.com/3rg0n/signpost@fe07275e18182acb2132e975bd6666387bf8ef4a/internal/semantic
+resource: git://github.com/3rg0n/signpost@c12150d5db22bcaf5fbc55234c0c8e028aeb769d/internal/semantic
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
+  - { name: commits, value: "1" }
   - { name: exported, value: "32" }
   - { name: files, value: "3" }
+  - { name: first_commit, value: "2026-07-31" }
+  - { name: last_commit, value: "2026-07-31" }
+  - { name: lines_added, value: "1420" }
+  - { name: lines_removed, value: "0" }
   - { name: package, value: semantic }
+  - { name: top_author, value: 3rg0n }
+  - { name: top_author_share, value: 100% }
 edges:
   - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 2, source: internal/semantic/semantic.go }
   - { kind: imports, to: /modules/graph.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
