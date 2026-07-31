@@ -2,7 +2,7 @@
 type: Module
 title: internal/assemble
 description: 6 go files; 39 exported symbols.
-resource: git://github.com/3rg0n/signpost@696d9013e36610d6f9244e9847b980d76717fbe1/internal/assemble
+resource: git://github.com/3rg0n/signpost@55fea4b6f8546df1d8ab560eca846cd0ef22845e/internal/assemble
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
   - { name: commits, value: "2" }

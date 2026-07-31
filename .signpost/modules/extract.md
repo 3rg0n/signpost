@@ -1,20 +1,20 @@
 ---
 type: Module
 title: internal/extract
-description: 14 go files; 186 exported symbols.
-resource: git://github.com/3rg0n/signpost@696d9013e36610d6f9244e9847b980d76717fbe1/internal/extract
+description: 14 go files; 189 exported symbols.
+resource: git://github.com/3rg0n/signpost@55fea4b6f8546df1d8ab560eca846cd0ef22845e/internal/extract
 generated: { by: signpost/dev, at: "2026-07-31" }
 attributes:
-  - { name: commits, value: "3" }
-  - { name: exported, value: "186" }
+  - { name: commits, value: "4" }
+  - { name: exported, value: "189" }
   - { name: files, value: "14" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-07-30" }
-  - { name: lines_added, value: "6709" }
-  - { name: lines_removed, value: "14" }
+  - { name: last_commit, value: "2026-07-31" }
+  - { name: lines_added, value: "6885" }
+  - { name: lines_removed, value: "20" }
   - { name: package, value: extract }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 100% }
+  - { name: top_author_share, value: 75% }
 edges:
   - { kind: co_changes, to: /modules/discover.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 12, source: internal/extract/extract.go }
@@ -22,7 +22,7 @@ edges:
 # internal/extract
 
 <!-- signpost:managed:summary -->
-14 go files; 186 exported symbols.
+14 go files; 189 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
