@@ -164,6 +164,8 @@ func (b *builder) index() {
 			switch f.Kind {
 			case manifest.KindGoMod:
 				b.res.addGoModule(f.Path, f.Module.Name)
+			case manifest.KindPackageJSON:
+				b.res.addNpmPackage(f.Path, f.Module.Name)
 			case manifest.KindCargo:
 				b.res.addCrate(f.Path)
 			}
@@ -258,6 +260,17 @@ func (b *builder) addModules() error {
 // Declared, never imported: see the resolver's doc comment. The node is keyed by
 // ecosystem and name so `serde` the crate and `serde` an npm package would be two
 // nodes, because they are two things with two separate advisory streams.
+//
+// **A monorepo's own packages are excluded, and this is a correctness rule rather than
+// a tidiness one.** A workspace declares its sibling packages as ordinary dependencies
+// — `"@scope/core": "workspace:*"` — so reading the manifest literally turns
+// first-party source into a third-party dependency page. That is a false claim about
+// the supply chain in the direction that misleads: a reader auditing what this
+// repository pulls in from outside gets entries nobody publishes to them, and cannot
+// tell which of the two kinds each one is. Measured on a real monorepo before this
+// exclusion: 60 of 81 scoped "external dependencies" were directories in the tree.
+// The declaration is not discarded — addDeclaredDepEdges draws it onto the module that
+// holds the package's source instead, which is what it was always describing.
 func (b *builder) addExternals() error {
 	if b.in.Manifests == nil {
 		return nil
@@ -293,6 +306,15 @@ func (b *builder) addExternals() error {
 
 	for _, key := range order {
 		e := byKey[key]
+		// A package this repository contains is not an external dependency, whatever the
+		// manifest calls it. Skipped before the ID is assigned, so no page is written and
+		// nothing points at one; the declaration still becomes an edge onto the package's
+		// own module in addDeclaredDepEdges.
+		if e.eco == "npm" {
+			if _, inRepo := b.res.npmSibling(e.name); inRepo {
+				continue
+			}
+		}
 		// The ecosystem is part of the ID, not just the key: two same-named packages
 		// in different registries must not collide into one page.
 		id := b.ids.assign(prefixReference, key, e.eco+"-"+e.name)
@@ -670,6 +692,13 @@ func (b *builder) addDeclaredDepEdges() {
 		}
 		for _, d := range f.Deps {
 			to := b.ids.lookup(prefixReference, d.Ecosystem+"\x00"+d.Name)
+			if to == "" && d.Ecosystem == "npm" {
+				// A sibling package in this repository has no external node — see
+				// addExternals — so the declaration points at the module holding its
+				// source. This is the part of a monorepo's structure that is stated
+				// nowhere else: which packages a package is built against.
+				to, _ = b.res.npmSibling(d.Name)
+			}
 			if to == "" {
 				continue
 			}

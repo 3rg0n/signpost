@@ -1,0 +1,9 @@
+{
+  "name": "@corpus/core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "dependencies": {
+    "react": "19.0.0"
+  }
+}

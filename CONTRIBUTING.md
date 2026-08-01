@@ -78,6 +78,11 @@ unit tests in the package that owned the code, and every one shipped anyway:
   reverse proxy was reported as reading the database password. It needs a *second*
   service in the file to be wrong about, and a unit test over one extractor call
   reads one file.
+- An npm workspace's own packages were emitted as third-party dependencies, and the
+  imports between them pointed at those fabricated nodes. It needs a package that
+  exists in the tree *and* is imported by its published name — two things true at
+  once, which one resolver call handed one specifier cannot express. The corpus was a
+  single flat `package.json` and could not be wrong about this at all.
 
 That is the pattern: a bug survives a package's own tests when the tree those tests
 run in cannot express the condition. So when you fix one, ask what shape of

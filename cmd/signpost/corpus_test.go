@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -511,6 +512,110 @@ func TestCorpusSecretsAreAttributedToTheServiceThatReadsThem(t *testing.T) {
 	}
 	if strings.Contains(api, "reads-secrets") {
 		t.Errorf("the api service reads no secret and carries the reads-secrets tag:\n%s", api)
+	}
+}
+
+// TestCorpusWorkspacePackagesAreNotExternalDependencies is the regression for a monorepo's
+// own packages reported as third-party dependencies.
+//
+// The bug, found running signpost against a real npm monorepo: a workspace declares its
+// sibling packages as ordinary dependencies (`"@scope/core": "workspace:*"`), and nothing
+// mapped a declared package name back to the directory holding its source. So a
+// cross-package import fell through to the dependency lookup, matched that entry, and drew
+// an edge to an External Dependency page for code sitting in the same repository. Measured
+// there: 60 of 81 scoped "external dependencies" were directories in the tree, 2064 edges
+// pointed at them, and the package with 122 importers had a module node showing zero.
+//
+// Two false claims, both worth a stage. The supply-chain view named first-party source as
+// something pulled in from outside, which is the audit a reader cannot re-derive from the
+// page. And cross-package coupling — the primary architectural fact in a monorepo — was
+// routed to leaf nodes, so the index's "most connected" list ranked six dependency pages
+// where the real hubs belonged.
+//
+// Go was never affected, which is the tell: `addGoModule` gives resolveGo a name-to-
+// directory map to consult before treating a specifier as external, and npm had no
+// equivalent. It needed *two* things to be true at once — a package that exists in the
+// repository *and* is imported by its published name — and a unit test over one resolver
+// call is handed one specifier with no workspace around it.
+//
+// The corpus expresses it as the shape that produces it: `ts/packages/{core,api}`, each
+// with its own package.json, `api` depending on `@corpus/core` with `workspace:*` and
+// importing it both bare and deep. `main` points at `dist/`, which is absent — the normal
+// published shape, and the reason resolution has to fall back to the source root.
+func TestCorpusWorkspacePackagesAreNotExternalDependencies(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// No page for the sibling package as a dependency. Asserted on the bundle rather than the
+	// graph because the page is what a reader audits.
+	for rel := range pages {
+		if strings.Contains(rel, "corpus-core") || strings.Contains(rel, "corpus-api") {
+			t.Errorf("%s is a page for a package that lives in this repository, presented as an "+
+				"external dependency. A reader auditing what this repo pulls in from outside is "+
+				"shown first-party source:\n%s", rel, pages[rel])
+		}
+	}
+
+	// The counterpart that still fails, and it is the whole point: suppressing the page is only
+	// correct if the import found the real module instead. A fix that dropped the edge would
+	// satisfy the loop above while losing the coupling this exists to surface.
+	stdout, stderr, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct {
+			ID, Kind, Path string
+		}
+		Edges []struct {
+			From, To, Kind string
+		}
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	var apiID, coreID string
+	for _, n := range g.Nodes {
+		switch n.Path {
+		case "ts/packages/api/src":
+			apiID = n.ID
+		case "ts/packages/core/src":
+			coreID = n.ID
+		}
+		// A genuinely external dependency must still be one. Without this the exclusion could
+		// be over-broad — dropping every npm node — and every assertion here would pass.
+		if n.Kind == "External Dependency" && n.Path != "" {
+			t.Errorf("external dependency %s has a repository path %q, so it is not external",
+				n.ID, n.Path)
+		}
+	}
+	if apiID == "" || coreID == "" {
+		t.Fatalf("no module node for one of the workspace packages (api=%q core=%q), so this "+
+			"test asserts nothing", apiID, coreID)
+	}
+	var found bool
+	for _, e := range g.Edges {
+		if e.From == apiID && e.To == coreID && e.Kind == "imports" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("api imports @corpus/core by published name and there is no imports edge from "+
+			"%s to %s. The reference was dropped rather than resolved, which loses the "+
+			"cross-package coupling that is the main structural fact in a monorepo", apiID, coreID)
+	}
+
+	// react is declared alongside @corpus/core in the same package.json. It has to stay an
+	// external node, or the exclusion is matching on the wrong thing.
+	var reactExternal bool
+	for _, n := range g.Nodes {
+		if n.Kind == "External Dependency" && strings.Contains(n.ID, "npm-react") {
+			reactExternal = true
+		}
+	}
+	if !reactExternal {
+		t.Error("react is a real npm dependency and is no longer an external node, so the " +
+			"workspace exclusion is over-broad")
 	}
 }
 

@@ -602,6 +602,54 @@ jobs:
           fi
           echo "secrets: attributed to db, not inherited by api"
 
+      # A package this repository contains is not something this repository depends on.
+      #
+      # A monorepo declares its own packages as ordinary dependencies —
+      # `"@scope/core": "workspace:*"` — and imports them by published name rather than by
+      # relative path. With no name-to-directory map the resolver had nothing to match, so
+      # every cross-package import fell through to the declared-dependency lookup and found
+      # that entry, and first-party source was emitted as a third-party dependency page.
+      # Measured on a real monorepo: 60 of 81 scoped externals were directories in the tree,
+      # with 2064 edges pointing at them, and the module node for the package's own source
+      # showed zero importers while its fabricated twin showed 122. Go was never affected,
+      # because addGoModule always gave the resolver that map.
+      - name: A workspace package is not an external dependency
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          api=$(grep -rl 'title: ts/packages/api/src' "${bundle}/modules") || {
+            echo "no module page for ts/packages/api/src; this step asserts nothing"; exit 1; }
+          core=$(grep -rl 'title: ts/packages/core/src' "${bundle}/modules") || {
+            echo "no module page for ts/packages/core/src; this step asserts nothing"; exit 1; }
+
+          for p in corpus-core corpus-api; do
+            if [ -f "${bundle}/references/npm-${p}.md" ]; then
+              echo "references/npm-${p}.md is a page for a package that lives in this"
+              echo "repository, presented as an external dependency. A reader auditing what"
+              echo "this repo pulls in from outside is shown first-party source."
+              exit 1
+            fi
+          done
+
+          # The counterpart that still fails: dropping the import instead of resolving it
+          # would satisfy the check above, and losing the cross-package coupling is the other
+          # way to be wrong — in a monorepo it is the main structural fact there is.
+          grep -q "to: /modules/$(basename "$core")" "$api" || {
+            echo "api imports @corpus/core by published name and there is no imports edge"
+            echo "from $(basename "$api") to $(basename "$core"). The reference was dropped"
+            echo "rather than resolved."
+            exit 1
+          }
+
+          # And the guard against an over-broad exclusion: react is genuinely external and
+          # must stay a reference page, or the fix traded false positives for false negatives.
+          [ -f "${bundle}/references/npm-react.md" ] || {
+            echo "npm-react.md is gone; react is a real third-party dependency and the"
+            echo "workspace exclusion is matching more than the repository's own packages."
+            exit 1
+          }
+          echo "workspace: @corpus/core resolved internally, react still external"
+
       # The bundle is signpost's own output, and a run that walks it describes itself.
       #
       # Not caught by .gitignore, because the bundle is committed on purpose (ADR 0005) —

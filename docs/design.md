@@ -382,6 +382,19 @@ therefore weight what it trusts, and a reviewer can audit what was guessed. Reco
 ADR [0004](adr/0004-confidence-is-a-first-class-field.md), which also states what the
 field does *not* claim.
 
+**Resolution precedence: this repository first, the manifest second, unresolved third.**
+An import resolves against the directories signpost found before it resolves against the
+dependencies a manifest declares, and a specifier that matches neither is counted as
+unresolved rather than turned into a node. The order is not a preference. A monorepo
+declares its own packages as ordinary dependencies — `"@scope/core": "workspace:*"` — so
+both lookups match, and the manifest entry is the weaker fact: it says the package is
+depended on, while the directory says where it is. Reading the manifest first turns
+first-party source into a third-party dependency page, which is a false claim about the
+supply chain in the direction that misleads — a reader auditing what the repository pulls
+in from outside is shown code that repository wrote, and cannot tell the two kinds apart.
+Each ecosystem therefore needs a name-to-directory map for the first lookup to consult;
+Go had one from the start, npm did not, and its absence was a bug rather than a gap.
+
 Metrics, all hand-written and all deterministic:
 
 - degree, fan-in, fan-out → hub identification

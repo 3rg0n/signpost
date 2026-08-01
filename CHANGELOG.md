@@ -10,6 +10,36 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-01
 
+- **A monorepo's own packages were reported as third-party dependencies.** npm packages
+  in a workspace import each other by published name — `import {x} from "@scope/core"`,
+  not by relative path — and the resolver had no map from a declared package name to the
+  directory declaring it. So every cross-package import fell through to the
+  declared-dependency lookup, matched the `workspace:*` entry sitting in `package.json`,
+  and resolved to an external node. Go was never affected for exactly this reason: it has
+  had that map since the beginning.
+
+  Two false claims, needing two fixes. The edges pointed at a fabricated external node
+  instead of the module holding the package's own source, and the node itself was written
+  as an External Dependency page for code in the repository. Measured on a real monorepo
+  before the fix: 60 of 81 scoped externals were directories in `packages/`, 2064 edges
+  pointed at them, and the module node for `@webex/webex-core`'s source showed zero
+  importers while its fabricated twin showed 122. After: unresolved imports 43 → 15,
+  module-to-module imports 614 → 1601, nodes 904 → 827, packages misreported as external
+  60 → 0. The code-coupling hubs went from six external `/references/npm-*` entries to
+  real first-party modules, with lodash and sinon still correctly external.
+
+  A declaration is not discarded, only redirected: the `workspace:*` entry now draws an
+  edge onto the module holding that package's source, which is what it was always
+  describing, and is the part of a monorepo's structure stated nowhere else. Resolution
+  precedence is now written down in [Design §4.4](docs/design.md) — this repository
+  first, the manifest second, unresolved third — because its absence is what let an
+  ecosystem ship without the map.
+
+  The corpus grew a two-package workspace to express it, with both a bare and a deep
+  cross-package import and a `main` pointing at a `dist/` that is not in the tree. One
+  unit test over one resolver call could not have caught this: the defect needs a package
+  that exists *and* is imported by published name, both at once.
+
 - **signpost analysed its own bundle, inflating the file census on every run.** Only
   `.git/` was excluded from the walk. The bundle is committed on purpose ([ADR
   0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)), so no `.gitignore` rule covers it the way

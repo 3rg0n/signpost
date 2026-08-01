@@ -38,6 +38,9 @@ type resolver struct {
 	// goMods maps a directory to the module path declared there, longest path first
 	// so a nested module wins over the one that contains it.
 	goMods []goModule
+	// npmPkgs maps a directory to the package name declared there, longest name
+	// first so `@scope/core-utils` wins over `@scope/core`.
+	npmPkgs []npmPkg
 	// crates are Cargo manifest directories, longest first, same reason.
 	crates []string
 	// deps maps a normalized dependency key to the external node it belongs to.
@@ -50,6 +53,11 @@ type resolver struct {
 type goModule struct {
 	dir  string
 	path string
+}
+
+type npmPkg struct {
+	dir  string
+	name string
 }
 
 // pyExts, tsExts and rustExts are the file spellings a module path may resolve to,
@@ -81,6 +89,62 @@ func (r *resolver) addGoModule(file, modPath string) {
 		}
 		return r.goMods[i].path < r.goMods[j].path
 	})
+}
+
+// addNpmPackage records a package.json's declared name against its directory.
+//
+// This is what makes an npm workspace resolve internally, and its absence was a bug
+// rather than a gap. A monorepo's packages import each other by published name —
+// `import {x} from "@scope/core"`, not by relative path — and with no name-to-directory
+// map the resolver had nothing to match, so every cross-package import fell through to
+// the declared-dependency lookup and found the `workspace:*` entry sitting in
+// package.json. The result was a package in this repository reported as a third-party
+// dependency, with the module node for its own source showing no importers at all.
+// Measured on a real monorepo before the fix: 60 of 81 scoped "external dependencies"
+// were directories in the repository, and 2064 edges pointed at them.
+//
+// Go has worked correctly all along for exactly this reason — addGoModule gives
+// resolveGo a path-to-directory map to consult first. This is the npm equivalent.
+func (r *resolver) addNpmPackage(file, name string) {
+	if name == "" {
+		return
+	}
+	r.npmPkgs = append(r.npmPkgs, npmPkg{dir: dirOf(file), name: name})
+	// Longest name first, so a deep import matches the most specific package that could
+	// provide it: with both `@scope/core` and `@scope/core-utils` declared, an import of
+	// `@scope/core-utils/x` must not be read as `@scope/core` plus a stray path.
+	sort.Slice(r.npmPkgs, func(i, j int) bool {
+		if len(r.npmPkgs[i].name) != len(r.npmPkgs[j].name) {
+			return len(r.npmPkgs[i].name) > len(r.npmPkgs[j].name)
+		}
+		return r.npmPkgs[i].name < r.npmPkgs[j].name
+	})
+}
+
+// npmSibling reports whether an npm dependency name is a package in this repository,
+// and returns the module node covering its source if one exists.
+//
+// Separate from npmWorkspace because the input is a different thing: that resolves an
+// import specifier, which may address a path inside a package, while this matches a
+// dependency *name* declared in a manifest, which never does. Conflating them would let
+// a dependency named `@scope/core` match a package named `@scope` with `/core` treated
+// as a subpath.
+func (r *resolver) npmSibling(name string) (id string, inRepo bool) {
+	for _, p := range r.npmPkgs {
+		if p.name != name {
+			continue
+		}
+		if id := r.tsTarget(p.dir); id != "" {
+			return id, true
+		}
+		for _, src := range []string{"src", "lib"} {
+			if id := r.tsTarget(path.Join(p.dir, src)); id != "" {
+				return id, true
+			}
+		}
+		return "", true
+	}
+	return "", false
 }
 
 // addCrate records a Cargo manifest's directory.
@@ -311,7 +375,49 @@ func (r *resolver) resolveTS(from, raw string) (string, bool) {
 		}
 		return "", true
 	}
+	// A workspace package in this repository is checked before the dependency lookup,
+	// because it is the more specific claim: a monorepo declares its own packages as
+	// `workspace:*` dependencies, so both would match and the declared one is the
+	// weaker fact. Same precedence resolveGo uses, for the same reason.
+	if id, ok := r.npmWorkspace(raw); ok {
+		return id, true
+	}
 	return r.depOrEmpty("npm", []string{npmPackage(raw)}), false
+}
+
+// npmWorkspace resolves a bare specifier against the packages declared in this
+// repository, returning whether the specifier named one at all.
+//
+// The two return values are distinct and both matter. `ok` says the import is internal;
+// `id` says which node it reached, and is empty when the package exists but the
+// subdirectory it points at holds no extracted source — a `dist/` entry point, or a
+// package whose files were all filtered. That case stays internal with no edge, which is
+// resolveGo's answer too: inventing an external node for code that is in the tree
+// misreports the supply chain, and that is the one thing this resolver must not do.
+func (r *resolver) npmWorkspace(raw string) (string, bool) {
+	for _, p := range r.npmPkgs {
+		rest, under := underPath(raw, p.name)
+		if !under {
+			continue
+		}
+		// A deep import addresses a path inside the package, and the package root is
+		// where that path is rooted: `@scope/core/lib/x` is `<dir>/lib/x`. Bare imports
+		// pass rest == "" and land on the package directory itself.
+		if id := r.tsTarget(path.Join(p.dir, rest)); id != "" {
+			return id, true
+		}
+		// A published package points its specifier at built output — `main: dist/index.js`
+		// — and `dist/` is not in the repository. So a bare import of a package whose root
+		// holds no source is retried against the conventional source roots before giving
+		// up, which is what makes `@scope/core` reach the code rather than nothing.
+		for _, src := range []string{"src", "lib"} {
+			if id := r.tsTarget(path.Join(p.dir, src, rest)); id != "" {
+				return id, true
+			}
+		}
+		return "", true
+	}
+	return "", false
 }
 
 func tsAliasPath(raw string) (string, bool) {
