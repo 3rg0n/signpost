@@ -203,6 +203,14 @@ does not support:
 - **Vendored** (`vendor/`, `node_modules/`, `target/`) — somebody else's code,
   unchangeable by this team. Analysing it swamps the graph with nodes nobody can act
   on. Recovered with `-include-vendored`.
+
+  Both flags are answered in one place, `Result.Analyses`, and the walk's option is carried
+  on the result so the consumers can reach it. Issue #11 was what happens otherwise: the
+  walk honoured `-include-vendored` and read the files, and six consumers each decided the
+  same question independently by testing `File.Vendored` with no reference to the option, so
+  the flag that exists to overrule the default overruled nothing. A file stays marked
+  vendored either way — the flag changes whether it is analysed, not what it is, so the skip
+  report and the file's own metadata stay truthful.
 - **Test fixtures** (`testdata/`, `fixtures/`, `__fixtures__/`) — sample projects
   that exist for tests to run against. Recovered with `-include-fixtures`.
 - **Binaries** — no content to read.

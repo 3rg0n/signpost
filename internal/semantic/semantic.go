@@ -178,7 +178,7 @@ func Run(ctx context.Context, in Input) *Result {
 		if n.Kind != graph.KindModule {
 			continue
 		}
-		srcs, truncated := sourcesFor(n, content)
+		srcs, truncated := sourcesFor(n, in.Discovered, content)
 		if len(srcs) == 0 {
 			// A module node with no readable source: a directory of binaries, of vendored
 			// code, or of files the size caps skipped. Not summarisable and not a failure.
@@ -346,7 +346,9 @@ func contentByPath(d *discover.Result) map[string]discover.File {
 // prompt has to be in a stable order because the cache key is computed over it — a set
 // that reordered between runs would miss the cache every time and produce a different
 // summary each morning.
-func sourcesFor(n *graph.Node, content map[string]discover.File) (srcs []model.Source, truncated bool) {
+// d is passed alongside the index it was built from, for the one question the index
+// cannot answer: whether this walk was asked to analyse vendored code.
+func sourcesFor(n *graph.Node, d *discover.Result, content map[string]discover.File) (srcs []model.Source, truncated bool) {
 	type cand struct {
 		path string
 		size int64
@@ -355,7 +357,7 @@ func sourcesFor(n *graph.Node, content map[string]discover.File) (srcs []model.S
 	var cands []cand
 	for _, p := range n.Files {
 		f, ok := content[p]
-		if !ok || f.Binary || f.Vendored || f.IsTest || strings.TrimSpace(f.Content) == "" {
+		if !ok || f.Binary || !d.Analyses(f) || f.IsTest || strings.TrimSpace(f.Content) == "" {
 			// Tests are excluded on purpose. A test file describes what a module must do,
 			// which reads like a specification and is not one — and a summary built from
 			// tests describes the tests.

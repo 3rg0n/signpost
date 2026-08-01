@@ -87,7 +87,36 @@ type Result struct {
 	// as a complete one (design §4.2: absence of measurement is never a clean
 	// bill of health).
 	Skipped []Skip
+
+	// IncludeVendored carries Options.IncludeVendored forward, so the consumers
+	// that filter on File.Vendored can honour the flag. Without it they cannot:
+	// every one of them holds the walk's result and not the options that produced
+	// it, which is how -include-vendored spent v0.1.0 reading vendored files that
+	// nothing downstream would look at.
+	IncludeVendored bool
 }
+
+// Analyses reports whether f is content this walk was asked to analyse.
+//
+// The one place the vendored decision is made, for the reason issue #11 records: it
+// was previously made independently at six call sites, each spelled `!f.Vendored`
+// with no reference to the option, so the flag that exists to overrule it overruled
+// nothing. Consumers keep their own other conditions — a test file, a class, a
+// binary — and defer only this one.
+//
+// Two of the six decide something; the rest are belt and braces. Sources() gates
+// extraction and manifest.Registry.Run gates the manifest readers, and reverting
+// either one alone is observable in the bundle. The others — ByClass, practice's two
+// counts, semantic's source picker — only ever see a vendored file when one of those
+// two let it through, because with the flag off the walk prunes vendored directories
+// entirely and nothing vendored reaches a consumer at all. They are kept honest
+// anyway: a filter that contradicted this one would be a hole waiting for the day the
+// walk changes.
+//
+// Deliberately not a question about fixtures as well. A fixture is pruned during the
+// walk and never reaches a consumer, so there is no downstream filter to satisfy and
+// nothing here to ask.
+func (r *Result) Analyses(f File) bool { return !f.Vendored || r.IncludeVendored }
 
 // Skip is one path that was not read, and why.
 type Skip struct {
@@ -144,7 +173,7 @@ func Walk(root string, opts Options) (*Result, error) {
 	}
 	defer func() { _ = rt.Close() }()
 
-	res := &Result{Root: absRoot}
+	res := &Result{Root: absRoot, IncludeVendored: opts.IncludeVendored}
 
 	base := &ignoreSet{}
 	// .git is never interesting as content; git signals come from `git log`.
@@ -514,23 +543,27 @@ func mustCompile(raw string) pattern {
 	return p
 }
 
-// Sources returns only the analysable source files: not vendored, not binary,
-// with content. This is what the language extractors consume.
+// Sources returns only the analysable source files: not vendored unless the walk
+// was asked for vendored code, not binary, with content. This is what the language
+// extractors consume, which makes it the method -include-vendored has to reach —
+// extraction is driven from here, so a vendored file excluded at this point is a
+// vendored file no extractor ever sees whatever the flag said.
 func (r *Result) Sources() []File {
 	var out []File
 	for _, f := range r.Files {
-		if f.Class == ClassSource && !f.Vendored && !f.Binary && f.Content != "" {
+		if f.Class == ClassSource && r.Analyses(f) && !f.Binary && f.Content != "" {
 			out = append(out, f)
 		}
 	}
 	return out
 }
 
-// ByClass returns files of a given class, excluding vendored and binary ones.
+// ByClass returns files of a given class, excluding binaries and — unless the walk
+// was asked for them — vendored ones.
 func (r *Result) ByClass(c Class) []File {
 	var out []File
 	for _, f := range r.Files {
-		if f.Class == c && !f.Vendored && !f.Binary {
+		if f.Class == c && r.Analyses(f) && !f.Binary {
 			out = append(out, f)
 		}
 	}

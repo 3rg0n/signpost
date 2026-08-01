@@ -1233,6 +1233,83 @@ func TestCorpusStalePageIsRemovedOrReported(t *testing.T) {
 	}
 }
 
+// TestCorpusVendoredCodeIsOffTheMapUntilAskedFor is issue #11.
+//
+// `-include-vendored` promised to "analyse vendored third-party code instead of only recording
+// it", and it read the files: `File.Content` was populated, and the census on stderr counted
+// them. Nothing downstream ever looked at them. Six consumers each filtered on `File.Vendored`
+// with no reference to the option — `Sources()` being the one that decided it, since extraction
+// is driven from there — so the flag moved the file count and the node count stayed where it
+// was. The sibling flag `-include-fixtures` worked, and that asymmetry is what surfaced this.
+//
+// It belongs in the corpus rather than only in internal/discover for the reason the harness
+// exists: nothing in *this* repository is vendored, so no amount of dogfooding reaches the
+// filters. The corpus carries `ts/node_modules/@corpus-vendor/logger`, which is a committed
+// node_modules — a real pattern, and one .gitignore does not exclude.
+//
+// The assertion is the *bundle*, not the file count, because the file count is what the broken
+// flag already moved. A page for the vendored module is what analysing it means.
+func TestCorpusVendoredCodeIsOffTheMapUntilAskedFor(t *testing.T) {
+	const (
+		vendoredModule = "logger"
+		// Declared only by the vendored package.json, so it can reach a bundle by no other
+		// route. This is what separates "the manifest reader ran" from "the walk read a file".
+		vendoredDep = "vendored-only-tinycolor"
+	)
+
+	// The negative boundary first, and it is the one that carries the weight. Vendored code is
+	// somebody else's, unchangeable by this team, and a bundle that puts it on the map swamps
+	// the graph with nodes nobody can act on and claims a dependency the repository does not
+	// declare. A fix that threaded the option too widely — or defaulted it on — ships that.
+	off := bundlePages(t, buildCorpus(t))
+	for rel, src := range off {
+		if strings.Contains(rel, vendoredModule) || strings.Contains(rel, vendoredDep) {
+			t.Errorf("%s describes vendored third-party code that nothing asked signpost to "+
+				"analyse. A committed node_modules is not this repository's surface:\n%s", rel, src)
+		}
+		if strings.Contains(src, vendoredDep) {
+			t.Errorf("%s cites %s, which only the vendored package.json declares:\n%s",
+				rel, vendoredDep, src)
+		}
+	}
+
+	// And the positive: with the flag, both halves arrive. They fail independently, which is why
+	// both are named and why one stage asserts both — measured, not assumed. Reverting
+	// `Sources()` alone loses the module page and leaves the citation intact; reverting
+	// manifest.Registry.Run alone does the reverse. So a fix to the extraction half analyses
+	// the vendored source and still discards the package.json beside it, leaving a module
+	// whose own declaration signpost read and threw away.
+	on := bundlePages(t, buildCorpus(t, "-include-vendored"))
+	var gotModule, gotDep string
+	for rel, src := range on {
+		if strings.Contains(rel, vendoredModule) {
+			gotModule = rel
+		}
+		if strings.Contains(src, vendoredDep) {
+			gotDep = rel
+		}
+	}
+	if gotModule == "" {
+		t.Errorf("-include-vendored produced no page for the vendored module. This is issue #11: "+
+			"the walk honoured the flag, every consumer filtered the result out again, and the "+
+			"flag changed the file count and nothing else.\n\nPages:\n  %s", pageNames(on))
+	}
+	if gotDep == "" {
+		t.Errorf("-include-vendored did not read the vendored package.json: nothing in the bundle "+
+			"names %s, which only that file declares. Sources() and ByClass() fail separately, so "+
+			"the extraction half can be fixed with this half still broken.\n\nPages:\n  %s",
+			vendoredDep, pageNames(on))
+	}
+	// Turning the flag on adds; it must not take anything away. Every page the default build
+	// wrote is still written, which is what distinguishes "analyse vendored code as well" from
+	// "analyse a different repository".
+	for rel := range off {
+		if _, ok := on[rel]; !ok {
+			t.Errorf("%s is in the default bundle and absent with -include-vendored", rel)
+		}
+	}
+}
+
 // TestCorpusBuildIsByteStable runs the build twice over the same tree and requires identical
 // bytes.
 //

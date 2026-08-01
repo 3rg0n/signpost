@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,6 +83,67 @@ func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	// would not tell anyone what went unread.
 	if !strings.Contains(stderr, "no extractor for") || !strings.Contains(stderr, ".kt") {
 		t.Errorf("unhandled language not reported by extension:\n%s", stderr)
+	}
+}
+
+// Issue #11, through the binary and stated the way the issue states it: the flag moved the
+// file count and left the node count alone, and the asymmetry with -include-fixtures is what
+// made it visible. Both flags are exercised against one tree here for that reason — a fix
+// that regressed fixtures while fixing vendored would pass a test that only knew about one.
+//
+// The node count is the assertion because it is the number that failed. A count assertion is
+// normally avoided in this suite (see corpus_test.go: it fails on every extractor
+// improvement), but the whole defect was a count that did not move, and the tree is four
+// files written by this test rather than a repository anything else can change.
+func TestIncludeFlagsReachTheGraphNotJustTheWalk(t *testing.T) {
+	root := t.TempDir()
+	for p, content := range map[string]string{
+		"go.mod":                    "module example.com/app\n\ngo 1.26\n",
+		"main.go":                   "package main\n\nfunc main() {}\n",
+		"vendor/example.com/v/v.go": "package v\n\nfunc V() {}\n",
+		"testdata/sample/s/s.go":    "package s\n\nfunc S() {}\n",
+	} {
+		full := filepath.Join(root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	nodes := func(t *testing.T, flags ...string) int {
+		t.Helper()
+		args := append([]string{"graph"}, flags...)
+		stdout, stderr, code := invoke(t, append(args, "--quiet", root)...)
+		if code != 0 {
+			t.Fatalf("graph %v: exit = %d\n%s", flags, code, stderr)
+		}
+		var n int
+		for _, line := range strings.Split(stdout, "\n") {
+			if _, err := fmt.Sscanf(strings.TrimSpace(line), "%d nodes,", &n); err == nil {
+				return n
+			}
+		}
+		t.Fatalf("no node count in the report:\n%s", stdout)
+		return 0
+	}
+
+	base := nodes(t)
+	// The negative boundary: neither directory is analysed unless asked for. Without this
+	// the two assertions below are satisfied by a tool that ignores both flags and analyses
+	// everything, which is the failure that costs a committed page a phantom module.
+	if base != 1 {
+		t.Fatalf("%d nodes by default, want only the root module: a vendored or fixture "+
+			"directory was analysed without being asked for", base)
+	}
+	if got := nodes(t, "-include-vendored"); got != base+1 {
+		t.Errorf("-include-vendored: %d nodes, want %d. The flag read the vendored file and "+
+			"every consumer filtered it out again, so it changed the file count and nothing "+
+			"else — issue #11.", got, base+1)
+	}
+	if got := nodes(t, "-include-fixtures"); got != base+1 {
+		t.Errorf("-include-fixtures: %d nodes, want %d", got, base+1)
 	}
 }
 

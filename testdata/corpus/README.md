@@ -90,6 +90,34 @@ is a *pair* of failures in opposite directions:
 A fix satisfying either row alone is a fix that ships one of the two bugs, so neither
 assertion means anything without the other.
 
+## What a flag is supposed to change
+
+`ts/node_modules/@corpus-vendor/logger/` is committed on purpose, and it is the only directory
+here that is not the corpus's own code. A committed `node_modules` is a real pattern —
+`.gitignore` does not exclude it here, and plenty of repositories vendor a package deliberately
+— which is exactly the condition signpost's own tree cannot express, since nothing in it is
+vendored.
+
+`TestCorpusVendoredCodeIsOffTheMapUntilAskedFor` is
+[issue #11](https://github.com/3rg0n/signpost/issues/11): `-include-vendored` promised to
+analyse vendored code, the walk honoured it and read the files, and every consumer downstream
+filtered them back out on `File.Vendored` without consulting the option. The flag read a
+vendored tree off disk and discarded it, and the bundle was identical either way. Every unit
+test covering the walk stayed green, because the walk was the one part that worked.
+
+| Run | Must happen | What the other direction would cost |
+|---|---|---|
+| default | no page names the vendored module, and no page cites `vendored-only-tinycolor` | describing somebody else's repository as this one |
+| `-include-vendored` | a page for the module **and** a page citing `vendored-only-tinycolor` | the shipped bug: a flag that reads files nothing looks at |
+| `-include-vendored` | every page from the default run still present | the flag silently *replacing* the map rather than extending it |
+
+The two positives are separate rows because they fail independently: extraction is gated by
+`Result.Sources()` and the manifest readers by `manifest.Registry.Run`, so a fix to the first
+alone analyses the vendored source and still discards the `package.json` beside it — leaving a
+module whose own declaration signpost had in hand and threw away. `vendored-only-tinycolor` is
+declared in that vendored manifest and nowhere else in this tree, so its name can only reach a
+bundle through the reader that was dropping it.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs

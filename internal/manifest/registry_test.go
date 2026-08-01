@@ -231,6 +231,21 @@ func TestRunReadsEveryNonSourceFile(t *testing.T) {
 	if _, ok := out.Unhandled[".png"]; ok {
 		t.Error("a binary file is not an extraction gap")
 	}
+
+	// The same tree with -include-vendored, which is issue #11's half of this filter. The
+	// walk honoured the flag and this loop did not, so a vendored manifest was read off disk
+	// and dropped here — leaving a module whose own declaration signpost had in hand and
+	// discarded. Asserted in this test rather than a new one because the negative boundary is
+	// the fixture above: the same file, excluded, is what makes the inclusion meaningful.
+	res.IncludeVendored = true
+	withVendored := DefaultRegistry().Run(res)
+	var got []string
+	for _, f := range withVendored.Facts {
+		got = append(got, f.Path)
+	}
+	if len(got) != 3 || got[2] != "vendor/other/go.mod" {
+		t.Errorf("facts with -include-vendored = %v, want the vendored go.mod as well", got)
+	}
 }
 
 // A truncated manifest is where partial reading misleads most: the dependency list is the

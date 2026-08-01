@@ -254,7 +254,7 @@ func testFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 	// signpost does not run the tests and does not know what they cover.
 	tests := 0
 	for _, f := range d.Files {
-		if f.IsTest && !f.Vendored {
+		if f.IsTest && d.Analyses(f) {
 			tests++
 		}
 	}
@@ -565,7 +565,7 @@ func documentationFindings(d *discover.Result) []Finding {
 	// number grow every time signpost ran, which is a tool measuring itself.
 	docs := 0
 	for _, f := range d.Files {
-		if f.Class == discover.ClassDoc && !f.Vendored && !inBundle(f.Path) {
+		if f.Class == discover.ClassDoc && d.Analyses(f) && !inBundle(f.Path) {
 			docs++
 		}
 	}

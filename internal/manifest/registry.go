@@ -150,12 +150,14 @@ type RunResult struct {
 // Run reads every non-source file in a discovery result.
 //
 // Source files are skipped: they belong to internal/extract, and a file is one or the
-// other. Vendored and binary files are skipped because they are recorded by the walk for
-// the record and are not this repository's own statements about itself.
+// other. Binary files have nothing to read. Vendored files are skipped unless the walk was
+// asked for them, because a vendored manifest is another repository's statement about
+// itself — the decision is deferred to Result.Analyses so that -include-vendored reaches
+// here and not only the walk (issue #11).
 func (r *Registry) Run(res *discover.Result) *RunResult {
 	out := &RunResult{Unhandled: make(map[string]int)}
 	for _, f := range res.Files {
-		if f.Class == discover.ClassSource || f.Vendored || f.Binary {
+		if f.Class == discover.ClassSource || !res.Analyses(f) || f.Binary {
 			continue
 		}
 		rt := r.Route(f)

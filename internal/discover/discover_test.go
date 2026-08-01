@@ -394,6 +394,89 @@ func TestWalkIncludeFixturesAnalysesThem(t *testing.T) {
 	}
 }
 
+// TestWalkIncludeVendoredAnalysesThem is issue #11, and it is the assertion the flag
+// shipped without.
+//
+// `-include-vendored` read the files and nothing downstream looked at them, so the census
+// on stderr went from two files to three and the node count did not move. Coverage existed
+// — TestWalkRecordsVendoredWithoutReading checks the default path — but it stopped at the
+// walk, and the walk was the half that already worked.
+//
+// So the assertion is on Sources(), not on File.Content. Content is what the flag used to
+// change; Sources() is what extraction is driven from, which makes it the difference between
+// reading a vendored file and analysing one. The three-way shape below is deliberate: with
+// the flag off the file must be recorded and not analysed, and with it on both must hold.
+func TestWalkIncludeVendoredAnalysesThem(t *testing.T) {
+	tree := map[string]string{
+		"app.go":                        "package main\n",
+		"vendor/example.com/lib/lib.go": "package lib\n",
+		"vendor/example.com/lib/go.mod": "module example.com/lib\n",
+	}
+
+	off, err := Walk(writeTree(t, tree), Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	on, err := Walk(writeTree(t, tree), Options{IncludeVendored: true})
+	if err != nil {
+		t.Fatalf("Walk(IncludeVendored): %v", err)
+	}
+
+	// The negative boundary, and the one that stops the fix from being "analyse everything".
+	// A flag that turns on by accident is as wrong as one that never turns on, and this half
+	// is what a fix threading the option too widely would break.
+	if n := len(off.Sources()); n != 1 {
+		t.Errorf("Sources() with the flag off = %d, want only app.go: %v", n, paths(off))
+	}
+	if len(off.Files) != 1 {
+		t.Errorf("a vendored tree should still be pruned by default; got %v", paths(off))
+	}
+
+	f := find(t, on, "vendor/example.com/lib/lib.go")
+	if !f.Vendored {
+		t.Error("Vendored should stay true with -include-vendored: the flag changes whether " +
+			"the file is analysed, not what it is")
+	}
+	if f.Content == "" {
+		t.Error("-include-vendored did not read the file")
+	}
+	if n := len(on.Sources()); n != 2 {
+		t.Errorf("Sources() = %d, want both files: %v.\n\nThis is issue #11 exactly: the walk "+
+			"honoured the flag and Sources() filtered the result out again, so the file was "+
+			"read and no extractor ever saw it.", n, paths(on))
+	}
+	// ByClass is the manifest half, and it fails independently. A fix to Sources() alone
+	// analyses the vendored code and still ignores the go.mod beside it, which is a module
+	// whose own declaration signpost has read and discarded.
+	if n := len(on.ByClass(ClassManifest)); n != 1 {
+		t.Errorf("ByClass(manifest) = %d, want the vendored go.mod: %v", n, paths(on))
+	}
+	if n := len(off.ByClass(ClassManifest)); n != 0 {
+		t.Errorf("ByClass(manifest) with the flag off = %d, want none", n)
+	}
+}
+
+// Analyses is the predicate the six consumers defer to, so its truth table is asserted
+// directly rather than only through them. The zero value matters most: a Result built by a
+// test or by a future caller that does not set IncludeVendored must exclude vendored files,
+// because that is the default the flag overrules and not a decision to include them.
+func TestAnalysesHonoursTheOptionAndDefaultsToExcluding(t *testing.T) {
+	own := File{Path: "app.go"}
+	vend := File{Path: "vendor/x/y.go", Vendored: true}
+
+	zero := &Result{}
+	if !zero.Analyses(own) {
+		t.Error("a file that is not vendored is always analysed")
+	}
+	if zero.Analyses(vend) {
+		t.Error("a zero-value Result analysed a vendored file; the default is to exclude it")
+	}
+	on := &Result{IncludeVendored: true}
+	if !on.Analyses(vend) || !on.Analyses(own) {
+		t.Error("IncludeVendored should analyse both")
+	}
+}
+
 // A fixture is neither vendored nor a test, and the distinction is load-bearing: a
 // tested_by edge from a real module to a sample project would be a false claim, and calling
 // a hand-maintained fixture third-party code would be a wrong reason for a right skip.

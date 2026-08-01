@@ -8,6 +8,31 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+#### 2026-08-02
+
+- **`-include-vendored` did nothing.** Its help text promises to *analyse vendored
+  third-party code instead of only recording it*, and the walk honoured it: vendored
+  directories were descended into and their files read off disk. Then every consumer filtered
+  them straight back out. Six sites each decided the same question independently, each spelled
+  `!f.Vendored` with no reference to the option — so the flag read a vendored tree into memory
+  and discarded it, and a user who passed it got a bundle byte-identical to one built without
+  it. `Sources()` was the one that mattered, because extraction is driven from it.
+
+  The decision now lives in one place, `discover.Result.Analyses`, and the walk carries its
+  option forward on the result — which is what the consumers were missing: each held the
+  result and none held the options that produced it. A vendored file stays marked vendored, so
+  the skip report and the file's metadata remain truthful; the flag changes whether a file is
+  analysed, not what it is, matching the invariant `-include-fixtures` already held.
+
+  Two halves fail independently and both are asserted: extraction, and the manifest readers.
+  Fixing only the first analyses a vendored package's source and still discards the
+  `package.json` beside it, leaving a module whose own declaration signpost had in hand and
+  threw away. The corpus carries a committed `ts/node_modules/` for this — a real pattern
+  `.gitignore` does not exclude, and a condition signpost's own tree cannot express, which is
+  why the defect survived the unit tests that covered the walk and stopped there. Its vendored
+  manifest declares a dependency named nowhere else in the corpus, so that name can only reach
+  a bundle through the reader that was dropping it.
+
 #### 2026-08-01
 
 - **`build` never deleted a page whose concept was gone, and strict `verify` exited 0 with

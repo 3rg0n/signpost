@@ -870,6 +870,75 @@ jobs:
           done
           echo "gaps: ${got} specifier(s), each a deliberate near-miss, none fabricated"
 
+      # -include-vendored, which spent v0.1.0 doing nothing (issue #11). The walk honoured
+      # the flag and read the files; every consumer downstream filtered them back out on
+      # File.Vendored with no reference to the option, so the flag read vendored code off
+      # disk and threw it away.
+      #
+      # Here rather than in Go alone because nothing in signpost's own tree is vendored, and
+      # a bug that survives a package's unit tests survives because the tree those tests run
+      # in cannot express the condition. `testdata/corpus/ts/node_modules/` can: a committed
+      # node_modules is a real pattern .gitignore does not exclude.
+      #
+      # Two assertions because the two halves fail independently, measured rather than
+      # assumed: reverting `Sources()` alone leaves the module page missing and the citation
+      # check untouched, and reverting manifest.Registry.Run alone does the reverse. So a fix
+      # to extraction alone analyses the vendored source and still discards the package.json
+      # beside it, leaving a module whose own declaration signpost read and dropped.
+      # `vendored-only-tinycolor` is declared nowhere else in the corpus, so it can reach a
+      # bundle only through the vendored manifest.
+      #
+      # Its own copy of the tree: this build writes a bundle, and the CRLF stage below
+      # measures the default one.
+      - name: The include-vendored flag reaches the bundle, not only the walk
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus-vendored"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus"
+
+          # The negative boundary first. Without the flag the walk prunes the directory, so
+          # neither the vendored module nor the dependency it alone declares may appear
+          # anywhere in the bundle.
+          ./signpost build -repo example.com/corpus "$corpus" >/dev/null 2>&1
+          for frag in corpus-vendor vendored-only-tinycolor; do
+            if grep -rqi "$frag" "${corpus}/.signpost"; then
+              echo "the default bundle names ${frag}, which lives under node_modules/."
+              echo "Vendored code is another repository's content and is off the map unless"
+              echo "asked for; a default run that describes it is describing someone else's"
+              echo "repository as this one."
+              grep -rli "$frag" "${corpus}/.signpost"
+              exit 1
+            fi
+          done
+          if [ -f "${corpus}/.signpost/modules/logger.md" ]; then
+            echo "a module page for the vendored logger exists in a default build"; exit 1
+          fi
+          echo "default: vendored code absent from the bundle"
+
+          # And the positive. Both halves are named, because either one alone passing is the
+          # bug half-fixed.
+          rm -rf "${corpus}/.signpost"
+          ./signpost build -include-vendored -repo example.com/corpus "$corpus" >/dev/null 2>&1
+          [ -f "${corpus}/.signpost/modules/logger.md" ] || {
+            echo "no module page for the vendored logger with -include-vendored. The walk read"
+            echo "the directory and Sources() excluded it, so the extractors never saw code"
+            echo "signpost had already read off disk — issue #11."
+            ls "${corpus}/.signpost/modules/"
+            exit 1
+          }
+          grep -rqi vendored-only-tinycolor "${corpus}/.signpost" || {
+            echo "nothing in the bundle cites vendored-only-tinycolor, which only the vendored"
+            echo "manifest declares. The flag read the file and no consumer looked at it."
+            exit 1
+          }
+          echo "with the flag: the vendored module and its own dependency both reached the bundle"
+
       # The bundle is signpost's own output, and a run that walks it describes itself.
       #
       # Not caught by .gitignore, because the bundle is committed on purpose (ADR 0005) —
