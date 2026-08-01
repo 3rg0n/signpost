@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" role="img" aria-label="corpus">
+  <!-- The target of `@corpus/assets/*`. Not source, so no extractor claims it and no module
+       node exists here — which is the point: an alias may legitimately map onto something
+       the graph has no node for, and the specifier must still be recognised as this
+       repository's own rather than reported as a package named `@corpus`. -->
+  <rect width="16" height="16" fill="#1d1f21" />
+  <path d="M4 12 L8 4 L12 12" stroke="#e6e6e6" stroke-width="1.5" fill="none" />
+</svg>

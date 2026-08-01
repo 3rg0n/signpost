@@ -83,6 +83,12 @@ unit tests in the package that owned the code, and every one shipped anyway:
   exists in the tree *and* is imported by its published name — two things true at
   once, which one resolver call handed one specifier cannot express. The corpus was a
   single flat `package.json` and could not be wrong about this at all.
+- A named tsconfig `paths` alias resolved nowhere, because nothing read the file that
+  defines it — 542 of 3912 edges absent on a real repository, 14% of the graph, from a
+  single unread mapping. It needs a config declaring `paths`, a package whose own
+  config states only `extends`, and a file importing through the inherited alias. And
+  the file is JSONC, so it needs comments in it: both real configs that declared
+  `paths` carried them, and a strict JSON parse of either fails outright.
 
 That is the pattern: a bug survives a package's own tests when the tree those tests
 run in cannot express the condition. So when you fix one, ask what shape of
@@ -97,6 +103,15 @@ these stages honest:
   one that introduces real drift and requires a non-zero exit. Without it, the stage
   is satisfied by a fix that stopped checking. Prove it by disabling your fix and
   confirming both halves change verdict.
+- **Add the negative boundary, not just the positive.** A stage asserting that a thing
+  now resolves is satisfied by a fix that resolves *everything* — that resolution is
+  wrong in the one direction the stage cannot see. Testing that 1+1 is 2 never catches
+  an adder that answers 2 for everything. So a fix that made something match also needs
+  an input that must **not** match: a near-miss of the name it now recognises, spelled
+  the way that ecosystem's normalization is loosest about. The corpus keeps one per
+  language and asserts the unresolved specifier *count*, which is what fails in both
+  directions — over-claiming lowers it, over-reporting raises it. See
+  [`testdata/corpus/README.md`](testdata/corpus/README.md#negative-boundaries).
 
 ## Dependencies
 

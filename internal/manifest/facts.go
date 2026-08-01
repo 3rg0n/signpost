@@ -37,6 +37,9 @@ type Facts struct {
 	Scripts []Script
 	// Entrypoints are the executables this manifest declares.
 	Entrypoints []Entrypoint
+	// Resolution is how this file says import specifiers map onto directories. Read
+	// from tsconfig.json, and the only place a codebase's own aliases are stated.
+	Resolution Resolution
 
 	// Services are runnable units: a compose service, a Kubernetes workload, a Helm
 	// chart's deployment.
@@ -93,8 +96,40 @@ const (
 	KindAgentRules  Kind = "agent-rules"
 	KindADR         Kind = "adr"
 	KindMakefile    Kind = "makefile"
+	KindTSConfig    Kind = "tsconfig"
 	KindLock        Kind = "lock"
 )
+
+// Resolution is a file's statement about what its own import specifiers mean.
+//
+// Only tsconfig.json produces one. The other ecosystems state resolution in a form the
+// resolver can derive without help — a Go import path is the module path plus the
+// directory, a Python package is a directory — while TypeScript lets a project invent
+// arbitrary aliases, and the mapping exists nowhere except this file.
+type Resolution struct {
+	// BaseURL is the directory alias targets are relative to, repo-relative and already
+	// joined with the config's own location. "" is the repository root.
+	BaseURL string
+	// Aliases are the declared patterns, in declaration order.
+	Aliases []Alias
+	// Extends is the config this one inherits from: a repo-relative path when it named
+	// one, or the specifier as written when it named a package. Present in 11 of 14
+	// tsconfig files in one real monorepo, which is why it is modelled rather than
+	// ignored — a package config that declares only `extends` and `include` inherits
+	// every alias it resolves by.
+	Extends string
+}
+
+// Alias is one `paths` entry: a pattern and the directories it maps onto.
+type Alias struct {
+	// Pattern is the specifier pattern as written, wildcard included: `@fider/*`.
+	Pattern string
+	// Targets are the mapped locations, repo-relative and already resolved against
+	// BaseURL, in declaration order. An array because TypeScript tries each in turn and
+	// the first that exists wins — a real fallback, not a formality.
+	Targets []string
+	Line    int
+}
 
 // Module is the identity a manifest declares for its unit of code.
 type Module struct {
@@ -424,6 +459,14 @@ func (f *Facts) Normalize() {
 	})
 	f.SecretRefs = dedupeSecretRefs(f.SecretRefs)
 	f.Module.Workspaces = sortedUnique(f.Module.Workspaces)
+
+	// Aliases sort by pattern, and their Targets deliberately do not. A pattern is an
+	// identity and reordering the `paths` object must not change the bundle; a target list
+	// is a fallback sequence TypeScript walks in order, so sorting it would change which
+	// directory a specifier resolves to. Same distinction as Job.Steps.
+	sort.Slice(f.Resolution.Aliases, func(i, j int) bool {
+		return f.Resolution.Aliases[i].Pattern < f.Resolution.Aliases[j].Pattern
+	})
 }
 
 // dedupeDeps folds repeated declarations of the same dependency.

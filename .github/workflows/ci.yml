@@ -650,6 +650,131 @@ jobs:
           }
           echo "workspace: @corpus/core resolved internally, react still external"
 
+      # A codebase states what its own import specifiers mean, and nothing else states it.
+      #
+      # `compilerOptions.paths` is that statement: `@fider/services` is `public/services`
+      # because one line of tsconfig.json says so. signpost did not read the file, so it
+      # guessed at a few bare prefixes and reported every named alias as unresolved — 542 of
+      # 3912 edges absent on the repository where this surfaced, 14% of the graph, from a
+      # single unread mapping. Three shapes are asserted below, each a real one: an alias
+      # inherited through `extends` (11 of 14 configs in one monorepo declare it and nothing
+      # else), a pattern with two targets where the first does not exist, and an exact pattern
+      # with no wildcard. The file is JSONC, which is not a curiosity — both real files that
+      # declared `paths` carried comments, and a strict JSON parse of either fails outright.
+      - name: A tsconfig path alias resolves to the directory it names
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          # Found by title rather than by filename, because the filenames are positional —
+          # ts/src is src-4.md only until another src/ directory sorts before it. The optional
+          # quotes in the pattern are not optional to write: a title holding `[` is a YAML flow
+          # indicator and is emitted quoted, which is issue #9's fix.
+          page() {
+            grep -rl "^title: \"\?$1\"\?\$" "${bundle}/modules" || {
+              echo "no module page titled $1; this step asserts nothing" >&2; exit 1; }
+          }
+          api=$(page 'ts/packages/api/src')
+          src=$(page 'ts/src')
+          mkt=$(page 'ts/app/(marketing)')
+          slug=$(page 'ts/app/tools/\[slug\]')
+
+          # An alias prefix is a mapping onto this repository's own directories, never a
+          # package. A reference page for one is a supply-chain entry nobody publishes.
+          if ls "${bundle}/references/" | grep -qi 'npm-corpus-\(app\|ui\|entry\)\.md'; then
+            echo "a tsconfig path alias was emitted as an external dependency page. The"
+            echo "pattern matched and then fell through to the npm lookup, which fabricates a"
+            echo "third-party package out of the codebase's own directory mapping."
+            exit 1
+          fi
+
+          fail=0
+          check() {
+            grep -q "kind: imports, to: /modules/$(basename "$2")" "$1" || {
+              echo "no imports edge $(basename "$1" .md) -> $(basename "$2" .md): $3"; fail=1; }
+          }
+          check "$api" "$src" \
+            "@corpus/app/greeter is declared two directories up, in ts/tsconfig.json, and the
+             package's own config states only extends. The inheritance was not followed."
+          check "$slug" "$mkt" \
+            "@corpus/ui/* lists two targets and the first does not exist. Resolution stopped at
+             the miss instead of trying the rest, which is the fallback TypeScript performs."
+          check "$slug" "$src" \
+            "@corpus/entry is an exact pattern with no wildcard. Only wildcards were matched."
+
+          # The counterpart that still fails: every check above is satisfied by a resolver that
+          # claims any bare specifier as internal until something matches, which is worse than
+          # the bug. Asserted on the edge, not the page — a reference page exists for every
+          # declared dependency whether or not an import ever reaches it.
+          grep -rq 'to: /references/npm-react' "${bundle}/modules" || {
+            echo "nothing imports react any more. Alias matching is claiming specifiers it was"
+            echo "given no mapping for and routing them into this repository, which hides what"
+            echo "the code actually pulls in from outside."
+            fail=1
+          }
+          [ "$fail" -eq 0 ] || exit 1
+          echo "aliases: extends-inherited, two-target fallback, and exact pattern all resolved"
+
+      # The negative boundary, and the only assertion in this job that fails in both directions.
+      #
+      # Every check above is a positive: this edge exists, that page does not. A positive is
+      # satisfied by a resolver that is too generous exactly as well as by a correct one — claim
+      # every specifier as internal and they all stay green while the map is wrong in the
+      # direction nobody can see. Testing that 1+1 is 2 never catches an adder that answers 2
+      # for everything.
+      #
+      # So the corpus carries a deliberate near-miss per language, each a name a slightly loose
+      # matcher swallows: `example.com/corpus/greeterx/format` against the declared Go module
+      # `example.com/corpus/greeter`; `@corpus/apples/juice` against the alias prefix
+      # `@corpus/app/`, separated only by a slash; `httpx_extras` against the declared `httpx`,
+      # in the spelling PEP 503 normalization rewrites; `serde_yaml::Value` against the declared
+      # `serde`, in the spelling Cargo's dash/underscore equivalence accepts. Each must be
+      # reported as a gap and land nowhere else — an edge inside this repository invents
+      # structure, an external node invents a supply-chain entry nobody declared.
+      #
+      # The count carries the assertion because the printed list is truncated to the five most
+      # frequent, so a grep for any single specifier passes by matching `and 1 more`. Verified
+      # by mutation: comparing a Go module prefix by string rather than by path segment, and
+      # comparing an alias prefix without its trailing slash, each drop the count while leaving
+      # the node and edge totals untouched at 25 and 24.
+      - name: Resolution reports exactly the gaps it should
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus"
+          bundle="${corpus}/.signpost"
+          # Its own build, capturing stderr: the coverage report goes there, and the tee above
+          # captures only stdout.
+          ./signpost build -repo example.com/corpus "$corpus" 2>"${RUNNER_TEMP}/gaps.txt" >/dev/null
+          got=$(sed -n 's/^ *[0-9]* import(s) unresolved across \([0-9]*\) specifier(s).*/\1/p' \
+            "${RUNNER_TEMP}/gaps.txt" | head -1)
+          [ -n "$got" ] || {
+            echo "no unresolved line in the coverage report. Every near-miss in the corpus"
+            echo "resolved to something, so resolution is claiming names nothing declares."
+            cat "${RUNNER_TEMP}/gaps.txt"
+            exit 1
+          }
+          want=6
+          [ "$got" = "$want" ] || {
+            echo "${got} unresolved specifier(s), want ${want}."
+            echo
+            echo "Higher means something that resolves is being reported as a gap. Lower means a"
+            echo "near-miss was claimed: routed into this repository as an edge it should not"
+            echo "have, or folded into a declared dependency it is not, which reports a package"
+            echo "this code does not use."
+            cat "${RUNNER_TEMP}/gaps.txt"
+            exit 1
+          }
+          # And no page for any of them. Which wrong home an over-match picks depends on the
+          # repository, so the count above is the primary assertion and this is the corroborating
+          # one: a near-miss folded into a declared dependency shows up here as nothing at all,
+          # while one fabricated outright shows up as a file.
+          for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml; do
+            if ls "${bundle}/references/" | grep -qi "$frag"; then
+              echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
+              exit 1
+            fi
+          done
+          echo "gaps: ${got} specifier(s), each a deliberate near-miss, none fabricated"
+
       # The bundle is signpost's own output, and a run that walks it describes itself.
       #
       # Not caught by .gitignore, because the bundle is committed on purpose (ADR 0005) —

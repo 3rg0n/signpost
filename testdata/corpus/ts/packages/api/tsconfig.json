@@ -1,0 +1,8 @@
+{
+  // A config that declares nothing but its parent. This is the dominant real shape —
+  // 11 of 14 tsconfig files in the repository this fixture was drawn from extend
+  // another, most of them declaring only `extends` and `include` — so aliases used
+  // here are stated only in the file above.
+  "extends": "../../tsconfig.json",
+  "include": ["src"]
+}

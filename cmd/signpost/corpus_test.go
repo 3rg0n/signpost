@@ -619,6 +619,279 @@ func TestCorpusWorkspacePackagesAreNotExternalDependencies(t *testing.T) {
 	}
 }
 
+// TestCorpusTSConfigPathAliasesResolve is the regression for issue #13.
+//
+// A TypeScript codebase states what its own import specifiers mean in
+// `compilerOptions.paths`, and nothing else states it. `@fider/services` is `public/services`
+// on disk because one line of tsconfig.json says so. signpost did not read that file, so it
+// guessed at a handful of bare prefixes — `@/`, `~/`, `#/` — and reported every named alias as
+// unresolved. On the repository where this surfaced: 542 of 3912 edges absent, 14% of the
+// graph, from a single unread mapping. After: 37 unresolved, none of them an alias.
+//
+// Unlike #12 this under-reported rather than fabricating, and the count was printed on every
+// run — but 14% of a codebase silently missing from the map is well past where a reader stops
+// trusting it, and the failure mode on the other side is worse: a matched pattern that fell
+// through to the npm lookup would turn `@fider/services` into a third-party dependency named
+// `@fider`, which is #12's defect reached by a different road.
+//
+// The corpus expresses four shapes, all drawn from real configs and none of them expressible
+// before this fix, because the fixture was a tsconfig with no `paths` block at all:
+//
+//   - a named wildcard alias, `@corpus/app/*` -> `src/*`;
+//   - an alias used from a package whose own tsconfig declares only `extends`, which is the
+//     dominant real shape — 11 of 14 configs in one monorepo — so the mapping is stated two
+//     directories away from the file that resolves by it;
+//   - two targets for one pattern where the first does not exist, since TypeScript tries them
+//     in order and a resolver that stopped at the miss would find nothing;
+//   - an exact pattern with no wildcard.
+//
+// And the file itself is JSONC — block comments, a `//` inside a URL, trailing commas — which
+// is not a curiosity: both real files that declared `paths` carried comments, and a strict JSON
+// parse of either fails outright, which would make the reader silently useless on exactly the
+// files it exists for.
+func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
+	dir := buildCorpus(t)
+
+	stdout, stderr, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct {
+			ID, Kind, Path, Title string
+		}
+		Edges []struct {
+			From, To, Kind string
+		}
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+
+	byPath := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+		// The alias prefix must never become a dependency. `@corpus/app` is a mapping, not a
+		// package, and an external node for it is the fabricating failure — the one that gives
+		// a reader a supply-chain entry nobody publishes. `@corpus/assets/logo.svg` is what
+		// reaches that branch: the pattern matches and the target is not extracted source, so
+		// there is no node to return, and a resolver that fell through on the miss rather than
+		// claiming the specifier would land in the npm lookup.
+		if n.Kind == "External Dependency" && (n.Title == "@corpus" || strings.HasPrefix(n.Title, "@corpus/")) {
+			t.Errorf("%s is an external dependency page for a tsconfig path alias, which is a "+
+				"mapping onto this repository's own directories and not a package anyone "+
+				"publishes", n.Title)
+		}
+	}
+
+	// Each alias shape, asserted by the edge it must produce. Named individually rather than
+	// counted, because a count is satisfied by the wrong edges.
+	for _, c := range []struct {
+		from, to, why string
+	}{
+		{
+			"ts/packages/api/src", "ts/src",
+			"`@corpus/app/greeter` is declared in ts/tsconfig.json and used from a package " +
+				"whose own tsconfig declares only `extends`. Missing this edge means the " +
+				"inheritance was not followed, which is most of what a monorepo's configs do",
+		},
+		{
+			"ts/app/tools/[slug]", "ts/app/(marketing)",
+			"`@corpus/ui/*` lists two targets and the first does not exist. Missing this edge " +
+				"means resolution stopped at the first miss instead of trying the rest, which " +
+				"is the fallback TypeScript actually performs",
+		},
+		{
+			"ts/app/tools/[slug]", "ts/src",
+			"`@corpus/entry` is an exact pattern with no wildcard. Missing this edge means only " +
+				"wildcard patterns were matched",
+		},
+	} {
+		from, to := byPath[c.from], byPath[c.to]
+		if from == "" || to == "" {
+			t.Fatalf("no module node for %q or %q, so this test asserts nothing", c.from, c.to)
+		}
+		var found bool
+		for _, e := range g.Edges {
+			if e.From == from && e.To == to && e.Kind == "imports" {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("no imports edge %s -> %s (%s -> %s): %s", c.from, c.to, from, to, c.why)
+		}
+	}
+
+	// An alias onto something that is not source is resolved, not reported: the mapping was
+	// read, so the specifier is not a gap in the map, and counting it would tell a reader
+	// signpost failed to understand an import it understood exactly. `@corpus/assets/logo.svg`
+	// is that case, and it is also what reaches the fall-through — a matched pattern that did
+	// not claim its specifier lands in the npm lookup, which either fabricates a package or,
+	// where nothing is declared under that name, reports the codebase's own mapping as an
+	// import it could not follow.
+	//
+	// The count is asserted in TestCorpusResolvesExactlyWhatItShould rather than here, because
+	// the printed list is truncated to the top five and this specifier is the one that falls
+	// off the end — a substring check for it would pass by reading `and 1 more`.
+
+	// The counterpart that still fails. Every assertion above is satisfied by a resolver that
+	// claims any bare specifier as internal until something matches, and that is worse than
+	// the bug: react is a real dependency, and losing it hides what this code pulls in from
+	// outside.
+	//
+	// Asserted on the edge rather than on the page, because the page is not evidence. An
+	// external node is created for every dependency the manifest declares, imported or not,
+	// so `references/npm-react.md` exists whether or not a single import ever reached it. The
+	// edge is the only thing that says the resolver still sends bare specifiers there.
+	var reactID string
+	for _, n := range g.Nodes {
+		if n.Kind == "External Dependency" && strings.Contains(n.ID, "npm-react") {
+			reactID = n.ID
+		}
+	}
+	if reactID == "" {
+		t.Fatal("no external node for react, so this assertion covers nothing")
+	}
+	var reactImported bool
+	for _, e := range g.Edges {
+		if e.To == reactID && e.Kind == "imports" {
+			reactImported = true
+		}
+	}
+	if !reactImported {
+		t.Error("no module imports react any more, so alias resolution is claiming bare " +
+			"specifiers it was never given a mapping for and routing them into this repository")
+	}
+}
+
+// TestCorpusResolvesExactlyWhatItShould is the corpus's negative boundary, and it is the only
+// assertion here that fails in both directions.
+//
+// Everything else about resolution is asserted positively: this edge exists, that page exists.
+// A positive is satisfied by a resolver that is too generous as easily as by a correct one — if
+// every specifier were claimed as internal, every alias assertion in this file would stay green
+// and the map would be wrong in the direction that cannot be seen. Testing that 1+1 is 2 never
+// catches an adder that answers 2 for everything.
+//
+// So the unresolved set is asserted exactly, and the corpus carries a deliberate near-miss in
+// each language, each one a name that a matcher slightly too loose would swallow:
+//
+//   - go `example.com/corpus/greeterx/format` — shares every character of the declared module
+//     `example.com/corpus/greeter` up to a segment boundary that is not there;
+//   - typescript `@corpus/apples/juice` — shares ten characters with the alias prefix
+//     `@corpus/app/`, whose trailing slash is the only thing separating them;
+//   - python `httpx_extras` — declared `httpx` plus a suffix, in the underscore spelling that
+//     PEP 503 normalization rewrites;
+//   - rust `serde_yaml::Value` — a real crate that is not the declared `serde`, in the
+//     underscore spelling the dash/underscore equivalence exists to accept.
+//
+// Each must land here and nowhere else. Two wrong homes are possible and both are worse than
+// the gap: an edge into this repository, which invents structure; or an external node, which
+// invents a supply-chain entry nobody declared. Which failure a given over-match produces
+// depends on the repository, so neither is asserted alone — the set is.
+//
+// The stdlib imports are the other half. `node:fs`, python `os`, and rust `std::fmt` are the
+// runtime: in no manifest, patched by nobody. They must be absent from this set, and absent is
+// also what a resolver that silently dropped them looks like, which is why they sit in files
+// whose other imports are asserted positively above.
+//
+// Measured against the real binary rather than the resolver's internals, because the report on
+// stderr is what a user acts on. Two mutations confirm it: comparing a Go module prefix by
+// string instead of by path segment, and comparing an alias prefix without its trailing slash.
+// Both leave the node and edge counts at 25 and 24 — untouched, so every other assertion in
+// this file stays green — and both are caught here, one specifier at a time.
+func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
+	dir := corpusRepo(t)
+	// No -quiet: the coverage report is on stderr and -quiet is what suppresses it. Built
+	// here rather than through buildCorpus for that reason.
+	_, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build failed: exit = %d\n%s", code, stderr)
+	}
+
+	// Asserted on the count and then on the names, because the printed list is truncated to
+	// the five most frequent and a sixth specifier is summarised as `and 1 more`. A substring
+	// check on that line would silently stop covering whichever entry sorts last, so the count
+	// is what carries the assertion and the names are what make a failure legible.
+	want := []string{
+		"go example.com/corpus/greeterx/format",
+		"python greeter",
+		"python httpx_extras",
+		"rust corpus_greeter::Greeting",
+		"rust serde_yaml::Value",
+		"typescript @corpus/apples/juice",
+	}
+	got, ok := unresolvedCount(stderr)
+	if !ok {
+		t.Fatalf("no unresolved line in the coverage report. Every near-miss in the corpus was "+
+			"resolved to something, which means resolution is claiming names nothing declares:"+
+			"\n%s", stderr)
+	}
+	if got != len(want) {
+		t.Errorf("%d unresolved specifier(s), want %d.\n\nHigher means something that resolves "+
+			"is being reported as a gap. Lower means a near-miss was claimed: routed into this "+
+			"repository as an edge it should not have, or attached to a declared dependency it "+
+			"is not, which reports a package this code does not use.\n\nThe %d expected:\n  %s"+
+			"\n\nReport:\n%s",
+			got, len(want), len(want), strings.Join(want, "\n  "), stderr)
+	}
+
+	// The names, from the graph rather than the report, so nothing is hidden by truncation. An
+	// unresolved specifier draws no edge and creates no node, so its absence from both is the
+	// evidence — checked here for the two wrong homes an over-match would put it in.
+	stdout, _, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d", code)
+	}
+	var g struct {
+		Nodes []struct{ ID, Kind, Title string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml"} {
+		for _, n := range g.Nodes {
+			if n.Kind != "External Dependency" {
+				continue
+			}
+			if strings.Contains(strings.ToLower(n.Title), frag) {
+				t.Errorf("%q is an external dependency page, but no manifest in the corpus "+
+					"declares it. It is a near-miss of a name that is declared, so a matcher "+
+					"too loose about prefixes or about the dash/underscore spelling folded it "+
+					"into one — which reports a dependency this code does not have", n.Title)
+			}
+		}
+	}
+	// And the stdlib, which must not appear either: it is the runtime, and a page for it is a
+	// supply-chain entry for something nobody ships or patches.
+	for _, frag := range []string{"node:fs", "std::fmt"} {
+		for _, n := range g.Nodes {
+			if n.Kind == "External Dependency" && strings.Contains(n.Title, frag) {
+				t.Errorf("%q is an external dependency page; it is the language runtime", n.Title)
+			}
+		}
+	}
+}
+
+// unresolvedCount reads the specifier count out of a coverage report on stderr.
+//
+// The specifier count, not the import count: the two differ once one unresolvable name is
+// imported from several files, and the specifier count is the one that says how many distinct
+// things the map does not know.
+func unresolvedCount(stderr string) (int, bool) {
+	for _, line := range strings.Split(stderr, "\n") {
+		var imports, specifiers int
+		if _, err := fmt.Sscanf(strings.TrimSpace(line),
+			"%d import(s) unresolved across %d specifier(s):", &imports, &specifiers); err == nil {
+			return specifiers, true
+		}
+	}
+	return 0, false
+}
+
 // sortedPageNames lists the bundle's pages, for a failure message that says what was there.
 func sortedPageNames(pages map[string]string) []string {
 	out := make([]string, 0, len(pages))

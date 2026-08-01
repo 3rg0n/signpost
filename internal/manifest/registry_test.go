@@ -117,10 +117,39 @@ func TestRegistryDeclinesUnknownFiles(t *testing.T) {
 	r := DefaultRegistry()
 	// Terraform is real infrastructure this package does not read. Claiming it would be
 	// worse than reporting the gap.
-	for _, p := range []string{"infra/main.tf", "config/settings.ini", "README.md", "docs/guide.md", "web/tsconfig.json"} {
+	for _, p := range []string{"infra/main.tf", "config/settings.ini", "README.md", "docs/guide.md"} {
 		if rt := r.Route(discover.File{Path: p}); rt != nil {
 			t.Errorf("%s claimed by %q, want no route", p, rt.Kind)
 		}
+	}
+}
+
+// tsconfig is claimed wherever it sits, and for one fact: `compilerOptions.paths`, the only
+// authoritative statement of what an import specifier in this codebase means. It used to be
+// on the declined list above, which is what issue #13 was — a named alias resolved nowhere
+// because nothing read the file that defines it. The variants carry the same mapping, so the
+// route matches by prefix rather than by exact name.
+func TestRegistryClaimsTSConfigVariants(t *testing.T) {
+	r := DefaultRegistry()
+	for _, p := range []string{
+		"tsconfig.json", "web/tsconfig.json", "tsconfig.build.json", "tsconfig.node.json",
+		"jsconfig.json",
+	} {
+		rt := r.Route(discover.File{Path: p})
+		if rt == nil {
+			t.Errorf("%s claimed by no route; its `paths` are the only statement of what the "+
+				"specifiers under it mean", p)
+			continue
+		}
+		if rt.Kind != KindTSConfig {
+			t.Errorf("%s -> %q, want %q", p, rt.Kind, KindTSConfig)
+		}
+	}
+	// A JSON file that merely mentions the name is not one. The prefix is `tsconfig.`, with
+	// the dot, so an unrelated file is not swept in.
+	if rt := r.Route(discover.File{Path: "scripts/tsconfig-gen.json"}); rt != nil {
+		t.Errorf("scripts/tsconfig-gen.json claimed by %q; it is a generator, not a config",
+			rt.Kind)
 	}
 }
 

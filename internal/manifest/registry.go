@@ -76,6 +76,11 @@ func DefaultRegistry() *Registry {
 	r.Register(Route{Kind: KindCargo, Match: basename("Cargo.toml"), Read: ExtractCargo})
 	r.Register(Route{Kind: KindMakefile, Match: basename("Makefile", "makefile", "GNUmakefile"), Read: ExtractMakefile})
 
+	// tsconfig, for its resolution mapping alone. Matched by prefix rather than exact
+	// name because the variants are conventional and carry the same mapping:
+	// `tsconfig.build.json`, `tsconfig.node.json`, `jsconfig.json`.
+	r.Register(Route{Kind: KindTSConfig, Match: matchTSConfig, Read: ExtractTSConfig})
+
 	// Infrastructure. Containerfiles and compose files are named unambiguously;
 	// workflows are identified by their directory, which is the only thing that
 	// distinguishes a workflow from any other YAML.
@@ -233,6 +238,19 @@ var lockBasenames = map[string]bool{
 }
 
 func matchLock(f discover.File) bool { return lockBasenames[path.Base(f.Path)] }
+
+// matchTSConfig claims TypeScript and JavaScript project configs, including the
+// `tsconfig.<name>.json` variants a project splits its build across. Those variants matter
+// rather than being tidiness: a repo whose aliases live in `tsconfig.base.json` and are
+// inherited everywhere else states its whole resolution mapping in a file an exact-name
+// match would skip.
+func matchTSConfig(f discover.File) bool {
+	base := strings.ToLower(path.Base(f.Path))
+	if !strings.HasSuffix(base, ".json") {
+		return false
+	}
+	return strings.HasPrefix(base, "tsconfig.") || strings.HasPrefix(base, "jsconfig.")
+}
 
 // matchRequirements claims pip requirement files under any of their conventional names:
 // `requirements.txt`, `requirements-dev.txt`, `requirements/base.txt`.

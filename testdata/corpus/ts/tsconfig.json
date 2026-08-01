@@ -1,9 +1,30 @@
 {
+  /* Block comment, and a URL below whose `//` must not be read as a comment:
+     https://www.typescriptlang.org/tsconfig — tsconfig is JSONC, not JSON, and
+     both of the real-world files that declared `paths` in the repository this
+     fixture was drawn from carried comments. */
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
     "strict": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      // A named alias. Nothing but this file says `@corpus/app` means `src`.
+      "@corpus/app/*": ["./src/*"],
+      // Two targets: TypeScript tries them in order and the first that exists wins.
+      // `nowhere` does not exist, so a resolver that took the last one, or gave up on
+      // the first miss, would resolve this to nothing.
+      "@corpus/ui/*": ["./nowhere/*", "./app/*"],
+      // An exact pattern with no wildcard, matched whole.
+      "@corpus/entry": ["./src/greeter"],
+      // A mapping onto something that is not extracted source, which is what an asset
+      // alias is: the pattern matches and there is no module node to point at. The
+      // specifier is still claimed, because falling through here reports a package named
+      // `@corpus` that nobody publishes — the alias mapping presented as a supply-chain
+      // entry, which is the fabricating failure this fix must not reintroduce.
+      "@corpus/assets/*": ["./assets/*"],
+    },
   },
-  "include": ["src", "app"]
+  "include": ["src", "app", "packages"],
 }

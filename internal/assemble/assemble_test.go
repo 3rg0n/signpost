@@ -254,6 +254,245 @@ func TestTypeScriptRelativeAndPackageImports(t *testing.T) {
 	}
 }
 
+// A tsconfig `paths` alias is the codebase's own statement about what a specifier means,
+// and the only one. `@fider/*` -> `./public/*` is why `@fider/services` is `public/services`;
+// nothing else in the repository says so, so without reading it the import resolves nowhere.
+func TestTypeScriptPathAliasResolves(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":             "{\"name\":\"app\"}",
+		"tsconfig.json":            "{\"compilerOptions\":{\"baseUrl\":\".\",\"paths\":{\"@app/*\":[\"./public/*\"]}}}",
+		"public/index.ts":          "import { get } from '@app/services/store';\nexport const run = () => get();\n",
+		"public/services/store.ts": "export function get() { return 1; }\n",
+	})
+	if !hasEdge(out.Graph, "/modules/public", "/modules/services", graph.EdgeImports) {
+		t.Errorf("alias edge missing; edges = %v", edgeTargets(out.Graph, "/modules/public"))
+	}
+	if len(out.Unresolved) != 0 {
+		t.Errorf("unresolved = %v, want none: the mapping is declared", out.Unresolved)
+	}
+}
+
+// The failure mode that matters is not the missing edge but what fills it. An alias whose
+// prefix is not `@`-scoped reduces to its first segment under the npm reading, so a pattern
+// that matched and then fell through to the dependency lookup reports `utils/format` as a
+// third-party package named `utils` — which exists on npm, so the collision is real and the
+// wrong answer is indistinguishable from a right one. That is #12's defect, a fabricated
+// supply-chain entry, reached by a different road.
+//
+// The second import is what reaches that branch: an asset addressed through the alias. The
+// pattern matches and the target is not extracted source, so there is no node to point at,
+// and claiming the specifier anyway is the only correct answer.
+func TestTypeScriptPathAliasIsNotADependency(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":        "{\"name\":\"app\",\"dependencies\":{\"utils\":\"^0.3.0\",\"react\":\"^18.0.0\"}}",
+		"tsconfig.json":       "{\"compilerOptions\":{\"paths\":{\"utils/*\":[\"./src/utils/*\"]}}}",
+		"src/index.ts":        "import { fmt } from 'utils/format';\nimport logo from 'utils/icons/logo.svg';\nimport React from 'react';\nexport const run = () => fmt(React) + logo;\n",
+		"src/utils/format.ts": "export function fmt(x: unknown) { return String(x); }\n",
+	})
+	g := out.Graph
+	if hasEdge(g, "/modules/src", "/references/npm-utils", graph.EdgeImports) {
+		t.Error("a declared alias resolved as a third-party package; the alias is the " +
+			"authoritative reading and the dependency name only collides with it")
+	}
+	if _, bad := out.Unresolved["typescript utils/icons/logo.svg"]; bad {
+		t.Error("an asset addressed through a declared alias was reported as an unresolved " +
+			"import; the mapping was read, so the specifier is not a gap")
+	}
+	if !hasEdge(g, "/modules/src", "/modules/utils", graph.EdgeImports) {
+		t.Errorf("alias edge missing; edges = %v", edgeTargets(g, "/modules/src"))
+	}
+	// The counterpart, without which the assertion above is satisfied by a resolver that
+	// stopped reporting dependencies at all: a specifier that is genuinely a package must
+	// still reach one.
+	if !hasEdge(g, "/modules/src", "/references/npm-react", graph.EdgeImports) {
+		t.Errorf("react edge missing; edges = %v", edgeTargets(g, "/modules/src"))
+	}
+}
+
+// `extends` is the dominant real shape: 11 of 14 tsconfig files in one monorepo declare it,
+// most declaring nothing else. A resolver that read each config in isolation would find the
+// aliases in the base config and never apply them to the packages that resolve by them.
+//
+// The base config lives in a shared directory rather than at the repository root, and that
+// placement is the whole test. A root config's scope is the root, so its aliases already
+// reach every file and inheritance changes nothing — the test would pass against a resolver
+// that ignored `extends` entirely. `configs/` is not an ancestor of `packages/api`, so the
+// inherited entry is the only thing that can resolve this import.
+//
+// The target is written `../shared/*` because `paths` are relative to the config declaring
+// them, which is where TypeScript reads them from too.
+func TestTypeScriptPathAliasInheritedThroughExtends(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":               "{\"name\":\"root\",\"workspaces\":[\"packages/*\"]}",
+		"configs/tsconfig.base.json": "{\"compilerOptions\":{\"paths\":{\"@app/*\":[\"../shared/*\"]}}}",
+		"packages/api/tsconfig.json": "{\"extends\":\"../../configs/tsconfig.base.json\",\"include\":[\"src\"]}",
+		"packages/api/package.json":  "{\"name\":\"@ws/api\"}",
+		"packages/api/src/h.ts":      "import { fmt } from '@app/text/fmt';\nexport const h = () => fmt();\n",
+		"shared/text/fmt.ts":         "export function fmt() { return ''; }\n",
+	})
+	if !hasEdge(out.Graph, "/modules/src", "/modules/text", graph.EdgeImports) {
+		t.Errorf("inherited alias edge missing; edges = %v", edgeTargets(out.Graph, "/modules/src"))
+	}
+	if len(out.Unresolved) != 0 {
+		t.Errorf("unresolved = %v, want none", out.Unresolved)
+	}
+}
+
+// An alias is directory-scoped, not repo-wide. Two packages each declaring `@src/*` for
+// their own source is a real and common shape — both configs in the monorepo this was drawn
+// from spell it exactly that way — and resolving one package's import into the other's code
+// is a wrong edge rather than a missing one, the more expensive kind.
+//
+// Both packages hold the same subpath on purpose. With distinct subpaths a repo-wide match
+// merely fails to resolve, so the test would pass against the defect it exists to catch:
+// the first-matching pattern would point at a path the other package does not have.
+func TestTypeScriptPathAliasIsScopedToItsConfig(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":                 "{\"name\":\"root\",\"workspaces\":[\"packages/*\"]}",
+		"packages/a/tsconfig.json":     "{\"compilerOptions\":{\"paths\":{\"@src/*\":[\"src/*\"]}}}",
+		"packages/a/package.json":      "{\"name\":\"@ws/a\"}",
+		"packages/a/src/entry.ts":      "import { x } from '@src/thing/impl';\nexport const a = () => x();\n",
+		"packages/a/src/thing/impl.ts": "export function x() { return 'a'; }\n",
+		"packages/b/tsconfig.json":     "{\"compilerOptions\":{\"paths\":{\"@src/*\":[\"src/*\"]}}}",
+		"packages/b/package.json":      "{\"name\":\"@ws/b\"}",
+		"packages/b/src/entry.ts":      "import { x } from '@src/thing/impl';\nexport const b = () => x();\n",
+		"packages/b/src/thing/impl.ts": "export function x() { return 'b'; }\n",
+	})
+	g := out.Graph
+	if len(out.Unresolved) != 0 {
+		t.Errorf("unresolved = %v, want none: each package declares its own mapping",
+			out.Unresolved)
+	}
+	// Neither package's entry may reach the other's source. IDs are assigned by discovery
+	// order, so the assertion is on the directories the nodes hold rather than on fixed IDs.
+	edges := allEdges(g, graph.EdgeImports)
+	crossings := 0
+	for _, e := range edges {
+		from, to := node(t, g, e.From), node(t, g, e.To)
+		if pkgOf(from.Path) == "" || pkgOf(to.Path) == "" {
+			continue
+		}
+		if pkgOf(from.Path) != pkgOf(to.Path) {
+			crossings++
+			t.Errorf("%s (%s) imports %s (%s): an alias declared in one package resolved "+
+				"into another's code", e.From, from.Path, e.To, to.Path)
+		}
+	}
+	// And each must reach its own, or the check above is satisfied by a resolver that drew
+	// no edges at all.
+	within := 0
+	for _, e := range edges {
+		from, to := node(t, g, e.From), node(t, g, e.To)
+		if p := pkgOf(from.Path); p != "" && p == pkgOf(to.Path) {
+			within++
+		}
+	}
+	if within != 2 {
+		t.Errorf("%d within-package alias edges, want 2 (%d crossings); edges = %v",
+			within, crossings, edges)
+	}
+}
+
+// `paths` targets are an ordered fallback, not a set: TypeScript tries each in turn and the
+// first that exists wins. Stopping at the first target when it names no directory would
+// leave the import unresolved even though the config says where it lives.
+func TestTypeScriptPathAliasFallsThroughToASecondTarget(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":       "{\"name\":\"app\"}",
+		"tsconfig.json":      "{\"compilerOptions\":{\"paths\":{\"@ui/*\":[\"./generated/*\",\"./src/*\"]}}}",
+		"src/index.ts":       "import { btn } from '@ui/widgets/btn';\nexport const run = () => btn();\n",
+		"src/widgets/btn.ts": "export function btn() { return 1; }\n",
+	})
+	if !hasEdge(out.Graph, "/modules/src", "/modules/widgets", graph.EdgeImports) {
+		t.Errorf("resolution stopped at a target that does not exist; edges = %v",
+			edgeTargets(out.Graph, "/modules/src"))
+	}
+}
+
+// Within one scope the longer prefix wins, so `@app/ui/*` is not matched by `@app/*` with
+// `ui/` read as part of the wildcard. Both patterns match the specifier; only one is right.
+func TestTypeScriptPathAliasPrefersTheLongerPattern(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":   "{\"name\":\"app\"}",
+		"tsconfig.json":  "{\"compilerOptions\":{\"paths\":{\"@app/*\":[\"./core/*\"],\"@app/ui/*\":[\"./widgets/*\"]}}}",
+		"src/index.ts":   "import { btn } from '@app/ui/btn';\nexport const run = () => btn();\n",
+		"widgets/btn.ts": "export function btn() { return 1; }\n",
+		"core/ui/btn.ts": "export function btn() { return 2; }\n",
+	})
+	g := out.Graph
+	if !hasEdge(g, "/modules/src", "/modules/widgets", graph.EdgeImports) {
+		t.Errorf("the more specific pattern lost; edges = %v", edgeTargets(g, "/modules/src"))
+	}
+	if hasEdge(g, "/modules/src", "/modules/ui", graph.EdgeImports) {
+		t.Error("`@app/*` swallowed `ui/` into its wildcard, resolving to core/ui")
+	}
+}
+
+// A pattern with no wildcard is an exact specifier, matched whole rather than by prefix.
+func TestTypeScriptPathAliasExactPattern(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":  "{\"name\":\"app\"}",
+		"tsconfig.json": "{\"compilerOptions\":{\"paths\":{\"@entry\":[\"./src/boot\"]}}}",
+		"app/main.ts":   "import { boot } from '@entry';\nexport const run = () => boot();\n",
+		"src/boot.ts":   "export function boot() { return 1; }\n",
+	})
+	if !hasEdge(out.Graph, "/modules/app", "/modules/src", graph.EdgeImports) {
+		t.Errorf("exact alias edge missing; edges = %v", edgeTargets(out.Graph, "/modules/app"))
+	}
+}
+
+// A hand-written `extends` cycle is a configuration error, not something to handle. But the
+// inheritance walk would not terminate on one, and hanging while analysing someone else's
+// repository is the worst available way to report their mistake. The assertion is that this
+// test finishes at all.
+func TestTypeScriptExtendsCycleTerminates(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json":       "{\"name\":\"app\"}",
+		"tsconfig.json":      "{\"extends\":\"./tsconfig.base.json\"}",
+		"tsconfig.base.json": "{\"extends\":\"./tsconfig.json\"}",
+		"src/index.ts":       "import { x } from '@app/x';\nexport const run = () => x();\n",
+	})
+	// No aliases are reachable through the cycle, so the specifier stays unresolved. It
+	// must be reported, not invented into a dependency named `@app`.
+	for _, n := range out.Graph.NodesOfKind(graph.KindExternal) {
+		if n.Title == "@app" {
+			t.Error("invented an external node from an unresolvable alias")
+		}
+	}
+}
+
+// pkgOf returns the `packages/<name>` prefix of a path, or "" if it has none. Used to check
+// that no edge crosses between two packages that declared the same alias.
+func pkgOf(p string) string {
+	parts := strings.Split(p, "/")
+	if len(parts) >= 2 && parts[0] == "packages" {
+		return parts[1]
+	}
+	return ""
+}
+
+// edgeTargets lists a node's outgoing edge destinations, for failure messages.
+func edgeTargets(g *graph.Graph, from string) []string {
+	var out []string
+	for _, e := range g.EdgesFrom(from) {
+		out = append(out, e.To)
+	}
+	return out
+}
+
+// allEdges lists every edge of a kind in the graph.
+func allEdges(g *graph.Graph, kind graph.EdgeKind) []graph.Edge {
+	var out []graph.Edge
+	for _, n := range g.Nodes() {
+		for _, e := range g.EdgesFrom(n.ID) {
+			if e.Kind == kind {
+				out = append(out, e)
+			}
+		}
+	}
+	return out
+}
+
 func TestRustCrateAndExternImports(t *testing.T) {
 	out := build(t, map[string]string{
 		"Cargo.toml":       "[package]\nname = \"app\"\nversion = \"0.1.0\"\n\n[dependencies]\nserde = \"1\"\nserde-json = \"1\"\n",

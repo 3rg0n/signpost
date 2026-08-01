@@ -395,6 +395,29 @@ in from outside is shown code that repository wrote, and cannot tell the two kin
 Each ecosystem therefore needs a name-to-directory map for the first lookup to consult;
 Go had one from the start, npm did not, and its absence was a bug rather than a gap.
 
+**Within the first lookup, a declared mapping outranks a guessed one.** Where a codebase
+states what its own specifiers mean, that statement is authoritative and is consulted before
+any convention: `compilerOptions.paths` in tsconfig.json is the only thing in a TypeScript
+repository that says `@fider/services` is `public/services`. Reading it is not optional
+enrichment — before signpost did, 542 of 3912 edges were absent on one real repository, 14%
+of the graph, from a single unread mapping. The guessed prefixes (`@/`, `~/`, `#/` as
+repo-relative) stay, but only *after* the declared aliases and only as a fallback for a
+config signpost could not read. And a specifier a declared alias matched never falls through
+to the dependency lookup, even when its target holds no extracted source: the mapping is
+proof the name is first-party, so falling through would report the codebase's own directory
+mapping as a package nobody publishes — the same false supply-chain claim as above, reached
+by a different road.
+
+**Being too generous is a failure mode, symmetrical with being too strict, and harder to
+see.** An over-broad match produces no error and no missing edge — it produces a confident
+wrong answer, either an edge into the repository that invents structure or an external node
+that invents a dependency. Positive tests cannot distinguish it from correctness, so the
+corpus carries a deliberate near-miss per ecosystem and asserts the unresolved-specifier
+count, which moves in opposite directions for the two failures. Name matching is by path
+segment and full name, never by string prefix: `example.com/corpus/greeterx` is not the
+module `example.com/corpus/greeter`, and `httpx_extras` is not the declared `httpx`, however
+much of a prefix they share.
+
 Metrics, all hand-written and all deterministic:
 
 - degree, fan-in, fan-out → hub identification

@@ -168,8 +168,14 @@ func (b *builder) index() {
 				b.res.addNpmPackage(f.Path, f.Module.Name)
 			case manifest.KindCargo:
 				b.res.addCrate(f.Path)
+			case manifest.KindTSConfig:
+				b.res.addTSConfig(f.Path, f.Resolution)
 			}
 		}
+		// After the loop, because a tsconfig may extend one that appears later in path
+		// order — a package config extending the root is the common case — so the
+		// inheritance can only be resolved once every config is registered.
+		b.res.flattenTSAliases()
 	}
 }
 

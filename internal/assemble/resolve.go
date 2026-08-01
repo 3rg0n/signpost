@@ -41,6 +41,13 @@ type resolver struct {
 	// npmPkgs maps a directory to the package name declared there, longest name
 	// first so `@scope/core-utils` wins over `@scope/core`.
 	npmPkgs []npmPkg
+	// tsConfigs are the resolution mappings read from tsconfig files, keyed by the
+	// config's own path so `extends` can be followed.
+	tsConfigs map[string]manifest.Resolution
+	// tsAliases are the alias patterns in effect, most specific first. Flattened from
+	// tsConfigs once every config is registered, since a config may extend one that has
+	// not been read yet.
+	tsAliases []tsAlias
 	// crates are Cargo manifest directories, longest first, same reason.
 	crates []string
 	// deps maps a normalized dependency key to the external node it belongs to.
@@ -60,6 +67,23 @@ type npmPkg struct {
 	name string
 }
 
+// tsAlias is one `paths` entry, flattened for matching.
+type tsAlias struct {
+	// scope is the directory the declaring config governs — its own directory. An alias
+	// is not repo-wide: `@src/*` declared in packages/demo/tsconfig.json means
+	// packages/demo/src, and applying it to a file in another package would resolve an
+	// import to code that package cannot see.
+	scope string
+	// prefix and suffix are the pattern either side of its `*`. A pattern without one is
+	// an exact specifier, matched whole, with wild false.
+	prefix string
+	suffix string
+	wild   bool
+	// targets are the mapped directories, repo-relative, in declaration order — the
+	// order TypeScript tries them in.
+	targets []string
+}
+
 // pyExts, tsExts and rustExts are the file spellings a module path may resolve to,
 // in the order a toolchain would try them.
 var (
@@ -74,6 +98,7 @@ func newResolver() *resolver {
 		moduleIDs: make(map[string]string),
 		srcFiles:  make(map[string]bool),
 		deps:      make(map[string]string),
+		tsConfigs: make(map[string]manifest.Resolution),
 	}
 }
 
@@ -145,6 +170,98 @@ func (r *resolver) npmSibling(name string) (id string, inRepo bool) {
 		return "", true
 	}
 	return "", false
+}
+
+// addTSConfig records one tsconfig's resolution mapping.
+//
+// Recorded rather than flattened, because a config may extend one that has not been read
+// yet: the manifest facts arrive in sorted path order, and `packages/a/tsconfig.json`
+// extending the root config comes first. flattenTSAliases resolves the inheritance once
+// every config is in.
+func (r *resolver) addTSConfig(file string, res manifest.Resolution) {
+	r.tsConfigs[file] = res
+}
+
+// flattenTSAliases turns the registered configs into a match list, resolving `extends`.
+//
+// Inheritance is not a refinement here. In one real monorepo 11 of 14 tsconfig files
+// declare `extends` and most declare nothing else — a package config is often just
+// `{"extends": "../../../tsconfig.json", "include": ["src"]}` — so a reader that ignored
+// it would find aliases in the root config and never apply them to the packages that
+// actually resolve by them.
+//
+// Ordering is most-specific-first on two axes at once: a deeper scope wins over a
+// shallower one, because a package's own config governs its files more closely than the
+// root's; and within a scope a longer prefix wins, so `@app/ui/*` is not matched by
+// `@app/*` with `ui/` read as part of the wildcard.
+func (r *resolver) flattenTSAliases() {
+	r.tsAliases = nil
+	for _, file := range sortedKeys(r.tsConfigs) {
+		scope := dirOf(file)
+		for _, a := range r.effectiveAliases(file) {
+			prefix, suffix, wild := strings.Cut(a.Pattern, "*")
+			r.tsAliases = append(r.tsAliases, tsAlias{
+				scope: scope, prefix: prefix, suffix: suffix, wild: wild,
+				targets: a.Targets,
+			})
+		}
+	}
+	sort.SliceStable(r.tsAliases, func(i, j int) bool {
+		a, b := r.tsAliases[i], r.tsAliases[j]
+		if len(a.scope) != len(b.scope) {
+			return len(a.scope) > len(b.scope)
+		}
+		if a.scope != b.scope {
+			return a.scope < b.scope
+		}
+		if len(a.prefix) != len(b.prefix) {
+			return len(a.prefix) > len(b.prefix)
+		}
+		return a.prefix < b.prefix
+	})
+}
+
+// effectiveAliases returns a config's own aliases, or the nearest inherited ones.
+//
+// A config that declares `paths` overrides its parent's entirely rather than merging, which
+// is what TypeScript does: `compilerOptions` keys are replaced, not combined. So the walk
+// stops at the first config in the chain that declares any.
+//
+// The visited set is not defensive. A tsconfig chain is written by hand and a cycle is a
+// configuration error, but this loop would not terminate on one, and a hang while analysing
+// someone else's repository is the worst possible way to report their mistake.
+func (r *resolver) effectiveAliases(file string) []manifest.Alias {
+	visited := make(map[string]bool, 4)
+	for file != "" && !visited[file] {
+		visited[file] = true
+		res, ok := r.tsConfigs[file]
+		if !ok {
+			return nil
+		}
+		if len(res.Aliases) > 0 {
+			return res.Aliases
+		}
+		file = r.tsConfigPath(res.Extends)
+	}
+	return nil
+}
+
+// tsConfigPath resolves an `extends` value to a config this repository holds, or "".
+//
+// TypeScript permits the extension to omit `.json` and to name a directory holding one, so
+// both spellings are tried. A bare package specifier — `@tsconfig/node20/tsconfig.json` —
+// is not in the repository and correctly finds nothing: its aliases are unknowable from
+// here, and guessing at them would invent edges.
+func (r *resolver) tsConfigPath(ext string) string {
+	if ext == "" {
+		return ""
+	}
+	for _, c := range []string{ext, ext + ".json", path.Join(ext, "tsconfig.json")} {
+		if _, ok := r.tsConfigs[c]; ok {
+			return c
+		}
+	}
+	return ""
 }
 
 // addCrate records a Cargo manifest's directory.
@@ -364,11 +481,17 @@ func (r *resolver) resolveTS(from, raw string) (string, bool) {
 		}
 		return "", true
 	}
-	// A leading slash or a tsconfig path alias (`@/components/x`) is repo-relative in
-	// intent but the mapping lives in tsconfig, which this package does not read. Try
-	// the literal path so the common `@/` -> root and `~/` -> root conventions land,
-	// and report the rest as unresolved rather than as an npm package that does not
-	// exist.
+	// A declared alias comes first, because it is the codebase's own statement about what
+	// this specifier means and the only authoritative one. `@fider/services` is
+	// `public/services` and nothing but tsconfig says so.
+	if id, ok := r.tsPathAlias(from, raw); ok {
+		return id, true
+	}
+	// A leading slash or an undeclared `@/`-style prefix is repo-relative in intent, and
+	// covers the case where the mapping is real but signpost did not read the config that
+	// holds it — a tsconfig outside the walk, or one that did not parse. Try the literal
+	// path so the common `@/` -> root and `~/` -> root conventions still land, and report
+	// the rest as unresolved rather than as an npm package that does not exist.
 	if alias, ok := tsAliasPath(raw); ok {
 		if id := r.tsTarget(alias); id != "" {
 			return id, true
@@ -412,6 +535,53 @@ func (r *resolver) npmWorkspace(raw string) (string, bool) {
 		// up, which is what makes `@scope/core` reach the code rather than nothing.
 		for _, src := range []string{"src", "lib"} {
 			if id := r.tsTarget(path.Join(p.dir, src, rest)); id != "" {
+				return id, true
+			}
+		}
+		return "", true
+	}
+	return "", false
+}
+
+// tsPathAlias resolves a specifier through the `paths` mapping declared for the importing
+// file, returning whether any pattern claimed it.
+//
+// The two return values carry the same distinction npmWorkspace does: `ok` says a declared
+// alias matched, so the specifier is internal and must not fall through to the npm lookup;
+// `id` says which node it reached, empty when the mapping is real but points at a directory
+// holding no extracted source. Falling through on a matched pattern is the failure mode that
+// matters — it would turn `@fider/services` into a third-party dependency named `@fider`,
+// which is #12's defect reached by a different road.
+func (r *resolver) tsPathAlias(from, raw string) (string, bool) {
+	for _, a := range r.tsAliases {
+		// An alias governs only the files under its config's directory. Two packages that
+		// each declare `@src/*` for their own source is a real and common shape, and a
+		// repo-wide match would route one package's import into the other's code.
+		if a.scope != "" && from != a.scope && !strings.HasPrefix(from, a.scope+"/") {
+			continue
+		}
+		var rest string
+		if a.wild {
+			if !strings.HasPrefix(raw, a.prefix) || !strings.HasSuffix(raw, a.suffix) ||
+				len(raw) < len(a.prefix)+len(a.suffix) {
+				continue
+			}
+			rest = raw[len(a.prefix) : len(raw)-len(a.suffix)]
+		} else if raw != a.prefix {
+			continue
+		}
+		for _, t := range a.targets {
+			// The wildcard's capture substitutes into the target's own `*`, which is how
+			// `@fider/*` -> `public/*` maps `@fider/services` to `public/services`. A
+			// target without a wildcard is a fixed location and the capture is dropped,
+			// which is TypeScript's behaviour for a single-file mapping.
+			p := t
+			if a.wild {
+				if i := strings.IndexByte(t, '*'); i >= 0 {
+					p = t[:i] + rest + t[i+1:]
+				}
+			}
+			if id := r.tsTarget(path.Clean(p)); id != "" {
 				return id, true
 			}
 		}

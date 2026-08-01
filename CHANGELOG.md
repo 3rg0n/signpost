@@ -10,6 +10,70 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-01
 
+- **A named tsconfig `paths` alias resolved to nothing.** `compilerOptions.paths` is where a
+  TypeScript codebase states what its own import specifiers mean — `@fider/services` is
+  `public/services` because one line of one config says so, and nothing else in the
+  repository states it. signpost never read the file. It guessed at a handful of bare
+  prefixes (`@/`, `~/`, `#/` as repo-relative) and reported every named alias as unresolved.
+  Measured on a real repository: 542 of 3912 edges absent, 14% of the graph, from a single
+  unread mapping. After: unresolved imports 542 → 37, edges 3912 → 4024, and none of the
+  remaining gaps is an alias.
+
+  Reading the file needed three things that are not obvious from the format's name.
+  tsconfig.json is JSONC, not JSON — both real configs that declared `paths` carried
+  comments and one ended its `paths` object with a trailing comma, so a strict parse of
+  either fails outright and the reader would have been silently useless on exactly the files
+  it exists for. The stripper is string-aware, because `"https://aka.ms/tsconfig.json"` is a
+  real value and a regex for `//` destroys the rest of that line; it blanks comments to
+  spaces rather than removing them, and keeps newlines inside block comments, so every
+  `paths` line number still points where a reader following it back to source expects.
+  And `extends` has to be followed: 11 of 14 configs in one monorepo declare it, most of
+  them declaring nothing else, so the aliases a package resolves by are stated two
+  directories away from the files that use them. Aliases are matched most-specific-first on
+  two axes — deeper scope, then longer prefix — and multiple targets for one pattern are an
+  ordered fallback rather than a set, which is why they are exempt from `Normalize`'s
+  sorting, the same as `Job.Steps`.
+
+  A matched alias never falls through to the dependency lookup, even when its target holds
+  no extracted source. The mapping is proof the specifier is first-party, so falling through
+  would report the codebase's own directory mapping as a package nobody publishes — the same
+  fabricated supply-chain entry the workspace fix below removed, reached by a different road.
+
+  The corpus grew the shapes to express it: a JSONC config with four alias patterns, a
+  package whose own config states only `extends`, a two-target pattern whose first target
+  does not exist, an exact pattern with no wildcard, and a mapping onto an asset that is not
+  extracted source. Resolution precedence is now written down in
+  [Design §4.4](docs/design.md) — a declared mapping outranks a guessed one, within the
+  repository-first rule that already governed the ecosystem lookups.
+
+- **The corpus tested resolution only in the direction that could not catch over-matching.**
+  Every assertion was a positive — this edge exists, that page exists — and a positive is
+  satisfied by a resolver that claims *everything* exactly as well as by a correct one.
+  Testing that 1+1 is 2 never catches an adder that answers 2 for everything. The failure it
+  could not see is the worse one: not a missing edge but a confident wrong answer, either an
+  edge into the repository that invents structure or an external node that invents a
+  dependency nobody declared.
+
+  Each language now carries a deliberate near-miss of a name that *is* declared, spelled the
+  way that ecosystem's normalization is loosest about: go `example.com/corpus/greeterx/format`
+  against the declared module `example.com/corpus/greeter`; typescript `@corpus/apples/juice`
+  against the alias prefix `@corpus/app/`, separated only by a slash; python `httpx_extras`
+  against the declared `httpx`, in the underscore spelling PEP 503 rewrites; rust
+  `serde_yaml::Value` against the declared `serde`, in the spelling Cargo's dash/underscore
+  equivalence accepts. Alongside them, a standard-library import per language, which must
+  produce neither a node nor a reported gap.
+
+  Asserted as the unresolved-specifier *count*, in `TestCorpusResolvesExactlyWhatItShould`
+  and in a new CI step against the shipped binary. The count is what fails in both
+  directions — over-claiming lowers it, over-reporting raises it — and a count rather than a
+  substring search because the printed report truncates to the five most frequent
+  specifiers, so a grep for any single one passes by matching `and 1 more`. Verified by four
+  mutations, each of which leaves the node and edge totals untouched at 25 and 24 and so
+  passes every other assertion in the suite: comparing a Go module prefix by string instead
+  of by path segment (6 → 5), comparing an alias prefix without its trailing slash (6 → 5),
+  falling back to prefix matching in the dependency lookup (6 → 4), and letting a matched
+  alias fall through to the npm lookup (6 → 7).
+
 - **A monorepo's own packages were reported as third-party dependencies.** npm packages
   in a workspace import each other by published name — `import {x} from "@scope/core"`,
   not by relative path — and the resolver had no map from a declared package name to the
