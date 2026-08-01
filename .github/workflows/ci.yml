@@ -752,7 +752,7 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
-          want=6
+          want=7
           [ "$got" = "$want" ] || {
             echo "${got} unresolved specifier(s), want ${want}."
             echo
@@ -767,7 +767,7 @@ jobs:
           # repository, so the count above is the primary assertion and this is the corroborating
           # one: a near-miss folded into a declared dependency shows up here as nothing at all,
           # while one fabricated outright shows up as a file.
-          for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml; do
+          for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe promises; do
             if ls "${bundle}/references/" | grep -qi "$frag"; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
               exit 1

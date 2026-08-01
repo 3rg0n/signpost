@@ -254,6 +254,51 @@ func TestTypeScriptRelativeAndPackageImports(t *testing.T) {
 	}
 }
 
+// A Node builtin addressed by subpath is the same builtin. Issue #14.
+//
+// `nodeBuiltin` was consulted with the whole specifier, so `fs/promises` missed a map that
+// holds `fs` and was counted as a dependency the repository failed to resolve. There is no
+// other way to reach the promise-based API, so this is not an exotic spelling: on
+// webex/webex-js-sdk it was three of the twenty-six reported gaps. Purely cosmetic — no
+// node fabricated, no edge lost — but the unresolved count is what tells a reader how much
+// of their repository signpost did not understand, and inflating it with things it
+// understood perfectly spends the only signal there.
+//
+// Ten specifiers are affected: the `/promises` variants of fs, dns, stream, timers and
+// readline, plus `util/types`, `stream/web`, `stream/consumers`, `assert/strict` and
+// `path/posix`.
+func TestNodeBuiltinSubpathsAreTheRuntime(t *testing.T) {
+	out := build(t, map[string]string{
+		"package.json": "{\"name\":\"app\"}",
+		"src/index.ts": "import fs from 'fs/promises';\n" +
+			"import { pipeline } from 'node:stream/promises';\n" +
+			"import { isDate } from 'util/types';\n" +
+			"import { tap } from 'node:test/reporters';\n" +
+			"import { resolve } from 'pathe/utils';\n" +
+			"export const run = () => [fs, pipeline, isDate, tap, resolve];\n",
+	})
+
+	for _, raw := range []string{"fs/promises", "node:stream/promises", "util/types", "node:test/reporters"} {
+		if _, bad := out.Unresolved["typescript "+raw]; bad {
+			t.Errorf("%q is a Node builtin addressed by subpath, and it is reported as an "+
+				"unresolved dependency. unresolved = %v", raw, out.Unresolved)
+		}
+	}
+	// The counterpart, and the reason the rule cuts on the separator instead of matching a
+	// prefix: `pathe` is a real npm path utility whose name starts with the builtin `path`,
+	// and this manifest does not declare it. Under a prefix comparison it reads as the
+	// runtime and disappears from the report — an undeclared dependency the reader is never
+	// told about, which is the failure this count exists to surface and is worse than the
+	// inflated count the fix removes. Asserted here rather than only in the corpus because
+	// the report truncates to five specifiers and this is one of seven.
+	if _, ok := out.Unresolved["typescript pathe/utils"]; !ok {
+		t.Errorf("`pathe/utils` is an npm package no manifest here declares, and it is not "+
+			"reported. The builtin test is matching a prefix rather than cutting the first "+
+			"path segment, so an honest gap was silenced as the runtime. unresolved = %v",
+			out.Unresolved)
+	}
+}
+
 // A tsconfig `paths` alias is the codebase's own statement about what a specifier means,
 // and the only one. `@fider/*` -> `./public/*` is why `@fider/services` is `public/services`;
 // nothing else in the repository says so, so without reading it the import resolves nowhere.

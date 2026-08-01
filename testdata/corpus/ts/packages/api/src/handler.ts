@@ -30,10 +30,29 @@ import { juice } from "@corpus/apples/juice";
 // looks identical to a resolver that simply lost the import.
 import fs from "node:fs";
 
+// The same modules addressed by subpath, which is how half of them are used in practice:
+// there is no other way to reach the promise-based `fs`. Both spellings appear because they
+// take different routes — the bare one is what older code writes and what a real repository
+// was reporting as an unresolved dependency, and the prefixed one only lands if `node:` is
+// trimmed before the subpath is cut, which is the ordering issue #14 turns on.
+import fsp from "fs/promises";
+import { tap } from "node:test/reporters";
+
+// The negative boundary for that rule, and the reason it is a package and not a builtin:
+// `pathe` is a real npm path utility whose name begins with the four characters of the
+// builtin `path`. A first-segment lookup sees `pathe`, which is not a builtin, and reports
+// it — correct, because nothing here declares it. A prefix comparison instead sees `path`
+// and calls this the runtime, which drops a genuine supply-chain fact and prints nothing to
+// say it did. The whole subpath rule is one `strings.Cut` away from that.
+import { resolve } from "pathe/utils";
+
 export function handle(raw: string): string {
   void useState;
   void greet;
   void juice;
   void fs;
+  void fsp;
+  void tap;
+  void resolve;
   return encode(mint(raw).value);
 }

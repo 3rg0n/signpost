@@ -10,6 +10,30 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-01
 
+- **A Node builtin addressed by subpath was counted as a dependency signpost could not
+  resolve.** `fs/promises` is the runtime; there is no other way to reach the promise-based
+  API. The builtin table holds `fs`, and the whole specifier was looked up in it, so every
+  subpath spelling missed and landed in the unresolved report. Ten are affected — the
+  `/promises` variants of `fs`, `dns`, `stream`, `timers` and `readline`, plus `util/types`,
+  `stream/web`, `stream/consumers`, `assert/strict` and `path/posix` — along with
+  `node:test/reporters`, which needs the `node:` prefix trimmed before the subpath is cut.
+  The first path segment is now what gets looked up, which is what the Python and Rust arms
+  of the same function already did with their own separators.
+
+  Cosmetic, uniquely among the defects fixed here: no node was fabricated and no edge lost.
+  What it spent was the unresolved count itself, which is the one number telling a reader how
+  much of their repository signpost did not understand — and a count inflated by things it
+  understood exactly is a count nobody reads. On webex/webex-js-sdk, the repository where this
+  surfaced: unresolved imports 16 → 9 across 11 → 9 specifiers, with nodes and edges unchanged
+  at 834 and 5429.
+
+  The rule cuts on the separator rather than matching a prefix, and the corpus asserts that
+  boundary: `pathe/utils` is a real npm package opening with the four characters of the builtin
+  `path`, and it must still be reported. A prefix comparison could not lose a declared
+  dependency's edge — this test runs only after resolution has already failed — but it would
+  silence an honest gap as the runtime, which is the same failure this fix removes, pointed the
+  other way.
+
 - **A named tsconfig `paths` alias resolved to nothing.** `compilerOptions.paths` is where a
   TypeScript codebase states what its own import specifiers mean — `@fider/services` is
   `public/services` because one line of one config says so, and nothing else in the
@@ -60,19 +84,21 @@ All notable changes to this project are documented here. Format follows
   against the alias prefix `@corpus/app/`, separated only by a slash; python `httpx_extras`
   against the declared `httpx`, in the underscore spelling PEP 503 rewrites; rust
   `serde_yaml::Value` against the declared `serde`, in the spelling Cargo's dash/underscore
-  equivalence accepts. Alongside them, a standard-library import per language, which must
-  produce neither a node nor a reported gap.
+  equivalence accepts; and typescript `pathe/utils`, an npm package opening with the four
+  characters of the Node builtin `path`. Alongside them, a standard-library import per
+  language, which must produce neither a node nor a reported gap.
 
   Asserted as the unresolved-specifier *count*, in `TestCorpusResolvesExactlyWhatItShould`
   and in a new CI step against the shipped binary. The count is what fails in both
   directions — over-claiming lowers it, over-reporting raises it — and a count rather than a
   substring search because the printed report truncates to the five most frequent
-  specifiers, so a grep for any single one passes by matching `and 1 more`. Verified by four
+  specifiers, so a grep for any single one passes by matching `and 2 more`. Verified by six
   mutations, each of which leaves the node and edge totals untouched at 25 and 24 and so
   passes every other assertion in the suite: comparing a Go module prefix by string instead
-  of by path segment (6 → 5), comparing an alias prefix without its trailing slash (6 → 5),
-  falling back to prefix matching in the dependency lookup (6 → 4), and letting a matched
-  alias fall through to the npm lookup (6 → 7).
+  of by path segment (7 → 6), comparing an alias prefix without its trailing slash (7 → 6),
+  falling back to prefix matching in the dependency lookup (7 → 5), letting a matched alias
+  fall through to the npm lookup (7 → 8), looking a Node builtin up by whole specifier
+  (7 → 9), and matching one as a string prefix (7 → 6).
 
 - **A monorepo's own packages were reported as third-party dependencies.** npm packages
   in a workspace import each other by published name — `import {x} from "@scope/core"`,

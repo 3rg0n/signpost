@@ -785,23 +785,27 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 //   - python `httpx_extras` — declared `httpx` plus a suffix, in the underscore spelling that
 //     PEP 503 normalization rewrites;
 //   - rust `serde_yaml::Value` — a real crate that is not the declared `serde`, in the
-//     underscore spelling the dash/underscore equivalence exists to accept.
+//     underscore spelling the dash/underscore equivalence exists to accept;
+//   - typescript `pathe/utils` — an npm package whose name opens with the four characters
+//     of the Node builtin `path`, which is the boundary for issue #14's subpath rule.
 //
 // Each must land here and nowhere else. Two wrong homes are possible and both are worse than
 // the gap: an edge into this repository, which invents structure; or an external node, which
 // invents a supply-chain entry nobody declared. Which failure a given over-match produces
 // depends on the repository, so neither is asserted alone — the set is.
 //
-// The stdlib imports are the other half. `node:fs`, python `os`, and rust `std::fmt` are the
-// runtime: in no manifest, patched by nobody. They must be absent from this set, and absent is
-// also what a resolver that silently dropped them looks like, which is why they sit in files
-// whose other imports are asserted positively above.
+// The stdlib imports are the other half. `node:fs`, python `os`, rust `std::fmt`, and the
+// Node builtins addressed by subpath — `fs/promises`, `node:test/reporters` — are the runtime:
+// in no manifest, patched by nobody. They must be absent from this set, and absent is also what
+// a resolver that silently dropped them looks like, which is why they sit in files whose other
+// imports are asserted positively above.
 //
 // Measured against the real binary rather than the resolver's internals, because the report on
-// stderr is what a user acts on. Two mutations confirm it: comparing a Go module prefix by
-// string instead of by path segment, and comparing an alias prefix without its trailing slash.
-// Both leave the node and edge counts at 25 and 24 — untouched, so every other assertion in
-// this file stays green — and both are caught here, one specifier at a time.
+// stderr is what a user acts on. Three mutations confirm it: comparing a Go module prefix by
+// string instead of by path segment, comparing an alias prefix without its trailing slash, and
+// testing a Node builtin by prefix rather than by first path segment. All three leave the node
+// and edge counts at 25 and 24 — untouched, so every other assertion in this file stays green —
+// and all three are caught here, one specifier at a time.
 func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	dir := corpusRepo(t)
 	// No -quiet: the coverage report is on stderr and -quiet is what suppresses it. Built
@@ -822,6 +826,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		"rust corpus_greeter::Greeting",
 		"rust serde_yaml::Value",
 		"typescript @corpus/apples/juice",
+		"typescript pathe/utils",
 	}
 	got, ok := unresolvedCount(stderr)
 	if !ok {
@@ -852,7 +857,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		t.Fatalf("export did not produce JSON: %v", err)
 	}
 	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml"} {
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -866,8 +871,10 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		}
 	}
 	// And the stdlib, which must not appear either: it is the runtime, and a page for it is a
-	// supply-chain entry for something nobody ships or patches.
-	for _, frag := range []string{"node:fs", "std::fmt"} {
+	// supply-chain entry for something nobody ships or patches. `promises` covers the subpath
+	// spellings of issue #14, which were counted as gaps before the first path segment was
+	// what got looked up.
+	for _, frag := range []string{"node:fs", "std::fmt", "promises"} {
 		for _, n := range g.Nodes {
 			if n.Kind == "External Dependency" && strings.Contains(n.Title, frag) {
 				t.Errorf("%q is an external dependency page; it is the language runtime", n.Title)

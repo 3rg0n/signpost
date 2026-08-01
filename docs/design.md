@@ -415,8 +415,19 @@ that invents a dependency. Positive tests cannot distinguish it from correctness
 corpus carries a deliberate near-miss per ecosystem and asserts the unresolved-specifier
 count, which moves in opposite directions for the two failures. Name matching is by path
 segment and full name, never by string prefix: `example.com/corpus/greeterx` is not the
-module `example.com/corpus/greeter`, and `httpx_extras` is not the declared `httpx`, however
-much of a prefix they share.
+module `example.com/corpus/greeter`, `httpx_extras` is not the declared `httpx`, and
+`pathe/utils` is not the Node builtin `path`, however much of a prefix they share.
+
+**The runtime is neither a dependency nor a gap.** `import os`, `import "fmt"` and
+`import fs from "node:fs"` are resolved — to nothing that deserves a node. Nobody patches
+the standard library separately from the toolchain, so a reference page for it is a
+supply-chain entry for something that has no supply chain, and counting it unresolved is
+worse: it would make every honest repository look as though assembly had failed. Each
+language is tested on its first path segment, cut on that language's own separator — `/`,
+`::`, `.`, and `/` again for Node after any `node:` prefix is trimmed. The segment matters
+because these modules are routinely addressed by subpath: `fs/promises` is the only way to
+reach the promise-based API, and looking the whole specifier up in a table holding `fs`
+reported the runtime as a dependency the repository could not resolve.
 
 Metrics, all hand-written and all deterministic:
 

@@ -50,6 +50,7 @@ matcher slightly too loose swallows it, and which nothing declares.
 | `@corpus/apples/juice` | the tsconfig alias prefix `@corpus/app/` | an alias prefix compared without its trailing slash |
 | `httpx_extras` | the declared `httpx` | PEP 503 name normalization applied as a prefix match |
 | `serde_yaml::Value` | the declared `serde` | Cargo's dash/underscore equivalence applied too widely |
+| `pathe/utils` | the Node builtin `path` | a builtin matched as a string prefix instead of by first path segment |
 
 Each must be reported as a gap and land nowhere else. Two wrong homes are possible and both
 are worse than the gap: an edge into this repository invents structure, and an external node
@@ -61,7 +62,12 @@ count rather than a substring search, because the printed report truncates to th
 frequent specifiers and a grep for any single one passes by matching `and 1 more`.
 
 Alongside them sit the stdlib imports — `node:fs`, python `os`, rust `std::fmt` — which are
-the runtime: in no manifest, patched by nobody, so no node and no reported gap.
+the runtime: in no manifest, patched by nobody, so no node and no reported gap. Two of them are
+addressed by subpath, `fs/promises` and `node:test/reporters`, which is
+[issue #14](https://github.com/3rg0n/signpost/issues/14): the whole specifier was looked up in a
+table holding `fs`, so the subpath missed and was reported as a dependency the repository failed
+to resolve. `pathe/utils` above is the boundary on the other side of that rule — the last row of
+the table is what stops the fix from being a prefix comparison.
 
 ## Running it
 

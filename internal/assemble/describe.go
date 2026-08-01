@@ -149,7 +149,23 @@ func isStdlib(lang discover.Lang, raw string) bool {
 	case discover.LangTS, discover.LangJS:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
-		return nodeBuiltin[strings.TrimPrefix(raw, "node:")]
+		//
+		// Several are also addressed by subpath — `fs/promises`, `stream/web`,
+		// `util/types`, `node:test/reporters` — and the subpath is the same module,
+		// shipped by the same runtime. So the first segment is what is looked up, as
+		// the Python and Rust arms above already do with their own separators. The
+		// prefix is trimmed first, which is what makes `node:test/reporters` land.
+		//
+		// Cutting on the separator rather than matching a prefix is the whole of the
+		// care needed here: `pathe/utils` begins with the four characters of the
+		// builtin `path` and is an npm package. This function is consulted only after
+		// resolution has already failed, so a prefix comparison could not lose a
+		// declared dependency's edge — what it would lose is the *report*. An
+		// undeclared package silently reclassified as the runtime is a gap the reader
+		// is never told about, which is the one thing the unresolved count exists to
+		// surface, and it is the same direction this fix moves in.
+		first, _, _ := strings.Cut(strings.TrimPrefix(raw, "node:"), "/")
+		return nodeBuiltin[first]
 	}
 	return false
 }
