@@ -1,29 +1,30 @@
 ---
 type: Module
 title: internal/discover
-description: 5 go files; 62 exported symbols.
-resource: git://github.com/3rg0n/signpost@96b12e9612b73345fbd79d5a97c81ac4e9bb0047/internal/discover
-generated: { by: signpost/dev, at: "2026-08-01" }
+description: 5 go files; 65 exported symbols.
+resource: git://github.com/3rg0n/signpost@9ed02653140c4c70eeb495fca25afa2bacbf8ead/internal/discover
+generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
-  - { name: commits, value: "4" }
-  - { name: exported, value: "62" }
+  - { name: commits, value: "5" }
+  - { name: exported, value: "65" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-01" }
-  - { name: lines_added, value: "2057" }
-  - { name: lines_removed, value: "16" }
+  - { name: last_commit, value: "2026-08-02" }
+  - { name: lines_added, value: "2179" }
+  - { name: lines_removed, value: "22" }
   - { name: package, value: discover }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
   - { kind: co_changes, to: /modules/extract.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/manifest.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: /modules/manifest.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: /modules/practice.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 3 }
 ---
 # internal/discover
 
 <!-- signpost:managed:summary -->
-5 go files; 62 exported symbols.
+5 go files; 65 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -36,7 +37,7 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Changes with**: [internal/extract](/modules/extract.md) ×2, [internal/manifest](/modules/manifest.md) ×2, [cmd/signpost](/modules/signpost.md) ×2
+- **Changes with**: [internal/extract](/modules/extract.md) ×2, [internal/manifest](/modules/manifest.md) ×3, [internal/practice](/modules/practice.md) ×2, [cmd/signpost](/modules/signpost.md) ×3
 <!-- /signpost:managed:structure -->
 
 ## Notes

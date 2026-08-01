@@ -2,8 +2,8 @@
 type: Module
 title: internal/vcs
 description: 6 go files; 55 exported symbols.
-resource: git://github.com/3rg0n/signpost@96b12e9612b73345fbd79d5a97c81ac4e9bb0047/internal/vcs
-generated: { by: signpost/dev, at: "2026-08-01" }
+resource: git://github.com/3rg0n/signpost@9ed02653140c4c70eeb495fca25afa2bacbf8ead/internal/vcs
+generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "4" }
   - { name: exported, value: "55" }
