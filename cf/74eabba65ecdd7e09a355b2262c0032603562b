@@ -1,0 +1,87 @@
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 4-5,9,11,15-16,19,31,43,64
+.signpost/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 1-29
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 4-5,8-9,13-14,17,21,28,49
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 27,29
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 4,7,9,32,42
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5-6,37,40,55
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_5c93e8e6e3bf39 5,50,61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cf74eabba65ecdd7e09a355b2262c0032603562b",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
