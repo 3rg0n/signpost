@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0005: commit the bundle to the repository"
-description: Architecture decision (Accepted), 22 rules read from 0005-commit-the-bundle-to-the-repository.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0005-commit-the-bundle-to-the-repository.md
+description: "Architecture decision (Accepted), 22 rules read from 0005-commit-the-bundle-to-the-repository.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0005-commit-the-bundle-to-the-repository.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0005" }
   - { name: rules, value: "22" }
-  - { name: sections, value: 5. Commit the bundle to the repository / Consequences, 5. Commit the bundle to the repository / Context, 5. Commit the bundle to the repository / Decision, 5. Commit the bundle to the repository / Status }
+  - { name: sections, value: "5. Commit the bundle to the repository / Consequences, 5. Commit the bundle to the repository / Context, 5. Commit the bundle to the repository / Decision, 5. Commit the bundle to the repository / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0005: commit the bundle to the repository

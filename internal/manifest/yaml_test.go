@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -396,6 +397,88 @@ spec:
 	}
 	if !strings.Contains(diag.Summary(), "skeleton") {
 		t.Errorf("diagnostic should explain what was read: %s", diag.Summary())
+	}
+	// Incomplete but not Malformed, and that pairing is the whole point of the second flag. A
+	// template directive is something this reader stepped over — the file is still valid input
+	// and every other reader agrees with what was read. Marking it Malformed would fail builds
+	// over a chart signpost was designed to tolerate (ADR 0001).
+	if diag.Malformed {
+		t.Errorf("a Helm template was marked Malformed: %s. Tolerance is not a fault; "+
+			"Malformed means no conforming parser can read the document", diag.Summary())
+	}
+}
+
+// TestYAMLUnterminatedFlowCollectionIsMalformed is the other half of that distinction, and
+// the reason issue #9 was invisible.
+//
+// An unterminated flow collection is not a construct this reader stepped over: the YAML is
+// unparseable by anything, so a conforming reader loses every entry after the fault. Both were
+// plain notes before, which meant a caller either failed builds over a Helm chart or reported an
+// unreadable document as a nit. Both happened.
+//
+// The two "made no progress" sites are not covered, and deliberately: their own comments say
+// every branch above them consumes at least one byte, so they are unreachable by construction
+// and exist to turn a future misreading into a diagnostic rather than a hang. A test would have
+// to break the scanner to reach them.
+func TestYAMLUnterminatedFlowCollectionIsMalformed(t *testing.T) {
+	for _, c := range []struct{ name, src string }{
+		{"in a sequence item", "edges:\n  - { kind: imports, source: a/[b]/c.ts }\n"},
+		{"in a value", "generated: { by: signpost, at: [2026-07-31\nname: x\n"},
+		{"an unterminated flow sequence", "tags: [go, security\nname: x\n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, diag := ParseYAMLDoc(c.src)
+			if !diag.Malformed {
+				t.Errorf("not marked Malformed: %s\n---\n%s", diag.Summary(), c.src)
+			}
+		})
+	}
+}
+
+// TestYAMLASplitFlowScalarIsNotDetectable states this flag's limit, so nobody mistakes it for
+// a complete defence.
+//
+// An unquoted comma inside a flow mapping is *legal* — a comma separates entries — so
+// `source: a/b,c.py` parses cleanly into `source: a/b` plus an invented `c.py:` key. No reader
+// can call that an error, this one or a conforming one, which is why the emitter's job is to
+// quote it and why callers that need to catch it check the edge's key set instead (see
+// internal/okf/yaml_test.go and cmd/signpost/corpus_test.go). Asserted rather than left
+// implicit: a future reader who assumed Malformed covered this would build the wrong gate.
+func TestYAMLASplitFlowScalarIsNotDetectable(t *testing.T) {
+	n, diag := ParseYAMLDoc("edges:\n  - { kind: imports, source: a/b,c.py }\n")
+	if diag.Malformed {
+		t.Fatalf("a comma inside a flow mapping was reported as malformed: %s. If this reader "+
+			"has learned to detect it, the comment above and the key-set checks elsewhere are "+
+			"now describing something that is no longer true", diag.Summary())
+	}
+	edge := n.Get("edges").At(0)
+	if got := edge.Get("source").String(); got != "a/b" {
+		t.Errorf("source = %q, want the truncated %q — this test documents the silent split, "+
+			"so a change in what it does is a change worth reading", got, "a/b")
+	}
+	if edge.GetAny("c.py") == nil {
+		t.Error("the split scalar's remainder did not become a key, which is the corruption " +
+			"the key-set checks elsewhere look for")
+	}
+}
+
+// TestDiagMalformedSurvivesTheNoteCap pins the one thing malformed() does beyond note().
+//
+// Notes are capped, and the flag is set regardless. A capped note costs a location; a dropped
+// flag would silently turn an unreadable document back into a clean one — which is the failure
+// the field exists to prevent, arriving through the mechanism meant to keep the record small.
+func TestDiagMalformedSurvivesTheNoteCap(t *testing.T) {
+	var d Diag
+	for i := 0; i < maxDiagNotes+5; i++ {
+		d.note(i, "distinct note "+strconv.Itoa(i))
+	}
+	if len(d.Notes) != maxDiagNotes {
+		t.Fatalf("Notes = %d, want the cap of %d", len(d.Notes), maxDiagNotes)
+	}
+	d.malformed(999, "unterminated flow mapping")
+	if !d.Malformed {
+		t.Error("the flag was dropped along with the capped note, so an unparseable document " +
+			"reads back as a clean one")
 	}
 }
 

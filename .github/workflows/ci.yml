@@ -429,6 +429,144 @@ jobs:
           rm -rf internal/ciprobe
           echo "verify: non-zero on a stale bundle"
 
+  corpus:
+    name: corpus (a repository signpost did not write)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      # The dogfood job above runs signpost on signpost, and that has a ceiling this job
+      # exists to clear. This tree is Go with kebab-case filenames, so self-hosting cannot
+      # reach the TypeScript, Python, or Rust extractors, cannot reach an npm, Cargo, or
+      # pyproject manifest, and cannot reach a path containing a character that is an
+      # indicator in YAML. Issue #9 was the last one: a Next.js dynamic route written
+      # unquoted into a flow mapping made four pages unreadable from that line down, and
+      # every unit test and the dogfood job stayed green.
+      #
+      # testdata/corpus is a synthetic repository with all four languages and the paths that
+      # break naive emitters. `go test ./cmd/signpost -run TestCorpus` runs it in-process on
+      # all three platforms in the test job; this job is what that cannot do — check the
+      # emitted YAML with an independent conforming parser, below.
+      - name: Build
+        run: go build -o signpost ./cmd/signpost
+
+      # A git repository, because signpost reads history and the corpus's own directory
+      # inside this checkout carries signpost's commits rather than the corpus's. Outside
+      # the checkout, because `build` writes .signpost/ and a second bundle in this tree is
+      # something the staleness check would compare against the wrong repository.
+      - name: Stage the corpus as its own repository
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus"
+
+      - name: Build and verify the corpus bundle
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus"
+          ./signpost build -repo example.com/corpus "$corpus" | tee "${RUNNER_TEMP}/build.txt"
+          ok=0
+          ./signpost verify -quiet -repo example.com/corpus "$corpus" \
+            >"${RUNNER_TEMP}/verify.txt" || ok=$?
+          cat "${RUNNER_TEMP}/verify.txt"
+          [ "$ok" -eq 0 ] || { echo "verify rejected a bundle signpost just wrote"; exit 1; }
+
+      # The check no Go test here can make. signpost's own reader is tolerant by design
+      # (ADR 0001), so it is the wrong instrument for proving output is well-formed: it is
+      # built to keep reading past things a conforming parser rejects. PyYAML is a
+      # conforming parser and has no stake in signpost being right.
+      #
+      # This is the assertion issue #9 could not have survived, and the only one here that
+      # does not depend on somebody having thought of the offending character in advance.
+      # Every path-injection defect so far — a newline, a backtick, a `](`, then a bracket —
+      # was found by a person imagining the character, and that does not scale.
+      - name: Every page's frontmatter parses under a conforming YAML reader
+        run: |
+          set -euo pipefail
+          python3 - "${RUNNER_TEMP}/corpus/.signpost" <<'PY'
+          import pathlib, sys, yaml
+
+          # Every key the emitter puts in an edge mapping. A key outside this set means a
+          # scalar terminated early and the rest of it became a key of its own, which is what
+          # an unquoted comma in a path does. Kept as an explicit set rather than derived, so
+          # adding a field to the emitter is a deliberate edit here.
+          EDGE_KEYS = {"kind", "to", "confidence", "weight", "source"}
+
+          root = pathlib.Path(sys.argv[1])
+          pages = sorted(root.rglob("*.md"))
+          if len(pages) < 10:
+              sys.exit(f"only {len(pages)} page(s) under {root}; the build wrote nothing")
+
+          failed = []
+          for page in pages:
+              text = page.read_text(encoding="utf-8")
+              if not text.startswith("---\n"):
+                  failed.append((page, "no frontmatter fence"))
+                  continue
+              end = text.find("\n---\n", 3)
+              if end < 0:
+                  failed.append((page, "unterminated frontmatter fence"))
+                  continue
+              block = text[4:end + 1]
+              try:
+                  doc = yaml.safe_load(block)
+              except yaml.YAMLError as err:
+                  failed.append((page, str(err).replace("\n", " ")))
+                  continue
+              if not isinstance(doc, dict):
+                  failed.append((page, f"frontmatter is {type(doc).__name__}, not a mapping"))
+                  continue
+              # The field issue #9 destroyed, checked by key set rather than by parseability.
+              #
+              # Parsing alone is not enough, and a comma proves it: an unquoted `[` raises,
+              # but an unquoted `,` inside a flow mapping parses *clean* and silently splits
+              # the scalar — `source: py/greeter/data,notes.py` reads back as
+              # `source: py/greeter/data` plus an invented `notes.py: None` key. A check for
+              # "did it parse" and even "does it have a kind" both pass on that. An
+              # unexpected key does not, and it needs no advance knowledge of the character.
+              for edge in doc.get("edges") or []:
+                  if not isinstance(edge, dict):
+                      failed.append((page, f"an edge read back as {edge!r}"))
+                      continue
+                  unknown = set(edge) - EDGE_KEYS
+                  if unknown or "kind" not in edge:
+                      failed.append((page, f"an edge read back with keys {sorted(edge)}, "
+                                           f"which is a scalar that split: {edge!r}"))
+
+          for page, why in failed:
+              print(f"{page.relative_to(root)}: {why}")
+          if failed:
+              sys.exit(f"\n{len(failed)} page(s) emitted YAML a conforming reader cannot read")
+          print(f"{len(pages)} page(s): frontmatter parses, every edge read back as a mapping")
+          PY
+
+      # The paths the corpus exists for, asserted by name. The parse check above would catch
+      # an unquoted bracket, but it would not say which path caused it, and a future emitter
+      # that dropped the hostile pages entirely would leave it green.
+      - name: The hostile paths reached the bundle
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          fail=0
+          for p in 'app/tools/\[slug\]/page.tsx' 'app/blog/\[\.\.\.rest\]/page.tsx' 'greeter/data,notes.py'; do
+            if ! grep -rq "$p" "$bundle"; then
+              echo "no page mentions ${p}; the corpus fixture or the extractor changed"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
   security:
     name: security
     runs-on: ubuntu-24.04

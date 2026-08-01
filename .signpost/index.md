@@ -2,37 +2,42 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 29 concepts, 34 relationships."
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932
-generated: { by: signpost/dev, at: "2026-07-31" }
+description: "Structural map of this repository: 30 concepts, 41 relationships."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c
+generated: { by: signpost/dev, at: "2026-08-01" }
 ---
 # Repository map
 
 <!-- signpost:managed:index -->
 Start here. Each line names a page and what is on it.
 
+### How work is done here
+
+- [How work is done here](/practices.md) — what this repository declares about building, testing, gating, and ownership, and what it does not.
+
 ### Most connected
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](/modules/signpost.md) — 16 relationships (3 in, 13 out)
-- [internal/okf](/modules/okf.md) — 8 relationships (4 in, 4 out)
-- [internal/discover](/modules/discover.md) — 7 relationships (6 in, 1 out)
+- [cmd/signpost](/modules/signpost.md) — 19 relationships (4 in, 15 out)
+- [internal/okf](/modules/okf.md) — 10 relationships (5 in, 5 out)
+- [internal/discover](/modules/discover.md) — 8 relationships (7 in, 1 out)
 - [internal/vcs](/modules/vcs.md) — 7 relationships (4 in, 3 out)
 - [internal/assemble](/modules/assemble.md) — 6 relationships (1 in, 5 out)
 
 ### Modules
 
 - [internal/assemble](/modules/assemble.md) — 6 go files; 39 exported symbols.
-- [internal/discover](/modules/discover.md) — 5 go files; 57 exported symbols.
+- [internal/discover](/modules/discover.md) — 5 go files; 60 exported symbols.
 - [internal/export](/modules/export.md) — 6 go files; 22 exported symbols.
 - [internal/extract](/modules/extract.md) — 14 go files; 189 exported symbols.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
-- [internal/manifest](/modules/manifest.md) — 21 go files; 218 exported symbols.
+- [internal/manifest](/modules/manifest.md) — 21 go files; 221 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
-- [internal/okf](/modules/okf.md) — 13 go files; 179 exported symbols.
+- [internal/okf](/modules/okf.md) — 13 go files; 184 exported symbols.
+- [internal/practice](/modules/practice.md) — 3 go files; 29 exported symbols.
 - [internal/semantic](/modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](/modules/signpost.md) — 12 go files; 41 exported symbols; entrypoint main; package main.
+- [cmd/signpost](/modules/signpost.md) — 13 go files; 48 exported symbols; entrypoint main; package main.
 - [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
 

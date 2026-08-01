@@ -177,14 +177,21 @@ func TestBuildReportsCoverageByDefault(t *testing.T) {
 
 // An empty repository produces a valid bundle rather than an error. This is the first run in
 // a fresh repository, and a crash there is the worst possible first impression.
+//
+// The reserved files are asserted by name rather than by count. A count is what this test used
+// to check, and adding practices.md broke it with a message saying "want the three reserved
+// files" — which named neither the fourth file nor whether its arrival was the bug. A name says
+// which file stopped being written.
 func TestBuildOnAnEmptyRepository(t *testing.T) {
 	root := t.TempDir()
-	stdout, stderr, code := invoke(t, "build", "--quiet", root)
+	_, stderr, code := invoke(t, "build", "--quiet", root)
 	if code != 0 {
 		t.Fatalf("exit = %d\n%s", code, stderr)
 	}
-	if !strings.Contains(stdout, "3 page(s)") {
-		t.Errorf("stdout = %q, want the three reserved files", stdout)
+	for _, name := range []string{okf.IndexPage, okf.LogPage, okf.ManifestFile, okf.PracticesPage} {
+		if _, err := os.Stat(filepath.Join(root, okf.BundleDir, name)); err != nil {
+			t.Errorf("%s was not written to a bundle for an empty repository: %v", name, err)
+		}
 	}
 	if idx := bundleFile(t, root, okf.IndexPage); !strings.Contains(idx, "0 concepts") {
 		t.Errorf("the index does not say the repository was empty:\n%s", idx)

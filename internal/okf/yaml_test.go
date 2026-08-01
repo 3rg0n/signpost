@@ -268,6 +268,101 @@ func TestYAMLNestedSequenceIsDroppedNotMisrendered(t *testing.T) {
 	}
 }
 
+// TestYAMLFlowIndicatorsInAPathSurviveInsideAFlowMapping is issue #9 at the unit level.
+//
+// The table above emits each value as a top-level scalar, where a bracket in the *middle* of
+// the string is genuinely harmless — `title: a[b]c` round-trips. That is why the old
+// first-character rule passed every test in this file and still shipped the bug: the character
+// only bites inside a flow collection, which is where every `edges[]` entry lives. So this test
+// puts the path where the emitter actually puts it.
+//
+// Two entries, deliberately. A fault in the first must not be masked by the second being
+// checked instead, and the second is what proves the *mapping* still terminated — an
+// unterminated one swallows every entry after it, which is how four pages lost seven edges.
+func TestYAMLFlowIndicatorsInAPathSurviveInsideAFlowMapping(t *testing.T) {
+	// Real conventions, not contrived strings. Next.js puts brackets and parentheses in
+	// directory names; POSIX permits all five characters in any filename.
+	paths := []struct{ name, path string }{
+		{"next.js dynamic route", "ts/app/tools/[slug]/page.tsx"},
+		{"next.js catch-all route", "ts/app/blog/[...rest]/page.tsx"},
+		{"comma in a basename", "py/greeter/data,notes.py"},
+		{"brace in a basename", "sh/{template}.sh"},
+		{"every indicator at once", "x/[a]{b},c.ts"},
+	}
+	for _, c := range paths {
+		t.Run(c.name, func(t *testing.T) {
+			d := &yamlDoc{}
+			d.set("edges", seq(
+				flowMap(
+					yamlPair{"kind", scalar("imports")},
+					yamlPair{"to", scalar("/modules/storage.md")},
+					yamlPair{"source", scalar(c.path)},
+				),
+				flowMap(
+					yamlPair{"kind", scalar("tested_by")},
+					yamlPair{"to", scalar("/modules/tests.md")},
+				),
+			))
+			src := d.String()
+
+			n, diag := manifest.ParseYAMLDoc(src)
+			if diag.Malformed {
+				t.Fatalf("a path containing a YAML flow indicator made the document unparseable "+
+					"(issue #9): %s\n---\n%s", diag.Summary(), src)
+			}
+			if diag.Incomplete() {
+				t.Fatalf("the reader could not fully read the emitted YAML: %s\n---\n%s",
+					diag.Summary(), src)
+			}
+
+			first := n.Get("edges").At(0)
+			if got := first.Get("source").String(); got != c.path {
+				t.Errorf("source round-tripped as %q, want %q — the scalar terminated early\n"+
+					"---\n%s", got, c.path, src)
+			}
+			// The key set, which is what catches a comma. An unquoted `[` makes the document
+			// unreadable and the check above fires; an unquoted `,` parses clean and silently
+			// splits the scalar, leaving `source: py/greeter/data` beside an invented
+			// `notes.py:` key. Nothing about parseability catches that.
+			for _, k := range first.Keys {
+				switch k {
+				case "kind", "to", "source":
+				default:
+					t.Errorf("the edge read back with the key %q, which was not emitted — the "+
+						"source scalar split and its remainder became a key\n---\n%s", k, src)
+				}
+			}
+			// The second entry, which an unterminated mapping would have consumed.
+			if got := n.Get("edges").At(1).Get("kind").String(); got != "tested_by" {
+				t.Errorf("the following edge read back with kind %q, want tested_by — the first "+
+					"mapping never terminated and swallowed it\n---\n%s", got, src)
+			}
+		})
+	}
+}
+
+// TestNeedsYAMLQuoteOnFlowIndicatorsAnywhere pins the rule directly, because the round-trip
+// above passes for the wrong reason if the emitter starts quoting everything.
+//
+// Position-independence is the whole correction: the old rule tested `s[0]`, which is right for
+// the indicators that only matter at the start of a scalar (`&`, `*`, `!`, `|`, `>`, `%`) and
+// wrong for the five that terminate a scalar wherever they appear.
+func TestNeedsYAMLQuoteOnFlowIndicatorsAnywhere(t *testing.T) {
+	for _, s := range []string{
+		"a[b", "a]b", "a{b", "a}b", "a,b",
+		"app/tools/[slug]/page.tsx",
+		"data,notes.py",
+		// Trailing, which is neither first nor interior.
+		"trailing[", "trailing,",
+	} {
+		if !needsYAMLQuote(s) {
+			t.Errorf("needsYAMLQuote(%q) = false; a flow indicator terminates the scalar "+
+				"wherever it appears, and every value this emitter writes may land inside a "+
+				"flow mapping (issue #9)", s)
+		}
+	}
+}
+
 func TestLooksNumeric(t *testing.T) {
 	numeric := []string{"1", "42", "1.10", "1.2.3", "-1", "+1", "1e9", "1_000", "0.0"}
 	for _, s := range numeric {

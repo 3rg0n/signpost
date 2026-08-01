@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0006: generator and viewer are separate repositories"
-description: Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
+description: "Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
 tags: [adr, constraint, superseded]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0006" }
   - { name: rules, value: "22" }
-  - { name: sections, value: 6. Generator and viewer are separate repositories / Consequences, 6. Generator and viewer are separate repositories / Context, 6. Generator and viewer are separate repositories / Decision, 6. Generator and viewer are separate repositories / Status }
+  - { name: sections, value: "6. Generator and viewer are separate repositories / Consequences, 6. Generator and viewer are separate repositories / Context, 6. Generator and viewer are separate repositories / Decision, 6. Generator and viewer are separate repositories / Status" }
   - { name: status, value: Superseded }
 ---
 # ADR 0006: generator and viewer are separate repositories

@@ -1,13 +1,13 @@
 ---
 type: Document
 title: README.md
-description: Architecture decision, 10 rules read from README.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/README.md
+description: "Architecture decision, 10 rules read from README.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/README.md
 tags: [adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: rules, value: "10" }
-  - { name: sections, value: Architecture decision records, Architecture decision records / Decisions still owed one, Architecture decision records / Writing one }
+  - { name: sections, value: "Architecture decision records, Architecture decision records / Decisions still owed one, Architecture decision records / Writing one" }
 ---
 # README.md
 

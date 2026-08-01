@@ -64,6 +64,11 @@ type File struct {
 	// Vendored marks third-party code committed into the tree. Discovered for
 	// the record, excluded from analysis.
 	Vendored bool
+	// Fixture marks a sample project kept for tests to run against — testdata/
+	// and friends. Discovered for the record, excluded from analysis: its modules
+	// and dependencies belong to the sample, not to this repository. See
+	// isFixture for why this is neither Vendored nor IsTest.
+	Fixture bool
 	// Binary marks a file whose content was not read.
 	Binary bool
 }
@@ -94,6 +99,16 @@ type Skip struct {
 type Options struct {
 	// IncludeVendored analyses vendored code instead of only recording it.
 	IncludeVendored bool
+	// IncludeFixtures analyses sample projects under testdata/ instead of only
+	// recording them.
+	//
+	// The escape hatch for isFixture guessing wrong about a directory genuinely
+	// named `fixtures`, and the counterpart to IncludeVendored. Notably *not* what
+	// the corpus harness uses: it copies testdata/corpus to a root of its own, so
+	// those files arrive as `go/greeter/...` with no `testdata` segment to match.
+	// Analysing a fixture in place and analysing it as its own repository are
+	// different things, and only the second gives it correct module paths.
+	IncludeFixtures bool
 	// ExtraIgnores are additional .gitignore-syntax patterns applied at the root.
 	ExtraIgnores []string
 }
@@ -208,10 +223,18 @@ func walkDir(rt *os.Root, relDir string, ig *ignoreSet, opts Options, res *Resul
 			if local.match(rel, true) {
 				continue
 			}
+			// isVendored and isFixture inspect directory segments, so append a
+			// dummy filename to test rel itself as a directory.
 			if !opts.IncludeVendored && isVendored(rel+"/x") {
-				// isVendored inspects directory segments, so append a dummy
-				// filename to test rel itself as a directory.
 				res.Skipped = append(res.Skipped, Skip{Path: rel, Reason: "vendored directory"})
+				continue
+			}
+			if !opts.IncludeFixtures && isFixture(rel+"/x") {
+				// A distinct reason, not folded into "vendored". Skipped paths are
+				// surfaced in manifest.json so the bundle never presents an
+				// incomplete walk as a complete one, and "vendored" would tell a
+				// reader their own reviewed fixture is somebody else's code.
+				res.Skipped = append(res.Skipped, Skip{Path: rel, Reason: "test fixture directory"})
 				continue
 			}
 			if err := walkDir(rt, rel, local, opts, res, totalBytes); err != nil {
@@ -283,11 +306,18 @@ func readFile(rt *os.Root, rel string, opts Options, totalBytes *int64) (File, *
 		Size:     info.Size(),
 		IsTest:   isTestPath(rel, lang),
 		Vendored: isVendored(rel),
+		Fixture:  isFixture(rel),
 	}
 
 	// Vendored files are recorded with metadata only. Reading them would cost
 	// the majority of the walk's IO for nodes nobody can act on.
 	if f.Vendored && !opts.IncludeVendored {
+		return f, nil
+	}
+	// A fixture is recorded the same way, for a different reason: reading it is
+	// cheap, but analysing it puts the sample project's modules and dependencies
+	// on this repository's pages as though they were its own.
+	if f.Fixture && !opts.IncludeFixtures {
 		return f, nil
 	}
 	if info.Size() == 0 {

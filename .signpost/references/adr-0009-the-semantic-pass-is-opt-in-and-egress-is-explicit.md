@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0009: the semantic pass is opt in and egress is explicit"
-description: Architecture decision (Accepted), 25 rules read from 0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+description: "Architecture decision (Accepted), 25 rules read from 0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0009" }
   - { name: rules, value: "25" }
-  - { name: sections, value: 9. The semantic pass is opt-in, and egress is explicit / Consequences, 9. The semantic pass is opt-in, and egress is explicit / Context, 9. The semantic pass is opt-in, and egress is explicit / Decision, 9. The semantic pass is opt-in, and egress is explicit / Status }
+  - { name: sections, value: "9. The semantic pass is opt-in, and egress is explicit / Consequences, 9. The semantic pass is opt-in, and egress is explicit / Context, 9. The semantic pass is opt-in, and egress is explicit / Decision, 9. The semantic pass is opt-in, and egress is explicit / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0009: the semantic pass is opt in and egress is explicit

@@ -311,6 +311,111 @@ func TestWalkRecordsVendoredWithoutReading(t *testing.T) {
 	}
 }
 
+// TestWalkPrunesTestFixturesFromAnalysis is the defect signpost found by biting itself.
+//
+// Adding testdata/corpus — four sample projects built to look like real repositories — put
+// `testdata/corpus/ts/app/(marketing)` in signpost's own index as a module, and react, httpx
+// and serde in it as dependencies. The manifest is the half that matters most: a fixture's
+// package.json is a statement about the *sample*, and treating it as the host repository's
+// makes the bundle claim a dependency nobody can find in the go.mod, which is the false
+// grounding design §4.6 exists to prevent.
+//
+// Asserted on both halves, because they fail independently: the walk can prune the source
+// files while a manifest reader still reaches the fixture's package.json.
+func TestWalkPrunesTestFixturesFromAnalysis(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"app.go":                          "package main\n",
+		"go.mod":                          "module example.com/host\n",
+		"testdata/corpus/ts/src/index.ts": "export const x = 1\n",
+		"testdata/corpus/ts/package.json": `{"dependencies":{"react":"19.0.0"}}`,
+		"internal/x/fixtures/sample/a.py": "def f(): pass\n",
+		"web/__fixtures__/sample/b.js":    "module.exports = {}\n",
+	})
+
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	for _, f := range res.Files {
+		if isFixture(f.Path) {
+			t.Errorf("%s was discovered as a file; a fixture's contents belong to the sample "+
+				"project, not to the repository being described", f.Path)
+		}
+	}
+	// The manifest half. Nothing here reads package.json, but this is the field every
+	// manifest reader routes on, so an empty content is what makes the reader a no-op.
+	for _, f := range res.Files {
+		if strings.Contains(f.Path, "testdata") && f.Content != "" {
+			t.Errorf("%s was read (%d bytes); a fixture manifest names the sample's "+
+				"dependencies, and reading it puts them on the host repository's pages",
+				f.Path, len(f.Content))
+		}
+	}
+	if len(res.Sources()) != 1 {
+		t.Errorf("Sources() = %d, want only app.go: %v", len(res.Sources()), paths(res))
+	}
+
+	// Named as a fixture, not as vendored. Skips are surfaced to the user, and telling
+	// somebody their own reviewed testdata is third-party code is a wrong explanation of a
+	// right decision.
+	var reasons []string
+	for _, s := range res.Skipped {
+		reasons = append(reasons, s.Path+":"+s.Reason)
+	}
+	joined := strings.Join(reasons, " ")
+	for _, want := range []string{"testdata:test fixture", "fixtures:test fixture", "__fixtures__:test fixture"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("no skip recorded matching %q; got %v", want, reasons)
+		}
+	}
+}
+
+// The escape hatch, asserted because a flag nobody checks is a flag that rots. This is the
+// only way to recover a directory genuinely named `fixtures` that holds shipping code.
+func TestWalkIncludeFixturesAnalysesThem(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"app.go":               "package main\n",
+		"testdata/corpus/b.go": "package b\n",
+	})
+	res, err := Walk(root, Options{IncludeFixtures: true})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	f := find(t, res, "testdata/corpus/b.go")
+	if !f.Fixture {
+		t.Error("Fixture should stay true with -include-fixtures: the flag changes whether " +
+			"the file is analysed, not what it is")
+	}
+	if f.Content == "" {
+		t.Error("-include-fixtures did not read the file")
+	}
+	if len(res.Sources()) != 2 {
+		t.Errorf("Sources() = %d, want both files: %v", len(res.Sources()), paths(res))
+	}
+}
+
+// A fixture is neither vendored nor a test, and the distinction is load-bearing: a
+// tested_by edge from a real module to a sample project would be a false claim, and calling
+// a hand-maintained fixture third-party code would be a wrong reason for a right skip.
+func TestFixtureIsDistinctFromVendoredAndTest(t *testing.T) {
+	const rel = "testdata/corpus/go/greeter/greeter.go"
+	if !isFixture(rel) {
+		t.Fatalf("isFixture(%q) = false", rel)
+	}
+	if isVendored(rel) {
+		t.Errorf("isVendored(%q) = true; a fixture is this repository's own reviewed code", rel)
+	}
+	// A fixture that happens to be named like a test is still a fixture, and the reverse
+	// must not hold: a real test file must not be pruned.
+	if isFixture("internal/okf/verify_test.go") {
+		t.Error("a test file outside a fixture directory must stay in the walk")
+	}
+	// `testdata` matches as a directory segment only, so a file named for it is untouched.
+	if isFixture("internal/discover/testdata.go") {
+		t.Error("isFixture matched a file basename; only directory segments count")
+	}
+}
+
 // Symlinks are recorded and never followed: a loop must not hang the walk, and a
 // link out of the tree must not escape it.
 func TestWalkDoesNotFollowSymlinks(t *testing.T) {

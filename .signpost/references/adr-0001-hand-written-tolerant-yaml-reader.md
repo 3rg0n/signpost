@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0001: hand written tolerant yaml reader"
-description: Architecture decision (Accepted), 15 rules read from 0001-hand-written-tolerant-yaml-reader.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0001-hand-written-tolerant-yaml-reader.md
+description: "Architecture decision (Accepted), 15 rules read from 0001-hand-written-tolerant-yaml-reader.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0001-hand-written-tolerant-yaml-reader.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0001" }
   - { name: rules, value: "15" }
-  - { name: sections, value: 1. Hand-written tolerant YAML reader / Consequences, 1. Hand-written tolerant YAML reader / Context, 1. Hand-written tolerant YAML reader / Decision, 1. Hand-written tolerant YAML reader / Status }
+  - { name: sections, value: "1. Hand-written tolerant YAML reader / Consequences, 1. Hand-written tolerant YAML reader / Context, 1. Hand-written tolerant YAML reader / Decision, 1. Hand-written tolerant YAML reader / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0001: hand written tolerant yaml reader

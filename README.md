@@ -250,7 +250,7 @@ moves, and it verifies clean.
 
 ## Status
 
-**v0.1 in progress — deterministic core.** No model required, no network.
+**v0.1.0 — deterministic core, complete.** No model required, no network.
 
 | Component | State |
 |---|---|
@@ -265,7 +265,7 @@ moves, and it verifies clean.
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
-| [Graph viewer](https://3rg0n.github.io/signpost/graph.html) — in `site/`, no JS dependencies | done |
+| [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |
 | Semantic pass: doc-to-code linking, invariants, cluster labels | v0.3 |

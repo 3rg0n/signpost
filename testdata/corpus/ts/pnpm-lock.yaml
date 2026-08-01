@@ -1,0 +1,7 @@
+lockfileVersion: '9.0'
+
+# Corpus fixture. Present so the practices page can find a pinned npm ecosystem;
+# deliberately minimal, since lock files are recorded, never parsed for structure.
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

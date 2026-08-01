@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0007: the bundle names the commit it describes"
-description: Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0007-the-bundle-names-the-commit-it-describes.md
+description: "Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0007-the-bundle-names-the-commit-it-describes.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0007" }
   - { name: rules, value: "21" }
-  - { name: sections, value: 7. The bundle names the commit it describes, and staleness is a content comparison / Consequences, 7. The bundle names the commit it describes, and staleness is a content comparison / Context, 7. The bundle names the commit it describes, and staleness is a content comparison / Decision, 7. The bundle names the commit it describes, and staleness is a content comparison / Status }
+  - { name: sections, value: "7. The bundle names the commit it describes, and staleness is a content comparison / Consequences, 7. The bundle names the commit it describes, and staleness is a content comparison / Context, 7. The bundle names the commit it describes, and staleness is a content comparison / Decision, 7. The bundle names the commit it describes, and staleness is a content comparison / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0007: the bundle names the commit it describes

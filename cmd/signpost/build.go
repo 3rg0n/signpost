@@ -10,6 +10,7 @@ import (
 
 	"github.com/3rg0n/signpost/internal/model"
 	"github.com/3rg0n/signpost/internal/okf"
+	"github.com/3rg0n/signpost/internal/practice"
 	"github.com/3rg0n/signpost/internal/semantic"
 	"github.com/3rg0n/signpost/internal/vcs"
 )
@@ -78,6 +79,10 @@ func runBuild(args []string, out, errOut io.Writer) error {
 	a.Graph().Clusters()
 
 	opts := buildOptions(a, *repo)
+	pr := addPractices(&opts, a)
+	if !*quiet {
+		reportPractices(newPrinter(errOut), pr)
+	}
 	if *sem {
 		sr, err := runSemantic(a, *semTimeout)
 		if err != nil {
@@ -127,6 +132,33 @@ func runSemantic(a *analysis, timeout time.Duration) (*semantic.Result, error) {
 		Backend:    b,
 		CacheDir:   filepath.Join(a.Discovered.Root, okf.BundleDir, "cache", "summary"),
 	}), nil
+}
+
+// addPractices runs the practices pass and puts its rendering on opts.
+//
+// Shared by `build` and `verify`, and that sharing is the point rather than a convenience.
+// verify works by rendering the bundle the current tree would produce and comparing it to the
+// one on disk, so any page build emits and verify does not is reported twice over: once as an
+// orphan page describing a concept the repository no longer has, and once as an index that a
+// build would change. Both messages describe the checker rather than the repository, and
+// neither names the cause. That is what happened when this pass was wired into build alone.
+//
+// Deterministic, so it runs on every invocation rather than behind a flag. The findings are
+// facts the pipeline has already extracted, and gating them would mean the page an agent most
+// wants first — how do I build and test this — is the one it usually does not get.
+func addPractices(opts *okf.Options, a *analysis) *practice.Result {
+	pr := practice.Analyse(practice.Input{Discovered: a.Discovered, Manifests: a.Manifests})
+	opts.Practices = pr.Render()
+	return pr
+}
+
+// reportPractices says how many declarations the page records and how many absences.
+//
+// Two counts and nothing derived from them. A percentage or a ratio here would be the score
+// design §9.1 rules out, arriving through the CLI instead of through the page — and the
+// absences are what the reader should open the page for, not a number to watch go up.
+func reportPractices(p *printer, r *practice.Result) {
+	p.printf("practices: %d declared, %d not declared\n", r.Declared(), r.Absent())
 }
 
 // reportSemantic says what the pass did and what it could not do.

@@ -1,0 +1,18 @@
+# Corpus fixture. Abridged: enough shape for a lockfile reader, not a resolvable graph.
+version = 3
+
+[[package]]
+name = "corpus-greeter"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+]
+
+[[package]]
+name = "pretty_assertions"
+version = "1.4.1"
+
+[[package]]
+name = "serde"
+version = "1.0.219"

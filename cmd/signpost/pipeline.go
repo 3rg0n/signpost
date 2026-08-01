@@ -36,6 +36,7 @@ func (a *analysis) Graph() *graph.Graph { return a.Assembled.Graph }
 // pipelineFlags are the flags every analysing command shares.
 type pipelineFlags struct {
 	includeVendored bool
+	includeFixtures bool
 	ignore          stringList
 	noHistory       bool
 	maxCommits      int
@@ -44,6 +45,11 @@ type pipelineFlags struct {
 func (p *pipelineFlags) register(fs *flag.FlagSet) {
 	fs.BoolVar(&p.includeVendored, "include-vendored", false,
 		"analyse vendored third-party code instead of only recording it")
+	// The escape hatch for a directory named `fixtures` that holds real code. Off by
+	// default because the failure it prevents lands on a committed page: a sample project
+	// under testdata/ produces modules and dependencies the repository does not have.
+	fs.BoolVar(&p.includeFixtures, "include-fixtures", false,
+		"analyse sample projects under testdata/ instead of only recording them")
 	fs.Var(&p.ignore, "ignore",
 		"additional .gitignore-syntax pattern to skip; repeatable")
 	// Opt-out rather than opt-in: history is the signal §4.1 calls the cheapest way to
@@ -72,6 +78,7 @@ func (s *stringList) Set(v string) error {
 func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, error) {
 	disc, err := discover.Walk(path, discover.Options{
 		IncludeVendored: pf.includeVendored,
+		IncludeFixtures: pf.includeFixtures,
 		ExtraIgnores:    pf.ignore,
 	})
 	if err != nil {

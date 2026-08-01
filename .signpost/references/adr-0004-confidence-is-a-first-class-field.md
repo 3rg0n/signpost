@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0004: confidence is a first class field"
-description: Architecture decision (Accepted), 24 rules read from 0004-confidence-is-a-first-class-field.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0004-confidence-is-a-first-class-field.md
+description: "Architecture decision (Accepted), 24 rules read from 0004-confidence-is-a-first-class-field.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0004-confidence-is-a-first-class-field.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0004" }
   - { name: rules, value: "24" }
-  - { name: sections, value: 4. Confidence is a first-class field on every node and edge / Consequences, 4. Confidence is a first-class field on every node and edge / Context, 4. Confidence is a first-class field on every node and edge / Decision, 4. Confidence is a first-class field on every node and edge / Status }
+  - { name: sections, value: "4. Confidence is a first-class field on every node and edge / Consequences, 4. Confidence is a first-class field on every node and edge / Context, 4. Confidence is a first-class field on every node and edge / Decision, 4. Confidence is a first-class field on every node and edge / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0004: confidence is a first class field

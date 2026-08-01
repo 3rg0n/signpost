@@ -261,6 +261,23 @@ func checkConformance(res *VerifyResult, disk *onDisk) {
 			continue
 		}
 		fm, diag := manifest.ParseYAMLDoc(page.Frontmatter)
+		if diag.Malformed {
+			// A failure, and checked before the mapping test below, because a broken document
+			// still reads back as a mapping: an unterminated flow collection loses everything
+			// after it and what remains is a well-formed map of whatever came first. That is
+			// precisely how issue #9 passed — four pages lost seven edges between them, the
+			// frontmatter parsed as a mapping, and verify exited 0.
+			//
+			// The severity is the whole point of splitting this from Incomplete. This is not a
+			// construct signpost stepped over; it is YAML no conforming reader can read, so
+			// every consumer of this page silently sees less than it says. A bundle is committed
+			// and read by people who did not build it (§4.6), and a checker that calls that a
+			// nit is the false pass verify exists to prevent.
+			res.fail(FindingConformance, rel,
+				"frontmatter is not parseable YAML, so a conforming reader loses everything "+
+					"after the first fault: %s", diag.Summary())
+			continue
+		}
 		if fm == nil || fm.Kind != manifest.KindMap {
 			res.fail(FindingConformance, rel, "frontmatter is not a YAML mapping")
 			continue
@@ -293,8 +310,9 @@ func checkConformance(res *VerifyResult, disk *onDisk) {
 // page may claim it. A second page typed `Index` would give a consumer two roots and no
 // way to choose, which is worse than having none.
 var reservedTypes = map[string]string{
-	IndexPage: "Index",
-	LogPage:   "Log",
+	IndexPage:     "Index",
+	LogPage:       "Log",
+	PracticesPage: "Practices",
 }
 
 func checkPageType(res *VerifyResult, rel string, fm *manifest.Node) {

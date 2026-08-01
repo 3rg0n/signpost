@@ -70,6 +70,13 @@ func runVerify(args []string, out, errOut io.Writer) error {
 
 	opts := buildOptions(a, *repo)
 	opts.AsOfBundle = *asOf
+	// The same pass build runs, and it has to be the same one. verify renders the bundle this
+	// tree would produce and compares; a page build emits and verify does not is reported as
+	// an orphan plus a changed index, neither of which names the real cause. See addPractices.
+	//
+	// Counts are not printed here. verify's stdout is a list of what was checked and what
+	// failed, and a line saying the repository declares twelve things is neither.
+	addPractices(&opts, a)
 	res, err := okf.Verify(a.Discovered.Root, a.Graph(), opts)
 	if err != nil {
 		return err

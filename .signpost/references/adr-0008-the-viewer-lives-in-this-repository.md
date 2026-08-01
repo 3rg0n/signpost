@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0008: the viewer lives in this repository"
-description: Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0008-the-viewer-lives-in-this-repository.md
+description: "Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0008-the-viewer-lives-in-this-repository.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0008" }
   - { name: rules, value: "23" }
-  - { name: sections, value: 8. The viewer lives in this repository, with no JavaScript dependencies / Consequences, 8. The viewer lives in this repository, with no JavaScript dependencies / Context, 8. The viewer lives in this repository, with no JavaScript dependencies / Decision, 8. The viewer lives in this repository, with no JavaScript dependencies / Status }
+  - { name: sections, value: "8. The viewer lives in this repository, with no JavaScript dependencies / Consequences, 8. The viewer lives in this repository, with no JavaScript dependencies / Context, 8. The viewer lives in this repository, with no JavaScript dependencies / Decision, 8. The viewer lives in this repository, with no JavaScript dependencies / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0008: the viewer lives in this repository

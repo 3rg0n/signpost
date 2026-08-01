@@ -196,6 +196,44 @@ Walk the tree honoring `.gitignore`. Classify by extension and by manifest
 filename. Skip binaries. Size caps mirror codeatlas: full ingest at ≤2 MB and
 ≤50k lines; oversized files get metadata plus head/tail plus an outline.
 
+Three kinds of path are recorded but not analysed, and the distinction between them
+is not tidiness — each would put a claim on a committed page that the repository
+does not support:
+
+- **Vendored** (`vendor/`, `node_modules/`, `target/`) — somebody else's code,
+  unchangeable by this team. Analysing it swamps the graph with nodes nobody can act
+  on. Recovered with `-include-vendored`.
+- **Test fixtures** (`testdata/`, `fixtures/`, `__fixtures__/`) — sample projects
+  that exist for tests to run against. Recovered with `-include-fixtures`.
+- **Binaries** — no content to read.
+
+The fixture rule was found the hard way, by signpost biting itself. Adding
+`testdata/corpus` (§4.2) put `testdata/corpus/ts/app/(marketing)` in signpost's own
+index as a module and react, httpx and serde in it as dependencies, and it reached
+`practices.md`, which cited `testdata/corpus/py/pyproject.toml` as evidence about how
+*signpost* pins its dependencies. That is not cosmetic noise. A bundle is committed
+and read by people who did not build it (§4.6), so a page naming a dependency absent
+from the `go.mod` is exactly the false grounding this design exists to prevent.
+
+A fixture is deliberately neither of its two neighbours. It is not vendored — it is
+this repository's own reviewed, hand-maintained code, and calling it third-party
+would be a wrong explanation of a right decision in the skip list users see. It is
+not a test either: a test file *exercises* the repository's surface and earns a
+`tested_by` edge pointing at it, whereas a fixture is the *subject* of a test, and an
+edge from a real module to a sample project would be a false claim.
+
+`testdata` is the strongest of the three names because it is toolchain-defined rather
+than conventional — the go command ignores it outright, so a Go repository cannot use
+it for shipping code. `fixtures` and `__fixtures__` are conventions, included because
+the cost of being wrong is asymmetric: a missed fixture puts a phantom module on a
+committed page, while a misclassified real directory loses nodes a reader can see are
+missing and recover with a flag.
+
+Skipping is not the same as analysing a fixture as its own repository, and the corpus
+harness does the second: it copies `testdata/corpus` to a root of its own, where those
+files arrive with no `testdata` segment and get correct module paths. Only that
+ordering gives the sample projects the paths a real repository would have.
+
 ### 4.1 Extract — deterministic, no model
 
 **Go** gets `go/parser` and `go/ast` from the stdlib: packages, imports, exported
@@ -243,6 +281,40 @@ imports/exports versus a hand-labeled expectation. The score is reported in
 `manifest.json` per language. When an extractor is below target for a language
 present in the repo, the affected pages say so in `status` and the bundle records
 it in `skipped_checks`. Absence of measurement is never presented as a clean bill.
+
+**Running signpost on signpost is not sufficient, and the gap is structural.** The
+CI dogfood job exercises the paths this repository contains, and this repository is
+Go with kebab-case filenames. It cannot reach the TypeScript, Python, or Rust
+extractors; it cannot reach an npm, Cargo, or pyproject manifest; and it cannot
+reach a path carrying a character that is an indicator in YAML, because none of its
+tracked paths contain one. That last gap cost something real: a Next.js dynamic
+route written unquoted into a flow mapping made four pages of a real repository
+unreadable from that line down, with every unit test and the dogfood job green.
+
+So `testdata/corpus` is a second repository, synthetic and committed: all four
+first-class languages, four manifest ecosystems, a gating workflow and a
+schedule-only one, and the filenames that break naive emitters — bracketed and
+parenthesised route directories, a comma in a basename. It is staged as its own git
+repository before analysis, because signpost reads history and the corpus's
+directory inside this checkout carries *signpost's* commits.
+
+Two checks run against it, and the division of labour matters. The Go tests assert
+**named facts** — this language produced a module page, this manifest was read —
+never counts, because a count assertion fails on every improvement to an extractor
+and never says which fact was lost. Separately, CI parses every emitted page with a
+**conforming third-party YAML reader**: signpost's own is tolerant by design (ADR
+0001), built to keep reading past what a conforming parser rejects, which makes it
+the wrong instrument for proving its own output well-formed.
+
+The strongest assertion is a frontmatter round-trip that validates the *key set* of
+each edge mapping, and it is strong because it needs no advance knowledge of the
+offending character. An unexpected key means a scalar terminated where the emitter
+did not intend, whatever caused it. This matters more than parseability alone: an
+unquoted `[` raises, but an unquoted `,` parses clean and silently splits the
+scalar, so a check for "did it parse" passes on a page whose `source:` now names a
+file that does not exist. Every path-injection defect so far — a newline, a
+backtick, a `](`, then a bracket — was found by a person imagining the character,
+and that does not scale.
 
 ### 4.3 Enrich — optional
 
@@ -757,6 +829,15 @@ The seam is `graph.json`, produced by `signpost export -format json` in the depl
 job and **not committed**: it has no value without the page that reads it, and a
 committed copy would be a second artifact that can go stale.
 
+The site is served from **`signpost.md`**, and `site/CNAME` is a required part of
+the published artifact rather than a convenience. Pages reads the custom domain from
+that file on every deploy, so a `site/` published without one *clears* the domain in
+the repository settings — the failure is a deploy that succeeds while moving the site
+back to the `github.io` address. Anything that rebuilds the artifact has to carry the
+file along. The `github.io` address keeps resolving, which is why both pages carry a
+`rel=canonical` naming the apex: two hostnames serving the same bytes is the case
+that tag exists for.
+
 The constraints, which are the whole reason this can live here:
 
 - **Zero JavaScript dependencies.** No `package.json`, no lockfile, no npm or
@@ -934,6 +1015,24 @@ tested, gated, and owned — and, more usefully, what it does not. "No test comm
 is declared for `internal/export`" is exactly the kind of thing an agent should
 know before it offers to add a test, and it is a fact with a file and a line
 behind it.
+
+**Shipped** in `internal/practice`, rendered into `.signpost/practices.md` and
+linked from the index. It is deterministic — it reads manifests the discovery pass
+has already opened and asks no model anything — so it runs on every `build` and
+every `verify` rather than behind a flag. That it runs on *both* is a correctness
+requirement rather than a convenience: `verify` works by rendering the bundle the
+current tree would produce and comparing, so a page one command emits and the other
+does not is reported as an orphan page plus a changed index, neither of which names
+the cause.
+
+Two things the implementation makes explicit. Each pillar reports **both ways** —
+found, with the file that grounds it, or not found — because a page that only ever
+reported presences would render a missing security policy identically to one it
+never looked for, and silence is the failure this section is written against. And
+the CI gate distinction is **per workflow, not per job**: GitHub's required-checks
+operates on job names, any of which can be selected, so every job in a
+`pull_request` workflow can block a merge, and only a schedule-only workflow runs
+outside that gate.
 
 **What signpost does not emit is the score.** A 1–5 maturity level is a rubric,
 and a rubric is an opinion that has to be defended, re-tuned, and argued about

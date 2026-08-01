@@ -308,6 +308,61 @@ func TestVerifyFailsOnAnEmptyType(t *testing.T) {
 	}
 }
 
+// TestVerifyFailsOnUnparseableFrontmatter is the half of issue #9 that let it reach a commit.
+//
+// The emitter wrote an unquoted `[` into a flow mapping and the checker read the page, warned,
+// and exited 0. That is the false pass verify exists to prevent (§4.6): a bundle everyone trusts
+// and nothing validates is confidently wrong.
+//
+// The page below still parses as a mapping — `type` and `title` come back intact, because the
+// fault is in the middle of the document and everything before it is fine. That is why the
+// Malformed check has to run before the mapping check, and why a test that only asserted "the
+// frontmatter is not a mapping" would pass on the bug.
+func TestVerifyFailsOnUnparseableFrontmatter(t *testing.T) {
+	root, _, g := write(t)
+	const page = "modules/internal-auth.md"
+	edit(t, root, page, func(s string) string {
+		return strings.Replace(s, "\n---\n",
+			"\ntags: [go, security\n---\n", 1)
+	})
+
+	res := verifyBundle(t, root, g)
+	if res.OK() {
+		t.Fatalf("a page whose frontmatter no conforming reader can read passed verification. "+
+			"This is issue #9: the emitter wrote it, verify read it, and the disagreement was "+
+			"reported at a severity that let CI go green.%s", findings(res))
+	}
+	if !has(res.Findings, FindingConformance, page) {
+		t.Errorf("want a conformance *finding* on %s, not a warning, got:%s", page, findings(res))
+	}
+}
+
+// TestVerifyWarnsButDoesNotFailOnTolerableFrontmatter is the other side of that severity split.
+//
+// A construct the tolerant reader stepped over is ADR 0001 working as designed — the document is
+// valid YAML and every reader agrees with what was read. Failing on it would fail builds over a
+// human's hand-edit, and a gate that fires on legitimate input is a gate somebody turns off.
+// Asserted here so that a future change tightening the Malformed check cannot quietly take this
+// with it.
+func TestVerifyWarnsButDoesNotFailOnTolerableFrontmatter(t *testing.T) {
+	root, _, g := write(t)
+	const page = "modules/internal-auth.md"
+	edit(t, root, page, func(s string) string {
+		// A tab-indented block: something this reader records and steps over, and something a
+		// conforming parser also rejects for indentation — but not a truncated document.
+		return strings.Replace(s, "\n---\n", "\nnotes:\n\tkept: by hand\n---\n", 1)
+	})
+
+	res := verifyBundle(t, root, g)
+	if !res.OK() {
+		t.Fatalf("a tolerated construct failed verification, which fails a build over a "+
+			"hand-edit ADR 0001 says to tolerate:%s", findings(res))
+	}
+	if !has(res.Warnings, FindingConformance, page) {
+		t.Errorf("want a conformance warning on %s, got:%s", page, findings(res))
+	}
+}
+
 // Both directions of the reserved-name rule. A second page typed `Index` gives a consumer
 // two roots and no way to choose, which is worse than having none.
 func TestVerifyChecksReservedFilenamesBothWays(t *testing.T) {

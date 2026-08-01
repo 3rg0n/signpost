@@ -2,18 +2,21 @@
 type: Module
 title: site
 description: 1 javascript file.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/site
-generated: { by: signpost/dev, at: "2026-07-31" }
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/site
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
-  - { name: commits, value: "4" }
+  - { name: commits, value: "5" }
   - { name: exported, value: "0" }
   - { name: files, value: "1" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-07-31" }
-  - { name: lines_added, value: "3066" }
-  - { name: lines_removed, value: "47" }
+  - { name: last_commit, value: "2026-08-01" }
+  - { name: lines_added, value: "3078" }
+  - { name: lines_removed, value: "48" }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 75% }
+  - { name: top_author_share, value: 60% }
+edges:
+  - { kind: co_changes, to: /modules/okf.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 2 }
 ---
 # site
 
@@ -26,6 +29,8 @@ attributes:
 <!-- signpost:managed:structure -->
 1 file:
 - `site/graph.js`
+
+- **Changes with**: [internal/okf](/modules/okf.md) ×2, [cmd/signpost](/modules/signpost.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

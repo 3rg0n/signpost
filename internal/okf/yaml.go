@@ -275,6 +275,25 @@ func needsYAMLQuote(s string) bool {
 	if strings.Contains(s, " #") {
 		return true
 	}
+	// The flow indicators, checked anywhere in the string rather than only in the first
+	// position above. This is the one rule here that is not about how a scalar *begins*, and
+	// it exists because every scalar this function renders may end up inside a flow
+	// collection — `edges:` is a block sequence of flow mappings — where `[`, `]`, `{`, `}`
+	// and `,` terminate the current scalar wherever they appear. A path is the case that
+	// bites: `app/tools/[slug]/page.tsx` opens a flow sequence that never closes, so the
+	// mapping never terminates and every *subsequent* entry in the sequence is unreadable.
+	// Reported as issue #9, where four pages of a Next.js repository silently lost seven
+	// edges — Next.js dynamic routes put brackets in a directory name by convention, and
+	// POSIX permits all five characters in any filename.
+	//
+	// Quoted unconditionally rather than only when the scalar is bound for a flow context.
+	// This function does not know its caller's context, and threading one through would put
+	// the decision in three call sites instead of one — where the cost of over-quoting is a
+	// pair of quotes in a diff, and the cost of getting the context wrong once is this bug
+	// again.
+	if strings.ContainsAny(s, "[]{},") {
+		return true
+	}
 	// Text that would resolve as a number must be quoted to stay text. A version string
 	// like "1.10" is the case that matters: unquoted it becomes 1.1, losing a digit.
 	if looksNumeric(s) {

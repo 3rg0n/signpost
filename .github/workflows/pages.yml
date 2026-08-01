@@ -74,6 +74,29 @@ jobs:
             exit 1
           fi
 
+      # The custom domain lives in the artifact, not in the repository settings:
+      # Pages reads site/CNAME on every deploy, and a deploy whose artifact has no
+      # CNAME clears the configured domain and moves the site back to the
+      # github.io address. That failure looks like a successful deploy, so it is
+      # checked before publishing rather than noticed afterwards.
+      - name: Check the custom domain will survive this deploy
+        env:
+          EXPECTED_DOMAIN: signpost.md
+        run: |
+          set -euo pipefail
+          if [ ! -f site/CNAME ]; then
+            echo "site/CNAME is missing; this deploy would clear the ${EXPECTED_DOMAIN} domain" >&2
+            exit 1
+          fi
+          # tr strips the trailing newline and any CRLF a Windows editor left:
+          # Pages treats the file's whole contents as the hostname.
+          got=$(tr -d '\r\n' < site/CNAME)
+          if [ "${got}" != "${EXPECTED_DOMAIN}" ]; then
+            echo "site/CNAME says '${got}', expected '${EXPECTED_DOMAIN}'" >&2
+            exit 1
+          fi
+          echo "site/CNAME names ${got}"
+
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

@@ -1,14 +1,14 @@
 ---
 type: Document
 title: "ADR 0003: directory granularity for module nodes"
-description: Architecture decision (Accepted), 18 rules read from 0003-directory-granularity-for-module-nodes.md.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/docs/adr/0003-directory-granularity-for-module-nodes.md
+description: "Architecture decision (Accepted), 18 rules read from 0003-directory-granularity-for-module-nodes.md."
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0003-directory-granularity-for-module-nodes.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-07-31" }
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: number, value: "0003" }
   - { name: rules, value: "18" }
-  - { name: sections, value: 3. Directory granularity for module nodes / Consequences, 3. Directory granularity for module nodes / Context, 3. Directory granularity for module nodes / Decision, 3. Directory granularity for module nodes / Status }
+  - { name: sections, value: "3. Directory granularity for module nodes / Consequences, 3. Directory granularity for module nodes / Context, 3. Directory granularity for module nodes / Decision, 3. Directory granularity for module nodes / Status" }
   - { name: status, value: Accepted }
 ---
 # ADR 0003: directory granularity for module nodes

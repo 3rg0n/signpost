@@ -71,6 +71,18 @@ type yamlLine struct {
 // as a complete reading of the chart.
 type Diag struct {
 	Notes []string
+	// Malformed marks the subset of notes that mean the *document* is broken rather than
+	// that this reader stepped over something it does not support.
+	//
+	// The distinction is not cosmetic, and it exists because of what a caller does with it.
+	// Most notes are tolerance working as designed (ADR 0001): a Helm template directive or
+	// a tab-indented block is something this reader cannot interpret, but the file is still
+	// valid input and every other reader will agree with what was read. An unterminated flow
+	// collection is different in kind — the YAML is not parseable *by anything*, so a
+	// conforming reader loses every entry after that point. A caller that treats both the
+	// same either fails builds over a template it was designed to tolerate, or reports an
+	// unreadable document as a nit. Both happened: see issue #9.
+	Malformed bool
 }
 
 // maxDiagNotes caps the record. A file with a thousand template directives has one
@@ -96,6 +108,19 @@ func (d *Diag) note(line int, msg string) {
 		return
 	}
 	d.Notes = append(d.Notes, entry)
+}
+
+// malformed records a note that additionally means the document is not parseable.
+//
+// The flag is set even when the note itself is dropped by maxDiagNotes above. A capped note
+// costs a location; a dropped flag would silently turn an unreadable document back into a
+// clean one, which is the failure this field exists to prevent.
+func (d *Diag) malformed(line int, msg string) {
+	if d == nil {
+		return
+	}
+	d.note(line, msg)
+	d.Malformed = true
 }
 
 // Incomplete reports whether anything went unread.
@@ -781,7 +806,7 @@ func parseFlow(s string, at int, line int, diag *Diag) (*Node, int) {
 		for {
 			at = skipFlowSpace(s, at)
 			if at >= len(s) {
-				diag.note(line, "unterminated flow mapping")
+				diag.malformed(line, "unterminated flow mapping")
 				return n, at
 			}
 			if s[at] == '}' {
@@ -811,7 +836,7 @@ func parseFlow(s string, at int, line int, diag *Diag) (*Node, int) {
 			// Same guard as the sequence branch: an entry that consumed nothing would
 			// loop forever rather than misread one file.
 			if at <= before {
-				diag.note(line, "flow mapping entry made no progress")
+				diag.malformed(line, "flow mapping entry made no progress")
 				return n, len(s)
 			}
 		}
@@ -821,7 +846,7 @@ func parseFlow(s string, at int, line int, diag *Diag) (*Node, int) {
 		for {
 			at = skipFlowSpace(s, at)
 			if at >= len(s) {
-				diag.note(line, "unterminated flow sequence")
+				diag.malformed(line, "unterminated flow sequence")
 				return n, at
 			}
 			if s[at] == ']' {
@@ -856,7 +881,7 @@ func parseFlow(s string, at int, line int, diag *Diag) (*Node, int) {
 			// turns one unanticipated shape into an infinite loop, and this reader runs
 			// over whatever YAML a repository happens to contain.
 			if at <= before {
-				diag.note(line, "flow sequence element made no progress")
+				diag.malformed(line, "flow sequence element made no progress")
 				return n, len(s)
 			}
 			n.Items = append(n.Items, item)

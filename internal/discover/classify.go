@@ -298,3 +298,42 @@ func isVendored(rel string) bool {
 	}
 	return false
 }
+
+// isFixture reports whether a path is a sample project kept for tests to run
+// against, rather than code that ships.
+//
+// This is not a tidiness rule, it is a correctness one, and signpost found it by
+// biting itself. Adding testdata/corpus — four sample projects, deliberately built
+// to look like real repositories — put `testdata/corpus/ts/app/(marketing)` in
+// signpost's own index as a module and react, httpx and serde in it as
+// dependencies. Worse, it reached practices.md, which cited
+// `testdata/corpus/py/pyproject.toml` as evidence about how *signpost* pins its
+// dependencies. A bundle is committed and read by people who did not build it
+// (design §4.6), so that is not noise: it is a page confidently describing a
+// repository that does not exist.
+//
+// The fixture is a distinct thing from the two neighbours it sits between, which
+// is why it is neither of them:
+//
+//   - Not vendored. Vendored code is somebody else's, unchangeable by this team.
+//     A fixture is this repository's own, hand-maintained, and reviewed — its
+//     content is load-bearing for the test suite.
+//   - Not a test. A test file exercises the repository's own surface and earns a
+//     tested_by edge pointing at it. A fixture is the *subject* of a test, and an
+//     edge from a real module to a sample project would be a false claim.
+//
+// `testdata` is the strongest possible signal because it is toolchain-defined
+// rather than a convention: the go command ignores it outright, so a Go
+// repository cannot use the name for shipping code. `fixtures` and `__fixtures__`
+// are conventions, included because the cost of being wrong is asymmetric — a
+// missed fixture puts a phantom module on a committed page, while a
+// misclassified real directory named `fixtures` loses nodes that a reader can see
+// are missing and recover with -include-fixtures.
+func isFixture(rel string) bool {
+	for _, d := range []string{"testdata", "fixtures", "__fixtures__"} {
+		if containsDir(rel, d) {
+			return true
+		}
+	}
+	return false
+}

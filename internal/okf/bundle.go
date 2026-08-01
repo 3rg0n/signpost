@@ -43,6 +43,11 @@ const (
 	IndexPage    = "index.md"
 	LogPage      = "log.md"
 	ManifestFile = "manifest.json"
+	// PracticesPage records what the repository declares about how it is built, tested,
+	// gated, and owned — design §9.1. Reserved alongside the two above because its `type`
+	// is checked in both directions: this filename must carry that type, and no other page
+	// may.
+	PracticesPage = "practices.md"
 )
 
 // Result reports what a write did, in enough detail for the CLI to say so.
@@ -140,6 +145,15 @@ func renderAll(g *graph.Graph, opts Options) (map[string]string, error) {
 	}
 	out[IndexPage] = indexPage(g, opts).Render()
 	out[LogPage] = logPage(g, opts).Render()
+	// Rendered only when there is something to say. Unlike `role`, this does not depend on
+	// a model, so a build normally does write it — but a caller that did not run the
+	// analysis (a graph assembled in a test, or a future caller with no manifest pass) would
+	// otherwise get a page whose every section reads as an absence, which is §4.2's rule
+	// exactly: unmeasured must not render as measured. Merge keeps a page found on disk, so
+	// an existing practices.md survives a run that renders none.
+	if opts.Practices != "" {
+		out[PracticesPage] = practicesPage(opts).Render()
+	}
 	man, err := manifestJSON(g, opts)
 	if err != nil {
 		return nil, err
@@ -272,7 +286,7 @@ func findStale(dir string, files map[string]string) ([]string, error) {
 			return nil //nolint:nilerr // as above
 		}
 		slash := filepath.ToSlash(rel)
-		if _, ok := files[slash]; !ok {
+		if _, ok := files[slash]; !ok && !reservedPage(slash) {
 			out = append(out, slash)
 		}
 		return nil
@@ -282,6 +296,20 @@ func findStale(dir string, files map[string]string) ([]string, error) {
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+// reservedPage reports whether a bundle-relative path is one signpost owns by name.
+//
+// Used to keep findStale from reporting a reserved page a given run did not render.
+// "Describes a concept that no longer exists" is the wrong claim about practices.md: it
+// describes the repository, which still exists, and a run renders none only when it had no
+// analysis to base one on. Reporting it would send someone looking for a deleted directory.
+func reservedPage(rel string) bool {
+	switch rel {
+	case IndexPage, LogPage, PracticesPage:
+		return true
+	}
+	return false
 }
 
 func sortedFileKeys(m map[string]string) []string {
@@ -316,7 +344,7 @@ func indexPage(g *graph.Graph, opts Options) *Page {
 	}
 	body := []Region{
 		humanRegion(heading(1, "Repository map")),
-		managedRegion(regionIndex, indexBody(g)),
+		managedRegion(regionIndex, indexBody(g, opts)),
 		humanRegion("\n" + heading(2, "Notes") + notesInvitation()),
 	}
 	return NewPage(fm.String(), body...)
@@ -329,9 +357,21 @@ func indexDescription(g *graph.Graph) string {
 }
 
 // indexBody groups pages by kind, with the hubs called out first.
-func indexBody(g *graph.Graph) string {
+func indexBody(g *graph.Graph, opts Options) string {
 	var b strings.Builder
 	b.WriteString("Start here. Each line names a page and what is on it.\n")
+
+	// Linked from the index rather than left to be found, and near the top: the practices
+	// page answers "how do I build and test this" before any module page becomes useful, and
+	// an agent that reads the index and stops has the pointer. Conditional on the same
+	// thing renderAll is, so the index never links a page that was not written — a dangling
+	// bundle-absolute link is a verify failure.
+	if opts.Practices != "" {
+		b.WriteString("\n" + heading(3, "How work is done here"))
+		b.WriteString("- " + proseLink("How work is done here", "/"+PracticesPage) +
+			" — what this repository declares about building, testing, gating, and " +
+			"ownership, and what it does not.\n")
+	}
 
 	if hubs := hubLines(g); hubs != "" {
 		b.WriteString("\n" + heading(3, "Most connected"))
@@ -432,6 +472,46 @@ func hubLines(g *graph.Graph) string {
 //   - **One entry per date.** Two commits on the same day collapse to one region, the later
 //     run winning. That is what "date-grouped" means, and it is also what keeps a repository
 //     that rebuilds on every push from growing an entry per push.
+//
+// practicesPage records what the repository declares about how work is done here.
+//
+// One page rather than a section on each module page, because the facts are repository-wide:
+// a test command, a CI gate and a licence are properties of the repository, and repeating
+// them on every module page would be the same claim eighty times. Where a finding *is*
+// per-module, internal/practice says so in the finding's own text.
+//
+// The body arrives finished, in opts.Practices. This function contributes the frontmatter,
+// the heading, and the Notes invitation — the same division of labour as every other page
+// here, and the reason the emitter cannot overstate what was measured: it does not know what
+// the findings say.
+func practicesPage(opts Options) *Page {
+	fm := &yamlDoc{}
+	fm.setScalar("type", "Practices")
+	fm.setScalar("title", "How work is done here")
+	fm.setScalar("description",
+		"What this repository declares about building, testing, gating, and ownership — "+
+			"and what it does not.")
+	if res := resourceFor(opts.Resource, ""); res != "" {
+		fm.setScalar("resource", res)
+	}
+	if opts.Actor != "" && opts.Date != "" {
+		fm.set("generated", flowMap(
+			yamlPair{"by", scalar(string(opts.Actor))},
+			yamlPair{"at", scalar(opts.Date)},
+		))
+	}
+	body := []Region{
+		humanRegion(heading(1, "How work is done here") +
+			"Each line is something this repository states, or something it does not. " +
+			"A missing declaration is not a criticism and there is no score here: it is a " +
+			"fact about what an agent can rely on, and the absences are the ones worth " +
+			"reading, because they are what it would otherwise have to guess.\n"),
+		managedRegion(regionPractices, opts.Practices),
+		humanRegion("\n" + heading(2, "Notes") + notesInvitation()),
+	}
+	return NewPage(fm.String(), body...)
+}
+
 func logPage(g *graph.Graph, opts Options) *Page {
 	fm := &yamlDoc{}
 	fm.setScalar("type", "Log")

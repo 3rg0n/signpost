@@ -45,6 +45,11 @@ const (
 	// grading asks for: `summary` is counted facts, `role` is a guess with a citation
 	// line, and a reader can tell which is which without knowing how signpost works.
 	regionRole = "role"
+	// regionPractices holds the practices page's findings. One region for the whole body,
+	// not one per topic: the sections are rendered together by internal/practice and a
+	// reader's notes belong under Notes, so per-topic regions would be structure serving
+	// nothing.
+	regionPractices = "practices"
 )
 
 // Actor is the OKF `generated.by` string.
@@ -96,6 +101,18 @@ type Options struct {
 	// keeping the emitter unable to invent prose even by accident, and keeping it free of
 	// any dependency on the model path.
 	Roles map[string]string
+
+	// Practices is the rendered body of the practices page — what the repository declares
+	// about how it is built, tested, gated, and owned, and what it does not (design §9.1).
+	// Empty means the page is not written at all.
+	//
+	// A finished string for the same reason as Roles, and it is worth being explicit about
+	// why the emitter does not compute this itself: the findings come from manifest facts
+	// and the file walk, neither of which is in the graph, so computing them here would
+	// give this package a dependency on the extraction packages and put a second kind of
+	// claim inside the emitter. internal/practice makes the claims and owns their wording;
+	// this package places the text and escapes it.
+	Practices string
 }
 
 // pageFor renders one node as the page a first run would write.

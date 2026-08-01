@@ -1,17 +1,17 @@
 ---
 type: Module
 title: internal/manifest
-description: 21 go files; 218 exported symbols.
-resource: git://github.com/3rg0n/signpost@30dc51f671e0e840cba4c8342a771996c6392932/internal/manifest
-generated: { by: signpost/dev, at: "2026-07-31" }
+description: 21 go files; 221 exported symbols.
+resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/internal/manifest
+generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
-  - { name: commits, value: "1" }
-  - { name: exported, value: "218" }
+  - { name: commits, value: "2" }
+  - { name: exported, value: "221" }
   - { name: files, value: "21" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-07-30" }
-  - { name: lines_added, value: "9734" }
-  - { name: lines_removed, value: "0" }
+  - { name: last_commit, value: "2026-08-01" }
+  - { name: lines_added, value: "9846" }
+  - { name: lines_removed, value: "4" }
   - { name: package, value: manifest }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
@@ -21,7 +21,7 @@ edges:
 # internal/manifest
 
 <!-- signpost:managed:summary -->
-21 go files; 218 exported symbols.
+21 go files; 221 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure

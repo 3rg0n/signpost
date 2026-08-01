@@ -1,0 +1,4 @@
+# Corpus fixture.
+*           @corpus/maintainers
+/go/        @corpus/backend
+/ts/        @corpus/frontend

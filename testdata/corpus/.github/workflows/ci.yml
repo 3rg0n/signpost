@@ -1,0 +1,26 @@
+# Corpus fixture: the gating workflow.
+#
+# Every job here is a gate, and that is a property of the trigger rather than of the job — a
+# workflow running on pull_request can have any of its jobs named in a required-checks rule.
+# The non-gating case therefore cannot live here; it is nightly.yml, which is schedule-only.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make test
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make lint

@@ -6,9 +6,91 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] — 2026-08-01
+
+The deterministic core, complete. v0.0.1 named the three things that had to land
+before this number was honest — `signpost build`, `signpost verify`, and git signal
+extraction — and all three are here, along with the OKF emitter with human-edit
+preservation, the `signpost.yml` workflow that keeps a committed bundle honest, the
+graph viewer, and an opt-in semantic pass that stays off unless a backend is
+configured *and* the flag is passed.
+
+No model and no network are required for anything in this release. `go.mod` still has
+no `require` block.
+
 ### Added
 
 #### 2026-07-31
+
+- `practices.md`, a bundle page stating what the repository declares about how it is
+  worked in: build and test commands, which CI jobs can block a merge and which run
+  outside that gate, whether dependencies are pinned by a lockfile and updated
+  automatically, ownership rules, licence, security policy, observability, ADRs, and
+  agent instructions. New `internal/practice` package; design §9.1.
+
+  **Findings, never a score.** No level, no grade, no rubric — a 1–5 scale is an
+  opinion that has to be defended and re-tuned per repository, and a repo at "level
+  2" reads as *measured* when it has only been *judged*. That is the exact failure
+  the confidence model exists to prevent, so the page states what it found and what
+  it did not find, and stops there.
+
+  **Absences are stated, not implied by silence.** A page that only ever reported
+  presences would render a missing security policy identically to one it never looked
+  for. Each pillar reports both ways, with the file that grounds it.
+
+  Deterministic, so it runs on every `build` and `verify` rather than behind a flag —
+  it reads manifests the discovery pass already opened and asks no model anything.
+
+- A multi-language test corpus and the CI job that runs signpost against it:
+  `testdata/corpus` is a synthetic repository with all four first-class languages,
+  four manifest ecosystems, a Compose file, two workflows, and the filenames that
+  break naive emitters. `go test ./cmd/signpost -run TestCorpus` exercises it
+  in-process on all three platforms; a new `corpus` CI job additionally checks the
+  emitted YAML with PyYAML.
+
+  **Dogfooding has a ceiling, and this is what clears it.** Signpost runs on
+  signpost in CI, which is a real test of the paths *this* tree contains — and this
+  tree is Go with kebab-case filenames. Self-hosting structurally cannot reach the
+  TypeScript, Python, or Rust extractors, cannot reach an npm, Cargo, or pyproject
+  manifest, and cannot reach a path carrying a YAML indicator: zero of signpost's
+  171 tracked paths contain `[`, `]`, `{`, `}`, or `,`. Issue #9 lived on the far
+  side of that ceiling, and no additional unit test would have found it either,
+  because nobody had thought of the character.
+
+  **PyYAML rather than signpost's own reader, deliberately.** That reader is
+  tolerant by design (ADR 0001) — built to keep reading past what a conforming
+  parser rejects — which makes it the wrong instrument for proving its own output is
+  well-formed. PyYAML has no stake in signpost being right.
+
+  **Assertions are named facts, not counts.** A count assertion fails on every
+  improvement to an extractor, which trains people to update the number rather than
+  read the diff, and it never says which fact was lost. The strongest check here is a
+  frontmatter round-trip that validates the *key set* of every edge mapping, and it
+  is strong precisely because it needs no advance knowledge of the offending
+  character: an unexpected key means a scalar terminated where the emitter did not
+  intend, whatever caused it. Every path-injection defect so far — a newline, a
+  backtick, a `](`, then a bracket — was found by a person imagining the character,
+  and that does not scale.
+
+  Both gates were mutation-tested rather than assumed. With the fix reverted the Go
+  test fails on all three hostile pages and the CI job reports 3 of 26; with only the
+  comma case reverted, both still fail on it — which is the case an earlier,
+  parse-only version of the check let through silently.
+
+  It earned its keep before a single assertion was written: its first run found the
+  two `Fixed` defects below that no unit test and no dogfooding run could reach. One
+  needs a multi-ecosystem repository, the other needs a bundle built and then
+  verified end to end.
+
+- `manifest.Diag.Malformed` distinguishes a document no parser can read from one the
+  tolerant reader merely stepped over. Both were notes, and they are different
+  claims: a Helm directive or tab indentation is ADR 0001's tolerance working as
+  designed and the document is still valid YAML, where an unterminated flow
+  collection means everything after it is lost to any reader. The flag is set even
+  when the note itself is dropped by the note cap — a capped note costs a location,
+  a dropped flag would silently turn an unreadable document back into a clean one.
 
 - The semantic pass, wired into `build` and shipped: `signpost build -semantic`
   summarises what each module is *for* with the configured model backend, and
@@ -466,6 +548,88 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-07-31
 
+- Sample projects under `testdata/` were analysed as though they were the repository
+  being described, putting modules and dependencies on committed pages that the
+  repository does not have.
+
+  signpost found this by biting itself. Adding `testdata/corpus` — four sample
+  projects deliberately built to look like real repositories — put
+  `testdata/corpus/ts/app/(marketing)` in signpost's own index as a module and react,
+  httpx and serde in it as external dependencies. Worse, it reached `practices.md`,
+  which cited `testdata/corpus/py/pyproject.toml` as evidence about how *signpost*
+  pins its dependencies. A bundle is committed and read by people who did not build it,
+  so a page naming a dependency that appears in no `go.mod` is not cosmetic noise —
+  it is the false grounding the design exists to prevent.
+
+  `testdata/`, `fixtures/`, and `__fixtures__/` are now recorded but not analysed,
+  the same treatment vendored code already got, and named as
+  `test fixture directory` in the skip list rather than folded into "vendored" —
+  telling somebody their own reviewed fixture is third-party code would be a wrong
+  explanation of a right decision. `-include-fixtures` recovers a directory genuinely
+  named `fixtures` that holds shipping code.
+
+  A fixture is deliberately neither of its neighbours. Not vendored: it is this
+  repository's own hand-maintained code. Not a test either — a test *exercises* the
+  repository's surface and earns a `tested_by` edge pointing at it, while a fixture is
+  the *subject* of a test, and an edge from a real module to a sample project would be
+  a false claim.
+
+  **This changes what a bundle contains.** Any repository with a sample project under
+  `testdata/` loses those phantom modules and dependencies on the next
+  `signpost build`. signpost's own bundle went from 56 pages to 34 and its practices
+  page from "17 declared, 1 not declared" to "10 declared, 5 not declared" — the
+  second number rising is the point, because the corpus had been supplying evidence
+  about a repository that does not exist. This does not affect the corpus harness,
+  which copies the corpus to a root of its own where those files are the surface
+  rather than a sample.
+
+- A path containing a YAML flow indicator made a page's frontmatter unreadable from
+  that line down. Issue #9. `app/tools/[slug]/page.tsx` — an ordinary Next.js
+  dynamic route — was written unquoted into an `edges[]` flow mapping, where `[`
+  opens a flow sequence. The mapping never terminated, so a conforming parser lost
+  every edge from that point on, and four pages of a real repository lost seven
+  edges between them.
+
+  The quoting rule tested indicators against the first character only, which is
+  correct for a block scalar and wrong for a flow one. In a flow context `[`, `]`,
+  `{`, `}`, and `,` end the current scalar *wherever they appear* — position is not
+  part of the rule. Now any path carrying one is quoted.
+
+  A comma was the worse half of the same bug and the reason the fix covers all five
+  rather than just brackets. An unquoted `[` raises, so it is at least loud: the
+  document is unreadable and every parser says so. An unquoted `,` parses **clean**
+  and silently splits the scalar — `source: py/greeter/data,notes.py` reads back as
+  `source: py/greeter/data` with an invented `notes.py:` key beside it. Consumers
+  get a source path naming a file that does not exist, and nothing anywhere reports
+  a problem.
+
+  `verify` reported the bracket case as a warning and exited 0, which is what let it
+  reach a commit. That half is tracked separately; a `Malformed` flag now
+  distinguishes an unparseable document from a construct the tolerant reader stepped
+  over (see Added).
+
+- `verify` rejected a bundle `build` had just written. `build` ran the practices
+  pass and `runVerify` did not, so verify re-rendered a bundle with no
+  `practices.md` and reported the difference twice over — once as an orphan page
+  "describing a concept this repository no longer has", and once as an index a build
+  would change. Neither message named the cause, because neither was about the
+  repository. Both commands now share one `addPractices` helper, so the two cannot
+  drift again.
+
+  This is the shape of failure verify is structurally prone to: it works by
+  rendering the bundle the current tree would produce and comparing, so any page one
+  command emits and the other does not is reported as a property of the repository.
+
+- Every ecosystem's dependencies were reported as unpinned in a repository that
+  commits lockfiles, alongside "a unknown lockfile is present with no manifest
+  beside it". The practices pass paired lockfiles to manifests on the ecosystem
+  field of the Fact, and `internal/manifest` deliberately does not parse lockfiles —
+  they are derived, often megabytes, and carry no architectural signal — so that
+  field was never set. Pairing is by basename now, with both spellings of each
+  ecosystem name in one file next to each other: a mismatch does not fail loudly, it
+  reports `go.mod` as unpinned in a repository that commits `go.sum`, which is a
+  false accusation rather than a missing line.
+
 - A truncated model summary was committed as though it were complete. Found by
   running the semantic pass against a live OpenAI-compatible backend for the first
   time — the pass shipped wired but exercised only against a fake, and this is what
@@ -747,6 +911,37 @@ that does not actually run an install.
   every test still green.
 
 ### Changed
+
+#### 2026-07-31
+
+- **`verify` now fails, rather than warns, on a page whose frontmatter no conforming
+  YAML reader can read.** This is the half of issue #9 that let the defect reach a
+  commit: the emitter wrote an unparseable page, the checker read it, and the
+  disagreement was reported at a severity that let CI go green. A bundle is committed
+  and read by people and agents who did not build it, so a checker that calls an
+  unreadable page a nit is the false pass verify exists to prevent (§4.6).
+
+  A page the tolerant reader merely *stepped over* still warns and still passes, and
+  keeping that split is the reason this took a new flag rather than a severity bump.
+  Failing on every note would fail builds over a hand-edited block ADR 0001 says to
+  tolerate, and a gate that fires on legitimate input is a gate somebody turns off.
+
+  The check runs before the "is this a mapping" test, because a broken document still
+  reads back as a mapping: an unterminated flow collection loses everything after it
+  and what remains is a well-formed map of whatever came first. That is exactly how
+  issue #9's pages passed.
+
+  **This can turn a previously-green bundle red.** If it does, the bundle was already
+  wrong and its consumers were already losing edges silently — `signpost build` with
+  this release rewrites the affected pages correctly.
+
+- The site is served from **`signpost.md`**. `site/CNAME` carries the domain, which
+  is what makes the setting survive: GitHub Pages reads the custom domain from a
+  file in the published artifact, so a deploy from a `site/` without one clears the
+  domain configured in the repository settings and quietly reverts the site to the
+  `github.io` address. Both pages gained a `rel=canonical` and the landing page's
+  `og:url` now names the apex, because both hostnames keep resolving and serving
+  identical bytes — which is exactly the case a canonical tag settles.
 
 #### 2026-07-30
 
