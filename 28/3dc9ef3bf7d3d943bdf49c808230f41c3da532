@@ -1,0 +1,106 @@
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_1e43a034f9400b 653-667,672,674-691,693-716
+  s_f6c0b1ac81cb95::t_a755f3b5bf97d0 771
+  s_f6c0b1ac81cb95::t_60e3b3d01846dc 717-742,744-770,772-777
+  s_f6c0b1ac81cb95::t_025668b5069af1 668-671,673
+  s_f6c0b1ac81cb95::t_ff4eb45818c8fc 743
+  s_f6c0b1ac81cb95::t_f6ad014a8b7f8f 692
+internal/manifest/registry_test.go
+  s_f6c0b1ac81cb95::t_ee1b0ec8080456 120,127-153
+  s_3f706e3f4b4643::t_15b18820c28093 154-155
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_8c93e7711e61e9 70-86
+  s_f6c0b1ac81cb95::t_56e706b6a581ad 44-50
+  s_f6c0b1ac81cb95::t_6249e3cd56df17 101
+  s_f6c0b1ac81cb95::t_c18a9d69840354 546-564,566-592
+  s_f6c0b1ac81cb95::t_bc0baefa842680 175-266
+  s_f6c0b1ac81cb95::t_a469dc12c202e6 484-494
+  s_f6c0b1ac81cb95::t_13a6c0c8ee6ca6 565
+internal/manifest/tsconfig_test.go
+  s_f6c0b1ac81cb95::t_86e044bb9e47af 1-187
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_8ef8a680b1f76c 106-114
+  s_f6c0b1ac81cb95::t_ed7304b43cfbfe 86-91
+testdata/corpus/rust/src/main.rs
+  s_f6c0b1ac81cb95::t_3193ee940f075b 5-17,19-22
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_4cc587acfe4528 275-280,292-294,300-308
+  s_f6c0b1ac81cb95::t_9a8074689c2752 287-288,290
+  s_f6c0b1ac81cb95::t_ddd5d36b97d7e5 281-284
+  s_f6c0b1ac81cb95::t_e28b344c32fca8 342-348,355,359,362-364,366-376,379-387,389-392
+  s_f6c0b1ac81cb95::t_918e6e32ca7c4d 312-323,327-328,335-337
+  s_f6c0b1ac81cb95::t_aca5db1b3b66a1 262-264,326,401-403,416-418,450-451,453
+  s_f6c0b1ac81cb95::t_28a20e9893693b 257-261,265-274,286,291,295,309-311,324-325,329-334,338-341,349-350,360-361,365,377-378,388,393-400,404-415,419-449,452,454-495
+  s_f6c0b1ac81cb95::t_8a11ec3beba303 351-354,356-358
+  s_f6c0b1ac81cb95::t_eab95569b35645 285,289,296-299
+testdata/corpus/ts/packages/api/src/handler.ts
+  s_f6c0b1ac81cb95::t_6b70066fb76d46 12-17,35
+  s_f6c0b1ac81cb95::t_68aeeeed49565d 18-32,36-37
+testdata/corpus/ts/packages/api/tsconfig.json
+  s_f6c0b1ac81cb95::t_acfcf5422c4ef4 1-8
+internal/manifest/registry.go
+  s_f6c0b1ac81cb95::t_593d2b6116abdc 242-254
+  s_f6c0b1ac81cb95::t_e0ab4219e735dd 79-83
+testdata/corpus/ts/tsconfig.json
+  s_f6c0b1ac81cb95::t_86ed25db2c900d 2-5,10-20,27,29
+  s_f6c0b1ac81cb95::t_b693df97b1eb66 21-26
+internal/manifest/tsconfig.go
+  s_f6c0b1ac81cb95::t_5a872798c14ba2 1-183
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_73c6740639cd36 171-172,175-178
+internal/manifest/facts.go
+  s_f6c0b1ac81cb95::t_9715210f7b234f 462-469
+  s_f6c0b1ac81cb95::t_b3345a8d00e8d6 40-42
+  s_f6c0b1ac81cb95::t_9c41592aeb6ae6 99,103-132
+  s_3f706e3f4b4643::t_a7fc1a7d6b60b6 133
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_a02d2d1b3611c8 740-748,751,754-765
+  s_f6c0b1ac81cb95::t_766595a9275a11 769-893
+  s_f6c0b1ac81cb95::t_daecdd74f9d7d4 678-682
+  s_f6c0b1ac81cb95::t_0fd0b632ccf48e 738
+  s_f6c0b1ac81cb95::t_851720973b35e3 727-737
+  s_f6c0b1ac81cb95::t_f5974f9c1b741a 622-677,683-726,739,749-750,752-753,766-768
+  s_3f706e3f4b4643::t_f37657ed78ddf4 621
+testdata/corpus/ts/assets/logo.svg
+  s_f6c0b1ac81cb95::t_04719ebcad8f4b 1-8
+testdata/corpus/go/cmd/hello/main.go
+  s_f6c0b1ac81cb95::t_d0512cd445e431 8-15,18-21
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_43509f2fca0667 36-65
+  s_f6c0b1ac81cb95::t_6efd2a733ace49 85-92
+testdata/corpus/ts/app/tools/[slug]/page.tsx
+  s_f6c0b1ac81cb95::t_d862fc5c6f367f 20
+  s_f6c0b1ac81cb95::t_d2de85f58d5d68 7-11
+  s_f6c0b1ac81cb95::t_6d6d9f9325059d 12-15
+  s_f6c0b1ac81cb95::t_3437d294c2a4e2 18-19
+docs/design.md
+  s_f6c0b1ac81cb95::t_b490111b520b56 398-420
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_8cf37ab8f41e09 13-76
+testdata/corpus/py/greeter/formatter.py
+  s_f6c0b1ac81cb95::t_9319971e6c5e0b 5-17,21,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "283dc9ef3bf7d3d943bdf49c808230f41c3da532",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
