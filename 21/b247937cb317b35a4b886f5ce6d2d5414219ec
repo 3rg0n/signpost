@@ -1,0 +1,62 @@
+internal/discover/discover.go
+  s_f6c0b1ac81cb95::t_10f47c3d7f619e 176
+  s_f6c0b1ac81cb95::t_08982b836e5ab5 107-115
+  s_f6c0b1ac81cb95::t_dc83771b051be7 119
+  s_f6c0b1ac81cb95::t_b59a1c67a1fcad 90-96,99-106,116-118
+  s_f6c0b1ac81cb95::t_591a8164c47f7a 546-550,561-562
+  s_f6c0b1ac81cb95::t_a151a8c30fc57d 554
+  s_f6c0b1ac81cb95::t_13305ec9c5d48a 566
+  s_f6c0b1ac81cb95::t_a982c857e25b97 120
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_62e0b92b4b63d2 397-479
+internal/manifest/registry.go
+  s_f6c0b1ac81cb95::t_54f68eefed8886 153-156
+  s_f6c0b1ac81cb95::t_f3469817d3b5cb 160
+docs/design.md
+  s_f6c0b1ac81cb95::t_a611ff95927133 206-213
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_a061211077157e 257
+  s_f6c0b1ac81cb95::t_56a85f30288256 568
+internal/semantic/semantic.go
+  s_f6c0b1ac81cb95::t_15414071a8a163 181
+  s_f6c0b1ac81cb95::t_e3e10dadb1109c 360
+  s_f6c0b1ac81cb95::t_920780df18490b 349-351
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_f8c069803ee1ed 1236-1276,1282-1312
+  s_f6c0b1ac81cb95::t_a43c0eada31f9e 1277-1281
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_c15799457bfba0 930-931
+  s_f6c0b1ac81cb95::t_234109a705e52d 873-882,890-929,932-941
+  s_f6c0b1ac81cb95::t_8a01e3a9a11d45 883-889
+cmd/signpost/main_test.go
+  s_f6c0b1ac81cb95::t_d4a9c5d6874bb1 6
+  s_f6c0b1ac81cb95::t_385a1529594c1c 89-95,97-100,105-149
+  s_f6c0b1ac81cb95::t_2b8e5a8145395b 96
+  s_f6c0b1ac81cb95::t_fa4d9b4e3351c4 101-104
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_965b854bbc2ea6 93-120
+internal/manifest/registry_test.go
+  s_f6c0b1ac81cb95::t_afd542c35bf39c 234-248
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_a30aeffe9a212b 11-35
+testdata/corpus/ts/node_modules/@corpus-vendor/logger/index.ts
+  s_f6c0b1ac81cb95::t_c8911f1d3f07c2 1-14
+testdata/corpus/ts/node_modules/@corpus-vendor/logger/package.json
+  s_f6c0b1ac81cb95::t_810c4d8294a7cb 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "21b247937cb317b35a4b886f5ce6d2d5414219ec",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
