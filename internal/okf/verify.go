@@ -231,7 +231,7 @@ func readBundle(dir string) (*onDisk, error) {
 		if err != nil {
 			return fmt.Errorf("okf: reading %s: %w", p, err)
 		}
-		d.pages[p] = string(b)
+		d.pages[p] = normalizeRead(string(b))
 		d.order = append(d.order, p)
 		return nil
 	})
@@ -694,7 +694,10 @@ func checkUpToDate(res *VerifyResult, dir string, disk *onDisk,
 			res.fail(FindingConformance, rel, "unreadable: %v", err)
 			continue
 		}
-		if string(cur) != merged {
+		// normalizeRead, or a CRLF checkout fails this check on every page in the bundle
+		// while being byte-identical to what a build produces — and the remedy the message
+		// names would not fix it.
+		if normalizeRead(string(cur)) != merged {
 			res.fail(FindingOutOfDate, rel,
 				"a build would change this page — run `signpost build` and commit the result")
 		}

@@ -436,3 +436,30 @@ func TestEnsureTrailingNewline(t *testing.T) {
 		}
 	}
 }
+
+// TestNormalizeReadOnlyTouchesCRLF pins the scope of the read-side normalisation directly.
+//
+// The rule is narrow on purpose. Converting CRLF is undoing a transport encoding git chose;
+// touching anything else would be editing what a human wrote, which the invariant at the top
+// of page.go forbids. The lone-CR case is the one worth spelling out: no git conversion
+// produces a bare CR, so one that reaches here is a byte someone put in the file deliberately
+// — a classic Mac line ending, or content inside a code fence — and rewriting it would lose
+// information rather than recover it.
+func TestNormalizeReadOnlyTouchesCRLF(t *testing.T) {
+	cases := map[string]string{
+		"":                        "",
+		"a\nb\n":                  "a\nb\n",                // already LF: unchanged
+		"a\r\nb\r\n":              "a\nb\n",                // the whole point
+		"a\r\nb\n":                "a\nb\n",                // mixed, as a partial hand-edit leaves it
+		"a\rb":                    "a\rb",                  // lone CR is content, not a line ending
+		"a\r\rb":                  "a\r\rb",                // still content
+		"a\r\r\nb":                "a\r\nb",                // CR then CRLF: only the CRLF converts
+		"trailing spaces:   \r\n": "trailing spaces:   \n", // whitespace before the break survives
+		"\r\n":                    "\n",
+	}
+	for in, want := range cases {
+		if got := normalizeRead(in); got != want {
+			t.Errorf("normalizeRead(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

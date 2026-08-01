@@ -39,6 +39,45 @@ const (
 func openMarker(name string) string  { return markerPrefix + name + markerSuffix }
 func closeMarker(name string) string { return markerEnd + name + markerSuffix }
 
+// normalizeRead converts a page read from disk to the line endings the emitter writes.
+//
+// Every comparison signpost makes is a byte comparison against freshly generated content,
+// and the emitter always writes LF. So a checkout that materialised the bundle with CRLF
+// differs from a rebuild on every single line, and the three things that compare bytes all
+// draw the wrong conclusion at once:
+//
+//   - `verify` reports "a build would change this page" for every page in the bundle. The
+//     bundle is byte-identical to what a build would produce, so the message is false and
+//     the fix it names does not help — a rebuild writes LF, git converts it back on the
+//     next checkout, and the gate stays red forever.
+//   - `build` reports every page as `updated` and rewrites all of them, so a filesystem
+//     watcher fires on the whole bundle each run.
+//   - `build` reports "N page(s) had human notes, carried across" on a bundle with no
+//     human notes at all, because HumanText() differs by its line endings. That one is
+//     the worst of the three: the count exists to tell a user their writing was kept, so
+//     inventing it teaches them the number means nothing.
+//
+// This is git's `core.autocrlf=true` on Windows, which is a default many Windows installs
+// select, and it needs no unusual setup to hit: commit a bundle, clone the repository,
+// verify. A `.gitattributes` carrying `* text=auto eol=lf` prevents it, and this
+// repository ships one, which is exactly why signpost's own CI could never catch this.
+// Normalising on read fixes it for repositories that have not been configured, which is
+// every repository on the first day signpost runs in it.
+//
+// The narrow scope is the point, and it is why this does not violate the invariant at the
+// top of this file. Human text is never *modified* — it is read through a decoding step,
+// the same way the UTF-8 BOM that a Windows editor leaves is stripped on read. What a
+// human wrote is their text; the bytes their platform's git chose to store it in are not,
+// and treating a transport encoding as content is what produces all three bugs above. A
+// lone CR is left alone: it is a classic Mac line ending no git conversion produces, so a
+// CR that reaches here is a byte someone put in a file on purpose.
+func normalizeRead(s string) string {
+	if !strings.Contains(s, "\r\n") {
+		return s
+	}
+	return strings.ReplaceAll(s, "\r\n", "\n")
+}
+
 // Page is a parsed bundle page: its frontmatter, and its body split into regions.
 type Page struct {
 	// Frontmatter is the raw text between the `---` fences, excluding them, exactly as

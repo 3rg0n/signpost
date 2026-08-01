@@ -34,7 +34,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 21 go files; 221 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
-- [internal/okf](/modules/okf.md) — 13 go files; 184 exported symbols.
+- [internal/okf](/modules/okf.md) — 13 go files; 189 exported symbols.
 - [internal/practice](/modules/practice.md) — 3 go files; 29 exported symbols.
 - [internal/semantic](/modules/semantic.md) — 3 go files; 35 exported symbols.
 - [cmd/signpost](/modules/signpost.md) — 13 go files; 48 exported symbols; entrypoint main; package main.

@@ -119,6 +119,14 @@ Two rules govern rewriting, and they are why the bundle is safe to hand-edit:
   from claiming a human vouched for code they never saw. Re-review, record the
   page's current `resource:`, and the next run clears it.
 
+Line endings are signpost's to choose, and it chooses LF — that is what makes the same
+commit produce identical bytes on Windows and Linux. Pages are read back through the
+same normalisation, so a checkout that git converted to CRLF is recognised as
+up-to-date rather than reported as stale; you do not need to configure anything for the
+bundle to be correct. Pinning `* text=auto eol=lf` in `.gitattributes` is still worth
+doing in a repository that commits a bundle, for the ordinary reason — it keeps the
+diffs readable.
+
 Pass `-repo example.com/org/repo` to name the repository in each page's
 `resource:` URI. It is asked for rather than derived from a git remote: a remote
 URL is a property of your checkout, and a fork's remote names the upstream.

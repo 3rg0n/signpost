@@ -768,6 +768,56 @@ YAML at all — a conforming parser rejects the whole document, so the library w
 the deployment surface unread. Owning one tolerant reader covers both cases; a library plus
 a hand-written template path would have been two.
 
+### 6.4 Line endings are a transport encoding
+
+signpost writes LF, always, and normalises CRLF to LF when it *reads* a page back.
+The write side follows from byte-stability (§8.1): the bundle's line endings are
+signpost's to choose, and choosing one is what lets a Windows contributor and a
+Linux runner produce identical bytes. The read side is less obvious and was a
+defect before it was a rule.
+
+Every claim signpost makes about an existing bundle is a byte comparison against
+freshly generated content. So a checkout that materialised the bundle with CRLF —
+git's `core.autocrlf=true`, which many Windows installs select by default —
+differs from a rebuild on every line of every page, and three things go wrong at
+once:
+
+- **`verify` reports every page as out of date.** The bundle is byte-identical to
+  what a build would produce, so the finding is false *and* the remedy it names
+  does not work: a rebuild writes LF, git converts it back on the next checkout,
+  and the gate stays red. On a pull request that changed nothing, CI fails on the
+  whole bundle.
+- **`build` rewrites every page each run**, so nothing is ever `unchanged` and a
+  filesystem watcher fires on the entire bundle.
+- **`build` reports human notes nobody wrote.** `HumanText()` differs by its line
+  endings, so a bundle with no `## Notes` at all reports "N page(s) had human
+  notes, carried across". That is the worst of the three: the count exists to
+  tell someone their writing survived, so inventing it teaches them the number
+  means nothing.
+
+Normalising on read fixes all three, and it is the right layer rather than the
+convenient one. A `.gitattributes` pinning `* text=auto eol=lf` also prevents it,
+and this repository ships one — which is precisely why signpost's own CI could
+never have caught this. The bug is invisible in a repository already configured
+against it, and **every** repository is unconfigured on the first day signpost
+runs in it. Fixing it in the tool means a bundle is correct before anyone
+configures anything; recommending `.gitattributes` alone would mean the tool is
+wrong by default and every user has to know why.
+
+Two limits keep this from becoming an edit. A lone CR is left alone: no git
+conversion produces one, so a bare CR that reaches the reader is a byte somebody
+put in the file deliberately. And signpost normalises to *compare*, not to
+convert — a page whose content matches is not rewritten, so a file keeps whatever
+line endings its owner's git chose. That preserves §6.1's invariant exactly: human
+text is never modified. It is decoded on read, the same way a UTF-8 BOM from a
+Windows editor is tolerated and stripped. What a person wrote is their text; the
+bytes their platform chose to store it in are not, and treating the second as the
+first is what produced all three bugs above.
+
+Pinning LF in `.gitattributes` is still worth doing in a repository that commits a
+bundle, for a reason that has nothing to do with correctness: it keeps the diffs
+readable. It is a recommendation, not a prerequisite.
+
 ---
 
 ## 7. One repo: generator and viewer

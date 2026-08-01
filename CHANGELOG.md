@@ -6,7 +6,41 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+#### 2026-08-01
+
+- **A bundle checked out with CRLF line endings was reported as stale on every page,
+  and the remedy the message named did not work.** Every claim signpost makes about an
+  existing bundle is a byte comparison against freshly generated content, and the
+  emitter writes LF. So a checkout under git's `core.autocrlf=true` — a default many
+  Windows installs select — differed from a rebuild on every line, and three things
+  failed at once: `verify` reported "a build would change this page" for every page in
+  a bundle that was byte-identical to what a build produces; `build` rewrote all of
+  them each run instead of reporting them unchanged; and `build` claimed "N page(s) had
+  human notes, carried across" on a bundle with no human notes at all, because
+  `HumanText()` differed only by its line endings.
+
+  The verify failure was the one that had no way out. "run `signpost build` and commit
+  the result" writes LF, git converts it back on the next checkout, and the gate stays
+  red — so a user following the instruction exactly ended up where they started. On CI
+  it failed a pull request that changed nothing, on every page.
+
+  Pages are now normalised to LF when read, so a CRLF checkout is recognised as
+  up-to-date. Scope is deliberately narrow: a lone CR is left alone, since no git
+  conversion produces one and a bare CR in a page is a byte somebody put there on
+  purpose; and signpost normalises to *compare*, not to convert, so a page whose
+  content matches is not rewritten and keeps whatever line endings its owner's git
+  chose. §6.1's invariant is intact — human text is never modified, only decoded on
+  read, the same way a Windows editor's UTF-8 BOM is stripped.
+
+  **This repository could never have caught it in CI**, which is the part worth
+  recording: `.gitattributes` here pins `* text=auto eol=lf`, so the bug is invisible
+  in a repository already configured against it — and every repository is unconfigured
+  on the first day signpost runs in it. Fixing it in the tool rather than only
+  recommending `.gitattributes` is what makes a bundle correct before anyone configures
+  anything. The recommendation stands anyway, for the ordinary reason that pinning LF
+  keeps diffs readable. Documented in [design §6.4](docs/design.md).
 
 ## [0.1.0] — 2026-08-01
 

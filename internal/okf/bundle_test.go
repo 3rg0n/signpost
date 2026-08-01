@@ -163,6 +163,109 @@ func TestWritePreservesHumanEditsAcrossARebuild(t *testing.T) {
 	}
 }
 
+// toCRLF rewrites a bundle file the way git materialises it under core.autocrlf=true.
+//
+// The mechanism that produces the checkout signpost has to read: a repository storing LF
+// blobs, cloned on Windows by a git configured to convert on checkout. No test can call git
+// to do this — the conversion depends on the developer's own git config, so a test that
+// relied on it would pass or fail based on the machine rather than the code.
+func toCRLF(t *testing.T, root, rel string) {
+	t.Helper()
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+	b, err := os.ReadFile(full)
+	if err != nil {
+		t.Fatalf("reading %s: %v", rel, err)
+	}
+	crlf := strings.ReplaceAll(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n", "\r\n")
+	if err := os.WriteFile(full, []byte(crlf), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", rel, err)
+	}
+}
+
+// TestWriteTreatsACRLFCheckoutAsUnchanged is the false-staleness defect, from the build side.
+//
+// Reachable with no unusual setup at all: commit a bundle, clone the repository on a Windows
+// machine whose git has core.autocrlf=true — a default many Windows installs select — and
+// build. Every page differs from a rebuild on every line, so nothing is recognised as
+// unchanged and the whole bundle is rewritten each run.
+//
+// This repository ships a .gitattributes pinning `* text=auto eol=lf`, which is precisely why
+// signpost's own CI could never catch this: the bug is invisible in a repository already
+// configured against it, and every repository is unconfigured on the first day signpost runs
+// in it.
+func TestWriteTreatsACRLFCheckoutAsUnchanged(t *testing.T) {
+	root, res, g := write(t)
+	for _, rel := range res.Written {
+		if strings.HasSuffix(rel, ".md") {
+			toCRLF(t, root, rel)
+		}
+	}
+
+	again, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	if again.Updated != 0 {
+		t.Errorf("Updated = %d on a CRLF checkout of an up-to-date bundle, want 0. "+
+			"Line endings are a transport encoding, not content: every page differs from "+
+			"the generated LF text on every line, so the whole bundle is rewritten each run",
+			again.Updated)
+	}
+	// The half that is worse than the churn. This count exists to tell a user their writing
+	// was kept, so reporting it for a bundle nobody edited teaches them it means nothing.
+	if again.Preserved != 0 {
+		t.Errorf("Preserved = %d on a bundle with no human notes, want 0. "+
+			"HumanText() differed only by its line endings, so the run claimed to have "+
+			"carried across notes nobody wrote", again.Preserved)
+	}
+}
+
+// TestWriteStillPreservesRealNotesOnACRLFPage is the other side of the check above, and it is
+// the one that would catch a fix that went too far.
+//
+// Normalising line endings on read must not make signpost blind to a real edit, and a Windows
+// editor writes that edit in CRLF. A fix that compared normalised text but then wrote the
+// generated page wholesale would pass the test above and silently delete this note.
+func TestWriteStillPreservesRealNotesOnACRLFPage(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/internal-auth.md"
+
+	// Trailing spaces included deliberately: page.go's invariant is that human text is
+	// never trimmed, re-indented, or reflowed, and a normalisation that reached past line
+	// endings into the rest of the text would take these with it.
+	const note = "\r\n## Notes\r\n\r\nLoad-bearing. Trailing spaces:   \r\n"
+	toCRLF(t, root, rel)
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+	b, err := os.ReadFile(full)
+	if err != nil {
+		t.Fatalf("reading: %v", err)
+	}
+	if err := os.WriteFile(full, append(b, []byte(note)...), 0o644); err != nil {
+		t.Fatalf("editing: %v", err)
+	}
+
+	res, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	got := read(t, root, rel)
+	if !strings.Contains(got, "Load-bearing.") {
+		t.Fatalf("a human note written in CRLF was lost:\n%s", got)
+	}
+	// Asserted against the CRLF form, because the page is left exactly as it was found. The
+	// merged text matches what is already on disk once line endings are set aside, so
+	// writeIfChanged declines to write and the file keeps the endings its owner's git chose.
+	// signpost normalises to *compare*; it does not convert a file it has no reason to touch.
+	if !strings.Contains(got, "Trailing spaces:   \r\n") {
+		t.Errorf("trailing whitespace was stripped from human text; normalisation reached "+
+			"past line endings into the text itself:\n%q", got)
+	}
+	if res.Preserved != 1 {
+		t.Errorf("Preserved = %d, want exactly 1 — the page that was actually edited",
+			res.Preserved)
+	}
+}
+
 // A managed region a human overwrote is regenerated — that is the half of the contract they
 // do not own, and the page would otherwise assert a structure the graph no longer has.
 func TestWriteRegeneratesManagedRegionsOverAHumanEdit(t *testing.T) {

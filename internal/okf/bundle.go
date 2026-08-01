@@ -217,7 +217,10 @@ func mergeOnDisk(full, generated string, opts Options) (string, writeStat, error
 		return generated, st, nil
 	}
 
-	prev := ParsePage(string(existing))
+	// Normalised before parsing, so a CRLF checkout does not read as a page whose every
+	// line differs from the generated one. See normalizeRead: without this, st.preserved
+	// below is true for every page and the run claims human notes nobody wrote.
+	prev := ParsePage(normalizeRead(string(existing)))
 	next := ParsePage(generated)
 	st.preserved = strings.TrimSpace(prev.HumanText()) != strings.TrimSpace(next.HumanText())
 
@@ -246,7 +249,11 @@ func mergeOnDisk(full, generated string, opts Options) (string, writeStat, error
 func writeIfChanged(full, content string, st writeStat, res *Result) error {
 	if st.existed {
 		cur, err := os.ReadFile(full) // #nosec G304 -- see mergeOnDisk
-		if err == nil && string(cur) == content {
+		// Compared after normalising, so a CRLF checkout is recognised as unchanged rather
+		// than rewritten on every run. The write below still emits LF: the bundle's line
+		// endings are signpost's to choose, and choosing one is what makes it byte-stable
+		// across the platforms design §4.6 requires agree.
+		if err == nil && normalizeRead(string(cur)) == content {
 			res.Unchanged++
 			return nil
 		}

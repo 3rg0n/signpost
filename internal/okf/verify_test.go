@@ -84,6 +84,64 @@ func TestVerifyPassesOnAFreshlyWrittenBundle(t *testing.T) {
 	}
 }
 
+// TestVerifyPassesOnACRLFCheckout is the false-staleness defect from the gate's side, and it
+// is the worse half: `build` churning is noise, but this makes verify report a bundle as
+// out of date when it is byte-identical to what a build would produce.
+//
+// The remedy the failure names does not work, which is what makes it more than a wrong
+// message. "run `signpost build` and commit the result" writes LF, git converts it back to
+// CRLF on the next checkout, and the gate is red again — so a user following the instruction
+// exactly ends up where they started with no way to tell why. On CI this fails the build for
+// every page in the bundle on a pull request that changed nothing.
+func TestVerifyPassesOnACRLFCheckout(t *testing.T) {
+	root, res, g := write(t)
+	for _, rel := range res.Written {
+		if strings.HasSuffix(rel, ".md") {
+			toCRLF(t, root, rel)
+		}
+	}
+
+	got := verifyBundle(t, root, g)
+	if !got.OK() {
+		t.Fatalf("a CRLF checkout of an up-to-date bundle failed verification. Line endings "+
+			"are how the platform's git stored the file, not what the bundle says:%s",
+			findings(got))
+	}
+	// The pass has to be a real one. A fix that made readBundle return nothing would also
+	// produce OK() here, and it would be a false pass of exactly the kind §4.6 forbids.
+	if got.Checked.Pages == 0 || got.Checked.Edges == 0 || got.Checked.Links == 0 {
+		t.Errorf("checked %d pages, %d edges, %d links — a pass over nothing is not a pass",
+			got.Checked.Pages, got.Checked.Edges, got.Checked.Links)
+	}
+}
+
+// TestVerifyStillFailsOnRealDriftInACRLFCheckout is the mutation the fix above must survive.
+//
+// Normalising line endings must not cost the check its teeth. This edits the *content* of a
+// page in a CRLF bundle, which is a real difference a build would change, and the gate has
+// to still catch it — otherwise the fix for a false negative bought a false positive, which
+// is the trade this whole file exists to refuse.
+func TestVerifyStillFailsOnRealDriftInACRLFCheckout(t *testing.T) {
+	root, res, g := write(t)
+	for _, rel := range res.Written {
+		if strings.HasSuffix(rel, ".md") {
+			toCRLF(t, root, rel)
+		}
+	}
+	// Inside a managed region, which is the drift this check exists to find: a build would
+	// regenerate this text, so the committed page says something the graph does not.
+	edit(t, root, "modules/internal-auth.md", func(s string) string {
+		return strings.Replace(s, "JWT validation and PAT issuance.",
+			"Not what the graph says.", 1)
+	})
+
+	got := verifyBundle(t, root, g)
+	if got.OK() {
+		t.Error("a CRLF bundle whose content actually drifted passed verification; " +
+			"normalising line endings must not make the byte comparison toothless")
+	}
+}
+
 // The failure that matters most, and the reason the exit code is the interface: a bundle
 // describing another commit must not pass.
 func TestVerifyFailsWhenTheBundleDescribesAnotherCommit(t *testing.T) {
