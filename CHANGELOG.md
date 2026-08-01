@@ -10,6 +10,50 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-01
 
+- **signpost analysed its own bundle, inflating the file census on every run.** Only
+  `.git/` was excluded from the walk. The bundle is committed on purpose ([ADR
+  0005](docs/adr/0005-commit-the-bundle-to-the-repository.md)), so no `.gitignore` rule covers it the way
+  one covers a build directory — which is exactly how this shipped — and the second run
+  walked the pages the first run wrote. On a repository with 143 tracked files, the
+  census went from `analysed 141 files` to `analysed 223`, the difference being the 82
+  pages of the previous build.
+
+  The graph was never affected: a bundle page produces no node, so every assertion about
+  nodes and edges stayed green through the whole defect. What moved is the number a user
+  has for judging whether the map covers their repository, and it moved *upward* — in
+  the direction that reads as better coverage — growing every time the bundle grew.
+  [Design §4.2](docs/design.md) requires that unmeasured never render as measured;
+  self-measured is the same failure wearing a larger number.
+
+  The bundle directory is now excluded from the walk, in neither the analysed set nor
+  the skipped one: a skipped entry claims the repository contains something signpost
+  declined to read, and these files are not the repository's content at all.
+
+- **Every service declared in a compose file was reported as reading every secret named
+  anywhere in that file.** The facts one reader produces are scoped to a file, and a
+  secret reference carried no record of which service made it, so graph assembly
+  attributed them through the only link available — the filename. A compose file with
+  eight services and nine credentials between them gave all nine to all eight. On the
+  repository where this surfaced, a Caddy reverse proxy with no `environment:` block at
+  all was described as reading the database password, the session secret, and the SAML
+  certificate.
+
+  Nothing leaked: these are names, never values, and that invariant was never in
+  question. What was wrong is the blast radius, and it was wrong in the direction that
+  matters. "This service reads that credential" is a fact a reader acts on without
+  re-deriving it, so an invented one says a credential is reachable from somewhere it is
+  not — which is how a threat model, an incident scope, or a least-privilege review ends
+  up drawn around the wrong set of services. A missing edge prompts a question; a
+  fabricated one prompts a conclusion.
+
+  A secret reference now records the service that makes it, and each service's page
+  gets its own references plus the file's unattributed ones — a compose top-level
+  `secrets:` block names credentials for the file without saying which service reads
+  them, and dropping those would trade a false claim for a missing one. A reference
+  naming a *different* service is never included. The same attribution now applies per
+  document in a multi-document Kubernetes file, where a reference found in one resource
+  was previously a fact about all of them.
+
 - **A bundle checked out with CRLF line endings was reported as stale on every page,
   and the remedy the message named did not work.** Every claim signpost makes about an
   existing bundle is a byte comparison against freshly generated content, and the

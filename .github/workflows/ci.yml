@@ -567,6 +567,138 @@ jobs:
           done
           exit "$fail"
 
+      # A secret belongs to the service that reads it, not to every service in the file.
+      #
+      # A Facts is per file, and SecretRefs carried no service, so assemble attributed them
+      # through the only link it had — the filename. Every service declared in a compose file
+      # inherited every secret named anywhere in it, and on the repository where this surfaced
+      # a reverse proxy with no `environment:` block was reported as reading nine credentials
+      # including the database password. The corpus expresses the shape that produces it: one
+      # compose file, two services, and a credential-shaped variable in exactly one of them.
+      - name: Secrets are attributed to the service that reads them
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          db="${bundle}/services/db.md"
+          api="${bundle}/services/api.md"
+          for p in "$db" "$api"; do
+            [ -f "$p" ] || { echo "no page at ${p}; this step asserts nothing"; exit 1; }
+          done
+
+          # The counterpart that still fails: a fix that stopped reporting secrets at all
+          # would satisfy the check below, and losing the fact is the other way to be wrong.
+          grep -q 'POSTGRES_PASSWORD' "$db" || {
+            echo "db declares POSTGRES_PASSWORD in compose.yaml and its page does not name it."
+            echo "The reference was dropped rather than attributed."
+            exit 1
+          }
+
+          if grep -q 'POSTGRES_PASSWORD' "$api"; then
+            echo "the api service declares no credential-shaped variable, and its page names"
+            echo "POSTGRES_PASSWORD — the secret belonging to db, the other service in the"
+            echo "same compose file. That tells a reader a credential is reachable from a"
+            echo "service that never sees it, which is worse than saying nothing."
+            exit 1
+          fi
+          echo "secrets: attributed to db, not inherited by api"
+
+      # The bundle is signpost's own output, and a run that walks it describes itself.
+      #
+      # Not caught by .gitignore, because the bundle is committed on purpose (ADR 0005) —
+      # which is how this shipped. The graph was never wrong, so a nodes-and-edges assertion
+      # stays green through the whole defect; what moved is the census, the one number a user
+      # has for judging whether the map covers their repository, and it moved *upward* every
+      # time the bundle grew. Two runs are the whole mechanism, so this must come before the
+      # CRLF stage below, while a second build of an unchanged tree is still meaningful.
+      - name: A second build does not analyse the bundle it just wrote
+        run: |
+          set -euo pipefail
+          # A copy with no bundle in it, because the step above already built one. Measuring
+          # the second and third builds of an already-bundled tree gives two equally inflated
+          # numbers and a green step — the exact false negative this check is about.
+          corpus="${RUNNER_TEMP}/corpus-census"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus"
+
+          ./signpost build -repo example.com/corpus "$corpus" 2>"${RUNNER_TEMP}/cov1.txt" >/dev/null
+          ./signpost build -repo example.com/corpus "$corpus" 2>"${RUNNER_TEMP}/cov2.txt" >/dev/null
+          count() { sed -n 's/^analysed \([0-9]*\) files:.*/\1/p' "$1" | head -1; }
+          a=$(count "${RUNNER_TEMP}/cov1.txt"); b=$(count "${RUNNER_TEMP}/cov2.txt")
+          [ -n "$a" ] && [ -n "$b" ] || { echo "no coverage report found; this step asserts nothing"; exit 1; }
+          echo "census: ${a} then ${b}"
+          [ "$a" = "$b" ] || {
+            echo "the file census moved between two builds of an unchanged tree. A run that"
+            echo "walks the pages the last run wrote is reporting its own output as"
+            echo "repository content, and the number grows with every build."
+            exit 1
+          }
+
+      # The CRLF regression, on the runner that can least afford to assume it away. This job
+      # runs on Linux, where no checkout produces CRLF — which is the point: the conversion is
+      # applied by hand, so the assertion does not depend on the runner's git config, and the
+      # gate holds identically on all three platforms in the test job.
+      #
+      # Worth having here and in Go, because these check different claims. `go test` asserts
+      # the counts the build reports; this asserts that a bundle whose bytes a checkout
+      # rewrote is still accepted by the *shipped binary*, and it is the last stage before a
+      # release that would tell a Windows user their bundle is stale on the day they clone it.
+      - name: A CRLF checkout of the bundle is up to date, not stale
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          n=0
+          while IFS= read -r -d '' f; do
+            # Normalised first, so a file already carrying CRLF does not become CR CR LF.
+            perl -pi -e 's/\r\n/\n/g; s/\n/\r\n/g' "$f"
+            n=$((n + 1))
+          done < <(find "$bundle" -type f \( -name '*.md' -o -name '*.json' \) -print0)
+          [ "$n" -gt 0 ] || { echo "no bundle file was converted; this step asserts nothing"; exit 1; }
+          echo "converted ${n} file(s) to CRLF"
+
+          ok=0
+          ./signpost verify -quiet -repo example.com/corpus "${RUNNER_TEMP}/corpus" \
+            >"${RUNNER_TEMP}/verify-crlf.txt" || ok=$?
+          cat "${RUNNER_TEMP}/verify-crlf.txt"
+          [ "$ok" -eq 0 ] || {
+            echo "verify called a CRLF checkout stale. The bundle is byte-identical to what a"
+            echo "build produces once line endings are read as the transport encoding they are,"
+            echo "and the remedy the message names cannot fix it — a rebuild writes LF and the"
+            echo "next checkout converts it back."
+            exit 1
+          }
+
+          ./signpost build -repo example.com/corpus "${RUNNER_TEMP}/corpus" \
+            | tee "${RUNNER_TEMP}/build-crlf.txt"
+          grep -q '0 created, 0 updated' "${RUNNER_TEMP}/build-crlf.txt" || {
+            echo "build rewrote a CRLF checkout that was already correct"; exit 1; }
+          if grep -q 'had human notes' "${RUNNER_TEMP}/build-crlf.txt"; then
+            echo "build claimed human notes on a bundle with no human edits. That count exists"
+            echo "to tell a user their writing was kept, so inventing it teaches them the"
+            echo "number means nothing."
+            exit 1
+          fi
+
+          # Real drift in a managed region must still fail, or the check above is satisfied by
+          # a fix that stopped checking.
+          perl -0pi -e 's/(<!-- signpost:managed:[a-z0-9_-]+ -->\r\n)/$1Not what the graph says.\r\n/' \
+            "${bundle}/index.md"
+          drift=0
+          ./signpost verify -quiet -repo example.com/corpus "${RUNNER_TEMP}/corpus" \
+            >"${RUNNER_TEMP}/verify-drift.txt" 2>&1 || drift=$?
+          cat "${RUNNER_TEMP}/verify-drift.txt"
+          [ "$drift" -ne 0 ] || {
+            echo "verify passed on a CRLF checkout whose managed region had been edited."
+            echo "Normalising line endings must not normalise away a change in what the"
+            echo "bundle says."
+            exit 1
+          }
+          echo "CRLF: up to date when correct, still failing on real drift"
+
   security:
     name: security
     runs-on: ubuntu-24.04

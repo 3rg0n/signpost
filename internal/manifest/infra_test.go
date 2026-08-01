@@ -147,8 +147,9 @@ func TestContainerfileUnknownInstructionIsRecorded(t *testing.T) {
 	}
 }
 
-func TestComposeExtraction(t *testing.T) {
-	facts := ExtractCompose(infraFile("compose.yaml", `
+// composeFixture is shared by the two compose tests below, so the attribution test asserts
+// against the same file the extraction test does rather than a copy that can drift from it.
+const composeFixture = `
 services:
   api:
     build:
@@ -185,7 +186,10 @@ services:
 secrets:
   api_signing_key:
     file: ./secrets/signing.pem
-`))
+`
+
+func TestComposeExtraction(t *testing.T) {
+	facts := ExtractCompose(infraFile("compose.yaml", composeFixture))
 	facts.Normalize()
 
 	if facts.Incomplete {
@@ -245,6 +249,40 @@ secrets:
 	}
 	if len(facts.Entrypoints) != 1 || facts.Entrypoints[0].Path != "redis-server --appendonly yes" {
 		t.Errorf("entrypoints = %+v", facts.Entrypoints)
+	}
+}
+
+// A compose file declares many services, and a secret belongs to the one that reads it.
+//
+// The fixture above puts every credential on `api` and none on `postgres` or `worker`, so
+// this asserts both halves of the attribution: what api gets, and what its neighbours do
+// not. Before SecretRef carried a Service the refs were file-scoped, and every service in
+// the file inherited all of them.
+func TestComposeAttributesSecretsPerService(t *testing.T) {
+	facts := ExtractCompose(infraFile("compose.yaml", composeFixture))
+	facts.Normalize()
+
+	// api declares all three: an interpolated credential, an env_file, and a compose secret.
+	for _, want := range []string{"DB_PASSWORD", ".env.local", "api_signing_key"} {
+		if !contains(facts.SecretNamesFor("api"), want) {
+			t.Errorf("api should read %q: %v", want, facts.SecretNamesFor("api"))
+		}
+	}
+	// Its neighbours declare none, and inherit none. The top-level `secrets:` block names
+	// api_signing_key with a file, and that reference is attributed to api by the service
+	// that lists it — but the declaration itself is file-scoped, so it stays visible to
+	// every service rather than being dropped.
+	for _, svc := range []string{"postgres", "worker"} {
+		for _, unwanted := range []string{"DB_PASSWORD", ".env.local"} {
+			if contains(facts.SecretNamesFor(svc), unwanted) {
+				t.Errorf("%s declares no credential and should not inherit %q from api: %v",
+					svc, unwanted, facts.SecretNamesFor(svc))
+			}
+		}
+	}
+	// SecretNames stays file-scoped, which is what makes the two functions different.
+	if !contains(facts.SecretNames(), "DB_PASSWORD") {
+		t.Errorf("SecretNames is the whole file's set: %v", facts.SecretNames())
 	}
 }
 

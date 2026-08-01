@@ -149,6 +149,22 @@ func Walk(root string, opts Options) (*Result, error) {
 	base := &ignoreSet{}
 	// .git is never interesting as content; git signals come from `git log`.
 	base.add(mustCompile("/.git/"))
+	// The bundle is signpost's own output, and reading it back makes the tool describe
+	// itself rather than the repository. It is committed (ADR 0005), so it is not caught
+	// by .gitignore the way a build directory is — which is what let this through.
+	//
+	// The graph was never affected: a bundle page produces no node, because a markdown
+	// file only becomes one by being a document signpost decided to record, and these are
+	// pages *about* those documents. What it did affect is the census on stderr, which is
+	// the one number a user has for judging whether the map covers their repository:
+	// `analysed 223 files` on a repository with 143 of them, the difference being the 82
+	// pages of the previous run. That number growing every time the bundle grows is worse
+	// than wrong, because it moves in the direction that reads as better coverage.
+	//
+	// Spelled literally rather than as okf.BundleDir: this package imports nothing else in
+	// the module, and that is worth keeping — discovery is the layer everything else is
+	// built on. The name is fixed by ADR 0005 and asserted against okf.BundleDir in a test.
+	base.add(mustCompile("/.signpost/"))
 	for _, raw := range opts.ExtraIgnores {
 		if p, ok := compilePattern(raw, ""); ok {
 			base.add(p)

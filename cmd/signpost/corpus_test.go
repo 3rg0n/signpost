@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,24 @@ import (
 // in advance. Every path-injection defect signpost has had so far — a newline, a backtick, a
 // `](`, and then this — was found by a person imagining the character. That does not scale,
 // and the round-trip is what covers the next one.
+//
+// # Every bug lands here
+//
+// A fixed bug earns a stage in this file, not only a unit test in the package that owns the
+// fix. The two are not substitutes. A unit test proves the function behaves; a stage here
+// proves the *binary* behaves, on a repository whose shape signpost's own tree cannot
+// produce, through the same command a user runs. Both defects this harness has been extended
+// for were invisible to the package tests that covered their code:
+//
+//   - Issue #9, a YAML flow indicator in a path: every unit test in internal/okf was green,
+//     because no path in this repository contains a bracket.
+//   - The CRLF checkout: every unit test in internal/okf was green, and so was CI, because
+//     this repository's .gitattributes pins `eol=lf` — so the tree that would have shown the
+//     bug is the one tree configured to prevent it.
+//
+// That is the pattern worth naming: a bug that survives a package's own tests survives
+// because the tree those tests run in cannot express the condition. The corpus can, so this
+// is where the condition gets expressed.
 
 // corpusRoot is the corpus's location relative to this package.
 const corpusRoot = "../../testdata/corpus"
@@ -433,6 +452,302 @@ func TestCorpusVerifyPassesOnItsOwnOutput(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("verify rejected a bundle signpost had just written: exit = %d\n%s",
 			code, stderr)
+	}
+}
+
+// TestCorpusSecretsAreAttributedToTheServiceThatReadsThem is the regression for secrets
+// sprayed across every service in a compose file.
+//
+// The bug, found reading a real bundle rather than by any test: a Facts is per *file*, and
+// SecretRefs carried no service, so assemble linked them back through the only thing it had
+// — the filename. Every service declared in a compose file therefore inherited every secret
+// named anywhere in it. On the repository where this surfaced, a Caddy reverse proxy with no
+// `environment:` block at all was reported as reading nine credentials including the database
+// password and the SAML certificate.
+//
+// Worth a stage here rather than only a unit test because the claim is false in the direction
+// that matters. "This service reads that credential" is a fact a reader acts on without
+// re-deriving it, and an over-broad blast radius reads as a finding: it says a credential is
+// reachable from somewhere it is not. A missing edge invites a question; an invented one
+// invites a conclusion.
+//
+// The corpus expresses the condition in the shape that produces it — one compose file, two
+// services, and a credential-shaped variable in exactly one of them. `db` reads
+// POSTGRES_PASSWORD; `api` reads DATABASE_URL, which is not credential-shaped, so `api` reads
+// no secret at all. Under the defect `api` got POSTGRES_PASSWORD from its neighbour.
+func TestCorpusSecretsAreAttributedToTheServiceThatReadsThem(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	const secret = "POSTGRES_PASSWORD"
+	db, ok := pages["services/db.md"]
+	if !ok {
+		t.Fatalf("no page for the db service, so this test asserts nothing about attribution. "+
+			"Pages: %v", sortedPageNames(pages))
+	}
+	api, ok := pages["services/api.md"]
+	if !ok {
+		t.Fatalf("no page for the api service: %v", sortedPageNames(pages))
+	}
+
+	// The counterpart that still fails. Without it, a fix that stopped reporting secrets
+	// entirely would satisfy the assertion below — and dropping the fact is the other way to
+	// get this wrong, not the fix.
+	if !strings.Contains(db, secret) {
+		t.Errorf("the db service declares %s in compose.yaml and its page does not mention it, "+
+			"so the reference was lost rather than attributed:\n%s", secret, db)
+	}
+	if !strings.Contains(db, "reads-secrets") {
+		t.Errorf("the db service reads a secret and is not tagged reads-secrets:\n%s", db)
+	}
+
+	// The symptom a user would report: a service that declares no credential presented as
+	// reading its neighbour's.
+	if strings.Contains(api, secret) {
+		t.Errorf("the api service declares no credential-shaped variable, and its page names "+
+			"%s — the secret belonging to db, the other service in the same compose file. A "+
+			"reader is told a credential is reachable from a service that never sees it:\n%s",
+			secret, api)
+	}
+	if strings.Contains(api, "reads-secrets") {
+		t.Errorf("the api service reads no secret and carries the reads-secrets tag:\n%s", api)
+	}
+}
+
+// sortedPageNames lists the bundle's pages, for a failure message that says what was there.
+func sortedPageNames(pages map[string]string) []string {
+	out := make([]string, 0, len(pages))
+	for rel := range pages {
+		out = append(out, rel)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TestCorpusSecondBuildDoesNotAnalyseTheBundle is the regression for the inflated census.
+//
+// The bug, found the first time signpost was pointed at somebody else's repository: the
+// bundle is committed (ADR 0005), so it is not excluded by the .gitignore rules that cover an
+// ordinary build directory, and the *second* run walked the pages the first run wrote. The
+// census on stderr went from `analysed 141 files` to `analysed 223` on a repository with 143
+// tracked files, the difference being the 82 pages of the previous run.
+//
+// The graph was never wrong — a bundle page produces no node — which is precisely why this
+// needed a stage here. A test asserting nodes and edges is green through the whole defect. The
+// number that moved is the one a user has for judging whether the map covers their repository,
+// and it moved in the direction that reads as *better* coverage, growing every time the bundle
+// grew. Design §4.2: unmeasured must not render as measured, and neither must self-measured.
+//
+// Two runs are the whole mechanism, so this builds from a bare repository rather than
+// through buildCorpus — the first build has to be one this test can measure, or the
+// inflation has already happened before the first assertion runs.
+func TestCorpusSecondBuildDoesNotAnalyseTheBundle(t *testing.T) {
+	dir := corpusRepo(t)
+
+	// No -quiet: the census is on stderr and -quiet is what suppresses it.
+	_, first, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("the first build failed: exit = %d\n%s", code, first)
+	}
+	pages := len(bundlePages(t, dir))
+	_, second, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("the second build failed: exit = %d\n%s", code, second)
+	}
+
+	// The assertion is that the number does not move, not what the number is. A count
+	// assertion would go red on every extractor improvement, which trains people to update
+	// the number rather than read the diff.
+	before, after := analysedCount(t, first), analysedCount(t, second)
+	if before != after {
+		t.Errorf("the file census moved between two builds of an unchanged tree: %d then %d, "+
+			"a difference of %d against a bundle of %d page(s). The bundle is committed, so "+
+			"it is not excluded by .gitignore, and a run that walks the pages the last run "+
+			"wrote reports its own output as repository content.",
+			before, after, after-before, pages)
+	}
+	// No page describes the bundle either. The census is the visible symptom; a module page
+	// for `.signpost` would be the one that reaches a committed artifact.
+	for rel := range bundlePages(t, dir) {
+		if strings.Contains(rel, "signpost") {
+			t.Errorf("the bundle got a page describing itself: %s", rel)
+		}
+	}
+}
+
+// analysedCount reads the file count out of a coverage report on stderr.
+func analysedCount(t *testing.T, stderr string) int {
+	t.Helper()
+	for _, line := range strings.Split(stderr, "\n") {
+		if !strings.HasPrefix(line, "analysed ") {
+			continue
+		}
+		var n int
+		if _, err := fmt.Sscanf(line, "analysed %d files:", &n); err != nil {
+			t.Fatalf("could not read the file count from %q: %v", line, err)
+		}
+		return n
+	}
+	t.Fatalf("no coverage report on stderr, so this test asserts nothing:\n%s", stderr)
+	return 0
+}
+
+// corpusToCRLF rewrites every page in the corpus bundle the way git materialises it under
+// core.autocrlf=true, and returns how many files it touched.
+//
+// The mechanism that produces the checkout signpost has to read: a repository storing LF
+// blobs, cloned on Windows by a git configured to convert on checkout. Done by hand rather
+// than by asking git, because the conversion depends on the *developer's* git config — a test
+// that relied on it would pass or fail based on the machine rather than on the code, and on
+// this machine it would be silently skipped by the `core.autocrlf false` corpusRepo sets to
+// keep the determinism assertions honest.
+//
+// manifest.json is converted too. It is compared by verify after a JSON unmarshal, which is
+// whitespace-insensitive, so it is not part of the bug — and that is exactly why it belongs
+// here. A future change that started comparing the manifest's bytes would break under a CRLF
+// checkout, and this is the only place that would say so.
+func corpusToCRLF(t *testing.T, dir string) int {
+	t.Helper()
+	root := filepath.Join(dir, okf.BundleDir)
+	n := 0
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".md") && !strings.HasSuffix(d.Name(), ".json") {
+			return nil
+		}
+		b, err := os.ReadFile(p) // #nosec G304 -- a path from a walk of the bundle this test wrote
+		if err != nil {
+			return err
+		}
+		// Normalised first, so a file that already carries CRLF does not become CR CR LF.
+		s := strings.ReplaceAll(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n", "\r\n")
+		if err := os.WriteFile(p, []byte(s), 0o600); err != nil {
+			return err
+		}
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("converting the bundle to CRLF: %v", err)
+	}
+	if n == 0 {
+		t.Fatal("no bundle file was converted, so this test asserts nothing")
+	}
+	return n
+}
+
+// TestCorpusCRLFCheckoutIsUpToDate is the regression for the CRLF false-staleness bug, at the
+// level the unit tests in internal/okf cannot reach.
+//
+// The bug: every comparison signpost makes is a byte comparison against freshly generated
+// content, and the emitter writes LF. A checkout that materialised the bundle with CRLF
+// therefore differs on every line of every page, and three things concluded the wrong thing
+// at once — `verify` called every page stale with a remedy that could not fix it, `build`
+// rewrote every page, and `build` reported human notes on a bundle nobody had edited.
+//
+// Asserted here rather than only in internal/okf because of *why* it shipped: signpost's own
+// .gitattributes pins `* text=auto eol=lf`, so the one repository the tool is developed in is
+// the one repository configured to hide this. Every other repository is unconfigured on the
+// first day signpost runs in it. The corpus is a repository signpost did not write, and this
+// stage puts it in the state a Windows clone arrives in.
+//
+// All three symptoms are asserted, not just the verify one. They share a root cause today,
+// and a partial fix that only satisfied verify would leave a user reading a page count and a
+// notes count that are both fabricated.
+func TestCorpusCRLFCheckoutIsUpToDate(t *testing.T) {
+	dir := buildCorpus(t)
+	before := bundlePages(t, dir)
+	converted := corpusToCRLF(t, dir)
+
+	// verify: the bundle is byte-identical to what a build produces, once the line endings
+	// its checkout chose are read as the transport encoding they are.
+	_, stderr, code := invoke(t, "verify", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Errorf("verify rejected a CRLF checkout of a bundle signpost had just written "+
+			"(%d file(s) converted): exit = %d\n%s", converted, code, stderr)
+	}
+
+	// build: nothing updated, and — the symptom that mattered most — no claim of human
+	// notes. Nothing outside a managed region was edited, so a non-zero count here is the
+	// run inventing the number that exists to tell a user their writing was kept.
+	stdout, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build failed on a CRLF checkout: exit = %d\n%s", code, stderr)
+	}
+	if strings.Contains(stdout, "had human notes") {
+		t.Errorf("build claimed human notes on a bundle with no human edits:\n%s", stdout)
+	}
+	// Asserted as "nothing was written" rather than against a page count. The count in the
+	// report includes manifest.json and bundlePages does not, so matching numbers would be
+	// asserting on which files the helper walks — and it would go red on the next page the
+	// emitter adds, which trains people to update the number instead of reading the diff.
+	if !strings.Contains(stdout, "0 created, 0 updated") {
+		t.Errorf("build rewrote pages on a CRLF checkout that was already correct:\n%s", stdout)
+	}
+
+	// And the bytes on disk are still the checkout's. A page whose content matches is not
+	// rewritten, so signpost does not convert a repository's line endings behind its back —
+	// it normalises to *compare*, which is what keeps page.go's invariant intact.
+	after := bundlePages(t, dir)
+	for rel, src := range after {
+		if !strings.Contains(src, "\r\n") {
+			t.Errorf("%s lost the line endings its checkout chose: build rewrote a page it "+
+				"had just reported as unchanged", rel)
+		}
+		if normalizeCRLF(src) != normalizeCRLF(before[rel]) {
+			t.Errorf("%s changed content on a CRLF checkout", rel)
+		}
+	}
+}
+
+// normalizeCRLF is the test's own copy of the normalisation under test.
+//
+// Deliberately not internal/okf's, which is unexported and is the code this file is checking.
+// A test that compared using the function it is testing would pass by construction.
+func normalizeCRLF(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }
+
+// TestCorpusCRLFCheckoutStillFailsOnRealDrift is the other half, and without it the test
+// above is satisfied by a fix that stops checking.
+//
+// Normalising line endings must not normalise away a difference in what the bundle *says*. So
+// the same CRLF checkout gets one sentence changed inside a managed region — a real edit to
+// generated prose, of exactly the kind a rebuild would restore — and verify must still fail.
+func TestCorpusCRLFCheckoutStillFailsOnRealDrift(t *testing.T) {
+	dir := buildCorpus(t)
+	corpusToCRLF(t, dir)
+
+	// The index's own managed region, edited in place. Chosen because index.md exists in
+	// every bundle regardless of which extractors ran, so this does not go quietly green if
+	// the corpus fixture changes shape.
+	full := filepath.Join(dir, okf.BundleDir, okf.IndexPage)
+	b, err := os.ReadFile(full) // #nosec G304 -- the bundle this test wrote
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker := "<!-- signpost:managed:"
+	i := strings.Index(string(b), marker)
+	if i < 0 {
+		t.Fatalf("%s has no managed region, so this test cannot introduce drift", okf.IndexPage)
+	}
+	j := strings.Index(string(b)[i:], "\r\n")
+	if j < 0 {
+		t.Fatalf("%s was not converted to CRLF", okf.IndexPage)
+	}
+	drifted := string(b)[:i+j+2] + "Not what the graph says.\r\n" + string(b)[i+j+2:]
+	if err := os.WriteFile(full, []byte(drifted), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, code := invoke(t, "verify", "--quiet", "-repo", "example.com/corpus", dir)
+	if code == 0 {
+		t.Fatalf("verify passed on a CRLF checkout whose managed region had been edited. "+
+			"Normalising line endings must not normalise away a change in what the bundle "+
+			"says.\n%s", stderr)
 	}
 }
 

@@ -99,7 +99,7 @@ func ExtractKubernetes(f discover.File) Facts {
 				// The TLS certificate lives in a Secret, and the reference is the fact.
 				if sn := t.Get("secretName").String(); sn != "" {
 					facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-						Name: sn, Source: "kubernetes-secret", Line: t.Line,
+						Name: sn, Service: name, Source: "kubernetes-secret", Line: t.Line,
 					})
 				}
 			}
@@ -125,7 +125,11 @@ func ExtractKubernetes(f discover.File) Facts {
 		// Secret references appear across every kind, not only in workloads: an
 		// annotation naming a cert-manager issuer secret, a ServiceAccount's
 		// imagePullSecrets. One subtree walk catches them all.
-		collectK8sSecretRefs(&facts, doc)
+		//
+		// Attributed to this document's resource, which is sound because the walk is
+		// per document: a multi-document file holds many resources, and a reference
+		// found in one of them is not a fact about the others.
+		collectK8sSecretRefs(&facts, doc, name)
 	}
 
 	// A file under deploy/ that holds no apiVersion+kind document is simply not a
@@ -163,7 +167,7 @@ func readWorkload(facts *Facts, doc *Node, kind, name, ns string) {
 		// Node.KeyValues already normalises.
 		for _, kv := range c.Get("env").KeyValues() {
 			svc.EnvKeys = append(svc.EnvKeys, kv.Key)
-			readValueFrom(facts, kv, kv.Node.Get("valueFrom"))
+			readValueFrom(facts, kv, kv.Node.Get("valueFrom"), name)
 		}
 		// envFrom pulls a whole ConfigMap or Secret into the environment. The
 		// individual variable names are not stated here — they are in the referenced
@@ -171,7 +175,7 @@ func readWorkload(facts *Facts, doc *Node, kind, name, ns string) {
 		for _, ef := range c.Get("envFrom").Seq() {
 			if sn := ef.Path("secretRef", "name").String(); sn != "" {
 				facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-					Name: sn, Source: "kubernetes-secret", Line: ef.Line,
+					Name: sn, Service: name, Source: "kubernetes-secret", Line: ef.Line,
 				})
 			}
 			if cm := ef.Path("configMapRef", "name").String(); cm != "" {
@@ -193,7 +197,7 @@ func readWorkload(facts *Facts, doc *Node, kind, name, ns string) {
 		case v.Get("secret") != nil:
 			sn := firstNonEmpty(v.Path("secret", "secretName").String(), v.Path("secret", "name").String())
 			facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-				Name: sn, Source: "kubernetes-secret", Line: v.Line,
+				Name: sn, Service: name, Source: "kubernetes-secret", Line: v.Line,
 			})
 			svc.Volumes = append(svc.Volumes, vn+":secret/"+sn)
 		case v.Get("configMap") != nil:
@@ -209,7 +213,7 @@ func readWorkload(facts *Facts, doc *Node, kind, name, ns string) {
 	for _, ps := range spec.Get("imagePullSecrets").Seq() {
 		if n := ps.Get("name").String(); n != "" {
 			facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-				Name: n, Source: "kubernetes-secret", Line: ps.Line,
+				Name: n, Service: name, Source: "kubernetes-secret", Line: ps.Line,
 			})
 		}
 	}
@@ -221,17 +225,18 @@ func readWorkload(facts *Facts, doc *Node, kind, name, ns string) {
 // A `secretKeyRef` is the canonical shape of the fact this package exists to capture:
 // the variable name, the Secret's name, and the key inside it — three references and
 // no value.
-func readValueFrom(facts *Facts, kv KeyValue, from *Node) {
+func readValueFrom(facts *Facts, kv KeyValue, from *Node, service string) {
 	if from == nil {
 		return
 	}
 	if s := from.Get("secretKeyRef"); s != nil {
 		facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-			Name:   s.Get("name").String(),
-			Key:    s.Get("key").String(),
-			EnvVar: kv.Key,
-			Source: "kubernetes-secret",
-			Line:   lineOf(s, kv.Line),
+			Name:    s.Get("name").String(),
+			Key:     s.Get("key").String(),
+			EnvVar:  kv.Key,
+			Service: service,
+			Source:  "kubernetes-secret",
+			Line:    lineOf(s, kv.Line),
 		})
 	}
 }
@@ -247,16 +252,18 @@ func readSecretManifest(facts *Facts, doc *Node, name, ns string) {
 	facts.Services = append(facts.Services, Service{
 		Name: name, Kind: "Secret", Namespace: ns, Line: doc.Line,
 	})
+	// Attributed to the Secret itself: this resource *is* the named thing, so the
+	// service it belongs to is the one this document declares.
 	keys := append(doc.Get("data").MapKeys(), doc.Get("stringData").MapKeys()...)
 	if len(keys) == 0 {
 		facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-			Name: name, Source: "kubernetes-secret", Line: doc.Line,
+			Name: name, Service: name, Source: "kubernetes-secret", Line: doc.Line,
 		})
 		return
 	}
 	for _, k := range keys {
 		facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-			Name: name, Key: k, Source: "kubernetes-secret", Line: doc.Line,
+			Name: name, Key: k, Service: name, Source: "kubernetes-secret", Line: doc.Line,
 		})
 	}
 }
@@ -267,19 +274,21 @@ func readSecretManifest(facts *Facts, doc *Node, name, ns string) {
 // the controllers that extend it — cert-manager writes `secretName`, external-secrets
 // writes `secretStoreRef`. A key-name walk catches these without this package needing
 // to know every CRD that exists.
-func collectK8sSecretRefs(facts *Facts, doc *Node) {
+// service is the resource the subtree belongs to, and is empty when the caller has no
+// single owner to name — a values.yaml describes a chart, not one workload.
+func collectK8sSecretRefs(facts *Facts, doc *Node, service string) {
 	walkNodes(doc, func(key string, n *Node) {
 		switch key {
 		case "secretName", "sslSecretName", "tlsSecretName", "caSecretName":
 			if s := n.String(); s != "" {
 				facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-					Name: s, Source: "kubernetes-secret", Line: n.Line,
+					Name: s, Service: service, Source: "kubernetes-secret", Line: n.Line,
 				})
 			}
 		case "secretRef", "secretKeyRef", "secretStoreRef":
 			if s := n.Get("name").String(); s != "" {
 				facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-					Name: s, Key: n.Get("key").String(),
+					Name: s, Key: n.Get("key").String(), Service: service,
 					Source: "kubernetes-secret", Line: n.Line,
 				})
 			}
@@ -411,7 +420,9 @@ func ExtractHelmValues(f discover.File) Facts {
 		facts.Images = append(facts.Images, Image{Ref: ref, Line: n.Line})
 	})
 
-	collectK8sSecretRefs(&facts, root)
+	// File-scoped: a values.yaml configures a whole chart, and no single workload in it
+	// owns a reference found at an arbitrary depth.
+	collectK8sSecretRefs(&facts, root, "")
 	// existingSecret is the chart convention for "use a secret I already created",
 	// and it is how a well-run deployment avoids putting credentials in values.yaml
 	// at all — so its presence is a good sign worth recording.

@@ -270,6 +270,18 @@ part comparable tools mostly skip.** All of this is exact, cheap, and structural
 | `migrations/*` | data model and its evolution |
 | `CODEOWNERS`, `AGENTS.md`, `CLAUDE.md`, `docs/adr/*` | ownership, stated rules, decisions |
 
+**A secret reference names two things, and both have to be right.** The credential is
+recorded by name and never by value, which is the rule that keeps a committed bundle
+from being an exfiltration path. The second half is *whose* reference it is: a
+reference is attributed to the service that makes it, and a service inherits only the
+references a file states without naming any service — a compose top-level `secrets:`
+block, an OpenAPI security scheme. It is tempting to treat this as cosmetic, because
+no value moves either way. It is not. "This service reads that credential" is a fact
+a reader acts on without re-deriving, so an over-broad attribution says a credential
+is reachable from somewhere it is not, and that is how a threat model or an incident
+scope gets drawn around the wrong set of services. A missing edge prompts a question;
+a fabricated one prompts a conclusion.
+
 **Git signals** via `git log` (git is present wherever this runs): co-change pairs,
 churn per path, author concentration, last-touch date, first-commit date. Co-change
 is the cheapest way to find coupling that imports do not show.
@@ -315,6 +327,29 @@ scalar, so a check for "did it parse" passes on a page whose `source:` now names
 file that does not exist. Every path-injection defect so far — a newline, a
 backtick, a `](`, then a bracket — was found by a person imagining the character,
 and that does not scale.
+
+**Every fixed bug becomes a stage in this harness.** Not only a unit test in the
+package that owns the fix — that test proves the function behaves, and every defect
+this harness has been extended for shipped with green unit tests over the code it
+broke. The bracket was invisible because no tracked path in this repository contains
+one. The CRLF checkout was invisible because this repository's `.gitattributes` pins
+`eol=lf`, so the one tree signpost is developed in is the one tree configured to
+prevent it. The inflated census and the misattributed secrets were both invisible
+because they need a *second* thing to be wrong about — a bundle already on disk, a
+neighbouring service in the same file — and a unit test over one function is handed
+one input. The generalisation is worth stating plainly: **a bug survives a package's
+own tests when the tree those tests run in cannot express the condition.** The corpus
+exists to be a tree that can, which makes it the right home for the regression rather
+than a second copy of the unit test.
+
+A stage asserts the symptom a user would report, not only the exit code — the CRLF
+stage checks the fabricated "N page(s) had human notes" count as well as `verify`,
+because a partial fix satisfying only `verify` still prints a number that teaches a
+reader the count means nothing. And each stage has a counterpart that must still
+fail: normalising line endings must not normalise away a change in what the bundle
+*says*, so the same converted checkout gets one sentence edited inside a managed
+region and `verify` must reject it. Without that half, the stage is satisfied by a
+fix that stopped checking.
 
 ### 4.3 Enrich — optional
 

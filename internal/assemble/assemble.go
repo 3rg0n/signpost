@@ -408,14 +408,20 @@ func (b *builder) addServices() error {
 				n.Attrs["replicas"] = it.svc.Replicas
 			}
 		}
-		// Secret references attach to the service through the file that declared it,
-		// which is the only link the fact model carries. Names, never values.
+		// Secret references attach to this service by name, falling back to the file's
+		// unattributed references — see SecretNamesFor. Names, never values.
+		//
+		// Per service rather than per file, which it used to be: a compose file declares
+		// many services, and giving each of them every secret named anywhere in the file
+		// reported a reverse proxy as reading the database password. An over-broad claim
+		// here is worse than a missing one, because "this service reads that credential"
+		// is exactly the kind of fact a reader acts on without re-deriving it.
 		fileSet := sortedUnique(files)
 		for _, f := range b.in.Manifests.Facts {
 			if !containsStr(fileSet, f.Path) {
 				continue
 			}
-			secrets = append(secrets, f.SecretNames()...)
+			secrets = append(secrets, f.SecretNamesFor(name)...)
 		}
 		n.Files = fileSet
 		setJoined(n.Attrs, "image", images)

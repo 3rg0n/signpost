@@ -557,6 +557,69 @@ func TestWalkAlwaysSkipsDotGit(t *testing.T) {
 	}
 }
 
+// The bundle is signpost's own output. Reading it back makes the tool describe itself.
+//
+// Not caught by the .gitignore rules that cover an ordinary build directory, because the
+// bundle is deliberately committed (ADR 0005) — which is exactly how this shipped. The
+// visible cost was the census on stderr: `analysed 223 files` on a repository with 143,
+// the difference being the pages of the previous run. Skipped rather than recorded as
+// Skipped, because a Skipped entry is a claim that the repository contains something
+// signpost declined to read, and these files are not the repository's content at all.
+func TestWalkAlwaysSkipsTheBundle(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"a.go":                        "package a\n",
+		"docs/note.md":                "# a real document\n",
+		".signpost/index.md":          "---\ntype: index\n---\n",
+		".signpost/modules/a.md":      "---\ntype: module\n---\n",
+		".signpost/manifest.json":     "{}\n",
+		".signpost/cache/abc123.json": "{}\n",
+	})
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	for _, f := range res.Files {
+		if strings.HasPrefix(f.Path, ".signpost/") {
+			t.Errorf("the bundle was analysed as repository content: %s", f.Path)
+		}
+	}
+	for _, s := range res.Skipped {
+		if strings.HasPrefix(s.Path, ".signpost/") {
+			t.Errorf("the bundle was recorded as skipped content: %s (%s). It is not the "+
+				"repository's content, so counting it as content signpost declined to read "+
+				"is a different wrong answer.", s.Path, s.Reason)
+		}
+	}
+	// The point of the walk still happens. A skip rule broad enough to drop a real
+	// document beside it would pass every assertion above.
+	if len(res.Files) != 2 {
+		t.Errorf("want the 2 real files, got %v", paths(res))
+	}
+}
+
+// The literal in discover.go must stay the directory okf actually writes.
+//
+// Spelled literally there because this package imports nothing else in the module, and
+// keeping the foundation dependency-free is worth a test instead. This is that test: it
+// fails if the bundle directory is ever renamed, which is the only way the literal can rot.
+func TestBundleDirLiteralMatchesTheEmitter(t *testing.T) {
+	// The name ADR 0005 fixes, and the value of okf.BundleDir. Asserted by value rather
+	// than by import, which is the whole point — importing okf here would create the
+	// dependency this test exists to avoid.
+	const bundleDir = ".signpost"
+	root := writeTree(t, map[string]string{
+		"a.go":                  "package a\n",
+		bundleDir + "/index.md": "---\ntype: index\n---\n",
+	})
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if len(res.Files) != 1 {
+		t.Errorf("the walk did not skip %s/; got %v", bundleDir, paths(res))
+	}
+}
+
 func TestByClassExcludesVendoredAndBinary(t *testing.T) {
 	root := writeTree(t, map[string]string{
 		"a.md":      "# doc\n",

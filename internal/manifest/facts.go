@@ -308,7 +308,20 @@ type SecretRef struct {
 	// Source describes where the reference lives: "kubernetes-secret",
 	// "github-secret", "env-file", "compose-secret", "helm-values".
 	Source string
-	Line   int
+	// Service names the service that makes this reference, when the file states one.
+	//
+	// Empty means file-scoped: the reference is real, but nothing in the file says
+	// which unit reads it — a compose top-level `secrets:` declaration, a workflow
+	// secret, an OpenAPI security scheme. The distinction is load-bearing rather
+	// than descriptive, because a Facts is per file and a compose file routinely
+	// declares a dozen services. Without this field the only link back was the
+	// filename, so every service in the file inherited every secret named anywhere
+	// in it, and a reverse proxy that declares no environment at all was reported
+	// as reading the database password. That is a false architectural claim in the
+	// direction that matters most: it tells a reader a credential is reachable from
+	// somewhere it is not.
+	Service string
+	Line    int
 }
 
 // Normalize sorts and dedupes every fact list so two readings of the same file
@@ -395,6 +408,12 @@ func (f *Facts) Normalize() {
 	})
 	sort.Slice(f.SecretRefs, func(i, j int) bool {
 		a, b := f.SecretRefs[i], f.SecretRefs[j]
+		// Service leads, because it is the outer scope: it keeps one service's
+		// references adjacent, which is what makes the dedupe below — a scan of
+		// neighbours — fold within a service and never across two.
+		if a.Service != b.Service {
+			return a.Service < b.Service
+		}
 		if a.Name != b.Name {
 			return a.Name < b.Name
 		}
@@ -461,6 +480,10 @@ func dedupeImages(in []Image) []Image {
 // scanning for a name never reaches.
 //
 // A secret bound to two *different* variables is genuinely two facts and stays two.
+//
+// So is the same secret read by two different services. Two services reading one
+// credential is precisely the coupling this reader exists to surface, and folding
+// them would erase one of the two readers — so Service is part of the identity.
 func dedupeSecretRefs(in []SecretRef) []SecretRef {
 	if len(in) < 2 {
 		return in
@@ -468,7 +491,7 @@ func dedupeSecretRefs(in []SecretRef) []SecretRef {
 	out := in[:1]
 	for _, s := range in[1:] {
 		last := &out[len(out)-1]
-		if last.Name != s.Name || last.Key != s.Key {
+		if last.Service != s.Service || last.Name != s.Name || last.Key != s.Key {
 			out = append(out, s)
 			continue
 		}
@@ -560,11 +583,33 @@ func (f *Facts) JobNames() []string {
 	return sortedUnique(out)
 }
 
-// SecretNames returns the referenced secret names, sorted. Names, never values.
+// SecretNames returns every referenced secret name, sorted. Names, never values.
+//
+// File-scoped: this is the whole file's set, regardless of which service reads what.
+// Correct for asking "does this file touch credentials at all", wrong for attributing
+// them to a service — use SecretNamesFor for that.
 func (f *Facts) SecretNames() []string {
 	out := make([]string, 0, len(f.SecretRefs))
 	for _, s := range f.SecretRefs {
 		out = append(out, s.Name)
+	}
+	return sortedUnique(out)
+}
+
+// SecretNamesFor returns the secret names attributable to one service, sorted.
+//
+// That means the references the file attributed to this service by name, plus the
+// ones it attributed to no service at all. The second half is deliberate: a compose
+// top-level `secrets:` block declares credentials for the file's services without
+// saying which, and dropping those would trade a false claim for a missing one.
+// A reference naming a *different* service is never included, which is the whole
+// point — that is the misattribution this function exists to prevent.
+func (f *Facts) SecretNamesFor(service string) []string {
+	out := make([]string, 0, len(f.SecretRefs))
+	for _, s := range f.SecretRefs {
+		if s.Service == "" || s.Service == service {
+			out = append(out, s.Name)
+		}
 	}
 	return sortedUnique(out)
 }

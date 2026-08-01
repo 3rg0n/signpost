@@ -53,6 +53,46 @@ on an empty graph, so an exit-code check would pass on a total collapse. If a
 change legitimately moves the node or edge counts below the floors in
 `.github/workflows/ci.yml`, move the floor in the same commit and say why.
 
+## A fixed bug becomes a corpus regression
+
+`testdata/corpus` is a synthetic repository — all four first-class languages, four
+manifest ecosystems, and the filenames that break naive emitters. It is the only
+harness that runs the whole binary against a repository signpost did not write, and
+**every bug fix adds a stage to it**, in `cmd/signpost/corpus_test.go` and in the
+`corpus` job. A unit test beside the fix is necessary and is not sufficient.
+
+The reason is in the defects the harness has been extended for. Every one had green
+unit tests in the package that owned the code, and every one shipped anyway:
+
+- A YAML flow indicator in a path made four pages unreadable from that line down.
+  Nothing in *this* repository's tracked paths contains a bracket, so no test here
+  could express the input.
+- A CRLF checkout made `verify` call every page stale, `build` rewrite all of them,
+  and `build` report human notes on a bundle nobody had edited. This repository's
+  `.gitattributes` pins `eol=lf`, so the one tree signpost is developed in is the
+  one tree configured to hide it.
+- The walk read signpost's own committed bundle, so the file census grew on every
+  run. It needs a bundle already on disk to go wrong, and it moved no node or edge —
+  a test asserting the graph is green through the whole defect.
+- Every service in a compose file inherited every secret named in that file, so a
+  reverse proxy was reported as reading the database password. It needs a *second*
+  service in the file to be wrong about, and a unit test over one extractor call
+  reads one file.
+
+That is the pattern: a bug survives a package's own tests when the tree those tests
+run in cannot express the condition. So when you fix one, ask what shape of
+repository would have caught it, and put that shape in the corpus — a file, a path,
+or a stage that manipulates the bundle before re-running the command. Two rules keep
+these stages honest:
+
+- **Assert the symptom a user would report,** not only the exit code. The CRLF stage
+  checks the phantom "had human notes" count as well as `verify`, because a partial
+  fix satisfying only `verify` would still print a fabricated number.
+- **Add the counterpart that still fails.** For every "this is now accepted" stage,
+  one that introduces real drift and requires a non-zero exit. Without it, the stage
+  is satisfied by a fix that stopped checking. Prove it by disabling your fix and
+  confirming both halves change verdict.
+
 ## Dependencies
 
 **A new direct dependency requires an ADR** in [`docs/adr/`](docs/adr/), and the

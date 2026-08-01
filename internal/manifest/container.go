@@ -437,7 +437,8 @@ func ExtractCompose(f discover.File) Facts {
 			// is worth recording — the *name*, never the interpolated value.
 			if ref := interpolatedName(kv.Value); ref != "" && looksSensitive(kv.Key) {
 				facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-					Name: ref, EnvVar: kv.Key, Source: "env-interpolation", Line: kv.Line,
+					Name: ref, EnvVar: kv.Key, Service: name,
+					Source: "env-interpolation", Line: kv.Line,
 				})
 			}
 		}
@@ -449,7 +450,7 @@ func ExtractCompose(f discover.File) Facts {
 				continue
 			}
 			facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-				Name: p, Source: "env-file", Line: ef.Line,
+				Name: p, Service: name, Source: "env-file", Line: ef.Line,
 			})
 		}
 		// A service's declared secrets: the short form is a name, the long form an
@@ -460,7 +461,7 @@ func ExtractCompose(f discover.File) Facts {
 				continue
 			}
 			facts.SecretRefs = append(facts.SecretRefs, SecretRef{
-				Name: name, Key: s.Get("target").String(),
+				Name: name, Key: s.Get("target").String(), Service: svc.Name,
 				Source: "compose-secret", Line: s.Line,
 			})
 		}
