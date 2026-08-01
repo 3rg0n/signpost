@@ -1,0 +1,224 @@
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-7,14-17,22-23
+  s_f6c0b1ac81cb95::t_8d5a5e46e0579a 24,31,35,37-38,40
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6,8,12-14,16-19,32-33
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_99625cf7bed169 4,11
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_0f84cfed0a12dd 4,11
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6,8-9,12-14
+  s_f6c0b1ac81cb95::t_f95baa6226b492 4,24
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7,9,11-12,14-16,19,26,28-30,33,40,46,49,61
+  s_f6c0b1ac81cb95::t_914da034ed04fc 4,63
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_2b1a76eff41a08 4,11
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_668fb2b3dcdd76 4,11
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_a42cdae315960c 4,11
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 4-5,7-9,13
+  s_f6c0b1ac81cb95::t_60fdc825023b3b 27
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_0cc12fa3aa8bcb 4,11
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_6bdfe7be945873 4,11
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+  s_f6c0b1ac81cb95::t_e0b3aed51ae678 1-4,7-67
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_5b7b1c4e192e09 4,11
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-17
+  s_f6c0b1ac81cb95::t_0711d511f0bd0f 1-4,18-41
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_11bf8e60f9195b 4,11
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 24-30
+  s_f6c0b1ac81cb95::t_8aea8e3438c7b7 20
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6,8-9,12-14,17,21-22,28,49
+  s_f6c0b1ac81cb95::t_98aac4a038e321 4
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5-6,8-9,12-14
+  s_f6c0b1ac81cb95::t_b82a5ca6dcae44 4,24
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_72a82f0f2605f8 5,7
+  s_f6c0b1ac81cb95::t_347eddb8b03331 4,10
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_07e7cab58b2292 432-569
+.github/workflows/pages.yml
+  s_f6c0b1ac81cb95::t_adc2434a29bfee 77-99
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_2b716c31ef5914 9-22,27-94,551-632,915-945
+README.md
+  s_f6c0b1ac81cb95::t_e12deca65498f3 253,268
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_3a1b95eab85321 13,82-85,137-163
+cmd/signpost/build_test.go
+  s_f6c0b1ac81cb95::t_ae553f0c7a725c 180-184,187,191-194
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_a9254223587dc2 1-470
+cmd/signpost/pipeline.go
+  s_f6c0b1ac81cb95::t_c2e5f68b5d6c1d 39,48-52,81
+cmd/signpost/verify.go
+  s_f6c0b1ac81cb95::t_4b0d7043c91539 73-79
+docs/design.md
+  s_f6c0b1ac81cb95::t_c36decf14614e3 199-236,285-318,832-840,1019-1036
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_140640239d0844 301-339
+internal/discover/discover.go
+  s_f6c0b1ac81cb95::t_436347ae2de026 67-71,102-111,226-227,232-239,309,317-322
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_2e6dec61cb83ea 314-418
+internal/manifest/yaml.go
+  s_f6c0b1ac81cb95::t_065b8bd504c522 74-85,113-125,809,839,849,884
+internal/manifest/yaml_test.go
+  s_f6c0b1ac81cb95::t_2bd9f28fccdce5 4,401-482
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_14ac21dbb13bc4 46-50,148-156,289,301-314,347,360,364-375,475-514
+internal/okf/emit.go
+  s_f6c0b1ac81cb95::t_d5a2f0732e5be7 48-52,104-115
+internal/okf/verify.go
+  s_f6c0b1ac81cb95::t_58b4f252631b04 264-280,313-315
+internal/okf/verify_test.go
+  s_f6c0b1ac81cb95::t_c94c3631d40d79 311-365
+internal/okf/yaml.go
+  s_f6c0b1ac81cb95::t_e5c09877c42144 278-296
+internal/okf/yaml_test.go
+  s_f6c0b1ac81cb95::t_96cc364019e3eb 271-365
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_923bc933c821dd 1-836
+internal/practice/practice_test.go
+  s_f6c0b1ac81cb95::t_1ddf98475648bb 1-469
+internal/practice/render.go
+  s_f6c0b1ac81cb95::t_59367572773187 1-183
+site/CNAME
+  s_f6c0b1ac81cb95::t_e9b254cdf57a4e 1
+site/graph.html
+  s_f6c0b1ac81cb95::t_97cdef7ef77f7b 28-31
+site/index.html
+  s_f6c0b1ac81cb95::t_e8a96c7b043063 20-26
+testdata/corpus/.github/dependabot.yml
+  s_f6c0b1ac81cb95::t_10cae2c710ec44 1-7
+testdata/corpus/.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_0b9e7ce085895c 1-26
+testdata/corpus/.github/workflows/nightly.yml
+  s_f6c0b1ac81cb95::t_48bb262dd94bbb 1-19
+testdata/corpus/AGENTS.md
+  s_f6c0b1ac81cb95::t_086ac9d98cfea7 1-9
+testdata/corpus/CODEOWNERS
+  s_f6c0b1ac81cb95::t_afee3d187f7c9a 1-4
+testdata/corpus/LICENSE
+  s_f6c0b1ac81cb95::t_c4e6aad4dca1ba 1-7
+testdata/corpus/Makefile
+  s_f6c0b1ac81cb95::t_9ad84c4a3aa8e7 1-8
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_15bfc57df87db9 1-56
+testdata/corpus/compose.yaml
+  s_f6c0b1ac81cb95::t_ec2559d51af1a0 1-15
+testdata/corpus/go/Makefile
+  s_f6c0b1ac81cb95::t_eb5612a2bbf7a1 1-5
+testdata/corpus/go/cmd/hello/main.go
+  s_f6c0b1ac81cb95::t_4748d1285b5169 1-10
+testdata/corpus/go/go.mod
+  s_f6c0b1ac81cb95::t_5520e0e2d85b02 1-5
+testdata/corpus/go/go.sum
+  s_f6c0b1ac81cb95::t_f822c1cabfd1c6 1-2
+testdata/corpus/go/greeter/greeter.go
+  s_f6c0b1ac81cb95::t_ec39e41055034f 1-24
+testdata/corpus/go/greeter/greeter_test.go
+  s_f6c0b1ac81cb95::t_6cc9d087180b99 1-10
+testdata/corpus/py/greeter/__init__.py
+  s_f6c0b1ac81cb95::t_399ab54a24d9a3 1-10
+testdata/corpus/py/greeter/data,notes.py
+  s_f6c0b1ac81cb95::t_65a9b971aa8bbb 1-16
+testdata/corpus/py/greeter/formatter.py
+  s_f6c0b1ac81cb95::t_16fbbb08da3f6e 1-12
+testdata/corpus/py/pyproject.toml
+  s_f6c0b1ac81cb95::t_324d799131739b 1-12
+testdata/corpus/py/tests/test_greeter.py
+  s_f6c0b1ac81cb95::t_65190dde98080e 1-7
+testdata/corpus/rust/Cargo.lock
+  s_f6c0b1ac81cb95::t_a47264b1879514 1-18
+testdata/corpus/rust/Cargo.toml
+  s_f6c0b1ac81cb95::t_27ad5deb5a385e 1-10
+testdata/corpus/rust/src/formatter.rs
+  s_f6c0b1ac81cb95::t_91c8050b64a030 1-6
+testdata/corpus/rust/src/lib.rs
+  s_f6c0b1ac81cb95::t_7accaa6e89eaca 1-30
+testdata/corpus/rust/src/main.rs
+  s_f6c0b1ac81cb95::t_12b6f607bc3aba 1-7
+testdata/corpus/ts/app/(marketing)/page.tsx
+  s_f6c0b1ac81cb95::t_ce0c133b224ddb 1-7
+testdata/corpus/ts/app/blog/[...rest]/page.tsx
+  s_f6c0b1ac81cb95::t_daf63a498b5d7a 1-6
+testdata/corpus/ts/app/tools/[slug]/page.tsx
+  s_f6c0b1ac81cb95::t_9b46caec630edd 1-10
+testdata/corpus/ts/package.json
+  s_f6c0b1ac81cb95::t_b7848cc39a609e 1-18
+testdata/corpus/ts/pnpm-lock.yaml
+  s_f6c0b1ac81cb95::t_6856dad653913c 1-7
+testdata/corpus/ts/src/greeter.test.ts
+  s_f6c0b1ac81cb95::t_126731dc0a9d60 1-9
+testdata/corpus/ts/src/greeter.ts
+  s_f6c0b1ac81cb95::t_3bec73ed117325 1-12
+testdata/corpus/ts/tsconfig.json
+  s_f6c0b1ac81cb95::t_a28261ab5c405e 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "0f2ffcf187b8feffc8a8867bb77ca579c842f92e",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
