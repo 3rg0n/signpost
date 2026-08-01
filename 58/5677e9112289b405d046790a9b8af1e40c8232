@@ -1,0 +1,63 @@
+testdata/corpus/ts/packages/api/src/handler.ts
+  s_f6c0b1ac81cb95::t_65790fe6c3a02a 1-15
+testdata/corpus/ts/packages/core/src/codec.ts
+  s_f6c0b1ac81cb95::t_fd08c6a6616797 1-5
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_d602b8d87b9591 124-149,421
+  s_f6c0b1ac81cb95::t_3228e98da7c7c0 378-381,384,388-420
+  s_f6c0b1ac81cb95::t_6a952783b08669 94-123
+  s_f6c0b1ac81cb95::t_f51782b322a972 58-62
+  s_f6c0b1ac81cb95::t_89fad4ea7b28fd 41-43
+  s_f6c0b1ac81cb95::t_a4ac31fdad9df3 382-383
+  s_f6c0b1ac81cb95::t_4e785b44c06a20 422
+testdata/corpus/ts/packages/api/package.json
+  s_f6c0b1ac81cb95::t_aef9cdfce5a0b8 1-10
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_ae99664ad7b94d 518-620
+  s_f6c0b1ac81cb95::t_319cb380b0f890 4
+  s_3f706e3f4b4643::t_ecccdd842babfa 517
+testdata/corpus/ts/packages/core/src/index.ts
+  s_f6c0b1ac81cb95::t_6304c001434c06 1-14
+testdata/corpus/ts/packages/core/package.json
+  s_f6c0b1ac81cb95::t_cec7acc06b2e67 1-9
+docs/design.md
+  s_f6c0b1ac81cb95::t_fce0c3c1cf3df2 385-397
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_b889cc7a3d7a27 13-42
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_02d0d1e54d23fc 81-85
+testdata/corpus/ts/package.json
+  s_f6c0b1ac81cb95::t_1fd5ef2fdb4e28 5
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_87444e92b0e7a9 605-652
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_dc4572898b8f15 167-168
+  s_f6c0b1ac81cb95::t_b1d3dea97ab0b1 309-312,317
+  s_f6c0b1ac81cb95::t_c626af7a7457d4 313-316
+  s_f6c0b1ac81cb95::t_8dc396e1ae9eb1 263-273
+  s_f6c0b1ac81cb95::t_17b1740b7b44e2 695-701
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "585677e9112289b405d046790a9b8af1e40c8232",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
