@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@126bee5494f99918719c22f8cc5ddb2d84fa80b8
+resource: git://github.com/3rg0n/signpost@c983f3fd1aa43bc9678df830319f19d3e61bcf29
 generated: { by: signpost/dev, at: "2026-08-01" }
 ---
 # How work is done here
@@ -47,7 +47,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 15 documentation files in the tree, outside the bundle.
+- 16 documentation files in the tree, outside the bundle.
 
 ### Observability
 
@@ -58,8 +58,8 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No agent instructions were found, so an agent working here has only the code to go on.
   - Looked in `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`.
-- 10 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 4 other files.
+- 11 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 5 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes

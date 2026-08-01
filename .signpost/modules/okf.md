@@ -1,31 +1,31 @@
 ---
 type: Module
 title: internal/okf
-description: 13 go files; 189 exported symbols.
-resource: git://github.com/3rg0n/signpost@126bee5494f99918719c22f8cc5ddb2d84fa80b8/internal/okf
+description: 13 go files; 194 exported symbols.
+resource: git://github.com/3rg0n/signpost@c983f3fd1aa43bc9678df830319f19d3e61bcf29/internal/okf
 generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
-  - { name: commits, value: "6" }
-  - { name: exported, value: "189" }
+  - { name: commits, value: "7" }
+  - { name: exported, value: "194" }
   - { name: files, value: "13" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-01" }
-  - { name: lines_added, value: "6518" }
-  - { name: lines_removed, value: "26" }
+  - { name: lines_added, value: "6976" }
+  - { name: lines_removed, value: "62" }
   - { name: package, value: okf }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 67% }
+  - { name: top_author_share, value: 71% }
 edges:
   - { kind: imports, to: /modules/graph.md, confidence: extracted, weight: 7, source: internal/okf/bundle.go }
   - { kind: imports, to: /modules/manifest.md, confidence: extracted, weight: 4, source: internal/okf/bundle_test.go }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: /modules/site.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: /modules/vcs.md, confidence: extracted, weight: 2 }
 ---
 # internal/okf
 
 <!-- signpost:managed:summary -->
-13 go files; 189 exported symbols.
+13 go files; 194 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -46,7 +46,7 @@ edges:
 - `internal/okf/yaml.go`
 - `internal/okf/yaml_test.go`
 
-- **Changes with**: [cmd/signpost](/modules/signpost.md) ×5, [site](/modules/site.md) ×2, [internal/vcs](/modules/vcs.md) ×2
+- **Changes with**: [cmd/signpost](/modules/signpost.md) ×6, [site](/modules/site.md) ×2, [internal/vcs](/modules/vcs.md) ×2
 
 - **Imports**: [internal/graph](/modules/graph.md) ×7, [internal/manifest](/modules/manifest.md) ×4
 <!-- /signpost:managed:structure -->

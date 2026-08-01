@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 30 concepts, 51 relationships."
-resource: git://github.com/3rg0n/signpost@126bee5494f99918719c22f8cc5ddb2d84fa80b8
+description: "Structural map of this repository: 31 concepts, 51 relationships."
+resource: git://github.com/3rg0n/signpost@c983f3fd1aa43bc9678df830319f19d3e61bcf29
 generated: { by: signpost/dev, at: "2026-08-01" }
 ---
 # Repository map
@@ -34,10 +34,10 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 23 go files; 239 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
-- [internal/okf](/modules/okf.md) — 13 go files; 189 exported symbols.
+- [internal/okf](/modules/okf.md) — 13 go files; 194 exported symbols.
 - [internal/practice](/modules/practice.md) — 3 go files; 29 exported symbols.
 - [internal/semantic](/modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](/modules/signpost.md) — 13 go files; 55 exported symbols; entrypoint main; package main.
+- [cmd/signpost](/modules/signpost.md) — 13 go files; 57 exported symbols; entrypoint main; package main.
 - [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
 
@@ -52,6 +52,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0007: the bundle names the commit it describes](/references/adr-0007-the-bundle-names-the-commit-it-describes.md) — Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md.
 - [ADR 0008: the viewer lives in this repository](/references/adr-0008-the-viewer-lives-in-this-repository.md) — Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md.
 - [ADR 0009: the semantic pass is opt in and egress is explicit](/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md) — Architecture decision (Accepted), 25 rules read from 0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md.
+- [ADR 0010: a stale page is deleted only when nobody wrote on it](/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md) — Architecture decision (Accepted), 21 rules read from 0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md.
 - [README.md](/references/readme-md.md) — Architecture decision, 10 rules read from README.md.
 
 ### External dependencies
