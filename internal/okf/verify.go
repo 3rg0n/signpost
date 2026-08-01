@@ -45,12 +45,24 @@ import (
 // # What is a failure and what is a warning
 //
 // A failure is a claim the bundle makes that is not true: an unreadable page, a link to a
-// page that does not exist, a resource naming a commit that is not the one being
-// described, content a rebuild would change. A warning is litter: a page whose concept no
-// longer exists. The split follows from bundle.go's deletion rule — pages are never
-// deleted, because a rename would otherwise silently destroy someone's notes — and a gate
-// that failed on the litter it is designed to leave behind would be a gate people disable
-// on the first rename.
+// page that does not exist, a resource naming a commit that is not the one being described,
+// content a rebuild would change, **a page for a concept the repository does not have**.
+//
+// The last one was issue #10, and it was a warning for a year of design on the strength of an
+// argument that had stopped being true. The argument was bundle.go's old never-delete rule:
+// pages were left on disk deliberately, so failing on the litter the tool itself was designed
+// to leave would be a gate people disable on the first rename. Now build deletes the ones
+// nobody has written on, so the severity follows what build would do rather than a blanket
+// policy — which is also the rule that makes a finding actionable:
+//
+//   - **A surplus page a build would remove is a failure.** The remedy is `signpost build`,
+//     the same remedy every other failure here names. This is what closes the hole: a page
+//     describing a module that is not there, with plausible edges and a resource stamp naming
+//     a commit where the code really did exist, reads as authoritative — and it used to
+//     survive both gates in silence.
+//   - **A surplus page a build would keep is a warning.** Somebody has written on it, so no
+//     command can resolve it and only a human can. Failing would be a red gate with no
+//     supported fix, which is the gate that gets switched off.
 
 // FindingKind names what kind of problem was found, so a caller can group findings without
 // matching on message text.
@@ -72,8 +84,10 @@ const (
 	FindingOutOfDate FindingKind = "out-of-date"
 	// FindingMissingPage means the bundle lacks a page this repository has a concept for.
 	FindingMissingPage FindingKind = "missing-page"
-	// FindingOrphanPage means a page describes a concept the repository no longer has.
-	// A warning, never a failure: see this file's header.
+	// FindingOrphanPage means a page describes a concept the repository no longer has. A
+	// failure when a build would delete it and a warning when a build would keep it, per this
+	// file's header — one kind either way, because the reader's question is the same and only
+	// the remedy differs.
 	FindingOrphanPage FindingKind = "orphan-page"
 	// FindingStaleVerification means a page carries the `status:` mark §6.1 writes when a
 	// human's review no longer matches the resource. A warning: the bundle is correct, and
@@ -170,6 +184,7 @@ func Verify(root string, g *graph.Graph, opts Options) (*VerifyResult, error) {
 	checkStaleResource(res, dir, disk, fresh, opts)
 	checkUpToDate(res, dir, disk, fresh, opts)
 	checkOrphans(res, disk, fresh)
+	checkPageList(res, dir, fresh)
 	return res, nil
 }
 
@@ -704,17 +719,101 @@ func checkUpToDate(res *VerifyResult, dir string, disk *onDisk,
 	}
 }
 
-// checkOrphans reports pages describing concepts that are gone.
+// checkOrphans reports pages describing concepts that are gone, at the severity build's own
+// sweep implies — issue #10.
 //
-// A warning. bundle.go never deletes a page, so this is the litter that rule leaves, and
-// failing on it would mean every rename turns CI red with no supported way to fix it —
-// `-prune` is a v0.2 answer. Reported so the litter is visible and someone can decide.
+// The reserved pages are exempt for the same reason findStale exempts them: practices.md is
+// rendered only when there was an analysis to base one on, and "describes a concept that no
+// longer exists" is the wrong claim about a page describing the repository.
 func checkOrphans(res *VerifyResult, disk *onDisk, fresh map[string]string) {
 	for _, rel := range disk.order {
-		if _, ok := fresh[rel]; !ok {
-			res.warn(FindingOrphanPage, rel,
-				"describes a concept this repository no longer has (not deleted: "+
-					"a rename would otherwise take your notes with it)")
+		if _, ok := fresh[rel]; ok || reservedPage(rel) {
+			continue
+		}
+		if prunable(disk.pages[rel]) {
+			// A page holding nothing but the skeleton a first emit wrote. A build deletes it, so
+			// this is a failure whose remedy is the one every other failure here names.
+			res.fail(FindingOrphanPage, rel,
+				"the bundle has a page for a concept this repository does not have — "+
+					"run `signpost build` and commit the result, which deletes it")
+			continue
+		}
+		res.warn(FindingOrphanPage, rel,
+			"describes a concept this repository no longer has, and it has been written on, "+
+				"so a build keeps it: move what is worth keeping and delete the page by hand")
+	}
+}
+
+// checkPageList compares the page list the manifest publishes against the pages a build
+// writes.
+//
+// The third thing issue #10 asked for, and the one that would have made the whole defect
+// obvious in seconds: the bundle's own arithmetic was the only signal there was, found by hand
+// comparing `manifest.pages` (341) against `ls | wc -l` (344). A consumer is invited to read
+// that list *instead of* walking the directory — that is what it is for — so a list that does
+// not name what was written is a claim the bundle makes and does not keep.
+//
+// Compared against the fresh render rather than against the files on disk, and the difference
+// is not a technicality. An orphan page a human has written on is on disk *and* deliberately
+// absent from the list, because the run did not write it — so a disk comparison would report
+// every kept orphan here as well as in checkOrphans, turning one fact into two findings and
+// making a warning into a failure through the back door. What the manifest must be right about
+// is what this run produced.
+//
+// Compared as a set rather than as a count, because a count that matches while the names
+// differ is precisely the coincidence that would make this check useless in the case it exists
+// for. The first difference is named: a list wrong about one page is wrong in one way, and the
+// name is what a reader needs to see which.
+//
+// This is not covered by the byte comparison, and the reason is worth stating because it looks
+// like it should be. checkUpToDate compares the manifest against a fresh render of *itself*, so
+// it catches a hand-edited list and cannot catch an emitter that writes the same wrong list
+// every time — both sides agree. Which is exactly what was shipping: every bundle this
+// repository produced omitted practices.md from `pages`, 32 listed against 33 on disk, and
+// verify was green on all of them until this check compared the list against the page set
+// rather than against another copy of the list.
+func checkPageList(res *VerifyResult, dir string, fresh map[string]string) {
+	man, err := readManifest(dir)
+	if err != nil {
+		// Already reported by checkStaleResource, which names the same file and says what is
+		// wrong with it. Reporting twice would make one fault look like two.
+		return
+	}
+	listed := make(map[string]bool, len(man.Pages))
+	for _, p := range man.Pages {
+		listed[p] = true
+	}
+	written := make(map[string]bool, len(fresh))
+	for rel := range fresh {
+		if strings.HasSuffix(rel, ".md") {
+			written[rel] = true
 		}
 	}
+
+	var unlisted, phantom string
+	for _, rel := range sortedFileKeys(fresh) {
+		if written[rel] && !listed[rel] {
+			unlisted = rel
+			break
+		}
+	}
+	for _, p := range man.Pages {
+		if !written[p] {
+			phantom = p
+			break
+		}
+	}
+	if unlisted == "" && phantom == "" {
+		return
+	}
+	detail := fmt.Sprintf("lists %s while this run writes %s",
+		plural(len(man.Pages), "page"), plural(len(written), "page"))
+	if unlisted != "" {
+		detail += "; " + unlisted + " was written and is not listed"
+	}
+	if phantom != "" {
+		detail += "; " + phantom + " is listed and was not written"
+	}
+	res.fail(FindingConformance, ManifestFile,
+		"%s. A consumer reads this list instead of walking the directory", detail)
 }

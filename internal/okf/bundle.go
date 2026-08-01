@@ -26,12 +26,26 @@ import (
 //
 // # Deletion
 //
-// A page whose node no longer exists is *not* deleted. That is deliberate and is the one
-// place this file chooses to leave litter: a directory that was renamed, or an extractor
-// that regressed, would otherwise silently delete a page a human had written notes on.
-// Stale pages are reported by verify instead, which is a visible problem someone can act
-// on, where a deleted paragraph is not. `signpost build -prune` is the v0.2 answer for
-// people who want the sweep.
+// A page whose concept is gone is deleted when, and only when, nobody has written on it —
+// ADR 0010. The split is the whole of issue #10, and the two halves fail in opposite
+// directions:
+//
+//   - **Never deleting** leaves a page describing a module that is not there, with plausible
+//     `edges`, an `attributes` block, and a `resource:` naming a commit where the code really
+//     did exist. That reads as authoritative, which makes it more expensive than a missing
+//     page, and it survived every gate: build did not mention it and verify exited 0.
+//   - **Always deleting** takes a human's `## Notes` with it the first time a directory is
+//     renamed, which is the one failure this package is built to prevent — see page.go.
+//
+// So the test is whether the page still holds exactly the skeleton a first emit wrote
+// (prunable, below). If it does, deleting it destroys nothing and the run says which files it
+// removed. If anything else is there, the page is kept and *reported*, which leaves a human
+// the decision that is theirs. Every uncertainty — an unreadable file, a title that does not
+// round-trip, a skeleton from an older version — falls toward keeping it.
+//
+// verify's severity mirrors this exactly, and that is what makes the gate actionable: it fails
+// on a surplus page a build would remove, because the remedy is to run build, and warns about
+// one build kept, because there is no remedy a command can perform.
 
 // BundleDir is the directory a bundle lives in, relative to the repository root.
 const BundleDir = ".signpost"
@@ -69,8 +83,14 @@ type Result struct {
 	// described, per §6.1. Surfaced rather than silent: a reviewer needs to know to look
 	// again.
 	Downgraded []string
-	// Stale lists existing pages with no corresponding node. Reported, not deleted.
+	// Stale lists pages with no corresponding node that were kept because somebody had
+	// written on them. Reported, not deleted: the decision is theirs.
 	Stale []string
+	// Removed lists pages with no corresponding node that held nothing but the skeleton a
+	// first emit wrote, so deleting them destroyed nothing. Named rather than counted, for
+	// the same reason Downgraded is: a file this run deleted is the one thing in a build a
+	// reader may want to recover from git.
+	Removed []string
 }
 
 // Write emits the bundle for g into root/.signpost, merging with what is there.
@@ -113,11 +133,9 @@ func Write(root string, g *graph.Graph, opts Options) (*Result, error) {
 	}
 	sort.Strings(res.Written)
 
-	stale, err := findStale(dir, files)
-	if err != nil {
+	if err := sweepStale(dir, files, res); err != nil {
 		return nil, err
 	}
-	res.Stale = stale
 	return res, nil
 }
 
@@ -265,6 +283,100 @@ func writeIfChanged(full, content string, st writeStat, res *Result) error {
 		return fmt.Errorf("okf: writing %s: %w", full, err)
 	}
 	return nil
+}
+
+// sweepStale deletes the pages this run did not produce and nobody has written on, and
+// reports the rest.
+//
+// Ordered after every write rather than before, which is what keeps a failed build from
+// deleting anything: renderAll has already succeeded, so the concept set is real. A run that
+// pruned first and then failed to render would remove pages on the strength of a graph it
+// turned out it could not emit.
+func sweepStale(dir string, files map[string]string, res *Result) error {
+	stale, err := findStale(dir, files)
+	if err != nil {
+		return err
+	}
+	for _, rel := range stale {
+		full := filepath.Join(dir, filepath.FromSlash(rel))
+		src, err := os.ReadFile(full) // #nosec G304 -- a path from a walk of the bundle directory
+		if err != nil {
+			// Unreadable. Reported as kept, because "delete a file I could not read" is the one
+			// action here with no way back, and the reason it could not be read may be that it
+			// is open in the editor of the person whose notes are in it.
+			res.Stale = append(res.Stale, rel)
+			continue
+		}
+		if !prunable(normalizeRead(string(src))) {
+			res.Stale = append(res.Stale, rel)
+			continue
+		}
+		if err := os.Remove(full); err != nil {
+			// A page that could not be removed is a page that is still there, so it is reported
+			// as kept rather than as removed. Not a build failure: the bundle it wrote is
+			// correct, and this is the sweep over what was already on disk.
+			res.Stale = append(res.Stale, rel)
+			continue
+		}
+		res.Removed = append(res.Removed, rel)
+	}
+	// Directories are not removed, even when the sweep emptied one. An empty `services/`
+	// carries no wrong claim, `git` does not track it, and a rmdir walking upward from a
+	// deleted page is a loop with the bundle root at the end of it.
+	sort.Strings(res.Stale)
+	sort.Strings(res.Removed)
+	return nil
+}
+
+// prunable reports whether a page holds nothing but the skeleton a first emit wrote, so that
+// deleting it destroys nothing a person put there.
+//
+// Three things have to be true, and each one is a direction the answer falls when in doubt:
+//
+//   - It is a page signpost wrote: frontmatter, and at least one managed region. A markdown
+//     file somebody dropped in the bundle directory has neither, and is not signpost's to
+//     delete no matter what the graph says.
+//   - No human frontmatter key. `verified:` above all — a review someone performed is an audit
+//     trail, and a renamed directory is not a reason to destroy it. Any unrecognised key
+//     counts, because signpost did not write it.
+//   - Nothing outside the managed regions but headings and the notes invitation, which is
+//     exactly what emit.go seeds a new page with.
+//
+// The heading exemption is the one concession, and it is worth naming: a heading a human
+// *rewrote* reads here as skeleton, so renaming a heading and nothing else does not save the
+// page. The alternative is comparing against the heading a first emit would have written,
+// which cannot be done — the node is gone, so its title is gone with it. Losing a heading
+// somebody retyped is a smaller loss than keeping every orphan forever, which is what the
+// strict reading would amount to.
+func prunable(src string) bool {
+	p := ParsePage(src)
+	if !p.HasFrontmatter {
+		return false
+	}
+	if carryHumanKeys(p.Frontmatter) != "" {
+		return false
+	}
+	managed := false
+	for _, r := range p.Body {
+		if r.Managed() {
+			managed = true
+			break
+		}
+	}
+	if !managed {
+		return false
+	}
+	for _, line := range strings.Split(p.HumanText(), "\n") {
+		s := strings.TrimSpace(line)
+		if s == "" || strings.HasPrefix(s, "#") {
+			continue
+		}
+		if s == strings.TrimSpace(notesInvitation()) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // findStale lists existing bundle pages that this run did not produce.

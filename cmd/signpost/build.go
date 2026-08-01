@@ -221,6 +221,14 @@ func reportBuild(p *printer, root string, res *okf.Result) {
 	p.printf("%s/%s\n", root, okf.BundleDir)
 	p.printf("  %d page(s): %d created, %d updated, %d unchanged\n",
 		len(res.Written), res.Created, res.Updated, res.Unchanged)
+	if n := len(res.Removed); n > 0 {
+		// Named individually rather than folded into the counts above, because this is the one
+		// line in a build that reports a file being *deleted*. The counts describe what was
+		// written and a reader scanning them would not learn that three files went away; the
+		// names are what makes recovering one from git possible.
+		p.printf("  %d page(s) removed, their concepts gone and nothing written on them:\n    %s\n",
+			n, joinTop(n, 10, func(i int) string { return res.Removed[i] }))
+	}
 	if res.Preserved > 0 {
 		p.printf("  %d page(s) had human notes, carried across\n", res.Preserved)
 	}
@@ -232,9 +240,11 @@ func reportBuild(p *printer, root string, res *okf.Result) {
 			n, joinTop(n, 10, func(i int) string { return res.Downgraded[i] }))
 	}
 	if n := len(res.Stale); n > 0 {
-		// Reported, not deleted. See internal/okf's package comment: a renamed directory
-		// would otherwise silently remove a page someone had written notes on.
-		p.printf("  %d page(s) describe concepts that no longer exist (not deleted):\n    %s\n",
+		// Kept because somebody has written on them. See internal/okf's package comment: a
+		// renamed directory must not silently remove a page someone put notes on, so the
+		// decision is handed back rather than made here. `verify` warns about the same pages.
+		p.printf("  %d page(s) describe concepts that no longer exist and have been "+
+			"written on, so they were kept:\n    %s\n",
 			n, joinTop(n, 10, func(i int) string { return res.Stale[i] }))
 	}
 }

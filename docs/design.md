@@ -658,11 +658,31 @@ Emit the bundle. Then `signpost verify` checks:
 - `resource` shas match the commit being described
 - byte-stability: a second run at the same sha with a warm cache produces an
   identical bundle
+- `manifest.pages` names exactly the pages a build writes
+- no page describes a concept the repository does not have
 
 `verify` exits non-zero on failure. This matters: the failure mode to avoid is a
 staleness check that exits zero, because a bundle that is silently stale is worse
 than no bundle — it is confidently wrong, and it destroys trust in the tool
 permanently.
+
+**A page whose concept is gone is deleted, unless somebody has written on it.** A
+renamed or deleted directory leaves a page describing a module that is not there,
+carrying plausible `edges`, an `attributes` block, and a `resource:` naming a commit
+where the code really did exist. That reads as authoritative, which makes it more
+expensive than a missing page rather than less. But deleting unconditionally would
+take a human's `## Notes` with it on the first rename, and preserving those is what
+§8.1 compounds on. So the test is the page's *content*, not the graph: a page holding
+nothing but the skeleton a first emit wrote is removed and named in the run's output,
+and anything else is kept and reported for a human to resolve. Every uncertainty — an
+unreadable file, an unrecognised frontmatter key, a `verified:` block — falls toward
+keeping it.
+
+`verify`'s severity mirrors that split, and the mirror is what makes the finding
+actionable rather than decorative. A surplus page a build **would** remove is a
+failure, because the remedy is `signpost build` — the same remedy every other failure
+here names. A surplus page a build **keeps** is a warning, because no command can
+resolve it and a red gate with no supported fix is a gate people switch off.
 
 ---
 
@@ -817,6 +837,10 @@ The mechanism that makes the bundle compound rather than churn:
   is recorded in `log.md`, so a reviewer knows to look again.
 - Human-authored `## Notes` sections are never regenerated, never reordered, never
   reflowed.
+- A page whose concept is gone is deleted only when nothing on it came from a person
+  (§4.6). Anything a human touched — a note, a rewritten heading, a `verified:` block,
+  an unrecognised frontmatter key — makes the page theirs to remove, and the run says
+  so instead.
 
 ### 6.2 What signpost does not write
 

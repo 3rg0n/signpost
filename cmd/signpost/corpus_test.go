@@ -1136,6 +1136,103 @@ func TestCorpusCRLFCheckoutStillFailsOnRealDrift(t *testing.T) {
 	}
 }
 
+// TestCorpusStalePageIsRemovedOrReported is the regression for issue #10 at the level the unit
+// tests cannot reach: a real repository, a real bundle, both commands, and both boundaries.
+//
+// The bug: build wrote and updated but never deleted, and strict verify exited 0 with the orphan
+// present. In the field that showed up as a run reporting `342 page(s): 0 created, 342 updated,
+// 0 unchanged` against a directory holding 344 files, with `counts.nodes` at 339 — three pages
+// describing modules that were not there, each carrying plausible edges and a `resource:` naming
+// a commit where the code really did exist. That reads as authoritative, which makes it more
+// expensive than a missing page, and every gate was green.
+//
+// Both boundaries are asserted in one stage because the defect is the *pair*: a fix that deletes
+// unconditionally passes the positive half and destroys a human's notes on the first rename, and
+// a fix that deletes nothing passes the negative half and is the shipped bug. Neither assertion
+// means anything without the other.
+func TestCorpusStalePageIsRemovedOrReported(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+	// A page signpost itself wrote, copied to a name no node has — what a renamed or deleted
+	// directory leaves behind. Copied rather than hand-written: a fixture skeleton can drift from
+	// what the emitter produces, and then this passes while build has stopped pruning.
+	donor := sortedPageNames(pages)[len(pages)-1]
+	const (
+		skeleton = "modules/ghost-skeleton.md"
+		written  = "modules/ghost-annotated.md"
+	)
+	plant := func(rel, extra string) {
+		t.Helper()
+		full := filepath.Join(dir, okf.BundleDir, filepath.FromSlash(rel))
+		if err := os.WriteFile(full, []byte(pages[donor]+extra), 0o600); err != nil {
+			t.Fatalf("planting %s: %v", rel, err)
+		}
+	}
+	plant(skeleton, "")
+	plant(written, "\nKeep this: the code moved to services/identity.\n")
+
+	// verify, before any rebuild. The severities differ because the remedies differ, and that is
+	// the property under test — a failure whose fix is `signpost build`, and a warning for the
+	// page no command can resolve.
+	stdout, stderr, code := invoke(t, "verify", "--quiet", "-repo", "example.com/corpus", dir)
+	if code == 0 {
+		t.Errorf("verify passed with a page describing a concept the repository does not have:\n%s",
+			stdout)
+	}
+	if !strings.Contains(stdout, skeleton) {
+		t.Errorf("verify did not name %s:\n%s%s", skeleton, stdout, stderr)
+	}
+	if !strings.Contains(stdout, written) {
+		t.Errorf("verify did not mention %s, which a build keeps and only a human can "+
+			"resolve:\n%s%s", written, stdout, stderr)
+	}
+
+	stdout, stderr, code = invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "1 page(s) removed") || !strings.Contains(stdout, skeleton) {
+		t.Errorf("build did not report removing %s by name:\n%s", skeleton, stdout)
+	}
+	if !strings.Contains(stdout, "so they were kept") || !strings.Contains(stdout, written) {
+		t.Errorf("build did not report keeping %s:\n%s", written, stdout)
+	}
+
+	after := bundlePages(t, dir)
+	if _, ok := after[skeleton]; ok {
+		t.Errorf("%s survived a rebuild, so the bundle still describes a concept that is gone",
+			skeleton)
+	}
+	// The negative boundary, and the reason build is allowed to delete at all. The sentence has to
+	// still be there, byte for byte — a fix that kept the file and rewrote it would lose the same
+	// thing more quietly.
+	if src, ok := after[written]; !ok {
+		t.Errorf("%s was deleted: a rename must not take somebody's notes with it", written)
+	} else if !strings.Contains(src, "Keep this: the code moved to services/identity.") {
+		t.Errorf("%s lost the human sentence:\n%s", written, src)
+	}
+	// Every page the run legitimately writes is still there. A sweep that over-reached would
+	// satisfy every assertion above while deleting the bundle around them.
+	for rel := range pages {
+		if _, ok := after[rel]; !ok {
+			t.Errorf("%s was deleted and it describes a concept the repository has", rel)
+		}
+	}
+
+	// And what is left is a bundle whose only remaining finding is the one a human owns. Asserted
+	// because the gate is the deliverable: a prune that fixed the pages and left manifest.json
+	// listing the deleted one would trade one wrong claim for another.
+	stdout, stderr, code = invoke(t, "verify", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Errorf("verify still fails after the rebuild that was its stated remedy: exit = %d\n%s",
+			code, stderr)
+	}
+	if !strings.Contains(stdout, written) {
+		t.Errorf("the kept page stopped being reported, so nothing tells a human it is theirs "+
+			"to resolve:\n%s%s", stdout, stderr)
+	}
+}
+
 // TestCorpusBuildIsByteStable runs the build twice over the same tree and requires identical
 // bytes.
 //

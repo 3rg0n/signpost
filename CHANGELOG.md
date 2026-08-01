@@ -10,6 +10,46 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-01
 
+- **`build` never deleted a page whose concept was gone, and strict `verify` exited 0 with
+  the orphan present.** A renamed or deleted directory left the page behind forever. It was
+  not an empty stub: it carried plausible `edges`, an `attributes` block, and a `resource:`
+  naming a commit where the code really did exist, so it reads as authoritative — which makes
+  an orphan more expensive than a missing page rather than less, and an agent handed one
+  starts work against a module that is not there. Both gates were silent. On a real
+  repository, `build` reported `342 page(s): 0 created, 342 updated, 0 unchanged` against a
+  `.signpost/` holding 344 files, with `counts.nodes` at 339; the only signal was the
+  bundle's own arithmetic, and nothing surfaced it.
+
+  `build` now deletes a surplus page when, and only when, nothing on it came from a person:
+  frontmatter with no unrecognised key and no `verified:` block, at least one managed region,
+  and nothing outside those regions but headings and the notes invitation. Removals are named
+  in the run's output rather than folded into the counts, because this is the one line in a
+  build reporting a *deletion* and the name is what makes recovering the page from git
+  possible. Anything else is kept and reported, as before. Every uncertainty — an unreadable
+  file, an undeletable file, a skeleton from an older version — falls toward keeping it, and
+  a markdown file somebody dropped into the bundle directory is never signpost's to remove.
+
+  `verify`'s severity mirrors what `build` would do, which is what makes the finding
+  actionable: a failure on a surplus page a build removes, because the remedy is
+  `signpost build`, and a warning on one a build keeps, because no command can resolve it and
+  a red gate with no supported fix is a gate people switch off. The corpus asserts both
+  boundaries in one stage, because the defect is the pair — deleting unconditionally passes
+  the first half and destroys somebody's `## Notes` on the first rename, which is the one
+  failure the emitter exists to prevent. Recorded as
+  [ADR 0010](docs/adr/0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md): signpost
+  now deletes tracked files in a repository it does not own, and the never-delete rule it
+  reverses was a documented convention.
+
+- **`manifest.pages` omitted `practices.md`, in every bundle signpost had ever written.**
+  This repository's own listed 32 pages against 33 on disk. The list is what a consumer is
+  invited to read *instead of* walking the directory, so a list that does not name what was
+  written is a claim the bundle makes and does not keep — and `verify` was green on all of
+  them, because its byte comparison checks the manifest against a fresh render of *itself*
+  and both sides agreed on the same wrong list. `verify` now compares the published list
+  against the page set a build writes, in both directions, which is what found this. Fixing
+  it changes `manifest.json` for every existing bundle: the first rebuild after upgrading
+  adds the missing entry.
+
 - **A Node builtin addressed by subpath was counted as a dependency signpost could not
   resolve.** `fs/promises` is the runtime; there is no other way to reach the promise-based
   API. The builtin table holds `fs`, and the whole specifier was looked up in it, so every

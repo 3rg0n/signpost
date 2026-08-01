@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -447,12 +448,19 @@ func TestVerifyChecksReservedFilenamesBothWays(t *testing.T) {
 	})
 }
 
-// An orphan page is a warning, not a failure. bundle.go never deletes a page, so this is
-// the litter that rule leaves behind: failing on it would turn every rename into a red CI
-// job with no supported way to fix it, and that gate gets disabled.
-func TestVerifyWarnsButDoesNotFailOnAnOrphanPage(t *testing.T) {
+// An orphan page a build would delete is a failure — the half of issue #10 that closes the
+// hole. A page for a module that is not there carries plausible edges and a resource stamp
+// naming a commit where the code really did exist, so it reads as authoritative; before this it
+// survived both gates, with build silent and verify exiting 0.
+//
+// The severity is a failure specifically because the remedy is the one every other failure here
+// names: run build. That is the property the pair of tests is asserting — not "orphans are bad"
+// but "the severity says whether a command can fix it".
+func TestVerifyFailsOnAnOrphanPageABuildWouldDelete(t *testing.T) {
 	root, _, g := write(t)
 	const page = "modules/renamed-away.md"
+	// A page signpost wrote, copied under a name no node has. Nothing on it came from a person,
+	// so sweepStale removes it.
 	src := read(t, root, "modules/internal-auth.md")
 	full := filepath.Join(root, BundleDir, filepath.FromSlash(page))
 	if err := os.WriteFile(full, []byte(src), 0o644); err != nil {
@@ -460,8 +468,29 @@ func TestVerifyWarnsButDoesNotFailOnAnOrphanPage(t *testing.T) {
 	}
 
 	res := verifyBundle(t, root, g)
+	if !has(res.Findings, FindingOrphanPage, page) {
+		t.Fatalf("want an orphan failure on %s, got:%s", page, findings(res))
+	}
+	if res.OK() {
+		t.Error("verify passed with a page describing a concept the repository does not have")
+	}
+}
+
+// An orphan page a build would *keep* is a warning, because no command resolves it: somebody's
+// text is on it and only they can say where it belongs. Failing would be a red gate whose only
+// fix is editing files by hand, which is the gate that gets switched off on the first rename.
+func TestVerifyWarnsOnAnOrphanPageABuildWouldKeep(t *testing.T) {
+	root, _, g := write(t)
+	const page = "modules/renamed-away.md"
+	src := read(t, root, "modules/internal-auth.md") + "\nThis moved to internal/identity.\n"
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(page))
+	if err := os.WriteFile(full, []byte(src), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", page, err)
+	}
+
+	res := verifyBundle(t, root, g)
 	if !res.OK() {
-		t.Fatalf("an orphan page failed verification:%s", findings(res))
+		t.Fatalf("a written-on orphan page failed verification:%s", findings(res))
 	}
 	if !has(res.Warnings, FindingOrphanPage, page) {
 		t.Errorf("want an orphan warning on %s, got:%s", page, findings(res))
@@ -734,5 +763,106 @@ func TestVerifyAsOfBundleDoesNotRescueAResourcelessManifest(t *testing.T) {
 		if strings.Contains(s, "provenance") {
 			t.Errorf("adopted provenance from a manifest that has none: %q", s)
 		}
+	}
+}
+
+// The invariant behind issue #10's third item, asserted on a bundle nobody has touched: the page
+// list a consumer is invited to read *instead of* walking the directory names exactly the pages
+// that were written.
+//
+// Run with and without a practices page, because the conditional page is where the real defect
+// was and the unconditional ones would have passed throughout. Every bundle this repository
+// produced left practices.md out of `pages` — 32 listed against 33 on disk — and verify was green
+// on all of them: checkUpToDate compares the manifest against a fresh render of *itself*, so both
+// sides agreed on the same wrong list. Only a comparison against the page set catches an emitter
+// that is wrong the same way every time.
+func TestManifestListsEveryPageWritten(t *testing.T) {
+	for _, practices := range []string{"", "## Build\n\n`go test ./...`\n"} {
+		name := "without a practices page"
+		if practices != "" {
+			name = "with a practices page"
+		}
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			g, _ := demoGraph(t)
+			opts := demoOptions()
+			opts.Practices = practices
+			res, err := Write(root, g, opts)
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
+			man, err := readManifest(filepath.Join(root, BundleDir))
+			if err != nil {
+				t.Fatalf("readManifest: %v", err)
+			}
+
+			var want []string
+			for _, rel := range res.Written {
+				if strings.HasSuffix(rel, ".md") {
+					want = append(want, rel)
+				}
+			}
+			if strings.Join(man.Pages, "\n") != strings.Join(want, "\n") {
+				t.Errorf("manifest lists %d page(s) and the build wrote %d:\n listed: %v\nwritten: %v",
+					len(man.Pages), len(want), man.Pages, want)
+			}
+			// Named as well as covered by the comparison above, in both directions. This is the
+			// page that was actually missing, so a refactor of pageList that drops it again should
+			// fail on a message saying which page rather than on a diff of two lists.
+			if got := slices.Contains(man.Pages, PracticesPage); got != (practices != "") {
+				t.Errorf("%s listed = %v, want %v: %v", PracticesPage, got, practices != "", man.Pages)
+			}
+		})
+	}
+}
+
+// A page list that disagrees with what a build writes is a failure, in both directions. Named
+// separately because the two are different defects for a consumer: a page it will never open, and
+// a path it will try to open and not find.
+func TestVerifyFailsOnAManifestPageListThatDisagrees(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func([]string) []string
+		want   string
+	}{
+		{
+			name:   "a page written and not listed",
+			mutate: func(p []string) []string { return p[1:] },
+			want:   "was written and is not listed",
+		},
+		{
+			name:   "a page listed and not written",
+			mutate: func(p []string) []string { return append(p, "modules/never-written.md") },
+			want:   "is listed and was not written",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, _, g := write(t)
+			edit(t, root, ManifestFile, func(src string) string {
+				var man map[string]any
+				if err := json.Unmarshal([]byte(src), &man); err != nil {
+					t.Fatal(err)
+				}
+				var pages []string
+				for _, p := range man["pages"].([]any) {
+					pages = append(pages, p.(string))
+				}
+				man["pages"] = tc.mutate(pages)
+				out, err := json.Marshal(man)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return string(out)
+			})
+
+			res := verifyBundle(t, root, g)
+			if !has(res.Findings, FindingConformance, ManifestFile) {
+				t.Fatalf("want a conformance finding on the manifest, got:%s", findings(res))
+			}
+			if !strings.Contains(findings(res), tc.want) {
+				t.Errorf("no finding says %q, so the reader is not told which way it is wrong:%s",
+					tc.want, findings(res))
+			}
+		})
 	}
 }

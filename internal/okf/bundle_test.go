@@ -505,8 +505,9 @@ func TestCheckPageRel(t *testing.T) {
 	}
 }
 
-// A page whose node no longer exists is reported, never deleted. A renamed directory or a
-// regressed extractor would otherwise silently delete a page a human had written notes on.
+// A page whose node no longer exists and which somebody has written on is reported, never
+// deleted. A renamed directory or a regressed extractor must not silently take a human's notes
+// with it, which is the half of issue #10 that argues against pruning at all.
 func TestWriteReportsStalePagesWithoutDeletingThem(t *testing.T) {
 	root, _, g := write(t)
 	stalePath := filepath.Join(root, BundleDir, "modules", "removed.md")
@@ -523,6 +524,77 @@ func TestWriteReportsStalePagesWithoutDeletingThem(t *testing.T) {
 	}
 	if got, err := os.ReadFile(stalePath); err != nil || string(got) != "---\nx: 1\n---\nmy notes\n" {
 		t.Errorf("the stale page was modified or deleted: %q, %v", got, err)
+	}
+	if len(res.Removed) != 0 {
+		t.Errorf("Removed = %v, want nothing: the page carried text nobody generated", res.Removed)
+	}
+}
+
+// The other half of issue #10: a page whose concept is gone and which holds nothing but the
+// skeleton a first emit wrote *is* deleted, and the run names it.
+//
+// Both halves are needed and neither is sufficient. Without this one, a bundle keeps a page
+// describing a module that is not there — with plausible edges and a resource stamp naming a
+// commit where the code really did exist — indefinitely, and every gate stays green. Without
+// the one above, the first rename destroys somebody's notes. The test between them is whether
+// anything on the page came from a person.
+func TestWriteRemovesAnUnwrittenStalePage(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/ghost.md"
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+	// A page signpost itself wrote, copied. Constructing one by hand would be asserting against
+	// this test's idea of a skeleton rather than against the emitter's.
+	if err := os.WriteFile(full, []byte(read(t, root, "modules/internal-auth.md")), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", rel, err)
+	}
+
+	res, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	if strings.Join(res.Removed, ",") != rel {
+		t.Errorf("Removed = %v, want [%s]", res.Removed, rel)
+	}
+	if len(res.Stale) != 0 {
+		t.Errorf("Stale = %v, want nothing: the page held only what the emitter wrote", res.Stale)
+	}
+	if _, err := os.Stat(full); !os.IsNotExist(err) {
+		t.Errorf("%s is still on disk: %v", rel, err)
+	}
+}
+
+// prunable is the whole of the delete/keep decision, so it is asserted directly as well as
+// through Write. Every case here is a way a page can carry something a person put there, and
+// each one must fall toward keeping it — the failure this guards is a single wrong answer
+// deleting a paragraph nobody can get back without git.
+func TestPrunableKeepsAnythingAPersonTouched(t *testing.T) {
+	root, _, _ := write(t)
+	skeleton := read(t, root, "modules/internal-auth.md")
+	if !prunable(skeleton) {
+		t.Fatalf("a page exactly as the emitter wrote it is not prunable, so nothing ever is:\n%s",
+			skeleton)
+	}
+
+	keep := map[string]string{
+		"a note under Notes":     skeleton + "\nRate limiting lives in the gateway.\n",
+		"a note before the body": strings.Replace(skeleton, "\n# ", "\nMine.\n\n# ", 1),
+		"a human `verified:` block": strings.Replace(skeleton, "---\n",
+			"---\nverified:\n  - { by: human:ecopelan, at: 2026-07-30 }\n", 1),
+		"an unrecognised frontmatter key": strings.Replace(skeleton, "---\n",
+			"---\nowner: platform-team\n", 1),
+		// Not a page signpost wrote. A markdown file somebody dropped in the bundle directory is
+		// not signpost's to delete no matter what the graph says.
+		"no frontmatter":    "# Scratch\n\nSomething I was drafting.\n",
+		"no managed region": "---\ntype: Module\n---\n# Notes\n\nWhatever this is.\n",
+		"an empty file":     "",
+		"frontmatter only":  "---\ntype: Module\n---\n",
+		"a broken open marker": strings.Replace(skeleton,
+			"<!-- signpost:managed:summary -->", "<!-- signpost:managed:summary", 1),
+	}
+	for what, src := range keep {
+		if prunable(src) {
+			t.Errorf("a page with %s is prunable, so a rebuild deletes it:\n%s", what, src)
+		}
 	}
 }
 

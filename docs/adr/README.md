@@ -26,6 +26,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0007](0007-the-bundle-names-the-commit-it-describes.md) | The bundle names the commit it describes, and staleness is a content comparison | Accepted |
 | [0008](0008-the-viewer-lives-in-this-repository.md) | The viewer lives in this repository, with no JavaScript dependencies | Accepted |
 | [0009](0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md) | The semantic pass is opt-in, and egress is explicit | Accepted |
+| [0010](0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md) | A stale page is deleted only when nobody wrote on it | Accepted |
 
 ## Decisions still owed one
 

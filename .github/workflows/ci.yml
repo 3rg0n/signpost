@@ -429,6 +429,93 @@ jobs:
           rm -rf internal/ciprobe
           echo "verify: non-zero on a stale bundle"
 
+      # The surplus direction — issue #10, and the one the step above cannot
+      # reach. A new package is a concept with no page; this is a page with no
+      # concept, and it used to pass both gates in silence: `build` reported
+      # `342 page(s): 0 created, 342 updated` over a directory holding 344, and
+      # strict `verify` exited 0 with three pages describing modules that were
+      # not there. Each carried plausible edges and a `resource:` naming a commit
+      # where the code really did exist, which is what makes an orphan more
+      # expensive than a missing page rather than less.
+      #
+      # Both boundaries, because the defect is the pair. A fix that deletes
+      # unconditionally satisfies the first half and takes somebody's notes with
+      # it the first time a directory is renamed, which is the one failure the
+      # emitter is built to prevent. Neither assertion means anything alone.
+      #
+      # Last in the job, after the sentinel edit above has already been asserted:
+      # the bundle here is the one signpost just wrote, so a copied page is a
+      # skeleton by construction rather than by this step's idea of one.
+      - name: A page whose concept is gone is deleted, unless somebody wrote on it
+        run: |
+          set -euo pipefail
+          repo="github.com/${GITHUB_REPOSITORY}"
+          # The glob's first match, as above: shell-sorted, so the donor is the
+          # same on every run.
+          set -- .signpost/modules/*.md
+          donor="$1"
+          skeleton=.signpost/modules/ci-ghost-skeleton.md
+          written=.signpost/modules/ci-ghost-written.md
+          cp "$donor" "$skeleton"
+          cp "$donor" "$written"
+          printf '\nKEEPME: the code this describes moved.\n' >>"$written"
+
+          out="${RUNNER_TEMP}/verify3.txt"
+          if ./signpost verify -quiet -repo "$repo" . >"$out"; then
+            echo "verify exited 0 with a page describing a concept this repository does not have"
+            cat "$out"
+            exit 1
+          fi
+          cat "$out"
+          # Named, and named at the right severity. A run that failed for some
+          # other reason would satisfy the exit code above while leaving the
+          # orphan unmentioned, so the page has to appear in the output.
+          grep -qF 'ci-ghost-skeleton.md' "$out" || {
+            echo "verify did not name the surplus page"
+            exit 1
+          }
+          grep -qF 'ci-ghost-written.md' "$out" || {
+            echo "verify did not mention the written-on page, so nothing tells a human it is theirs"
+            exit 1
+          }
+          echo "verify: non-zero on a surplus page, both pages named"
+
+          ./signpost build -quiet -repo "$repo" . >"${RUNNER_TEMP}/build4.txt"
+          cat "${RUNNER_TEMP}/build4.txt"
+          grep -q 'page(s) removed' "${RUNNER_TEMP}/build4.txt" || {
+            echo "build did not report removing anything"
+            exit 1
+          }
+          [ ! -e "$skeleton" ] || {
+            echo "the surplus page survived a rebuild, so the bundle still describes a concept that is gone"
+            exit 1
+          }
+          # The negative boundary, and the reason build is allowed to delete at
+          # all. Byte-for-byte: a fix that kept the file and rewrote it would lose
+          # the same thing more quietly.
+          grep -qF 'KEEPME: the code this describes moved.' "$written" || {
+            echo "a rename took somebody's notes with it"
+            exit 1
+          }
+          echo "build: surplus page removed, written-on page kept"
+
+          # And the remedy verify named actually resolves it. A gate whose stated
+          # fix leaves the gate red is the gate people switch off.
+          out="${RUNNER_TEMP}/verify4.txt"
+          ok=0
+          ./signpost verify -quiet -repo "$repo" . >"$out" || ok=$?
+          cat "$out"
+          [ "$ok" -eq 0 ] || {
+            echo "verify still fails after the rebuild it asked for"
+            exit 1
+          }
+          grep -qF 'ci-ghost-written.md' "$out" || {
+            echo "the kept page stopped being reported"
+            exit 1
+          }
+          rm -f "$written"
+          echo "verify: green after the rebuild, kept page still warned about"
+
   corpus:
     name: corpus (a repository signpost did not write)
     runs-on: ubuntu-24.04

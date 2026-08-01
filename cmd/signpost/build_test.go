@@ -118,8 +118,8 @@ func TestBuildPreservesHumanNotes(t *testing.T) {
 	}
 }
 
-// A page whose concept no longer exists is reported and left alone. A renamed directory
-// would otherwise silently delete a page someone had written notes on.
+// A page whose concept no longer exists and which somebody has written on is reported and left
+// alone. A renamed directory would otherwise silently delete a page someone had written notes on.
 func TestBuildReportsStalePagesWithoutDeleting(t *testing.T) {
 	root := fixture(t)
 	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
@@ -138,8 +138,45 @@ func TestBuildReportsStalePagesWithoutDeleting(t *testing.T) {
 	if !strings.Contains(stdout, "modules/gone.md") {
 		t.Errorf("the stale page was not named:\n%s", stdout)
 	}
+	if !strings.Contains(stdout, "so they were kept") {
+		t.Errorf("the run did not say the page was kept, which is the fact a reader needs "+
+			"to distinguish this from a removal:\n%s", stdout)
+	}
 	if got, err := os.ReadFile(stale); err != nil || string(got) != content {
 		t.Errorf("the stale page was modified or deleted: %q, %v", got, err)
+	}
+}
+
+// The other half — issue #10. A page whose concept is gone and which holds nothing but the
+// skeleton a build wrote is deleted, and the run names the file rather than folding it into a
+// count. That naming is the point: this is the one line in a build reporting a deletion, and the
+// name is what makes recovering the page from git possible.
+func TestBuildRemovesAnUnwrittenStalePageAndNamesIt(t *testing.T) {
+	root := fixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("first build: exit = %d\n%s", code, stderr)
+	}
+	const rel = "modules/ghost.md"
+	full := filepath.Join(root, okf.BundleDir, filepath.FromSlash(rel))
+	// A page signpost itself wrote, under a name no node has — what a renamed directory leaves.
+	if err := os.WriteFile(full, []byte(bundleFile(t, root, "modules/auth.md")), 0o600); err != nil {
+		t.Fatalf("writing %s: %v", rel, err)
+	}
+
+	stdout, stderr, code := invoke(t, "build", "--quiet", root)
+	if code != 0 {
+		t.Fatalf("rebuild: exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "1 page(s) removed") || !strings.Contains(stdout, rel) {
+		t.Errorf("the removal was not reported by name:\n%s", stdout)
+	}
+	if _, err := os.Stat(full); !os.IsNotExist(err) {
+		t.Errorf("%s is still on disk: %v", rel, err)
+	}
+	// And the bundle it left behind still verifies. A prune that removed the page but left the
+	// manifest listing it would trade one wrong claim for another.
+	if _, stderr, code := invoke(t, "verify", "--quiet", root); code != 0 {
+		t.Errorf("verify failed after the prune: exit = %d\n%s", code, stderr)
 	}
 }
 

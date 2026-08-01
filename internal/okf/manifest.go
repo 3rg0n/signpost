@@ -70,7 +70,7 @@ func manifestJSON(g *graph.Graph, opts Options) (string, error) {
 			Clusters: len(g.Clusters()),
 		},
 		Confidence: confidenceCounts(g),
-		Pages:      pageList(g),
+		Pages:      pageList(g, opts),
 	}
 
 	var buf bytes.Buffer
@@ -106,9 +106,18 @@ func confidenceCounts(g *graph.Graph) map[string]int {
 	return out
 }
 
-func pageList(g *graph.Graph) []string {
-	out := make([]string, 0, len(g.Nodes())+2)
+// pageList is every page this run writes, which is what makes the list checkable.
+//
+// practices.md is conditional on the same thing renderAll's is. Omitting it was a real
+// discrepancy this repository's own bundle carried — 32 listed against 33 on disk — invisible
+// until verify started comparing the two, which is the third thing issue #10 asked for. A list
+// a consumer is invited to read *instead of* walking the directory has to name what is there.
+func pageList(g *graph.Graph, opts Options) []string {
+	out := make([]string, 0, len(g.Nodes())+3)
 	out = append(out, IndexPage, LogPage)
+	if opts.Practices != "" {
+		out = append(out, PracticesPage)
+	}
 	for _, n := range g.Nodes() {
 		out = append(out, trimLeadingSlash(pagePath(n.ID)))
 	}

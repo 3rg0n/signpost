@@ -69,6 +69,27 @@ table holding `fs`, so the subpath missed and was reported as a dependency the r
 to resolve. `pathe/utils` above is the boundary on the other side of that rule — the last row of
 the table is what stops the fix from being a prefix comparison.
 
+## The bundle's own lifecycle
+
+One stage here asserts nothing about extraction. `TestCorpusStalePageIsRemovedOrReported` is
+[issue #10](https://github.com/3rg0n/signpost/issues/10): a page whose concept is gone used to
+stay on disk forever, and strict `verify` exited 0 with it there. It belongs in the corpus
+rather than only in `internal/okf` because the bug is about a bundle *in a repository over
+time* — two builds, two verifies, a real git tree — and because the page it leaves behind is
+not an empty stub. It carries plausible `edges` and a `resource:` naming a commit where the
+code really did exist, which is what makes an orphan more expensive than a missing page.
+
+Its negative boundary sits in the same test rather than in the table above, because the defect
+is a *pair* of failures in opposite directions:
+
+| Planted page | Must happen | What the other direction would cost |
+|---|---|---|
+| a copy of a real page, untouched | deleted, and named in the run's output | never deleting is the shipped bug: the bundle describes a module that is not there |
+| the same copy plus one human sentence | kept, reported, sentence intact byte for byte | deleting unconditionally takes somebody's `## Notes` on the first rename |
+
+A fix satisfying either row alone is a fix that ships one of the two bugs, so neither
+assertion means anything without the other.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs
