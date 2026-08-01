@@ -1,0 +1,69 @@
+internal/okf/verify.go
+  s_f6c0b1ac81cb95::t_5128bbe73c2e61 187
+  s_f6c0b1ac81cb95::t_1ece18b704b11d 722-723,725-727,730-746,749-750,755,776-784,791,804-805,807,817
+  s_f6c0b1ac81cb95::t_4e36540834a97e 747-748,751-754,756-766,775,785-790,792-797,800-803,806,808-816,818
+  s_f6c0b1ac81cb95::t_ce87446cf88159 87-90
+  s_f6c0b1ac81cb95::t_d16ff75ff03920 767-774
+  s_f6c0b1ac81cb95::t_6d95a291c73303 48-65
+internal/okf/verify_test.go
+  s_f6c0b1ac81cb95::t_4711b1111ef86e 7
+  s_f6c0b1ac81cb95::t_b61d185487c0d1 451-459,462-463,470-490,493
+  s_f6c0b1ac81cb95::t_1e5bb2ef5d28c3 768-770,772,784,816-823,825,827-868
+  s_f6c0b1ac81cb95::t_c39b02e4b3abf4 771,773-783,785-815
+  s_f6c0b1ac81cb95::t_1e85305cd8e247 824,826
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_d7789df4965e5e 13-37,42-52
+  s_f6c0b1ac81cb95::t_57f3ec79987bad 38-41
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_4e373301bbb68c 1230
+  s_f6c0b1ac81cb95::t_d78d1ed6966c58 1177,1180,1182-1183,1185,1187
+  s_f6c0b1ac81cb95::t_8be546c4dc0422 1190
+  s_f6c0b1ac81cb95::t_eee2cd7c4779cd 1139-1176,1178-1179,1181,1184,1186,1188-1189,1191-1229,1231-1235
+docs/design.md
+  s_f6c0b1ac81cb95::t_326691b43a0145 661-662,669-685
+  s_f6c0b1ac81cb95::t_063d190d4f42d0 840-843
+  s_f6c0b1ac81cb95::t_3298dfd1a0844e 686
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_785d23784d4ca8 243-247
+  s_f6c0b1ac81cb95::t_c96b4dc4ea8834 224-231
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_ff2653be0afb7c 432-518
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_3df421f5204f3d 72-92
+docs/adr/0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_8e526e29b20e39 1-101
+internal/okf/bundle_test.go
+  s_f6c0b1ac81cb95::t_49e5469518b4f7 508-510,528-586,591-598
+  s_f6c0b1ac81cb95::t_1e85305cd8e247 587-590
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_3d390642558b0f 136
+  s_f6c0b1ac81cb95::t_df137611f4dfd3 288-381
+  s_f6c0b1ac81cb95::t_79c2e7c6580c40 32-48
+  s_f6c0b1ac81cb95::t_7b89a4baa801b9 86-87,89-93
+  s_f6c0b1ac81cb95::t_1e08fdc22f9bb7 29-31
+internal/okf/manifest.go
+  s_f6c0b1ac81cb95::t_5a20e0fe34fe7d 73
+  s_f6c0b1ac81cb95::t_f8b02c46f922a0 109-116,118-120
+cmd/signpost/build_test.go
+  s_f6c0b1ac81cb95::t_c41d1cef3c33a3 121-122,141-144,150-177,179-180
+  s_f6c0b1ac81cb95::t_bbe0f205af1b02 178
+  s_f6c0b1ac81cb95::t_2092424d275309 181-182
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_b2fe8aca1f19f1 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c983f3fd1aa43bc9678df830319f19d3e61bcf29",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
