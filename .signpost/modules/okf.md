@@ -2,7 +2,7 @@
 type: Module
 title: internal/okf
 description: 13 go files; 189 exported symbols.
-resource: git://github.com/3rg0n/signpost@283dc9ef3bf7d3d943bdf49c808230f41c3da532/internal/okf
+resource: git://126bee5494f99918719c22f8cc5ddb2d84fa80b8/internal/okf
 generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
   - { name: commits, value: "6" }
