@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0001: hand written tolerant yaml reader"
 description: "Architecture decision (Accepted), 15 rules read from 0001-hand-written-tolerant-yaml-reader.md."
-resource: git://github.com/3rg0n/signpost@706eb3aa2cab88395d31bba7fa4e6349a7ffc50c/docs/adr/0001-hand-written-tolerant-yaml-reader.md
+resource: git://github.com/3rg0n/signpost@0f2ffcf187b8feffc8a8867bb77ca579c842f92e/docs/adr/0001-hand-written-tolerant-yaml-reader.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:
