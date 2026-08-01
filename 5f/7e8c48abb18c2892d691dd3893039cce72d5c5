@@ -1,0 +1,44 @@
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_184c41d022c76b 9-43
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_68e51ad627f997 37
+README.md
+  s_f6c0b1ac81cb95::t_6f878dd07f56c3 122-129
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_68e51ad627f997 4,9,28
+internal/okf/verify_test.go
+  s_f6c0b1ac81cb95::t_661946696e80bc 87-130,133,136-144
+  s_f6c0b1ac81cb95::t_6c0531f6700258 131-132,134-135
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_c71c7a4f037b95 220-223
+  s_f6c0b1ac81cb95::t_410bfa481359a4 252-256
+internal/okf/page_test.go
+  s_f6c0b1ac81cb95::t_3f4c669f2897f1 439-465
+internal/okf/bundle_test.go
+  s_f6c0b1ac81cb95::t_bee01b1566699e 166-254,260-268
+  s_f6c0b1ac81cb95::t_fff7373e9a20a9 255-259
+internal/okf/verify.go
+  s_f6c0b1ac81cb95::t_fb5e349b7a0a91 234
+  s_f6c0b1ac81cb95::t_e4977aeee13ecc 697-700
+internal/okf/page.go
+  s_f6c0b1ac81cb95::t_5abd8b86203a7d 42-74,79-80
+  s_f6c0b1ac81cb95::t_c28785e1bf5fc0 75-78
+docs/design.md
+  s_f6c0b1ac81cb95::t_3cb33564ad9a1c 771-820
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "5f7e8c48abb18c2892d691dd3893039cce72d5c5",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
