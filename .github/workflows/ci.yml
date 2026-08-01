@@ -450,9 +450,17 @@ jobs:
         run: |
           set -euo pipefail
           repo="github.com/${GITHUB_REPOSITORY}"
-          # The glob's first match, as above: shell-sorted, so the donor is the
-          # same on every run.
+          # The glob's *last* match, and the reason is the step above: it appended
+          # the SENTINEL note to the first one, so that page is human territory now
+          # and a copy of it is correctly kept rather than pruned — the tool being
+          # right and the test being wrong. Shell-sorted either way, so the donor is
+          # the same on every run.
           set -- .signpost/modules/*.md
+          [ "$#" -ge 2 ] || {
+            echo "only $# module page(s): the donor would be the sentinel-edited one"
+            exit 1
+          }
+          shift "$(( $# - 1 ))"
           donor="$1"
           skeleton=.signpost/modules/ci-ghost-skeleton.md
           written=.signpost/modules/ci-ghost-written.md
