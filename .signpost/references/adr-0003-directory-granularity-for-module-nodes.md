@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0003: directory granularity for module nodes"
 description: "Architecture decision (Accepted), 18 rules read from 0003-directory-granularity-for-module-nodes.md."
-resource: git://github.com/3rg0n/signpost@585677e9112289b405d046790a9b8af1e40c8232/docs/adr/0003-directory-granularity-for-module-nodes.md
+resource: git://github.com/3rg0n/signpost@283dc9ef3bf7d3d943bdf49c808230f41c3da532/docs/adr/0003-directory-granularity-for-module-nodes.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-01" }
 attributes:

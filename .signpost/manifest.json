@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@585677e9112289b405d046790a9b8af1e40c8232",
+  "resource": "git://github.com/3rg0n/signpost@283dc9ef3bf7d3d943bdf49c808230f41c3da532",
   "date": "2026-08-01",
   "counts": {
     "nodes": 30,
-    "edges": 49,
+    "edges": 51,
     "clusters": 20
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 49,
+    "extracted": 51,
     "inferred": 0
   },
   "pages": [
