@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@a6fa38aba4861a1d7d1c7acc3e5d5616a37c4a76
+resource: git://github.com/3rg0n/signpost@585677e9112289b405d046790a9b8af1e40c8232
 generated: { by: signpost/dev, at: "2026-08-01" }
 ---
 # How work is done here
