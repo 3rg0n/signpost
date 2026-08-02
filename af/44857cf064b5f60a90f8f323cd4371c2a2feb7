@@ -1,0 +1,101 @@
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_ec84af0eb89b5f 5
+  s_f6c0b1ac81cb95::t_115fe88a8ad589 57
+  s_f6c0b1ac81cb95::t_9a1733a91de1b8 40
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 6,56,58
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 4-5,9,15
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+  s_f6c0b1ac81cb95::t_99002a68483790 8,12-16,19,33
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_ec84af0eb89b5f 50,61-62
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_ec84af0eb89b5f 7,9,44
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 4,43
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0011-configuration-file-format-and-location.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 1-29
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0012-a-group-name-is-never-an-action.md
+  s_f6c0b1ac81cb95::t_115fe88a8ad589 4,10,17
+  s_f6c0b1ac81cb95::t_ec84af0eb89b5f 1-3,5-9,11-16,18-29
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 36
+  s_f6c0b1ac81cb95::t_ec84af0eb89b5f 34
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+  s_f6c0b1ac81cb95::t_9a1733a91de1b8 4,11,15-16,19,37,44
+  s_f6c0b1ac81cb95::t_9bd3443f45b6a5 9,65
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_c5d305a61532fa 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "af44857cf064b5f60a90f8f323cd4371c2a2feb7",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
