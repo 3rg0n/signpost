@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@fadeb55a3a6491fcdc86fefb2cd864043a9f9f5e
+resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # How work is done here
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, and Cargo aliases.
-- 46 test files in the tree.
+- 48 test files in the tree.
 
 ### What blocks a merge
 

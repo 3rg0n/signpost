@@ -1,22 +1,23 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@fadeb55a3a6491fcdc86fefb2cd864043a9f9f5e",
+  "resource": "git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f",
   "date": "2026-08-02",
   "counts": {
-    "nodes": 35,
-    "edges": 59,
+    "nodes": 36,
+    "edges": 65,
     "clusters": 24
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 59,
+    "extracted": 65,
     "inferred": 0
   },
   "pages": [
     "index.md",
     "log.md",
     "modules/assemble.md",
+    "modules/config.md",
     "modules/discover.md",
     "modules/export.md",
     "modules/extract.md",

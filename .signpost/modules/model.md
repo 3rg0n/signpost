@@ -1,25 +1,27 @@
 ---
 type: Module
 title: internal/model
-description: 15 go files; 97 exported symbols.
-resource: git://github.com/3rg0n/signpost@fadeb55a3a6491fcdc86fefb2cd864043a9f9f5e/internal/model
+description: 15 go files; 98 exported symbols.
+resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/model
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
-  - { name: commits, value: "1" }
-  - { name: exported, value: "97" }
+  - { name: commits, value: "2" }
+  - { name: exported, value: "98" }
   - { name: files, value: "15" }
   - { name: first_commit, value: "2026-07-31" }
-  - { name: last_commit, value: "2026-07-31" }
-  - { name: lines_added, value: "2839" }
+  - { name: last_commit, value: "2026-08-02" }
+  - { name: lines_added, value: "2853" }
   - { name: lines_removed, value: "0" }
   - { name: package, value: model }
-  - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 100% }
+  - { name: top_author, value: 3rg0n }
+  - { name: top_author_share, value: 50% }
+edges:
+  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 2 }
 ---
 # internal/model
 
 <!-- signpost:managed:summary -->
-15 go files; 97 exported symbols.
+15 go files; 98 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -41,6 +43,8 @@ attributes:
 - `internal/model/probe_test.go`
 - `internal/model/untrusted.go`
 - `internal/model/untrusted_test.go`
+
+- **Changes with**: [cmd/signpost](/modules/signpost.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes
