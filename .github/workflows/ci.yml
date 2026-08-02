@@ -1201,6 +1201,355 @@ jobs:
           }
           echo "CRLF: up to date when correct, still failing on real drift"
 
+      # The empty-manifest false positive, found by reading signpost's own practices page:
+      # "The Go dependencies are declared but not pinned by any lockfile in the tree, so two
+      # builds can resolve different versions" — against a go.mod with an empty require block
+      # and no go.sum. Nothing was declared, so nothing resolves and two builds cannot differ.
+      #
+      # A second copy of the corpus, because this step empties a dependency table and deletes a
+      # lockfile: the steps above assert on Cargo resolution and would fail for a reason that is
+      # not a bug. The condition cannot be expressed by the corpus as committed — all four of
+      # its ecosystems declare dependencies, deliberately, since the resolution assertions need
+      # them to.
+      - name: A manifest with nothing to pin says so, and an unpinned one still fails
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus-nodeps"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+
+          # A crate declaring a package and no dependencies: legal, common in a workspace
+          # member, and the shape of the empty require block. The lockfile goes with it, since a
+          # manifest with nothing to pin and a lockfile beside it reports as pinned instead.
+          cat >"${corpus}/rust/Cargo.toml" <<'TOML'
+          [package]
+          name = "corpus-greeter"
+          version = "0.1.0"
+          edition = "2021"
+          TOML
+          rm "${corpus}/rust/Cargo.lock"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus, with an empty dependency table"
+
+          ./signpost build -quiet -repo example.com/corpus "$corpus"
+          page="${corpus}/.signpost/practices.md"
+          [ -f "$page" ] || { echo "no practices page was written"; exit 1; }
+
+          grep -qF 'The Cargo manifest declares no dependencies' "$page" || {
+            echo "the page does not state that the Cargo manifest declares nothing. Its"
+            echo "dependency table is empty and no Cargo.lock is in the tree."
+            exit 1
+          }
+          if grep -qF 'The Cargo dependencies are declared but not pinned' "$page"; then
+            echo "the page reports an empty dependency table as unpinned, so it tells a reader"
+            echo "two builds can resolve different versions of nothing."
+            exit 1
+          fi
+
+          # The counterparts, from the same build. Without them the check above is satisfied by
+          # a page that stopped reporting unpinned ecosystems at all — the more expensive bug,
+          # because an unreproducible build then reads as a clean one.
+          grep -qF 'The Python dependencies are declared but not pinned' "$page" || {
+            echo "the page stopped reporting the unpinned Python manifest, which declares two"
+            echo "dependencies and has no lockfile beside it."
+            exit 1
+          }
+          grep -qF 'The Go dependencies are pinned by a lockfile' "$page" || {
+            echo "the page stopped reporting the pinned Go module"; exit 1; }
+
+          # One empty manifest in this tree. A count, because a branch that fell through would
+          # state it for Python as well and every check above would still pass.
+          n=$(grep -cF 'manifest declares no dependencies' "$page")
+          [ "$n" -eq 1 ] || {
+            echo "${n} manifest(s) reported as declaring nothing, want 1 — only the crate's"
+            echo "table was emptied."
+            exit 1
+          }
+          echo "dependencies: nothing-to-pin stated, unpinned still reported"
+
+      # Telemetry, against a collector that is not signpost's own httptest.Server (ADR 0014).
+      #
+      # `go test ./cmd/signpost -run TestCorpusTelemetry` covers the same properties in-process
+      # on all three platforms. This step is what that cannot do: the payload is read by a
+      # parser with no stake in signpost being right, from a real subprocess whose environment
+      # is the one an operator sets, over a real socket. An exporter that encoded a timestamp as
+      # a JSON number, or a batch that never left because the flush raced the exit, looks
+      # identical from inside the process that wrote it.
+      #
+      # Both boundaries. Positive: every stage span arrives, so the content check below cannot
+      # be satisfied by an exporter that sends nothing. Negative: nothing the corpus contains
+      # is anywhere in the bytes — and the corpus is the tree that can violate that, holding
+      # `[slug]` paths, a comma in a filename, internal package names, and a secret's name.
+      - name: Spans reach a collector, and carry nothing from the repository
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus-telemetry"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus"
+
+          # A collector in ~25 lines of stdlib, reused by the step after this one. Each body
+          # is appended as one tab-separated line, which is what makes the assertions below a
+          # read of a file rather than a parse of a log.
+          #
+          # A GET is the readiness probe: answering it needs no request body and cannot be
+          # mistaken for an export, so nothing has to be truncated afterwards — and truncating
+          # is not available anyway, since this process holds the file open at its own offset
+          # and a `: >file` from the shell would leave the gap reading back as NUL bytes.
+          cat >"${RUNNER_TEMP}/collector.py" <<'PY'
+          import http.server, sys
+
+          out = open(sys.argv[2], "w", encoding="utf-8")
+
+          class H(http.server.BaseHTTPRequestHandler):
+              protocol_version = "HTTP/1.1"
+
+              def do_POST(self):
+                  n = int(self.headers.get("Content-Length", 0))
+                  body = self.rfile.read(n).decode("utf-8")
+                  out.write(self.headers.get("Content-Type", "") + "\t" + body + "\n")
+                  out.flush()
+                  self.send_response(200)
+                  self.send_header("Content-Length", "0")
+                  self.end_headers()
+
+              def do_GET(self):
+                  self.send_response(204)
+                  self.send_header("Content-Length", "0")
+                  self.end_headers()
+
+              def log_message(self, *a):
+                  pass
+
+          http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
+          PY
+          batches="${RUNNER_TEMP}/batches.tsv"
+          python3 "${RUNNER_TEMP}/collector.py" 14318 "$batches" &
+          collector=$!
+          # shellcheck disable=SC2064
+          trap "kill ${collector} 2>/dev/null || true" EXIT
+          for _ in $(seq 1 50); do
+            curl -sf -o /dev/null http://127.0.0.1:14318/ready && break
+            sleep 0.2
+          done
+          curl -sf -o /dev/null http://127.0.0.1:14318/ready || {
+            echo "the collector never came up, so this step would assert nothing"; exit 1
+          }
+
+          # 14318, not the default 4318, and the endpoint is named rather than defaulted. A
+          # self-hosted runner can have its own collector on the default port, and then this
+          # step posts a repository's spans to a listener it does not own — the negative
+          # assertion below would still pass, having checked a file nothing wrote to. The
+          # default's own resolution is covered by TestEndpointResolution, which needs no
+          # socket to check it.
+          #
+          # OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME are cleared because they override
+          # signpost's own resource by design, so a runner image exporting either would fail
+          # the resource allowlist below for a reason that is not a defect in signpost.
+          SIGNPOST_ENABLE_TELEMETRY=1 \
+          OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:14318 \
+          OTEL_RESOURCE_ATTRIBUTES='' OTEL_SERVICE_NAME='' \
+            ./signpost build -quiet -repo example.com/corpus "$corpus" \
+            2>"${RUNNER_TEMP}/telemetry-stderr.txt"
+          cat "${RUNNER_TEMP}/telemetry-stderr.txt"
+          if grep -qF 'telemetry:' "${RUNNER_TEMP}/telemetry-stderr.txt"; then
+            echo "the build reported a telemetry fault against a collector answering 200"
+            exit 1
+          fi
+          [ -s "$batches" ] || {
+            echo "the collector received nothing, so this step asserts nothing about what a"
+            echo "real repository's spans contain. Either the exporter never posted or the"
+            echo "flush did not finish before the process exited."
+            exit 1
+          }
+          # Kept for the next step, which compares it against a bundle built with telemetry
+          # off. Outside the corpus, so it is not content the next run discovers.
+          cp -r "$corpus/.signpost" "${RUNNER_TEMP}/bundle-exported"
+
+          python3 - "$batches" <<'PY'
+          import json, pathlib, sys
+
+          # Every stage analyse() runs. A missing one means the trace cannot answer which
+          # stage was slow, which is the whole question the instrumentation exists for.
+          WANT_SPANS = {"analyse", "discover", "extract", "manifests", "history", "assemble"}
+
+          # Each is a category the corpus supplies, not a sample: a path, a path holding a YAML
+          # indicator, a comma in a filename, internal package names, a declared dependency, a
+          # module path, and the name of a secret. A repository's contents leave the machine
+          # only through the semantic pass, which is opt-in (ADR 0009).
+          FORBIDDEN = ["page.tsx", "[slug]", "data,notes", "greeter", "codec", "corpus",
+                       "POSTGRES_PASSWORD", "example.com", "go.mod", "Cargo.toml",
+                       "pyproject", "compose", "node_modules"]
+
+          # The resource is attached to every span in the batch, so a detector added later that
+          # reads a filesystem path leaks everywhere at once. Fixed list, deliberately.
+          ALLOWED_RESOURCE = {"service.name", "service.version", "telemetry.sdk.name",
+                              "telemetry.sdk.language", "telemetry.sdk.version"}
+
+          raw = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          fail, seen = [], set()
+          batches = 0
+
+          for line in raw.splitlines():
+              if not line.strip():
+                  continue
+              ctype, _, body = line.partition("\t")
+              batches += 1
+              # OTLP over HTTP defaults to protobuf, so this header is what tells a collector
+              # which parser to use. Wrong and every batch is rejected as a malformed protobuf.
+              if ctype != "application/json":
+                  fail.append(f"Content-Type is {ctype!r}, want application/json")
+              # The independent parse. signpost's own encoder produced these bytes, so a test
+              # using it would pass on whatever it emitted.
+              try:
+                  payload = json.loads(body)
+              except json.JSONDecodeError as e:
+                  fail.append(f"batch {batches} is not valid JSON: {e}")
+                  continue
+              for frag in FORBIDDEN:
+                  if frag in body:
+                      fail.append(f"{frag!r} from the corpus reached the collector")
+              for rs in payload.get("resourceSpans", []):
+                  for a in rs.get("resource", {}).get("attributes", []):
+                      if a["key"] not in ALLOWED_RESOURCE:
+                          fail.append(f"resource attribute {a['key']!r} is not one signpost "
+                                      f"sets; it is attached to every span in the batch")
+                  for ss in rs.get("scopeSpans", []):
+                      for s in ss.get("spans", []):
+                          seen.add(s["name"])
+                          # 64-bit integers are proto3-JSON strings. A number here is read
+                          # back as a float64, so a nanosecond timestamp loses its low digits
+                          # and the span acquires a duration it did not have.
+                          for k in ("startTimeUnixNano", "endTimeUnixNano"):
+                              if not isinstance(s.get(k), str):
+                                  fail.append(f"{s['name']}.{k} is {type(s.get(k)).__name__}, "
+                                              f"want a JSON string")
+                          # Lowercase hex, an explicit OTLP exception to proto3's
+                          # base64-for-bytes rule.
+                          for k, width in (("traceId", 32), ("spanId", 16)):
+                              v = s.get(k, "")
+                              if len(v) != width or v != v.lower() or v.strip("0123456789abcdef"):
+                                  fail.append(f"{s['name']}.{k} is {v!r}, want {width} "
+                                              f"lowercase hex chars")
+                          for a in s.get("attributes", []):
+                              if not a["key"].startswith("signpost."):
+                                  fail.append(f"{s['name']} carries {a['key']!r}, outside "
+                                              f"signpost's namespace")
+                              # A path reaches a span as a string attribute, and no method on
+                              # telemetry.Span can produce one. This is the check a later
+                              # change adding a string setter fails.
+                              if "intValue" not in a["value"]:
+                                  fail.append(f"{s['name']} carries {a['key']}={a['value']}, "
+                                              f"which is not a count")
+
+          missing = WANT_SPANS - seen
+          if missing:
+              fail.append(f"no span named {sorted(missing)} arrived, so the checks above are "
+                          f"satisfied by an exporter that sent almost nothing")
+          if fail:
+              for f in sorted(set(fail)):
+                  print(f"  {f}")
+              sys.exit(f"{len(set(fail))} telemetry finding(s) across {batches} batch(es)")
+          print(f"telemetry: {batches} batch(es), {len(seen)} span name(s), "
+                f"no repository content")
+          PY
+
+      # The default, and the promise that telemetry can never be why a build failed.
+      #
+      # An OTEL_* endpoint in the environment is not consent — CI runners carry them for
+      # unrelated collectors, and ADR 0009's rule is that a default which sends anything
+      # anywhere has already sent it by the time anyone notices. So: endpoint set, gate unset,
+      # and the collector must see nothing. Then the gate set against a port nothing is
+      # listening on, which is the common CI shape, and the build must still exit 0.
+      #
+      # Every bundle here is compared against a baseline built with telemetry off, not handed
+      # to `verify`. A `verify` straight after a `build` passes on whatever that build wrote,
+      # so it cannot see a span that leaked into a page or an exporter goroutine that
+      # perturbed a map iteration — the two ways instrumentation changes output it is only
+      # supposed to measure. `diff -r` can.
+      - name: An endpoint alone sends nothing, and an unreachable one fails open
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus-telemetry"
+          batches="${RUNNER_TEMP}/batches-off.tsv"
+          python3 "${RUNNER_TEMP}/collector.py" 14319 "$batches" &
+          collector=$!
+          # shellcheck disable=SC2064
+          trap "kill ${collector} 2>/dev/null || true" EXIT
+          for _ in $(seq 1 50); do
+            curl -sf -o /dev/null http://127.0.0.1:14319/ready && break
+            sleep 0.2
+          done
+          curl -sf -o /dev/null http://127.0.0.1:14319/ready || {
+            echo "the collector never came up, so the off-by-default assertion below would"
+            echo "pass against a port nothing was listening on"; exit 1
+          }
+
+          # The baseline: no telemetry variables at all, and outside the corpus so the copy
+          # is not content the next run discovers.
+          ./signpost build -quiet -repo example.com/corpus "$corpus" >/dev/null
+          cp -r "$corpus/.signpost" "${RUNNER_TEMP}/bundle-baseline"
+
+          OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:14319 \
+            ./signpost build -quiet -repo example.com/corpus "$corpus" \
+            2>"${RUNNER_TEMP}/off-stderr.txt"
+          if [ -s "$batches" ]; then
+            echo "a batch was posted with SIGNPOST_ENABLE_TELEMETRY unset. An OTEL_* endpoint"
+            echo "in the environment is never sufficient on its own — CI runners carry them"
+            echo "for unrelated collectors (ADR 0009, ADR 0014 clause 3)."
+            cat "$batches"
+            exit 1
+          fi
+          if grep -qF 'telemetry:' "${RUNNER_TEMP}/off-stderr.txt"; then
+            echo "a run with telemetry off mentioned it on stderr"; exit 1
+          fi
+          diff -r "${RUNNER_TEMP}/bundle-baseline" "$corpus/.signpost" || {
+            echo "the bundle changed on a run with telemetry off"; exit 1
+          }
+          echo "off by default: endpoint set, nothing sent, bundle unchanged"
+
+          # Port 14999: nothing is bound, so the connection is refused. The failure has to be
+          # reported — the absence of a measurement never reads as a clean bill of health —
+          # and it has to change nothing else.
+          code=0
+          SIGNPOST_ENABLE_TELEMETRY=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:14999 \
+            ./signpost build -quiet -repo example.com/corpus "$corpus" \
+            2>"${RUNNER_TEMP}/dead-stderr.txt" || code=$?
+          cat "${RUNNER_TEMP}/dead-stderr.txt"
+          [ "$code" -eq 0 ] || {
+            echo "an unreachable collector changed the exit code to ${code}. Telemetry can"
+            echo "never be the reason a build failed (ADR 0014 clause 4)."
+            exit 1
+          }
+          grep -qF 'telemetry:' "${RUNNER_TEMP}/dead-stderr.txt" || {
+            echo "an unreachable collector was not reported at all, so a user who asked for"
+            echo "telemetry gets silence indistinguishable from a working exporter."
+            exit 1
+          }
+          diff -r "${RUNNER_TEMP}/bundle-baseline" "$corpus/.signpost" || {
+            echo "the bundle differs from the telemetry-off baseline after a run whose"
+            echo "exporter could not reach anything, so instrumentation changed the output"
+            echo "it is only supposed to measure."
+            exit 1
+          }
+          echo "fail open: unreachable collector reported, exit 0, bundle unchanged"
+
+          # And the same comparison for the run that did export, in the step above. That one
+          # posted six span batches through a live socket, which is the configuration most
+          # likely to perturb timing — so it is the one whose output matters most here.
+          diff -r "${RUNNER_TEMP}/bundle-baseline" "${RUNNER_TEMP}/bundle-exported" || {
+            echo "the bundle from the exporting run differs from the telemetry-off baseline"
+            exit 1
+          }
+          echo "exporting run: bundle identical to the telemetry-off baseline"
+
   security:
     name: security
     runs-on: ubuntu-24.04

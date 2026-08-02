@@ -117,8 +117,11 @@ func TestLockfilesPairWithManifestsByBasename(t *testing.T) {
 			manifest.Facts{Path: "Cargo.toml", Kind: manifest.KindCargo},
 			manifest.Facts{Path: "Cargo.lock", Kind: manifest.KindLock},
 			// Python deliberately unpinned, so the negative case is exercised by the same
-			// input rather than by a second repository shaped to fail.
-			manifest.Facts{Path: "pyproject.toml", Kind: manifest.KindPyProject},
+			// input rather than by a second repository shaped to fail. It declares a
+			// dependency because an unpinned ecosystem and one with nothing to pin are
+			// different findings — see TestAManifestDeclaringNothingIsNotReportedAsUnpinned.
+			manifest.Facts{Path: "pyproject.toml", Kind: manifest.KindPyProject,
+				Deps: []manifest.Dep{{Name: "httpx", Version: ">=0.28"}}},
 		),
 	})
 
@@ -142,6 +145,113 @@ func TestLockfilesPairWithManifestsByBasename(t *testing.T) {
 	if got := findingsMatching(res, TopicDependencies, "lockfile is present with no manifest"); len(got) != 0 {
 		t.Errorf("%d orphan-lockfile finding(s), want 0. Every lockfile here has its manifest "+
 			"beside it:\n%s", len(got), res.Render())
+	}
+}
+
+// TestAManifestDeclaringNothingIsNotReportedAsUnpinned is the regression for the
+// empty-manifest false positive, found by reading signpost's own practices page.
+//
+// The page said "The Go dependencies are declared but not pinned by any lockfile in the tree,
+// so two builds can resolve different versions" about a `go.mod` with an empty require block
+// and no `go.sum`. Every clause is false: nothing was declared, nothing resolves, and two
+// builds cannot differ. The lockfile check alone cannot tell the two apart — "no lockfile" is
+// true of an ecosystem with nothing to pin and of one that needs pinning, and only the
+// dependency count separates them.
+//
+// It is also a false positive that would have started passing on its own. Adding two requires
+// to signpost's own go.mod creates a go.sum, at which point the sentence becomes accidentally
+// true and the bug becomes invisible — which is why this is pinned by an input rather than by
+// the repository the tests run in.
+//
+// The three branches are asserted together and by count, because each one alone is satisfied by
+// a fix that answers it for everything. Reporting nothing as unpinned passes the first, and
+// reporting every ecosystem as dependency-free passes it too — the input carries all three
+// outcomes so no single answer satisfies it.
+func TestAManifestDeclaringNothingIsNotReportedAsUnpinned(t *testing.T) {
+	res := Analyse(Input{
+		Discovered: walk("go.mod", "package.json", "Cargo.toml", "Cargo.lock"),
+		Manifests: facts(
+			// Nothing to pin: an empty require block, which is what signpost's own go.mod was.
+			manifest.Facts{Path: "go.mod", Kind: manifest.KindGoMod},
+			// Declared and unpinned: the finding this test must not suppress.
+			manifest.Facts{Path: "package.json", Kind: manifest.KindPackageJSON,
+				Deps: []manifest.Dep{{Name: "next", Version: "15.1.0"}}},
+			// Declared and pinned, so the count below is over a page that says all three
+			// things at once.
+			manifest.Facts{Path: "Cargo.toml", Kind: manifest.KindCargo,
+				Deps: []manifest.Dep{{Name: "serde", Version: "1.0"}}},
+			manifest.Facts{Path: "Cargo.lock", Kind: manifest.KindLock},
+		),
+	})
+
+	for _, c := range []struct {
+		eco, want string
+	}{
+		{"Go", "The Go manifest declares no dependencies, so there is nothing for a lockfile to pin."},
+		{"npm", "The npm dependencies are declared but not pinned by any lockfile in the tree"},
+		{"Cargo", "The Cargo dependencies are pinned by a lockfile."},
+	} {
+		got := findingsMatching(res, TopicDependencies, c.want)
+		if len(got) != 1 {
+			t.Errorf("%d finding(s) say %q, want exactly 1:\n%s", len(got), c.want, res.Render())
+		}
+	}
+
+	// The two wrong answers, stated as the sentences they would print. Checked separately from
+	// the counts above because a fix that emitted both the zero-dependency line *and* the
+	// unpinned line for the same manifest satisfies every count above and still tells a reader
+	// their build is unreproducible.
+	if got := findingsMatching(res, TopicDependencies, "Go dependencies are declared but not pinned"); len(got) != 0 {
+		t.Errorf("%d finding(s) report Go as unpinned. The require block is empty: nothing is "+
+			"declared, so nothing resolves and two builds cannot differ:\n%s",
+			len(got), res.Render())
+	}
+	if got := findingsMatching(res, TopicDependencies, "manifest declares no dependencies"); len(got) != 1 {
+		t.Errorf("%d finding(s) report a manifest as declaring nothing, want 1 — npm and Cargo "+
+			"each declare one:\n%s", len(got), res.Render())
+	}
+
+	// Exactly one lockfile finding per ecosystem, whichever it is. This is the assertion that
+	// fails in both directions: a branch that fell through to a second finding raises it, and
+	// one that returned early past an ecosystem lowers it.
+	var lockFindings int
+	for _, f := range res.Findings {
+		if f.Topic != TopicDependencies {
+			continue
+		}
+		if strings.Contains(f.Text, "lockfile") || strings.Contains(f.Text, "declares no dependencies") {
+			lockFindings++
+		}
+	}
+	if lockFindings != 3 {
+		t.Errorf("%d lockfile finding(s) for 3 ecosystems, want 3:\n%s", lockFindings, res.Render())
+	}
+}
+
+// TestIndirectDependenciesAreSomethingToPin is the other side of the count in
+// dependencyFindings, and the reason it counts Deps rather than direct ones.
+//
+// A `go.mod` carrying only `// indirect` entries has a closure that a lockfile pins, so it is
+// not the empty-manifest case even though nothing in it was requested by hand. Scoping the
+// count to direct dependencies would report a real supply chain as having nothing to pin,
+// which is the original false positive with the sign flipped — and worse, because it would be
+// silence about a tree that has dependencies rather than noise about one that does not.
+func TestIndirectDependenciesAreSomethingToPin(t *testing.T) {
+	res := Analyse(Input{
+		Discovered: walk("go.mod"),
+		Manifests: facts(manifest.Facts{Path: "go.mod", Kind: manifest.KindGoMod,
+			Deps: []manifest.Dep{
+				{Name: "google.golang.org/grpc", Version: "v1.81.1", Scope: manifest.ScopeIndirect},
+			}}),
+	})
+
+	if got := findingsMatching(res, TopicDependencies, "Go dependencies are declared but not pinned"); len(got) != 1 {
+		t.Errorf("%d finding(s) report Go as unpinned, want 1. An indirect requirement is a "+
+			"module in the build that a lockfile pins:\n%s", len(got), res.Render())
+	}
+	if got := findingsMatching(res, TopicDependencies, "declares no dependencies"); len(got) != 0 {
+		t.Errorf("a manifest requiring an indirect module was reported as declaring nothing:"+
+			"\n%s", res.Render())
 	}
 }
 

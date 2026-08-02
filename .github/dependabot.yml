@@ -8,9 +8,10 @@
 version: 2
 
 updates:
-  # Go modules. Nothing to bump today — go.mod has no require block — but this is
-  # enabled from the first commit so the first dependency added is covered on the
-  # day it lands rather than whenever somebody remembers to configure this.
+  # Go modules: the OpenTelemetry API, trace API, and SDK (ADR 0014), plus their closure. Enabled
+  # from the first commit, when there was nothing to bump, so the first dependency
+  # added was covered on the day it landed rather than whenever somebody remembered to
+  # configure this.
   - package-ecosystem: gomod
     directory: /
     schedule:

@@ -89,7 +89,8 @@ Which yields:
 | Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4). |
 | YAML | Hand-written tolerant reader and hand-written emitter, both ours. Helm templates are not YAML and a conforming parser rejects them outright, so a library would not have covered the files that matter (ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). |
 | Model access | Two backends behind one interface (§5). Both first-party over stdlib `net` and `net/http`. |
-| SCIP enrichment | `google.golang.org/protobuf` under a build tag — Google-published, heavily audited, already in codeatlas. |
+| Telemetry | `go.opentelemetry.io/otel`, `otel/trace`, and `otel/sdk` — the only three direct dependencies. `otel/trace` holds the `Tracer` and `Span` interfaces `internal/telemetry` is written against, so an instrumenting package cannot avoid naming it. The OTLP/JSON exporter is hand-written, because upstream's *HTTP* exporter links the whole gRPC stack — 65 gRPC packages for a transport that uses none (ADR [0014](adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md)). |
+| SCIP enrichment | `google.golang.org/protobuf` — Google-published, heavily audited, already in codeatlas. **Not behind a build tag**: `go.mod` carries a tagged requirement anyway, so `govulncheck` reports clean on a tree with a known CVE unless someone remembers the matching `-tags`, which is the opposite of the exposure this table exists to bound (measured in ADR [0014](adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md)). |
 | Generator output | Markdown and JSON only. Nothing executable. |
 | Viewer | Hand-written HTML, CSS, and JavaScript in `site/`. Zero JS dependencies, so there is no second dependency tree to govern (§7, ADR [0008](adr/0008-the-viewer-lives-in-this-repository.md)). |
 
@@ -1321,7 +1322,10 @@ the cause.
 Two things the implementation makes explicit. Each pillar reports **both ways** —
 found, with the file that grounds it, or not found — because a page that only ever
 reported presences would render a missing security policy identically to one it
-never looked for, and silence is the failure this section is written against. And
+never looked for, and silence is the failure this section is written against. Where
+both ways is not enough, the third is stated rather than folded into one of them:
+a manifest declaring no dependencies is not an unpinned one, and reporting it as
+unpinned told a reader two builds could resolve different versions of nothing. And
 the CI gate distinction is **per workflow, not per job**: GitHub's required-checks
 operates on job names, any of which can be selected, so every job in a
 `pull_request` workflow can block a merge, and only a schedule-only workflow runs

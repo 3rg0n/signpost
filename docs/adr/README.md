@@ -30,15 +30,17 @@ lost; Consequences states what this costs, not only what it buys.
 | [0011](0011-configuration-file-format-and-location.md) | Configuration lives in `.signpost.yml`, and a config key may only change a default | Accepted |
 | [0012](0012-a-group-name-is-never-an-action.md) | A group name is never an action, and a noun with one operation stays flat | Accepted |
 | [0013](0013-the-local-hook-reports-and-ci-gates.md) | The local hook reports, CI gates, and the hook is a guest in somebody else's file | Accepted |
+| [0014](0014-adopt-the-otel-sdk-and-write-the-exporter.md) | Adopt the OpenTelemetry SDK and write the exporter | Accepted |
+
+[ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
+dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
+`go.mod` has no `require` block, is superseded by
+[0014](0014-adopt-the-otel-sdk-and-write-the-exporter.md), which takes three.
 
 ## Decisions still owed one
 
 Recorded here so the gap is visible rather than discovered later:
 
-- **OpenTelemetry instrumentation.** The SDK is five to eight modules including gRPC and
-  protobuf, which would end the property [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)
-  records and README asserts. Genuinely unresolved: hand-rolled OTLP/HTTP, a build tag, or
-  taking the dependency are all live.
 - **Louvain over label propagation.** Alternative tried, measured, and rejected — the
   textbook ADR shape, currently one line in `docs/design.md` §4.4.
 - **Git history as annotation only.** History never creates a node or decides what is on the

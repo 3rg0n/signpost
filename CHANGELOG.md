@@ -10,6 +10,47 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-02
 
+- **OpenTelemetry traces for signpost's own run, off unless asked for.** Six spans — `analyse`
+  and the five stages under it: `discover`, `extract`, `manifests`, `history`, `assemble` —
+  each carrying counts of what it handled and nothing else. It answers the one question a
+  timing report cannot: *which* stage is slow on a repository, and whether it is slow because
+  the repository is large. `history` is usually the answer.
+
+  **`SIGNPOST_ENABLE_TELEMETRY` is the only thing that turns it on.** An `OTEL_*` endpoint in
+  the environment is not consent — CI runners carry them for unrelated collectors, and a
+  default that sends anything anywhere has already sent it by the time anyone notices. With
+  the gate set, the standard `OTEL_EXPORTER_OTLP_*` variables configure endpoint, headers, and
+  timeout as they do for any other instrumented tool.
+
+  **Counts only, and the type system is what enforces it.** The one method for attaching data
+  to a span is `Count(key string, n int)`; there is no string setter, so a path cannot reach a
+  span without adding an API to do it. Spans are named for stages, resource attributes are the
+  five signpost sets plus the SDK's own, and a failed stage records status without a message —
+  a Go error from this pipeline routinely reads `open /home/someone/private/repo/x.go:
+  permission denied`.
+
+  **Telemetry can never be why a build failed.** An unreachable collector, a rejected batch, a
+  malformed variable: each is one line on stderr and the run continues. Reported rather than
+  swallowed, because somebody who typed `=yes` has asked for telemetry and silence is
+  indistinguishable from a working exporter with nothing to say.
+
+  Three direct dependencies, and the SDK's own OTLP/HTTP exporter is not one of them —
+  `otlptracehttp` links the entire gRPC stack for a package that posts JSON over HTTP, 21
+  modules and 65 gRPC packages against 10 modules and none. The exporter here is ~200 lines
+  against the SDK's `SpanExporter` interface. The full measurement, including a build-tag trap
+  where `govulncheck` reports clean on a tree carrying a known CVE, is in
+  [ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md).
+
+  Two corpus stages and two CI steps hold both boundaries. Positive: all six span names must
+  arrive, so the content check cannot be satisfied by an exporter that sends nothing. Negative:
+  nothing the corpus contains — `[slug]`, `data,notes`, `POSTGRES_PASSWORD`, internal package
+  names — appears anywhere in the payload, every span attribute is an integer in signpost's
+  namespace, and every bundle is compared byte-for-byte against one built with telemetry off.
+  The CI steps read the payload with a parser that has no stake in signpost being right, over a
+  real socket, from a real subprocess: an exporter that encoded a timestamp as a JSON number,
+  or a batch that never left because the flush raced the exit, looks identical from inside the
+  process that wrote it.
+
 - **`AGENTS.md`, and a README section on pointing agents at the bundle — because a committed
   bundle is not a discovered bundle.** Measured rather than assumed. Two agents got the same
   task in two repositories that both had a bundle committed. In *this* repository one found
@@ -124,6 +165,28 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-02
 
+- **The zero-dependency claim is withdrawn from the README, the landing page, and
+  `CONTRIBUTING`, ahead of the three OpenTelemetry modules
+  ([ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md)).** ADR 0002's *rule*
+  still binds — a direct dependency must be one we can bump ourselves, and there must be few
+  enough that bumping stays routine — but its consequence, an empty `require` block, does not.
+  Only the consequence is superseded, and the evidence that the rule holds is that
+  `GO-2026-6061` was remediated by one `go get`.
+
+  The measurements are in the ADR, and two of them are worth knowing before somebody repeats
+  them. Upstream's *HTTP* exporter links `google.golang.org/grpc`, protobuf, and grpc-gateway —
+  **65 gRPC packages and 36 protobuf packages for a transport that uses neither** — where the
+  SDK plus two methods of our own OTLP/JSON links ten modules and no gRPC at all. And a build
+  tag does not contain a dependency: on one tree, `govulncheck ./...` reported *"No
+  vulnerabilities found"* while `govulncheck -tags otel ./...` reported a known CVE. A tag hides
+  a dependency from the scanner, not from the supply chain, which is the inverse of what
+  ADR 0002 exists to achieve — so the telemetry code will not be behind one.
+
+  `go list -m all` is also the wrong instrument, and using it is how the estimate in the ADR
+  index came to say "five to eight modules". It counts test-only modules of dependencies.
+  `go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort -u` counts modules that
+  actually contribute a linked package, and that is the number `CONTRIBUTING` now asks for.
+
 - **Breaking: `signpost export` is now `signpost graph export`, and `signpost graph` is now
   `signpost graph show`.** One rule now decides the shape of every verb: a noun with more than
   one operation becomes a group, a noun with one stays flat, and *a group's own name is never
@@ -178,6 +241,30 @@ All notable changes to this project are documented here. Format follows
 ### Fixed
 
 #### 2026-08-02
+
+- **A manifest declaring no dependencies was reported as unpinned, so the practices page told
+  readers two builds could resolve different versions of nothing.** Found by reading
+  signpost's own page, which said *"The Go dependencies are declared but not pinned by any
+  lockfile in the tree, so two builds can resolve different versions"* about a `go.mod` with an
+  empty `require` block and no `go.sum`. Every clause of it is false: nothing was declared, so
+  nothing resolves and two builds cannot differ. The lockfile check alone cannot tell the two
+  apart — "no lockfile beside this manifest" is true of an ecosystem with nothing to pin and of
+  one that needs pinning, and only the dependency count separates them. An ecosystem with an
+  empty table now states that, because a reader can act on it: no lockfile is missing and no
+  supply chain needs reviewing.
+
+  It is also the rare false positive that would have fixed *itself* into invisibility. The three
+  OpenTelemetry requires ([ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md))
+  create a `go.sum`, at which point the sentence becomes accidentally true and nothing about the
+  logic has changed — so this landed first, and the regression is pinned by an input rather than
+  by the repository the tests run in.
+
+  The corpus could not express the condition as committed: all four of its ecosystems declare
+  dependencies, deliberately, because the resolution assertions need them to. So the stage
+  empties a crate's dependency table and removes its lockfile, then asserts all three outcomes
+  from one page — Go pinned, Python declared-and-unpinned, Cargo with nothing to pin — plus the
+  count of empty manifests. No single answer satisfies that: "nothing is unpinned" fails on
+  Python, "every manifest is empty" fails on Go and Python, and the shipped bug fails on Cargo.
 
 - **Every link between bundle pages was root-absolute, so every one of them 404'd on
   GitHub.** `/modules/hook.md` resolves against the *web server root*: on

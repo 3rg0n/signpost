@@ -375,17 +375,26 @@ drops the summary rather than the citation.
 
 See [docs/design.md](docs/design.md) for the full design, including the
 supply-chain posture that motivates it, and [docs/adr/](docs/adr/) for the
-decisions that bind it — why the dependency list is empty, why module nodes are
-directories, why confidence is a field on every edge, and why the bundle is
-committed.
+decisions that bind it — why the dependency list is three modules long, why module
+nodes are directories, why confidence is a field on every edge, and why the bundle
+is committed.
 
 ## Build from source
 
-Requires Go 1.26+. There are no third-party dependencies — `go.mod` has no
-`require` block. That is an outcome of the policy in
-[ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md), not the
-policy itself: the rule is that every dependency must be one we can bump
-ourselves, and the bar is high enough that nothing has cleared it.
+Requires Go 1.26+. `go.mod` has three direct dependencies — the OpenTelemetry API, its
+trace API, and its SDK — all Google-published and released together, so a CVE fix is one
+`go get -u`. The policy in
+[ADR 0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md) is not zero
+dependencies but *patchable* ones: each must be something we can bump ourselves when a
+CVE lands, and there must be few enough that bumping stays routine. Everything else —
+the four language extractors, the YAML reader, the graph algorithms, the clustering —
+is stdlib.
+
+The OTel exporter is hand-written for that reason.
+[ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md) has the
+measurements: upstream's *HTTP* exporter links `google.golang.org/grpc`, protobuf, and
+grpc-gateway — 65 gRPC packages for a transport that uses none of them — while the SDK
+plus two methods of our own OTLP/JSON links ten modules and no gRPC at all.
 
 The same holds for the site in `site/`, which carries the landing page and the
 graph viewer: hand-written HTML, CSS, and JavaScript, with no `package.json` and no

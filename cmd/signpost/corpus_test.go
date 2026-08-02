@@ -3,12 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/3rg0n/signpost/internal/config"
@@ -438,6 +443,86 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 			t.Errorf("%s states %q — the page emits findings, never a score (design §9.1)",
 				okf.PracticesPage, unwanted)
 		}
+	}
+}
+
+// TestCorpusAManifestWithNothingToPinSaysSo is the corpus half of the empty-manifest false
+// positive, and it needs a repository rather than a fixture because the defect was found by
+// reading a page, not by running a test.
+//
+// signpost's own practices page said "The Go dependencies are declared but not pinned by any
+// lockfile in the tree, so two builds can resolve different versions" about a `go.mod` with an
+// empty require block and no `go.sum`. Nothing was declared, so nothing resolves and two builds
+// cannot differ — three false clauses in one sentence, on the page whose entire purpose is that
+// a reader can trust it.
+//
+// The condition cannot be expressed by the corpus as committed: all four of its ecosystems
+// declare dependencies, because every other stage here needs them to. So this stage makes one
+// of them empty — the manipulate-then-rebuild shape the CRLF and stale-page stages use — and
+// takes its lockfile away, which is the only arrangement that reaches the branch.
+//
+// All three outcomes are asserted from the one page, and that is the point. Go stays pinned,
+// Python stays declared-and-unpinned, Cargo becomes the empty case. A fix that answers "nothing
+// is unpinned" fails on Python, one that answers "every manifest is empty" fails on Go and
+// Python, and the shipped bug fails on Cargo. No single answer satisfies the page.
+func TestCorpusAManifestWithNothingToPinSaysSo(t *testing.T) {
+	dir := corpusRepo(t)
+
+	// A Cargo.toml declaring a package and no dependencies — legal, common in a workspace
+	// member, and what the empty require block was. The lockfile goes with it: a manifest with
+	// nothing to pin and a lockfile beside it reports as pinned, which is a different branch.
+	rewrite(t, filepath.Join(dir, "rust", "Cargo.toml"),
+		"[package]\nname = \"corpus-greeter\"\nversion = \"0.1.0\"\nedition = \"2021\"\n")
+	if err := os.Remove(filepath.Join(dir, "rust", "Cargo.lock")); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "empty the crate's dependency table")
+
+	if _, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir); code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	page, ok := bundlePages(t, dir)[okf.PracticesPage]
+	if !ok {
+		t.Fatalf("no %s was written", okf.PracticesPage)
+	}
+
+	if !strings.Contains(page, "The Cargo manifest declares no dependencies") {
+		t.Errorf("%s does not state that the Cargo manifest declares nothing. The crate's "+
+			"dependency table is empty and no Cargo.lock is in the tree:\n%s",
+			okf.PracticesPage, page)
+	}
+	if strings.Contains(page, "The Cargo dependencies are declared but not pinned") {
+		t.Errorf("%s reports an empty dependency table as unpinned, so it tells a reader two "+
+			"builds can resolve different versions of nothing:\n%s", okf.PracticesPage, page)
+	}
+	// The counterparts, from the same build. Without these the assertion above is satisfied by
+	// a page that stopped reporting unpinned ecosystems at all — which is the more expensive
+	// bug, because an unreproducible build then reads as a clean one.
+	if !strings.Contains(page, "The Python dependencies are declared but not pinned") {
+		t.Errorf("%s stopped reporting the unpinned Python manifest, which declares two "+
+			"dependencies and has no lockfile beside it:\n%s", okf.PracticesPage, page)
+	}
+	if !strings.Contains(page, "The Go dependencies are pinned by a lockfile") {
+		t.Errorf("%s stopped reporting the pinned Go module:\n%s", okf.PracticesPage, page)
+	}
+	// Exactly one manifest is empty in this tree. A count rather than a presence check, because
+	// a branch that fell through would state it for Python as well and every assertion above
+	// would still pass.
+	if n := strings.Count(page, "manifest declares no dependencies"); n != 1 {
+		t.Errorf("%d manifest(s) reported as declaring nothing, want 1 — only the crate's table "+
+			"was emptied:\n%s", n, page)
+	}
+}
+
+// rewrite replaces a file in the corpus copy.
+func rewrite(t *testing.T, path, body string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("the corpus fixture this stage rewrites is gone: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -1645,6 +1730,217 @@ func assertBundleSurvivesRelocation(t *testing.T, pages map[string]string) {
 // sources of nondeterminism are map iteration and filesystem order, and those need scale to
 // show up: four languages, thirty-odd files, and several module names that collide and must
 // be resolved to the same suffixed page twice.
+// TestCorpusTelemetryCarriesNoRepositoryContent is the corpus half of ADR 0014's clause on
+// span content, and it needs a repository rather than a fixture for the same reason every
+// other stage here does: the unit tests in internal/telemetry start spans by hand, so
+// "no repository content reaches a span" is asserted there against a tree that has no
+// content. The rule is about what happens when a real repository goes through the pipeline.
+//
+// The corpus is the tree that can violate it. It holds `app/tools/[slug]/page.tsx`,
+// `py/greeter/data,notes.py`, a `POSTGRES_PASSWORD` reference in compose.yaml, and internal
+// package names — every category of thing that must not leave the machine. A future change
+// adding a string attribute to a span, or an error message to Span.Failed, would compile,
+// pass the package tests, and fail here.
+//
+// Both boundaries, in one run. Positive: five named stage spans arrive, so a broken exporter
+// cannot satisfy the negative half by sending nothing. Negative: nothing in the payload names
+// anything in the tree.
+func TestCorpusTelemetryCarriesNoRepositoryContent(t *testing.T) {
+	dir := corpusRepo(t)
+
+	var mu sync.Mutex
+	var bodies []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		bodies = append(bodies, string(b))
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	t.Setenv("SIGNPOST_ENABLE_TELEMETRY", "1")
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", srv.URL+"/v1/traces")
+	// Nothing extra in the resource. The build's own environment is what an operator has set,
+	// and a resource attribute is attached to every span in the batch — so this stage asserts
+	// the default set and TestNoRepositoryContentReachesTheWire covers the override.
+	t.Setenv("OTEL_RESOURCE_ATTRIBUTES", "")
+
+	_, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	// Nothing about telemetry on stderr. With a collector answering 200 there is nothing to
+	// report, and a note here would mean the exporter is failing on a working endpoint.
+	if strings.Contains(stderr, "telemetry:") {
+		t.Errorf("the build reported a telemetry fault against a collector answering 200:\n%s",
+			stderr)
+	}
+
+	mu.Lock()
+	payload := strings.Join(bodies, "\n")
+	mu.Unlock()
+	if payload == "" {
+		t.Fatal("the collector received nothing, so this stage asserts nothing about what a " +
+			"real repository's spans contain")
+	}
+
+	// The positive boundary. Every stage the pipeline runs is named, so an exporter that
+	// dropped spans — or a pipeline whose stages stopped being instrumented — fails here
+	// rather than passing the content check by sending an empty batch.
+	for _, stage := range []string{"analyse", "discover", "extract", "manifests", "history",
+		"assemble"} {
+		if !strings.Contains(payload, `"name":"`+stage+`"`) {
+			t.Errorf("no span named %q reached the collector, so the trace does not answer "+
+				"which stage was slow", stage)
+		}
+	}
+
+	// The negative boundary: nothing the corpus contains appears anywhere in the bytes. Each
+	// of these is a real category, not a sample — a path, a path with a YAML indicator in it,
+	// an internal package name, a dependency name, a service name, and the name of a secret.
+	for _, forbidden := range []string{
+		"page.tsx", "[slug]", "data,notes", "greeter", "codec",
+		"corpus", "POSTGRES_PASSWORD", "example.com",
+		"go.mod", "Cargo.toml", "pyproject", "compose",
+	} {
+		if strings.Contains(payload, forbidden) {
+			t.Errorf("%q from the corpus reached the collector. A span carries stage names, "+
+				"counts, and durations; a repository's contents leave the machine only through "+
+				"the semantic pass, which is opt-in (ADR 0009, ADR 0014)", forbidden)
+		}
+	}
+
+	// And the shape, structurally, so a value that is neither a count nor a fixed name fails
+	// even when it happens not to match a string above. Asserted on the decoded payload
+	// because the check that matters is "every span attribute is an integer", and the corpus's
+	// own filenames are exactly what a string attribute would carry.
+	for _, body := range bodies {
+		var p struct {
+			ResourceSpans []struct {
+				ScopeSpans []struct {
+					Spans []struct {
+						Name       string `json:"name"`
+						Attributes []struct {
+							Key   string         `json:"key"`
+							Value map[string]any `json:"value"`
+						} `json:"attributes"`
+					} `json:"spans"`
+				} `json:"scopeSpans"`
+			} `json:"resourceSpans"`
+		}
+		if err := json.Unmarshal([]byte(body), &p); err != nil {
+			t.Fatalf("the collector received invalid JSON: %v", err)
+		}
+		for _, rs := range p.ResourceSpans {
+			for _, ss := range rs.ScopeSpans {
+				for _, s := range ss.Spans {
+					for _, a := range s.Attributes {
+						if !strings.HasPrefix(a.Key, "signpost.") {
+							t.Errorf("span %q carries attribute %q, outside signpost's own "+
+								"namespace", s.Name, a.Key)
+						}
+						if _, ok := a.Value["intValue"]; !ok {
+							t.Errorf("span %q carries %q = %v, which is not a count — a path "+
+								"reaches a span as a string attribute and there is no API on "+
+								"telemetry.Span that can produce one", s.Name, a.Key, a.Value)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestCorpusTelemetryIsOffAndFailsOpen is the other half: the default, and the promise that
+// telemetry can never be why a build failed.
+//
+// Three runs on the same tree. Off, which is what every user gets. Enabled against a
+// collector that refuses everything. And enabled against an endpoint nothing is listening
+// on — the CI case, where an OTEL_* variable is set for a collector that is not reachable
+// from the runner. All three must produce the same bundle and exit 0.
+func TestCorpusTelemetryIsOffAndFailsOpen(t *testing.T) {
+	var got int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&got, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	// An address that accepts nothing. Closed immediately, so the port is almost certainly
+	// free and a connection is refused rather than hanging.
+	dead := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	deadURL := dead.URL
+	dead.Close()
+
+	baseline := bundlePages(t, buildCorpus(t))
+
+	for _, tc := range []struct {
+		name     string
+		enable   string
+		endpoint string
+		// posts is whether the collector should see traffic, which is what separates "off"
+		// from "on and failing".
+		posts bool
+	}{
+		{name: "off, which is every user", enable: "", endpoint: srv.URL + "/v1/traces"},
+		{name: "on, and the collector rejects every batch", enable: "1",
+			endpoint: srv.URL + "/v1/traces", posts: true},
+		{name: "on, and nothing is listening", enable: "1",
+			endpoint: deadURL + "/v1/traces"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			atomic.StoreInt32(&got, 0)
+			if tc.enable != "" {
+				t.Setenv("SIGNPOST_ENABLE_TELEMETRY", tc.enable)
+			}
+			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", tc.endpoint)
+
+			dir := corpusRepo(t)
+			_, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir)
+			if code != 0 {
+				t.Fatalf("a telemetry failure changed the exit code: exit = %d\n%s\n"+
+					"Telemetry can never be the reason a build failed (ADR 0014 clause 4)",
+					code, stderr)
+			}
+
+			// The bundle is the deliverable, and it must be unaffected. Byte-identical to the
+			// baseline built with telemetry off — a span that leaked into an emitted page, or
+			// an exporter that perturbed a map iteration, shows up here.
+			pages := bundlePages(t, dir)
+			if len(pages) != len(baseline) {
+				t.Fatalf("%d page(s) with telemetry %q, %d with it off",
+					len(pages), tc.enable, len(baseline))
+			}
+			for rel, want := range baseline {
+				if pages[rel] != want {
+					t.Errorf("%s differs from the bundle built with telemetry off", rel)
+				}
+			}
+
+			if posted := atomic.LoadInt32(&got) > 0; posted != tc.posts {
+				if tc.posts {
+					t.Errorf("the collector saw no batch, so this case does not exercise a " +
+						"failing export")
+				} else {
+					t.Errorf("a batch was posted with SIGNPOST_ENABLE_TELEMETRY=%q; an "+
+						"OTEL_* endpoint in the environment is never sufficient on its own "+
+						"(ADR 0009)", tc.enable)
+				}
+			}
+			// A failure that is reported, not swallowed. §4.2: the absence of a measurement
+			// must never read as a clean bill of health, so somebody who asked for telemetry
+			// and is not getting it learns so.
+			if tc.enable != "" && !strings.Contains(stderr, "telemetry:") {
+				t.Errorf("telemetry failed silently, so the run got no trace and no reason:\n%s",
+					stderr)
+			}
+			if tc.enable == "" && strings.Contains(stderr, "telemetry:") {
+				t.Errorf("a run with telemetry off mentioned it on stderr:\n%s", stderr)
+			}
+		})
+	}
+}
+
 func TestCorpusBuildIsByteStable(t *testing.T) {
 	dir := buildCorpus(t)
 	first := bundlePages(t, dir)

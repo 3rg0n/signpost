@@ -14,12 +14,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/3rg0n/signpost/internal/telemetry"
 )
 
 // version is stamped at link time by the release workflow
@@ -96,6 +99,17 @@ func main() {
 // run is main's testable body: everything reaches the process through it, so a
 // test can drive the real CLI without a subprocess.
 func run(args []string, out, errOut io.Writer) int {
+	// Telemetry is initialised here, before anything is parsed, because this is the one
+	// function every path goes through — putting it in runBuild would leave `verify` and
+	// `graph export` uninstrumented, and those run in CI too. Off unless
+	// SIGNPOST_ENABLE_TELEMETRY asks for it, and the deferred flush is a no-op when it
+	// did not (ADR 0014).
+	//
+	// Deferred rather than called at the end: a command returning an error still returns
+	// through here, and a trace that only arrives on success is missing exactly the runs
+	// somebody wanted to look at.
+	defer telemetry.Init(context.Background(), errOut, version)()
+
 	// -v is handled here rather than in dispatch because it is the one thing that is a
 	// flag rather than a command; `signpost version` is the command, and this is the
 	// spelling everyone tries first.

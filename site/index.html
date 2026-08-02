@@ -231,10 +231,12 @@ disconnected components (17)
               bundle gets committed.
             </li>
             <li class="props__item">
-              <span class="props__name">No third-party dependencies.</span>
-              <code>go.mod</code> has no <code>require</code> block. The policy
-              is not zero dependencies but patchable ones — few enough that
-              shipping a CVE fix the day it lands stays routine.
+              <span class="props__name">Three dependencies, all patchable.</span>
+              <code>go.mod</code> requires the OpenTelemetry API, its trace API,
+              and its SDK, and nothing else. The policy is not zero dependencies
+              but patchable ones — few enough that shipping a CVE fix the day it
+              lands stays routine. The OTLP exporter is hand-written, because
+              upstream's links the entire gRPC stack to speak HTTP.
             </li>
           </ul>
         </div>

@@ -352,6 +352,12 @@ func dependencyFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 	// pin the other — a single "a lockfile exists" line would hide exactly that.
 	locks := map[string][]Source{}
 	manifests := map[string][]Source{}
+	// Declared counts dependencies per ecosystem, because an unpinned ecosystem and one
+	// with nothing to pin are different facts and the lockfile check cannot tell them
+	// apart on its own. signpost's own go.mod had an empty require block and was reported
+	// as "declared but not pinned, so two builds can resolve different versions" — false,
+	// since nothing was declared and there was nothing to resolve.
+	declared := map[string]int{}
 	for _, f := range facts {
 		if f.Kind == manifest.KindLock {
 			eco := lockEcosystem(f.Path)
@@ -367,6 +373,10 @@ func dependencyFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 		}
 		if eco := manifestEcosystem(f); eco != "" {
 			manifests[eco] = append(manifests[eco], Source{Path: f.Path})
+			// Every dependency counts, including indirect ones: a go.mod carrying only
+			// `// indirect` entries has a closure to pin even though nothing in it was
+			// requested by hand, and that closure is exactly what a lockfile pins.
+			declared[eco] += len(f.Deps)
 		}
 	}
 
@@ -377,6 +387,19 @@ func dependencyFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 				Declared: true,
 				Text:     "The " + eco + " dependencies are pinned by a lockfile.",
 				Sources:  dedupeSources(srcs),
+			})
+			continue
+		}
+		if declared[eco] == 0 {
+			// Stated rather than omitted. "This ecosystem has no dependencies" is a fact an
+			// agent can act on — it means no lockfile is missing and no supply chain needs
+			// reviewing — and staying silent would read as the check not having run.
+			out = append(out, Finding{
+				Topic:    TopicDependencies,
+				Declared: true,
+				Text: "The " + eco + " manifest declares no dependencies, so there is " +
+					"nothing for a lockfile to pin.",
+				Sources: dedupeSources(manifests[eco]),
 			})
 			continue
 		}

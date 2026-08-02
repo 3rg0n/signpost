@@ -14,6 +14,7 @@ import (
 	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/telemetry"
 	"github.com/3rg0n/signpost/internal/vcs"
 )
 
@@ -75,36 +76,103 @@ func (s *stringList) Set(v string) error {
 }
 
 // analyse walks, extracts, reads manifests, reads history, and assembles the graph.
+//
+// Each of those five is a span (ADR 0014), which is the reason the stages are written
+// out here rather than chained: the span boundaries and the stage boundaries are the same
+// thing, and "which stage ate the forty seconds" is the question the instrumentation
+// exists to answer. On a run without SIGNPOST_ENABLE_TELEMETRY every telemetry.Stage call
+// returns the context it was handed and a no-op span, so the cost is a nil check per
+// stage.
+//
+// The counts attached are the ones that explain a duration — files walked, facts
+// extracted, commits read — and nothing that names anything in the repository. See the
+// package doc for why Span cannot carry a path even if a later change wanted it to.
 func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, error) {
-	disc, err := discover.Walk(path, discover.Options{
-		IncludeVendored: pf.includeVendored,
-		IncludeFixtures: pf.includeFixtures,
-		ExtraIgnores:    pf.ignore,
-	})
+	ctx, root := telemetry.Stage(ctx, "analyse")
+	defer root.End()
+
+	disc, err := func() (*discover.Result, error) {
+		_, span := telemetry.Stage(ctx, "discover")
+		defer span.End()
+		r, err := discover.Walk(path, discover.Options{
+			IncludeVendored: pf.includeVendored,
+			IncludeFixtures: pf.includeFixtures,
+			ExtraIgnores:    pf.ignore,
+		})
+		if err != nil {
+			span.Failed()
+			return nil, err
+		}
+		span.Count("signpost.files", len(r.Files))
+		span.Count("signpost.files_skipped", len(r.Skipped))
+		return r, nil
+	}()
 	if err != nil {
+		root.Failed()
 		return nil, err
 	}
-	src := extract.DefaultRegistry().Run(disc)
-	mans := manifest.DefaultRegistry().Run(disc)
+
+	src := func() *extract.RunResult {
+		_, span := telemetry.Stage(ctx, "extract")
+		defer span.End()
+		r := extract.DefaultRegistry().Run(disc)
+		span.Count("signpost.facts", len(r.Facts))
+		span.Count("signpost.extract_failures", len(r.Failures))
+		return r
+	}()
+
+	mans := func() *manifest.RunResult {
+		_, span := telemetry.Stage(ctx, "manifests")
+		defer span.End()
+		r := manifest.DefaultRegistry().Run(disc)
+		span.Count("signpost.manifests", len(r.Facts))
+		return r
+	}()
 
 	var hist *vcs.Signals
 	if !pf.noHistory {
-		// An error here is a real git fault — vcs reports a missing git, a non-repository,
-		// an empty history, and a shallow clone as facts rather than errors, so anything
-		// that reaches this branch is worth failing on rather than swallowing.
-		hist, err = vcs.Read(ctx, path, vcs.Options{MaxCommits: pf.maxCommits})
+		hist, err = func() (*vcs.Signals, error) {
+			hctx, span := telemetry.Stage(ctx, "history")
+			defer span.End()
+			// An error here is a real git fault — vcs reports a missing git, a
+			// non-repository, an empty history, and a shallow clone as facts rather than
+			// errors, so anything that reaches this branch is worth failing on rather
+			// than swallowing.
+			s, err := vcs.Read(hctx, path, vcs.Options{MaxCommits: pf.maxCommits})
+			if err != nil {
+				span.Failed()
+				return nil, err
+			}
+			span.Count("signpost.commits", s.Commits)
+			return s, nil
+		}()
 		if err != nil {
+			root.Failed()
 			return nil, err
 		}
 	}
 
-	built, err := assemble.Build(assemble.Input{
-		Discovered: disc,
-		Source:     src,
-		Manifests:  mans,
-		History:    hist,
-	})
+	built, err := func() (*assemble.Result, error) {
+		_, span := telemetry.Stage(ctx, "assemble")
+		defer span.End()
+		r, err := assemble.Build(assemble.Input{
+			Discovered: disc,
+			Source:     src,
+			Manifests:  mans,
+			History:    hist,
+		})
+		if err != nil {
+			span.Failed()
+			return nil, err
+		}
+		nodes, edges := r.Graph.Counts()
+		span.Count("signpost.nodes", nodes)
+		span.Count("signpost.edges", edges)
+		span.Count("signpost.unresolved", totalCount(r.Unresolved))
+		return r, nil
+	}()
 	if err != nil {
+		root.Failed()
 		return nil, err
 	}
 	return &analysis{

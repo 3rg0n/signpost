@@ -5,8 +5,8 @@ it lands, so a review is about the change and not about the process.
 
 ## Getting set up
 
-Go 1.26 or later. Nothing else — signpost has no third-party dependencies, so
-there is no install step beyond cloning.
+Go 1.26 or later. Nothing else — `go build` fetches the three OpenTelemetry modules
+in `go.mod` and there is no install step beyond cloning.
 
 ```bash
 git clone https://github.com/3rg0n/signpost
@@ -134,6 +134,16 @@ The full argument, including the alternatives rejected, is
 
 Write the ADR before the code, in Nygard short form, naming what the dependency
 buys and what the stdlib alternative costs.
+
+**Measure the closure, not the `require` line, and measure it before you write the
+ADR.** `go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort -u` is
+the number that matters — one plausible-looking module can link twenty. Two findings
+from [ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md) are worth
+knowing before you repeat them: OpenTelemetry's *HTTP* exporter links the whole gRPC
+stack, and **a build tag does not contain a dependency** — `go.mod` carries it either
+way, so `govulncheck` reports clean on a tree with a known CVE unless someone passes
+the matching `-tags`. If a dependency only looks acceptable behind a tag, it is not
+acceptable.
 
 ## Decisions
 

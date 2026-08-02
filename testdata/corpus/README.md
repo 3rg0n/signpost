@@ -90,6 +90,31 @@ is a *pair* of failures in opposite directions:
 A fix satisfying either row alone is a fix that ships one of the two bugs, so neither
 assertion means anything without the other.
 
+## A manifest with nothing to pin
+
+Every ecosystem here declares dependencies, deliberately, because the resolution assertions
+above need them to. That makes the tree unable to express one condition: a manifest whose
+dependency table is *empty*. signpost's own practices page said *"The Go dependencies are
+declared but not pinned by any lockfile in the tree, so two builds can resolve different
+versions"* about a `go.mod` with an empty `require` block and no `go.sum` — nothing was declared,
+so nothing resolves and two builds cannot differ. The lockfile check alone cannot tell the two
+apart, since "no lockfile beside this manifest" is true of an ecosystem with nothing to pin and
+of one that needs pinning.
+
+`TestCorpusAManifestWithNothingToPinSaysSo` empties the crate's `[dependencies]` table and
+removes `rust/Cargo.lock`, then reads all three outcomes off the one page:
+
+| Ecosystem in that build | Must say | What the other direction would cost |
+|---|---|---|
+| Cargo — empty table, no lockfile | nothing to pin | the shipped bug: a reader told two builds can resolve different versions of nothing |
+| Python — two dependencies, no lockfile | declared but not pinned | the more expensive bug — an unreproducible build reading as a clean one |
+| Go — one dependency, `go.sum` present | pinned by a lockfile | a page that stopped distinguishing pinned from unpinned at all |
+
+The lockfile goes with the emptied table because a manifest with nothing to pin and a lockfile
+beside it reports as pinned, which is a different branch. And the stage counts empty manifests
+rather than only looking for one: a branch that fell through would state it for Python too, and
+every check above would still pass.
+
 ## What a flag is supposed to change
 
 `ts/node_modules/@corpus-vendor/logger/` is committed on purpose, and it is the only directory
@@ -117,6 +142,42 @@ alone analyses the vendored source and still discards the `package.json` beside 
 module whose own declaration signpost had in hand and threw away. `vendored-only-tinycolor` is
 declared in that vendored manifest and nowhere else in this tree, so its name can only reach a
 bundle through the reader that was dropping it.
+
+## What must not leave the machine
+
+This tree is the only one that can violate the no-content rule in
+[ADR 0014](../../docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md). Telemetry's own
+unit tests start spans by hand against nothing, so "no repository content reaches a span" is
+asserted there against a tree with no content in it. Here there is content, and it is the
+content that hurts: `ts/app/tools/[slug]/page.tsx`, `py/greeter/data,notes.py`,
+`POSTGRES_PASSWORD` named in `compose.yaml`, module and package names, and every declared
+dependency.
+
+`TestCorpusTelemetryCarriesNoRepositoryContent` runs a real build against an in-process
+collector and reads both boundaries off one payload:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | all six span names arrive — `analyse`, `discover`, `extract`, `manifests`, `history`, `assemble` | every check below satisfied by an exporter that sends an empty batch, which is indistinguishable from a tool that sends nothing |
+| negative | no path, filename, package name, dependency, or secret name from this tree appears in the bytes | the failure the whole design exists to prevent, and it is unrecoverable — the bytes are on somebody else's collector |
+| structural | every span attribute is `signpost.`-prefixed and carries `intValue` | a string setter added later, which is how a path gets in; the current API has no method that can produce one |
+
+The positive row is not decoration. Both other rows are assertions about *absence*, and a
+subsystem that exports nothing satisfies an absence check perfectly.
+
+`TestCorpusTelemetryIsOffAndFailsOpen` covers the three configurations, each against a bundle
+built with telemetry off:
+
+| Run | Must happen | What the other direction would cost |
+|---|---|---|
+| endpoint set, `SIGNPOST_ENABLE_TELEMETRY` unset | nothing is posted, nothing on stderr | a repository's structure sent to whatever collector a CI runner happens to name — the case ADR 0009 forbids by default |
+| enabled, collector rejects every batch | exit 0, one line on stderr | telemetry becoming a reason a build fails |
+| enabled, nothing listening | exit 0, the failure reported | silence indistinguishable from a working exporter |
+| all three | bundle byte-identical to the telemetry-off baseline | instrumentation changing the output it exists to measure |
+
+The CI job repeats both against a collector outside the process, because a span encoded wrongly
+— a timestamp as a JSON number rather than a string, an ID as base64 rather than hex — round-trips
+correctly through signpost's own reader and is rejected by every real collector.
 
 ## Running it
 
