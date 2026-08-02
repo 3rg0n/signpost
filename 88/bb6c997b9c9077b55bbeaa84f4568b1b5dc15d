@@ -1,0 +1,105 @@
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_dbeba54ab43a18 5-6,22,24,31,38,42
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_d8d8ca21c63a3a 34,36
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_d05982e279fb2a 4,7-8,13,20
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_4cc7c0ab72ceda 5
+.signpost/modules/config.md
+  s_5811b7f24eccc0::t_f7e4ff1d22a880 1-41
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_2be3e08eaacb68 5
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_278724d5269628 5
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_017e41ed21b92a 5
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_7626a62dd4871d 5
+.signpost/modules/hook.md
+  s_f6c0b1ac81cb95::t_696ed75629de16 5
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_729c00a34f3181 5
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_343043bcf38698 4-5,8-9,12-13,16-19,24,46-47
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_ad96981b4323c6 5
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_0904d63680daf4 5
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_d3df11359e4824 5
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_8cc3c8f7127c99 4-5,9,11-12,15-16,19,23,32-33,47,53,56-57,72,74
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_476a2e82e2cc06 5
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_83177325691d25 5
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_0ac3126961c9f6 5,21
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_5886e0aaf5d5bb 5
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_9d46a7b0855266 5
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_3a1ec5d139eb6b 5
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_2cec0e8c7bd9e4 5
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_a18c971f858d04 5
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_797e71bc855d38 5
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_3e2bedec0ed8ff 5
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_c5511453d9f7fd 5
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_f8de3b80f0815a 5
+.signpost/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_e35c8ef7c66dd7 5
+.signpost/references/adr-0011-configuration-file-format-and-location.md
+  s_f6c0b1ac81cb95::t_7fc9e9c2e65623 5
+.signpost/references/adr-0012-a-group-name-is-never-an-action.md
+  s_f6c0b1ac81cb95::t_fc411bc125af75 5
+.signpost/references/adr-0013-the-local-hook-reports-and-ci-gates.md
+  s_f6c0b1ac81cb95::t_d497081f4b5b71 5
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_1bee7c53313b29 5
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_62506de59c133c 5
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_89da3c131db72b 5
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_7ddb594ac1b225 5
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_dfd3cda65bbe0c 5
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_e17a4a0ee464f2 5
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_bbaa1532e1f059 5
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_2a8d68bd8a0d1f 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "88bb6c997b9c9077b55bbeaa84f4568b1b5dc15d",
+  "prompts": {},
+  "sessions": {
+    "s_5811b7f24eccc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5ac7310-ca40-41b4-86cf-fc36cc2e2474",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
