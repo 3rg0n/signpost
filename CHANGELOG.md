@@ -10,6 +10,35 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-02
 
+- **`AGENTS.md`, and a README section on pointing agents at the bundle — because a committed
+  bundle is not a discovered bundle.** Measured rather than assumed. Two agents got the same
+  task in two repositories that both had a bundle committed. In *this* repository one found
+  `.signpost/modules/extract.md` and read it second, before any source. In a repository with
+  every textual mention of signpost scrubbed out, the other read eleven files by hand and
+  never opened the bundle at all — re-deriving from `go.mod`, `pyproject.toml`, `Cargo.toml`,
+  and the CI workflow exactly the structure sitting in twenty-eight pages it never looked at.
+
+  The first result was a false positive: the agent found the bundle because it was reading
+  the README *of the tool that writes bundles*, and that chain does not exist in anybody
+  else's repository. Adding a four-line `AGENTS.md` to the scrubbed control moved
+  `.signpost/index.md` to the third file read. Models are trained to read `README.md` and
+  `AGENTS.md`; nothing trains them to look inside a dot-directory they have never heard of.
+  One line in a file they already read is the entire fix.
+
+  signpost still does not write those files — they encode human intent, and a generator
+  overwriting them is how teams learn to distrust tooling (design §6.2). It only reads them,
+  to report whether a repository states any rules for the agents working in it, which makes
+  the omission here self-diagnosing: signpost's own `practices.md` said *"No agent
+  instructions were found, so an agent working here has only the code to go on"* until this
+  commit, and now says *"14 stated rules."*
+
+  The `AGENTS.md` carries more than the pointer, because the control run showed what a bare
+  pointer does not prevent: the agent proposed hand-writing `modules/greeter-3.md` and
+  editing `index.md`, treating generated pages as source. So the file states that managed
+  regions are replaced on every run, that CI owns the rebuild on `main` while pull requests
+  only verify, and — now also in CONTRIBUTING — that a rebuilt bundle does not belong in a
+  PR.
+
 - **`.signpost.yml` — a repository states how it wants to be analysed.** Optional, at the
   repository root. Nine keys, each of which sets the default for a flag: `include_vendored`,
   `include_fixtures`, `ignore`, `no_history`, `max_commits`, `repo`, `backend`, `model`, and
@@ -149,6 +178,42 @@ All notable changes to this project are documented here. Format follows
 ### Fixed
 
 #### 2026-08-02
+
+- **Every link between bundle pages was root-absolute, so every one of them 404'd on
+  GitHub.** `/modules/hook.md` resolves against the *web server root*: on
+  `github.com/3rg0n/signpost/blob/main/.signpost/index.md` it points at
+  `github.com/modules/hook.md`. It only ever worked in a viewer that mounts the bundle at
+  `/` — and ADR 0005 names GitHub browsing as the whole reason the bundle is committed, a
+  reader opening `.signpost/index.md` and seeing the module graph with nothing installed.
+  That reader had 118 broken links across 40 pages. Links are now page-relative (`./b.md`,
+  `../interfaces/x.md`), which works in a viewer, on GitHub, and in a checkout opened in an
+  editor, and survives relocation: a fork, a bundle under a different directory, or a
+  subtree merge that nests the tree one level down all keep working, because no link names
+  a root that a relocation can change.
+
+  **Nothing failed, and the reason it could not fail is the part worth recording.**
+  `verify`'s resolver interpreted the same absolute form the emitter wrote, so the two
+  agreed with each other and disagreed with every markdown renderer in existence. A gate
+  built out of one half of a round trip cannot see a bug in the convention both halves
+  share. So the regression test resolves each link the way a renderer does — join it to the
+  directory of the page it is written on and look for that file on disk — with no help from
+  signpost's own resolver, and it lives in the corpus so it runs through the binary against
+  a repository this tree cannot produce.
+
+  The change also came within one line of silently emptying the link gate. `bundleLinks`
+  returned only `/`-prefixed targets and counted the rest as `skipped`; moving the emitter
+  to relative links without touching it would have turned 118 *checked* links into 118
+  *skipped* ones while `verify` kept printing ok. It now takes the region's provenance: in a
+  generated region a relative target is signpost's own and is checked, and in human prose it
+  is genuinely ambiguous — `../../internal/auth/auth.go` in somebody's notes means a
+  repository file — and is counted as unchecked. `verify` on this repository reports 123
+  prose links checked, which is the number that would have gone to zero.
+
+  `bundleRel` still resolves the absolute form, deliberately: `verify` runs against a bundle
+  on disk that a rebuild has not necessarily touched, and a resolver that stopped
+  understanding the old form would report every page of an older bundle as broken rather
+  than stale. `resource:` URIs stay absolute — OKF requires a globally-unique identifier,
+  and a relative one identifies nothing.
 
 - **`hooks install` reported a hooks directory inside the repository as shared with every
   repository on the machine**, when the repository was reached through a symlink. That warning

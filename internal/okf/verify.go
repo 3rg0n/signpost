@@ -367,28 +367,28 @@ func checkPageLinks(res *VerifyResult, disk *onDisk, rel string, page *Page,
 			continue
 		}
 		res.Checked.Edges++
-		if !resolves(disk, to) {
+		if !resolves(disk, rel, to) {
 			res.fail(FindingBrokenLink, rel, "edge target %s is not in the bundle", to)
 		}
 	}
 	for _, s := range fm.Get("sources").Seq() {
 		src := s.Get("resource").String()
-		if !strings.HasPrefix(src, "/") {
+		if !isBundleTarget(src) {
 			// A source may cite something outside the bundle — a commit URI, a spec URL —
 			// and design §4.6 asks only that the ones naming a bundle page resolve.
 			continue
 		}
 		res.Checked.Sources++
-		if !resolves(disk, src) {
+		if !resolves(disk, rel, src) {
 			res.fail(FindingBrokenLink, rel, "source %s is not in the bundle", src)
 		}
 	}
 	for _, r := range page.Body {
-		targets, n := bundleLinks(r.Text)
+		targets, n := bundleLinks(r.Text, r.Managed())
 		*skipped += n
 		for _, t := range targets {
 			res.Checked.Links++
-			if resolves(disk, t) {
+			if resolves(disk, rel, t) {
 				continue
 			}
 			// The region is named because it says whose problem it is. A broken link in a
@@ -403,48 +403,88 @@ func checkPageLinks(res *VerifyResult, disk *onDisk, rel string, page *Page,
 	}
 }
 
-// resolves reports whether a bundle-absolute target names a file in the bundle.
-func resolves(disk *onDisk, target string) bool {
-	rel, ok := bundleRel(target)
+// resolves reports whether a target named on the page at from names a file in the bundle.
+func resolves(disk *onDisk, from, target string) bool {
+	rel, ok := bundleRel(from, target)
 	if !ok {
 		return false
 	}
 	return disk.files[rel]
 }
 
-// bundleRel turns a link target into the bundle-relative path it names.
+// bundleRel turns a link target on the page at from into the bundle-relative path it names.
 //
-// Cleaned before lookup, so `/modules/../index.md` resolves to the page it names rather
-// than failing as a string mismatch — and rejected if cleaning walks out of the bundle,
-// which is a link that cannot resolve no matter what is on disk.
-func bundleRel(target string) (string, bool) {
-	if !strings.HasPrefix(target, "/") {
-		return "", false
-	}
+// Two forms resolve, and the second is the one signpost now writes. A `/`-prefixed target
+// is bundle-absolute and interpreted from the bundle root, which is what every bundle built
+// before this change contains — still accepted, because verify runs against a bundle on
+// disk that a rebuild has not necessarily touched yet, and a resolver that stopped
+// understanding the old form would report every page of an older bundle as broken instead
+// of stale. A `./` or `../` target is page-relative and interpreted from from's directory.
+//
+// Cleaned before lookup, so `modules/../index.md` resolves to the page it names rather than
+// failing as a string mismatch — and rejected if cleaning walks out of the bundle, which is
+// a link that cannot resolve no matter what is on disk.
+func bundleRel(from, target string) (string, bool) {
 	// A fragment names a heading within the page; the page is what has to exist.
 	if i := strings.IndexByte(target, '#'); i >= 0 {
 		target = target[:i]
 	}
-	rel := path.Clean(strings.TrimPrefix(target, "/"))
+	if target == "" {
+		return "", false
+	}
+	var rel string
+	switch {
+	case strings.HasPrefix(target, "/"):
+		rel = path.Clean(strings.TrimPrefix(target, "/"))
+	case isRelTarget(target):
+		rel = path.Clean(path.Join(path.Dir(from), target))
+	default:
+		return "", false
+	}
 	if rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
 		return "", false
 	}
 	return rel, true
 }
 
-// bundleLinks returns the bundle-absolute markdown link targets in a span of text, and how
-// many links it deliberately left unchecked.
+// isRelTarget reports whether a link target is explicitly page-relative.
 //
-// Only `/`-prefixed targets are returned, and that is a decision about false positives
-// rather than an oversight. A relative link in a page is genuinely ambiguous — a human
-// writing `../src/main.go` in their notes means a file in the repository, not in the
-// bundle — and a gate that failed on those would be a gate people turn off. Every link
-// signpost itself writes is bundle-absolute (see pagePath), so the checked set covers all
-// of the generated content and the unchecked count is reported rather than swallowed.
+// The `./` or `../` prefix is required rather than treating every non-absolute target as
+// relative, and that is the same false-positive judgement bundleLinks documents: a bare
+// `main.go` in somebody's notes means a file in the repository, and resolving it against
+// the bundle would fail a build over a link that was never about the bundle. relTarget
+// always writes the prefix, so everything signpost generates is covered.
+func isRelTarget(target string) bool {
+	return strings.HasPrefix(target, "./") || strings.HasPrefix(target, "../")
+}
+
+// isBundleTarget reports whether a target is one this resolver can check at all.
+func isBundleTarget(target string) bool {
+	return strings.HasPrefix(target, "/") || isRelTarget(target)
+}
+
+// bundleLinks returns the markdown link targets in a span of text that name a bundle page,
+// and how many links it deliberately left unchecked.
+//
+// managed is whether the text came from a generated region, and it decides whether a
+// page-relative target is checked. That asymmetry is the whole reason this takes the
+// argument, and it is a decision about false positives rather than an oversight:
+//
+//   - In a *generated* region every link is signpost's own, written by relTarget, so a
+//     relative target that does not resolve is a bug in this package or a stale bundle.
+//     Checked. Without this the move to relative links would have silently emptied the
+//     gate — 118 checked links become 118 skipped ones, and `verify` keeps saying ok.
+//   - In *human* prose a relative link is genuinely ambiguous: somebody writing
+//     `../../internal/auth/auth.go` in their notes means a file in the repository, not a
+//     bundle page, and a gate that failed on those would be a gate people turn off.
+//     Counted as unchecked.
+//
+// A `/`-prefixed target is checked in both, because nothing outside a bundle is named that
+// way and older bundles are full of them.
 //
 // Code — fenced blocks and inline spans — is skipped: a note showing an example link is not
 // a link, and failing a build over one would make the page's own documentation unwritable.
-func bundleLinks(text string) (targets []string, skipped int) {
+func bundleLinks(text string, managed bool) (targets []string, skipped int) {
 	fence := ""
 	for off := 0; off < len(text); {
 		line, next := nextLine(text, off)
@@ -465,7 +505,7 @@ func bundleLinks(text string) (targets []string, skipped int) {
 			continue
 		}
 		for _, t := range lineLinks(stripCodeSpans(line)) {
-			if strings.HasPrefix(t, "/") {
+			if strings.HasPrefix(t, "/") || managed && isRelTarget(t) {
 				targets = append(targets, t)
 				continue
 			}

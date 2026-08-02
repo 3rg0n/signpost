@@ -487,7 +487,8 @@ func indexBody(g *graph.Graph, opts Options) string {
 	// bundle-absolute link is a verify failure.
 	if opts.Practices != "" {
 		b.WriteString("\n" + heading(3, "How work is done here"))
-		b.WriteString("- " + proseLink("How work is done here", "/"+PracticesPage) +
+		b.WriteString("- " + proseLink("How work is done here",
+			relTarget(IndexPage, PracticesPage)) +
 			" — what this repository declares about building, testing, gating, and " +
 			"ownership, and what it does not.\n")
 	}
@@ -506,7 +507,7 @@ func indexBody(g *graph.Graph, opts Options) string {
 		}
 		b.WriteString("\n" + heading(3, kindHeading(k)))
 		for _, n := range ns {
-			b.WriteString("- " + proseLink(n.Title, pagePath(n.ID)))
+			b.WriteString("- " + proseLink(n.Title, relTarget(IndexPage, pagePath(n.ID))))
 			if n.Description != "" {
 				b.WriteString(" — " + n.Description)
 			}
@@ -566,7 +567,7 @@ func hubLines(g *graph.Graph) string {
 		if n == nil {
 			continue
 		}
-		b.WriteString("- " + proseLink(n.Title, pagePath(n.ID)) + " — " +
+		b.WriteString("- " + proseLink(n.Title, relTarget(IndexPage, pagePath(n.ID))) + " — " +
 			plural(d.Total, "relationship") + " (" + strconv.Itoa(d.In) + " in, " +
 			strconv.Itoa(d.Out) + " out)\n")
 	}

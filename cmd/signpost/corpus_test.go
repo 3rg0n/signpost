@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -1411,6 +1412,228 @@ func TestCorpusGateWeakeningConfigStopsTheBuild(t *testing.T) {
 	// anyway would leave CI comparing against a bundle nobody's configuration produced.
 	if _, err := os.Stat(filepath.Join(dir, okf.BundleDir)); !os.IsNotExist(err) {
 		t.Errorf("a bundle was written despite the refused key: %v", err)
+	}
+}
+
+// TestCorpusEveryLinkResolvesAndSurvivesRelocation is the regression test for the bug that every
+// intra-bundle link was root-absolute.
+//
+// `/modules/hook.md` resolves against the *web server root*, so it only worked in a viewer
+// that mounts the bundle at `/`. On GitHub — which ADR 0005 names as the entire point of
+// committing the bundle, a reader opening `.signpost/index.md` with nothing installed — it
+// pointed at `github.com/modules/hook.md` and 404'd. Every generated link in this
+// repository's own bundle was broken for that reader, and nothing failed: `verify`'s
+// resolver interpreted the same absolute form the emitter wrote, so the two agreed with each
+// other and disagreed with every renderer.
+//
+// So this test deliberately does not use signpost's resolver. It resolves each link the way
+// a renderer does — join it to the directory of the page it is written on, and look for that
+// file on disk — because a resolver bug is exactly what hid this.
+//
+// The corpus rather than a unit test because the failure needs shape to appear: pages at the
+// bundle root (index, log, practices) linking down into subdirectories, pages under
+// `modules/` linking to siblings, and pages linking across to `references/` and
+// `interfaces/`. A bundle with one directory would pass with `./` hard-coded.
+func TestCorpusEveryLinkResolvesAndSurvivesRelocation(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// Every file in the bundle, not only the pages: manifest.json is a legitimate target.
+	onDisk := map[string]bool{}
+	root := filepath.Join(dir, okf.BundleDir)
+	if err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		onDisk[filepath.ToSlash(rel)] = true
+		return nil
+	}); err != nil {
+		t.Fatalf("walking the bundle: %v", err)
+	}
+
+	checked := 0
+	for rel, src := range pages {
+		for _, target := range generatedLinks(src) {
+			// The positive half of the boundary: an absolute target is the bug, so it fails
+			// here rather than being resolved leniently. Checked before resolution because
+			// `/index.md` would otherwise resolve fine after trimming and the defect would
+			// survive with the test still green.
+			if strings.HasPrefix(target, "/") {
+				t.Errorf("%s links to %s, which is root-absolute: it resolves against the "+
+					"server root, so it 404s on GitHub and in a plain checkout", rel, target)
+				continue
+			}
+			checked++
+			// Resolved the way a markdown renderer does, with no help from okf.
+			want := path.Clean(path.Join(path.Dir(rel), target))
+			if !onDisk[want] {
+				t.Errorf("%s links to %s, which resolves to %s — not in the bundle:\n  %s",
+					rel, target, want, pageNames(pages))
+			}
+		}
+	}
+
+	// The count matters, per the corpus's negative-boundary rule: a `generatedLinks` that
+	// returned nothing would make every assertion above vacuous, and a bundle whose pages
+	// stopped linking to each other is the failure ADR 0004's traversability rests on. The
+	// bound is loose because the corpus grows; it is the zero and near-zero cases that are
+	// being excluded.
+	if checked < 20 {
+		t.Errorf("only %d generated links were checked across %d pages, so this test is "+
+			"asserting almost nothing", checked, len(pages))
+	}
+
+	assertBundleSurvivesRelocation(t, pages)
+}
+
+// generatedLinks returns the markdown link targets in a page's managed regions, and the
+// `to:` targets in its frontmatter edges.
+//
+// Managed regions only, because those are the links signpost wrote and is accountable for.
+// A relative link in somebody's notes may legitimately name a repository file rather than a
+// bundle page, which is the same distinction verify draws.
+//
+// Written here with its own scanner rather than calling into okf so that a bug in okf's link
+// parsing cannot hide a bug in okf's link emission.
+func generatedLinks(src string) []string {
+	var out []string
+	inRegion := false
+	inFrontmatter := false
+	for i, line := range strings.Split(src, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			// Frontmatter is the leading fenced block only; a `---` later in the body is a
+			// horizontal rule.
+			if i == 0 {
+				inFrontmatter = true
+				continue
+			}
+			if inFrontmatter {
+				inFrontmatter = false
+			}
+			continue
+		}
+		if inFrontmatter {
+			// `- { kind: imports, to: ./x.md, confidence: extracted }`
+			if idx := strings.Index(line, " to: "); idx >= 0 {
+				rest := line[idx+len(" to: "):]
+				if end := strings.IndexAny(rest, ",}"); end >= 0 {
+					out = append(out, strings.TrimSpace(rest[:end]))
+				}
+			}
+			continue
+		}
+		switch {
+		case strings.HasPrefix(trimmed, "<!-- signpost:managed:"):
+			inRegion = true
+			continue
+		case strings.HasPrefix(trimmed, "<!-- /signpost:managed:"):
+			inRegion = false
+			continue
+		}
+		if !inRegion {
+			continue
+		}
+		out = append(out, markdownTargets(line)...)
+	}
+	return out
+}
+
+// markdownTargets pulls `](target)` out of a line, skipping code spans so an example link in
+// generated prose is not treated as a link.
+func markdownTargets(line string) []string {
+	// Blank the contents of inline code spans.
+	if strings.Count(line, "`") >= 2 {
+		var b strings.Builder
+		open := false
+		for _, r := range line {
+			if r == '`' {
+				open = !open
+				b.WriteRune(r)
+				continue
+			}
+			if open {
+				b.WriteByte(' ')
+				continue
+			}
+			b.WriteRune(r)
+		}
+		line = b.String()
+	}
+	var out []string
+	for i := 0; i+1 < len(line); i++ {
+		if line[i] != ']' || line[i+1] != '(' {
+			continue
+		}
+		rest := line[i+2:]
+		end := strings.IndexByte(rest, ')')
+		if end < 0 {
+			break
+		}
+		target := strings.TrimSpace(rest[:end])
+		i += 2 + end
+		if sp := strings.IndexAny(target, " \t"); sp >= 0 {
+			target = target[:sp]
+		}
+		if idx := strings.IndexByte(target, '#'); idx >= 0 {
+			target = target[:idx]
+		}
+		if target == "" || strings.Contains(target, "://") {
+			continue
+		}
+		out = append(out, target)
+	}
+	return out
+}
+
+// assertBundleSurvivesRelocation is the fork half of the same property.
+//
+// A relative link names no root, so moving the whole bundle cannot break it. Asserted by
+// moving the bundle into a subdirectory and re-resolving every link from there: with the
+// absolute form every link breaks, and with the relative form the set of resolved targets is
+// unchanged. This is what makes a fork, a subtree merge, or a bundle published under a path
+// prefix keep working — the thing the absolute form silently did not do.
+//
+// A subtree of the test above rather than its own top-level test because it asserts a
+// different property of the same artifact, and a corpus build is the expensive part: on a
+// Windows host each one costs ~28 seconds of process creation, so a second build to re-read
+// bytes this test already holds buys nothing.
+func assertBundleSurvivesRelocation(t *testing.T, pages map[string]string) {
+	t.Helper()
+
+	// Relocation is a pure path operation on the bundle: every page keeps its bytes, and only
+	// the prefix each one sits under changes. So a link that resolves within the moved set
+	// resolves in the original, and one that named the old root does not.
+	moved := map[string]bool{}
+	for rel := range pages {
+		moved["docs/knowledge/"+rel] = true
+	}
+
+	broken := 0
+	for rel, src := range pages {
+		from := "docs/knowledge/" + rel
+		for _, target := range generatedLinks(src) {
+			if !strings.HasSuffix(target, ".md") {
+				continue
+			}
+			if !moved[path.Clean(path.Join(path.Dir(from), target))] {
+				broken++
+				if broken <= 3 {
+					t.Errorf("after moving the bundle under docs/knowledge/, %s no longer "+
+						"resolves from %s", target, from)
+				}
+			}
+		}
+	}
+	if broken > 3 {
+		t.Errorf("and %d more links broke on relocation", broken-3)
 	}
 }
 

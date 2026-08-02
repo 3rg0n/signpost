@@ -133,6 +133,30 @@ URL is a property of your checkout, and a fork's remote names the upstream.
 Without it, pages carry a commit-only resource, which is still enough to tell
 whether a page describes the code in front of you.
 
+## Point your agents at it
+
+**A committed bundle is not a discovered bundle.** Add one line to your `AGENTS.md`,
+`CLAUDE.md`, or `.github/copilot-instructions.md`:
+
+```markdown
+Read `.signpost/index.md` before starting work — it is a compiled map of this
+repository's structure.
+```
+
+That line is the difference between the bundle being used and being ignored, and the
+gap is not small. Given the same task in two repositories that both had a bundle
+committed, an agent used it in the one whose README described signpost and ignored it
+entirely in the one that did not — reading eleven files by hand to re-derive structure
+that was sitting in twenty-eight pages it never opened. Models are trained to read
+`README.md` and `AGENTS.md`; nothing trains them to look inside a dot-directory they
+have never heard of. This repository's own [`AGENTS.md`](AGENTS.md) is that pointer, and
+it is the whole fix.
+
+signpost will not write those files for you — they encode your intent, and a generator
+that overwrites them is how teams learn to distrust tooling
+([design §6.2](docs/design.md)). It only reads them, to report whether a repository
+states any rules for the agents working in it.
+
 ## What it checks
 
 `signpost verify` answers one question — is the committed bundle still true of

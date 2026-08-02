@@ -215,12 +215,13 @@ func attributeMap(attrs map[string]string) []yamlValue {
 // it would make an inference indistinguishable from a parsed import, which is the failure
 // this project exists to avoid.
 func edgeList(g *graph.Graph, id string) []yamlValue {
+	from := pagePath(id)
 	edges := g.EdgesFrom(id)
 	out := make([]yamlValue, 0, len(edges))
 	for _, e := range edges {
 		pairs := []yamlPair{
 			{"kind", scalar(string(e.Kind))},
-			{"to", scalar(pagePath(e.To))},
+			{"to", scalar(relTarget(from, pagePath(e.To)))},
 			{"confidence", scalar(string(e.Conf))},
 		}
 		if e.Weight > 0 {
@@ -240,6 +241,48 @@ func edgeList(g *graph.Graph, id string) []yamlValue {
 // only ever appending ".md". Written as a function anyway because it is the one place the
 // two conventions meet, and a change to either should have exactly one place to fail.
 func pagePath(id string) string { return id + ".md" }
+
+// relTarget renders a link from one bundle page to another as a page-relative path.
+//
+// Every rendered link in the bundle goes through this, and the reason is the one place
+// where "correct in a viewer" and "correct for a reader" came apart. A bundle-absolute
+// `/modules/hook.md` resolves against the *server root*, so it only works in something
+// that mounts the bundle at `/`. On GitHub — which ADR 0005 names as the whole point of
+// committing the bundle, a reader opening `.signpost/index.md` with nothing installed —
+// it points at `github.com/modules/hook.md` and 404s. Page-relative works in both, and
+// in a plain checkout opened in an editor, which the absolute form never did.
+//
+// Relative also survives being moved: a fork, a bundle under a different directory, or a
+// subtree merge that nests the whole tree one level down all keep working, because no
+// link names a root that a relocation can change.
+//
+// Both arguments are bundle-relative page paths, with or without the leading slash that
+// pagePath carries. The `./` prefix on a sibling is deliberate: it makes the target
+// unmistakably a relative path in the markdown source, where a bare `hook.md` reads like
+// it could be anything.
+func relTarget(from, to string) string {
+	fromSegs := strings.Split(strings.TrimPrefix(from, "/"), "/")
+	fromSegs = fromSegs[:len(fromSegs)-1] // the directory the link is written in
+	toSegs := strings.Split(strings.TrimPrefix(to, "/"), "/")
+
+	// The shared prefix is the directories both pages sit under. Stopping one short of
+	// toSegs's end keeps the target's own filename out of the comparison, so a page named
+	// the same as a directory cannot consume it.
+	i := 0
+	for i < len(fromSegs) && i < len(toSegs)-1 && fromSegs[i] == toSegs[i] {
+		i++
+	}
+	out := make([]string, 0, len(fromSegs)-i+len(toSegs)-i)
+	for j := i; j < len(fromSegs); j++ {
+		out = append(out, "..")
+	}
+	out = append(out, toSegs[i:]...)
+	rel := strings.Join(out, "/")
+	if !strings.HasPrefix(rel, "../") {
+		rel = "./" + rel
+	}
+	return rel
+}
 
 // summaryText is the placeholder for the managed region a model fills.
 //
@@ -262,6 +305,7 @@ func summaryText(n *graph.Node) string {
 // aware one reads the typed list. Emitting only the frontmatter would leave a conformant
 // consumer unable to walk the graph at all.
 func structureText(g *graph.Graph, n *graph.Node) string {
+	from := pagePath(n.ID)
 	var b strings.Builder
 	if len(n.Files) > 0 {
 		b.WriteString(filesLine(n))
@@ -278,7 +322,7 @@ func structureText(g *graph.Graph, n *graph.Node) string {
 	for _, k := range kinds {
 		es := byKind[graph.EdgeKind(k)]
 		b.WriteString("\n- **" + edgeKindLabel(graph.EdgeKind(k)) + "**: ")
-		b.WriteString(edgeSentence(g, es))
+		b.WriteString(edgeSentence(g, from, es))
 		b.WriteString("\n")
 	}
 	if b.Len() == 0 {
@@ -371,7 +415,10 @@ func escapeLinkLabel(s string) string {
 }
 
 // edgeSentence renders one edge kind's targets as prose links with their confidence.
-func edgeSentence(g *graph.Graph, es []graph.Edge) string {
+//
+// from is the page these links are written on, because the targets are page-relative
+// (relTarget) and so cannot be rendered without knowing where they are rendered.
+func edgeSentence(g *graph.Graph, from string, es []graph.Edge) string {
 	parts := make([]string, 0, len(es))
 	for _, e := range es {
 		target := g.Node(e.To)
@@ -379,7 +426,7 @@ func edgeSentence(g *graph.Graph, es []graph.Edge) string {
 		if target != nil && target.Title != "" {
 			label = target.Title
 		}
-		s := proseLink(label, pagePath(e.To))
+		s := proseLink(label, relTarget(from, pagePath(e.To)))
 		// The confidence marker is on the link itself rather than in a legend, because a
 		// reader scanning one line must be able to tell a parsed fact from a guess without
 		// scrolling. `extracted` is the silent default: annotating the common case would

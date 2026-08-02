@@ -297,8 +297,7 @@ func TestVerifyFailsOnABrokenEdgeTarget(t *testing.T) {
 	root, _, g := write(t)
 	const page = "modules/internal-auth.md"
 	edit(t, root, page, func(s string) string {
-		return strings.Replace(s, "to: /modules/internal-storage.md",
-			"to: /modules/deleted.md", 1)
+		return strings.Replace(s, "to: ./internal-storage.md", "to: ./deleted.md", 1)
 	})
 
 	res := verifyBundle(t, root, g)
@@ -563,22 +562,100 @@ func TestVerifyFindingsAreOrderedStably(t *testing.T) {
 }
 
 func TestBundleRelRejectsAPathEscapingTheBundle(t *testing.T) {
-	cases := map[string]struct {
+	// Keyed by the page the link is written on and the target, because a page-relative
+	// target cannot be resolved without both — which is the whole change here.
+	cases := map[[2]string]struct {
 		want string
 		ok   bool
 	}{
-		"/modules/a.md":          {"modules/a.md", true},
-		"/index.md#heading":      {"index.md", true},
-		"/modules/../index.md":   {"index.md", true},
-		"/../outside.md":         {"", false},
-		"modules/a.md":           {"", false},
-		"/modules/./b.md":        {"modules/b.md", true},
-		"/modules/../../away.md": {"", false},
+		// Bundle-absolute. Still resolved, because a bundle on disk from before the move to
+		// relative links is full of these and verify has to report it as stale rather than as
+		// eighty broken links.
+		{"index.md", "/modules/a.md"}:            {"modules/a.md", true},
+		{"index.md", "/index.md#heading"}:        {"index.md", true},
+		{"modules/a.md", "/modules/../index.md"}: {"index.md", true},
+		{"index.md", "/../outside.md"}:           {"", false},
+		{"index.md", "/modules/./b.md"}:          {"modules/b.md", true},
+		{"index.md", "/modules/../../away.md"}:   {"", false},
+
+		// Page-relative, the form relTarget writes now. Resolved against the linking page's
+		// directory, so the same target text means different files on different pages.
+		{"modules/a.md", "./b.md"}:          {"modules/b.md", true},
+		{"modules/a.md", "../index.md"}:     {"index.md", true},
+		{"index.md", "./modules/a.md"}:      {"modules/a.md", true},
+		{"modules/a.md", "./b.md#heading"}:  {"modules/b.md", true},
+		{"modules/a.md", "../modules/c.md"}: {"modules/c.md", true},
+
+		// Negative boundaries. Without these a resolver that returned ok for everything
+		// would pass every case above, and "the link resolved" would stop meaning anything.
+		{"modules/a.md", "../../outside.md"}: {"", false}, // walks out of the bundle
+		{"index.md", "../outside.md"}:        {"", false}, // one level up from the root
+		{"index.md", "modules/a.md"}:         {"", false}, // bare: ambiguous, not ours
+		{"index.md", "main.go"}:              {"", false}, // a repository file in a note
+		{"index.md", "https://x.example/a"}:  {"", false}, // not a bundle target at all
+		{"index.md", "#heading"}:             {"", false}, // same-page fragment, no file
+		{"index.md", "./"}:                   {"", false}, // a directory is not a page
 	}
 	for in, want := range cases {
-		got, ok := bundleRel(in)
+		from, target := in[0], in[1]
+		got, ok := bundleRel(from, target)
 		if ok != want.ok || got != want.want {
-			t.Errorf("bundleRel(%q) = %q, %v; want %q, %v", in, got, ok, want.want, want.ok)
+			t.Errorf("bundleRel(%q, %q) = %q, %v; want %q, %v",
+				from, target, got, ok, want.want, want.ok)
+		}
+	}
+}
+
+// relTarget is the other half of the same contract: what the emitter writes has to be what
+// bundleRel reads back. Asserted as a round trip rather than only on the rendered string,
+// because the two live in different files and a change to either alone is the failure.
+func TestRelTargetRoundTripsThroughBundleRel(t *testing.T) {
+	pages := []string{
+		"index.md", "log.md", "practices.md",
+		"modules/a.md", "modules/b.md", "references/x.md",
+		"modules/nested/deep.md",
+	}
+	for _, from := range pages {
+		for _, to := range pages {
+			target := relTarget(from, to)
+			if !isRelTarget(target) {
+				t.Errorf("relTarget(%q, %q) = %q, which is not explicitly relative: "+
+					"bundleLinks would count it as unchecked and the gate would not see it",
+					from, to, target)
+			}
+			got, ok := bundleRel(from, target)
+			if !ok || got != to {
+				t.Errorf("relTarget(%q, %q) = %q, which bundleRel reads back as %q, %v",
+					from, to, target, got, ok)
+			}
+		}
+	}
+}
+
+// A link in a generated region is signpost's own and must be checked; the same text in
+// human prose must not be. That asymmetry is what keeps the gate honest without failing a
+// build over somebody's note, and it is the one thing that would have silently emptied the
+// link check when the emitter moved to relative targets.
+func TestBundleLinksChecksRelativeTargetsOnlyInGeneratedRegions(t *testing.T) {
+	const text = "See [b](./b.md) and [src](../../internal/auth/auth.go).\n"
+
+	managed, mSkipped := bundleLinks(text, true)
+	if len(managed) != 2 || mSkipped != 0 {
+		t.Errorf("in a generated region: checked %v, skipped %d; want both links checked",
+			managed, mSkipped)
+	}
+
+	human, hSkipped := bundleLinks(text, false)
+	if len(human) != 0 || hSkipped != 2 {
+		t.Errorf("in human prose: checked %v, skipped %d; want both left unchecked — a note "+
+			"naming a repository file is not a bundle link", human, hSkipped)
+	}
+
+	// Bundle-absolute is checked in both: nothing outside a bundle is named that way.
+	for _, m := range []bool{true, false} {
+		got, _ := bundleLinks("See [a](/modules/a.md).\n", m)
+		if len(got) != 1 {
+			t.Errorf("managed=%v: absolute target not checked: %v", m, got)
 		}
 	}
 }

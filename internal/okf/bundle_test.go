@@ -871,9 +871,16 @@ func TestIndexPageGroupsByKindWithHubsFirst(t *testing.T) {
 	if iRefs > 0 && iRefs < iModules {
 		t.Error("external dependencies were listed above modules")
 	}
-	// One described line per concept.
-	if !strings.Contains(idx, "[internal/storage](/modules/internal-storage.md) — Token table.") {
+	// One described line per concept, with a page-relative target: the index sits at the
+	// bundle root, so a page under modules/ is `./modules/...` from it.
+	if !strings.Contains(idx, "[internal/storage](./modules/internal-storage.md) — Token table.") {
 		t.Errorf("index line is not described:\n%s", idx)
+	}
+	// The negative half. A root-absolute target resolves against the web server root, so on
+	// GitHub — where ADR 0005 expects the bundle to be read with nothing installed —
+	// `/modules/x.md` is a 404. None may survive anywhere on the page.
+	if strings.Contains(idx, "](/") {
+		t.Errorf("the index carries a root-absolute link, which 404s on GitHub:\n%s", idx)
 	}
 }
 

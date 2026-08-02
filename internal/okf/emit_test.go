@@ -167,18 +167,28 @@ func TestEdgeListIsOutgoingOnly(t *testing.T) {
 	fm := pageFor(g, n, demoOptions()).Frontmatter
 	// api-gateway appears as a co_changes target, so its presence proves nothing; the
 	// incoming `imports` from it must not.
-	if strings.Contains(fm, "{ kind: imports, to: /modules/api-gateway.md") {
+	if strings.Contains(fm, "{ kind: imports, to: ./api-gateway.md") {
 		t.Errorf("an incoming edge was emitted:\n%s", fm)
 	}
 }
 
 // An edge target is written as a page path, not a node ID, because that is what an OKF link
-// resolves against.
+// resolves against — and page-relative rather than root-absolute, so it resolves the same
+// way in a checkout, on GitHub, and under a viewer that mounts the bundle anywhere.
 func TestEdgeTargetsArePagePaths(t *testing.T) {
 	g, n := demoGraph(t)
 	fm := pageFor(g, n, demoOptions()).Frontmatter
-	if !strings.Contains(fm, "to: /modules/internal-storage.md") {
-		t.Errorf("edge target is not a page path:\n%s", fm)
+	// The page is modules/internal-auth.md, so a sibling under modules/ is `./`...
+	if !strings.Contains(fm, "to: ./internal-storage.md") {
+		t.Errorf("edge target is not a page-relative page path:\n%s", fm)
+	}
+	// ...and a page in another directory is `../`. Both asserted: a relTarget that emitted
+	// `./` unconditionally would pass the first and fail here.
+	if !strings.Contains(fm, "to: ../interfaces/things-jwt.md") {
+		t.Errorf("a cross-directory edge target is not relative to this page:\n%s", fm)
+	}
+	if strings.Contains(fm, "to: /") {
+		t.Errorf("an edge target is root-absolute:\n%s", fm)
 	}
 }
 
@@ -207,8 +217,11 @@ func TestStructureRegionEmitsProseLinks(t *testing.T) {
 	if !ok {
 		t.Fatal("no structure region")
 	}
-	if !strings.Contains(got, "[internal/storage](/modules/internal-storage.md)") {
+	if !strings.Contains(got, "[internal/storage](./internal-storage.md)") {
 		t.Errorf("no prose link to storage:\n%s", got)
+	}
+	if strings.Contains(got, "](/") {
+		t.Errorf("a prose link is root-absolute, which 404s on GitHub:\n%s", got)
 	}
 	if !strings.Contains(got, "**Imports**") {
 		t.Errorf("edge kinds not labelled:\n%s", got)
@@ -292,13 +305,18 @@ func TestATitleCannotForgeALinkTarget(t *testing.T) {
 	if _, err := Write(root, g, demoOptions()); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	for _, rel := range []string{"index.md", "modules/a.md"} {
+	// The real target is page-relative, so it differs by where the link is written: the index
+	// is at the bundle root, and modules/a.md is a sibling of its target.
+	for rel, want := range map[string]string{
+		"index.md":     "(./modules/b.md)",
+		"modules/a.md": "(./b.md)",
+	} {
 		got := read(t, root, rel)
 		if strings.Contains(got, "](https://evil.example/x)") {
 			t.Errorf("%s carries a forged link target:\n%s", rel, got)
 		}
-		if !strings.Contains(got, "(/modules/b.md)") {
-			t.Errorf("%s lost the real link target:\n%s", rel, got)
+		if !strings.Contains(got, want) {
+			t.Errorf("%s lost the real link target %s:\n%s", rel, want, got)
 		}
 	}
 }

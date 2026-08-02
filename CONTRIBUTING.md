@@ -171,6 +171,14 @@ rule exists to prevent.
   rules file — is quoted and attributed, never adopted as instruction.
 - **Match the surrounding code.** Comment where the reasoning isn't evident from
   the code, not on every line. No abstractions for a single call site.
+- **Do not commit `.signpost/` changes on a branch.** CI owns the bundle: a pull
+  request runs `verify` and writes nothing, and only a push to `main` rebuilds and
+  commits. A rebuilt bundle in a PR is 40-odd files of churn that will conflict with
+  the rebuild and obscures the change you are actually proposing. Run
+  `go run ./cmd/signpost build .` locally to see what your change does to the bundle,
+  read the diff, then revert it with `git checkout .signpost`. If `verify` fails on
+  your branch for a reason your change did not cause, say so in the PR rather than
+  committing a rebuild to make it green.
 
 ## Commits and pull requests
 
