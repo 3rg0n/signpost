@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@9ed02653140c4c70eeb495fca25afa2bacbf8ead",
+  "resource": "git://2f488fb2af7df22b5c7ec19a6b59a33f145599f3",
   "date": "2026-08-02",
   "counts": {
-    "nodes": 31,
+    "nodes": 33,
     "edges": 57,
-    "clusters": 21
+    "clusters": 23
   },
   "confidence": {
     "ambiguous": 0,
@@ -40,6 +40,8 @@
     "references/adr-0008-the-viewer-lives-in-this-repository.md",
     "references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md",
     "references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md",
+    "references/adr-0011-configuration-file-format-and-location.md",
+    "references/adr-0012-a-group-name-is-never-an-action.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",
