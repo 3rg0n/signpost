@@ -27,13 +27,13 @@ lost; Consequences states what this costs, not only what it buys.
 | [0008](0008-the-viewer-lives-in-this-repository.md) | The viewer lives in this repository, with no JavaScript dependencies | Accepted |
 | [0009](0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md) | The semantic pass is opt-in, and egress is explicit | Accepted |
 | [0010](0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md) | A stale page is deleted only when nobody wrote on it | Accepted |
+| [0011](0011-configuration-file-format-and-location.md) | Configuration lives in `.signpost.yml`, and a config key may only change a default | Accepted |
+| [0012](0012-a-group-name-is-never-an-action.md) | A group name is never an action, and a noun with one operation stays flat | Accepted |
 
 ## Decisions still owed one
 
 Recorded here so the gap is visible rather than discovered later:
 
-- **Configuration file format and location.** Blocks restructuring the CLI around verbs,
-  since a config file changes what a flag means.
 - **OpenTelemetry instrumentation.** The SDK is five to eight modules including gRPC and
   protobuf, which would end the property [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)
   records and README asserts. Genuinely unresolved: hand-rolled OTLP/HTTP, a build tag, or

@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           go build -o signpost ./cmd/signpost
-          ./signpost export -format json -o site/graph.json .
+          ./signpost graph export -format json -o site/graph.json .
           # A viewer fed an empty graph renders an empty frame and looks like it
           # works, so the deploy fails here instead.
           node_count=$(grep -c '"id":' site/graph.json)

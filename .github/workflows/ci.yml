@@ -178,6 +178,97 @@ jobs:
       - name: Build
         run: go build -o signpost ./cmd/signpost
 
+      # The CLI's shape is a rule, not a layout: a noun with more than one
+      # operation is a group, a noun with one is flat, and a group's own name is
+      # never an action. Go tests assert it, and it is asserted again here on the
+      # real binary, because this is the surface a released artifact promises and
+      # the failure mode is silent — a later change gives a group a default verb,
+      # `signpost graph .` starts analysing again, and the rule becomes a comment
+      # describing something untrue.
+      #
+      # The renamed-verb notes are checked in the same step. They are the only
+      # thing owed to somebody whose shell history predates v0.2.0, since neither
+      # old spelling kept a working alias.
+      - name: The command surface holds
+        run: |
+          set -euo pipefail
+          fail=0
+          # Under ${RUNNER_TEMP}, not the workspace: the steps after this one
+          # analyse this repository and assert on its file census, so a scratch
+          # file dropped here would be counted as repository content.
+          err="${RUNNER_TEMP}/surface.txt"
+
+          # Every one of these must exit 2, not merely non-zero. The 2-versus-1
+          # split is the contract with CI — 2 means the command line was wrong, 1
+          # means signpost ran and what it found was the problem — so a misuse
+          # that started exiting 1 would be reported as a broken repository.
+          check() {
+            local want_frag="$1" desc="$2"; shift 2
+            local code=0
+            ./signpost "$@" >/dev/null 2>"$err" || code=$?
+            if [ "$code" -ne 2 ]; then
+              echo "signpost $*: exit ${code}, want 2 — ${desc}"
+              cat "$err"
+              fail=1
+              return
+            fi
+            grep -q "$want_frag" "$err" || {
+              echo "signpost $*: stderr does not ${desc}"
+              cat "$err"
+              fail=1
+            }
+          }
+
+          # A group must not run something, and must offer its subcommands rather
+          # than dead-ending.
+          check '<command>' 'print the group usage' graph
+          check 'show'       "offer show"           graph
+          check '<command>' 'print the group usage' model
+          check 'check'      "offer check"          model
+
+          # A renamed verb says where it went. `export` is unknown now; `graph .`
+          # parses as a group handed a path, which is exactly the v0.1.0 spelling.
+          check 'signpost graph export' "name the new spelling of export" export .
+          check 'signpost graph show'   'say the group used to be a command'  graph .
+
+          # And a typo gets its one suggestion, asserted on the real command table
+          # because that is the only place the hint is worth anything.
+          check 'signpost verify' "suggest verify" verfiy .
+
+          # Requested help is an answer, not a misuse: exit 0, on stdout, at every
+          # level. The unit tests assert this too; it is repeated here because it
+          # is the one part of the surface a person consumes through a pipe, and
+          # `signpost graph show -h | less` showing nothing is not a test failure
+          # anywhere — it is a silent one.
+          helps() {
+            local code=0 out
+            out="$(./signpost "$@" -h 2>"$err")" || code=$?
+            if [ "$code" -ne 0 ]; then
+              echo "signpost $* -h: exit ${code}, want 0"
+              cat "$err"
+              fail=1
+              return
+            fi
+            [ -n "$out" ] || { echo "signpost $* -h: nothing on stdout"; fail=1; }
+            [ ! -s "$err" ] || {
+              echo "signpost $* -h: wrote to stderr"
+              cat "$err"
+              fail=1
+            }
+          }
+
+          helps
+          helps graph
+          helps model
+          helps build
+          helps verify
+          helps graph show
+          helps graph export
+          helps model check
+
+          [ "$fail" -eq 0 ] || exit 1
+          echo "the command surface is intact"
+
       # Running the binary on this repository is the only check that exercises
       # discovery, extraction, manifest reading, resolution, clustering, and
       # export together against a real tree rather than a fixture. Every unit
@@ -186,7 +277,7 @@ jobs:
       - name: Analyse this repository
         run: |
           set -euo pipefail
-          ./signpost graph . 2>coverage.txt
+          ./signpost graph show . 2>coverage.txt
           cat coverage.txt
 
       # Not a smoke test. `graph` exits 0 on an empty graph, so asserting the exit
@@ -201,7 +292,7 @@ jobs:
       - name: Coverage floors hold
         run: |
           set -euo pipefail
-          ./signpost export -format json -quiet . > graph.json
+          ./signpost graph export -format json -quiet . > graph.json
           nodes="$(jq '.nodes | length' graph.json)"
           edges="$(jq '.edges | length' graph.json)"
           echo "nodes=${nodes} edges=${edges}"
@@ -235,8 +326,8 @@ jobs:
         run: |
           set -euo pipefail
           for fmt in mermaid dot graphml json; do
-            ./signpost export -format "$fmt" -quiet . > "a.${fmt}"
-            ./signpost export -format "$fmt" -quiet . > "b.${fmt}"
+            ./signpost graph export -format "$fmt" -quiet . > "a.${fmt}"
+            ./signpost graph export -format "$fmt" -quiet . > "b.${fmt}"
             if ! cmp -s "a.${fmt}" "b.${fmt}"; then
               echo "${fmt} export is not deterministic:"
               diff "a.${fmt}" "b.${fmt}" | head -20
@@ -307,7 +398,7 @@ jobs:
       - name: Structure is complete without history
         run: |
           set -euo pipefail
-          ./signpost export -format json -quiet -no-history . > nohist.json
+          ./signpost graph export -format json -quiet -no-history . > nohist.json
           nodes="$(jq '.nodes | length' nohist.json)"
           full="$(jq '.nodes | length' graph.json)"
           echo "nodes without history=${nodes}, with=${full}"

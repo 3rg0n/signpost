@@ -13,13 +13,16 @@ import (
 	"github.com/3rg0n/signpost/internal/export"
 )
 
-// `signpost export` renders the graph in a format another tool reads.
+// `signpost graph export` renders the graph in a format another tool reads.
 func runExport(args []string, out, errOut io.Writer) error {
-	fs := flag.NewFlagSet("export", flag.ContinueOnError)
-	fs.SetOutput(errOut)
+	fs := flag.NewFlagSet("graph export", flag.ContinueOnError)
+	// One writer for the whole of this command's usage, so the prose above and
+	// PrintDefaults' flag list cannot land on different streams.
+	help := helpStream(args, out, errOut)
+	fs.SetOutput(help)
 	fs.Usage = func() {
-		u := newPrinter(errOut)
-		u.printf("usage: signpost export [flags] [path]\n")
+		u := newPrinter(help)
+		u.printf("usage: signpost graph export [flags] [path]\n")
 		u.printf("\nRender the graph. Formats: %s.\n\nFlags:\n", formatList())
 		fs.PrintDefaults()
 	}

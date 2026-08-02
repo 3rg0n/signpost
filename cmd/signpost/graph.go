@@ -10,19 +10,25 @@ import (
 	"github.com/3rg0n/signpost/internal/graph"
 )
 
-// `signpost graph` reports the structure of a repository to a terminal.
+// `signpost graph show` reports the structure of a repository to a terminal.
 //
 // The findings it leads with are the ones design §12 argues are the differentiator:
 // import cycles, cross-cluster bridges, hubs, and disconnected components. Those
 // are the things a person is wrong about in their own repository, and they are what
 // a structural map is for — a listing of every module is something `ls` already
 // gives you.
-func runGraph(args []string, out, errOut io.Writer) error {
-	fs := flag.NewFlagSet("graph", flag.ContinueOnError)
-	fs.SetOutput(errOut)
+//
+// `show` rather than a bare `graph`, because `graph export` belongs beside it and a
+// name cannot be both an action and a namespace without being learned twice.
+func runGraphShow(args []string, out, errOut io.Writer) error {
+	fs := flag.NewFlagSet("graph show", flag.ContinueOnError)
+	// One writer for the whole of this command's usage, so the prose above and
+	// PrintDefaults' flag list cannot land on different streams.
+	help := helpStream(args, out, errOut)
+	fs.SetOutput(help)
 	fs.Usage = func() {
-		u := newPrinter(errOut)
-		u.printf("usage: signpost graph [flags] [path]\n")
+		u := newPrinter(help)
+		u.printf("usage: signpost graph show [flags] [path]\n")
 		u.printf("\nAnalyse a repository and report its structure.\n\nFlags:\n")
 		fs.PrintDefaults()
 	}

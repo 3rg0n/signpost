@@ -44,8 +44,8 @@ together against a real tree instead of a fixture. Run it yourself the same way:
 
 ```bash
 go build -o signpost ./cmd/signpost
-./signpost graph .
-./signpost export -format json -quiet . | jq '.nodes | length, (.edges | length)'
+./signpost graph show .
+./signpost graph export -format json -quiet . | jq '.nodes | length, (.edges | length)'
 ```
 
 That job asserts what the run produced, not that it exited 0 — `export` exits 0
@@ -169,7 +169,7 @@ Write the commit message as a description of the change and why it was made.
 Open the PR against `main`; CI runs the gate above plus a determinism check.
 
 Bug reports are most useful with the repository shape that triggered them — a
-minimal directory tree and the command you ran. `signpost graph .` output on a
+minimal directory tree and the command you ran. `signpost graph show .` output on a
 real repo is often enough.
 
 ## License

@@ -59,7 +59,7 @@
         <h1 class="viewer__title">The graph of this repository</h1>
         <p class="viewer__sub">
           Every node and edge below was read out of the repository by
-          <code>signpost export -format json</code> at deploy time. Nodes are
+          <code>signpost graph export -format json</code> at deploy time. Nodes are
           directories; edges are imports and files that change together.
         </p>
       </div>
@@ -117,8 +117,8 @@
           <p class="plot__fallback" data-fallback>
             Loading <code>graph.json</code>. If nothing appears, the graph can be
             read without this page: run
-            <code>signpost graph .</code> for the text findings, or
-            <code>signpost export -format graphml .</code> and open it in yEd.
+            <code>signpost graph show .</code> for the text findings, or
+            <code>signpost graph export -format graphml .</code> and open it in yEd.
           </p>
         </figure>
 

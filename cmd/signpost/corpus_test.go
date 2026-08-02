@@ -559,7 +559,7 @@ func TestCorpusWorkspacePackagesAreNotExternalDependencies(t *testing.T) {
 	// The counterpart that still fails, and it is the whole point: suppressing the page is only
 	// correct if the import found the real module instead. A fix that dropped the edge would
 	// satisfy the loop above while losing the coupling this exists to surface.
-	stdout, stderr, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
 	if code != 0 {
 		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
 	}
@@ -652,7 +652,7 @@ func TestCorpusWorkspacePackagesAreNotExternalDependencies(t *testing.T) {
 func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 	dir := buildCorpus(t)
 
-	stdout, stderr, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
 	if code != 0 {
 		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
 	}
@@ -846,7 +846,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// The names, from the graph rather than the report, so nothing is hidden by truncation. An
 	// unresolved specifier draws no edge and creates no node, so its absence from both is the
 	// evidence — checked here for the two wrong homes an over-match would put it in.
-	stdout, _, code := invoke(t, "export", "-format", "json", "--quiet", dir)
+	stdout, _, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
 	if code != 0 {
 		t.Fatalf("export failed: exit = %d", code)
 	}

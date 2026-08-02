@@ -24,9 +24,12 @@ import (
 // "ok" from one that opened everything.
 func runVerify(args []string, out, errOut io.Writer) error {
 	fs := flag.NewFlagSet("verify", flag.ContinueOnError)
-	fs.SetOutput(errOut)
+	// One writer for the whole of this command's usage, so the prose above and
+	// PrintDefaults' flag list cannot land on different streams.
+	help := helpStream(args, out, errOut)
+	fs.SetOutput(help)
 	fs.Usage = func() {
-		u := newPrinter(errOut)
+		u := newPrinter(help)
 		u.printf("usage: signpost verify [flags] [path]\n")
 		u.printf("\nCheck %s/ against the repository. Non-zero if it is stale.\n\nFlags:\n",
 			okf.BundleDir)

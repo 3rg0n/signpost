@@ -184,13 +184,15 @@ func TestModelRejectsUnknownSubcommand(t *testing.T) {
 }
 
 // The help text is where an operator learns how to configure a backend, since credentials
-// are read from the environment and there is no config file to read them from.
+// are read from the environment and never from the config file (ADR 0011).
 func TestModelCheckHelpNamesTheEnvironmentVariables(t *testing.T) {
 	stdout, stderr, code := invoke(t, "model", "check", "-h")
-	if code != 2 {
-		t.Fatalf("exit = %d, want 2 for -h\n%s", code, stderr)
+	if code != 0 {
+		t.Fatalf("exit = %d, want 0 for -h\n%s", code, stderr)
 	}
-	text := stdout + stderr
+	// stdout alone: requested help is an answer, and TestLeafHelpExitsZeroOnStdout is
+	// what pins the stream. Reading stdout+stderr here would keep passing if it moved.
+	text := stdout
 	for _, want := range []string{
 		model.EnvBackend, model.EnvModel, model.EnvBaseURL,
 		model.EnvAPIKey, model.EnvBedrockToken,

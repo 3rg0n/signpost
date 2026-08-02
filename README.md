@@ -13,8 +13,8 @@ the repo.
 ```bash
 signpost build .                      # write the bundle to .signpost/ — the point of the tool
 signpost verify .                     # is the committed bundle still true? non-zero if not
-signpost graph .                      # report structure: hubs, cycles, bridges, islands
-signpost export --format mermaid .    # render the graph for a diagram or another tool
+signpost graph show .                 # report structure: hubs, cycles, bridges, islands
+signpost graph export -format mermaid .   # render the graph for a diagram or another tool
 ```
 
 ## Install
@@ -268,7 +268,7 @@ moves, and it verifies clean.
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |
-| `signpost graph`, `signpost export` | done |
+| `signpost graph show`, `signpost graph export` | done |
 | Git signals (co-change, churn, ownership) | done |
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |

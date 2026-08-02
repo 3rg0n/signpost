@@ -28,9 +28,12 @@ import (
 // than buried in a file count.
 func runBuild(args []string, out, errOut io.Writer) error {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
-	fs.SetOutput(errOut)
+	// One writer for the whole of this command's usage, so the prose above and
+	// PrintDefaults' flag list cannot land on different streams.
+	help := helpStream(args, out, errOut)
+	fs.SetOutput(help)
 	fs.Usage = func() {
-		u := newPrinter(errOut)
+		u := newPrinter(help)
 		u.printf("usage: signpost build [flags] [path]\n")
 		u.printf("\nWrite the knowledge bundle to %s/ in the repository.\n\nFlags:\n", okf.BundleDir)
 		fs.PrintDefaults()

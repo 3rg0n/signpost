@@ -49,7 +49,7 @@ func invoke(t *testing.T, args ...string) (stdout, stderr string, code int) {
 
 func TestGraphReportsStructure(t *testing.T) {
 	root := fixture(t)
-	stdout, stderr, code := invoke(t, "graph", root)
+	stdout, stderr, code := invoke(t, "graph", "show", root)
 	if code != 0 {
 		t.Fatalf("exit = %d\nstderr:\n%s", code, stderr)
 	}
@@ -70,7 +70,7 @@ func TestGraphReportsStructure(t *testing.T) {
 // signpost read only part of must say so without being asked.
 func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	root := fixture(t)
-	_, stderr, code := invoke(t, "graph", root)
+	_, stderr, code := invoke(t, "graph", "show", root)
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -114,7 +114,7 @@ func TestIncludeFlagsReachTheGraphNotJustTheWalk(t *testing.T) {
 
 	nodes := func(t *testing.T, flags ...string) int {
 		t.Helper()
-		args := append([]string{"graph"}, flags...)
+		args := append([]string{"graph", "show"}, flags...)
 		stdout, stderr, code := invoke(t, append(args, "--quiet", root)...)
 		if code != 0 {
 			t.Fatalf("graph %v: exit = %d\n%s", flags, code, stderr)
@@ -149,7 +149,7 @@ func TestIncludeFlagsReachTheGraphNotJustTheWalk(t *testing.T) {
 
 func TestQuietSuppressesCoverageOnly(t *testing.T) {
 	root := fixture(t)
-	stdout, stderr, code := invoke(t, "graph", "--quiet", root)
+	stdout, stderr, code := invoke(t, "graph", "show", "--quiet", root)
 	if code != 0 {
 		t.Fatalf("exit = %d\n%s", code, stderr)
 	}
@@ -164,10 +164,10 @@ func TestQuietSuppressesCoverageOnly(t *testing.T) {
 // --fail-on-cycle is the CI gate, so its exit code is the whole contract.
 func TestFailOnCycleExitsNonZero(t *testing.T) {
 	root := fixture(t)
-	if _, _, code := invoke(t, "graph", "--quiet", root); code != 0 {
+	if _, _, code := invoke(t, "graph", "show", "--quiet", root); code != 0 {
 		t.Errorf("without the flag a cycle is a finding, not a failure: exit = %d", code)
 	}
-	_, stderr, code := invoke(t, "graph", "--quiet", "--fail-on-cycle", root)
+	_, stderr, code := invoke(t, "graph", "show", "--quiet", "--fail-on-cycle", root)
 	if code != 1 {
 		t.Errorf("exit = %d, want 1", code)
 	}
@@ -191,7 +191,7 @@ func TestFailOnCyclePassesOnAcyclicRepo(t *testing.T) {
 	write("main.go", "package main\n\nimport \"example.com/clean/internal/a\"\n\nfunc main() { a.F() }\n")
 	write("internal/a/a.go", "package a\n\nfunc F() {}\n")
 
-	if _, stderr, code := invoke(t, "graph", "--quiet", "--fail-on-cycle", root); code != 0 {
+	if _, stderr, code := invoke(t, "graph", "show", "--quiet", "--fail-on-cycle", root); code != 0 {
 		t.Errorf("exit = %d on an acyclic repo\n%s", code, stderr)
 	}
 }
@@ -204,7 +204,7 @@ func TestExportEveryFormat(t *testing.T) {
 		{"graphml", "<graphml"},
 		{"json", `"nodes"`},
 	} {
-		stdout, stderr, code := invoke(t, "export", "--format", tc.format, "--quiet", root)
+		stdout, stderr, code := invoke(t, "graph", "export", "--format", tc.format, "--quiet", root)
 		if code != 0 {
 			t.Errorf("%s: exit = %d\n%s", tc.format, code, stderr)
 			continue
@@ -216,7 +216,7 @@ func TestExportEveryFormat(t *testing.T) {
 }
 
 func TestExportDefaultsToMermaid(t *testing.T) {
-	stdout, _, code := invoke(t, "export", "--quiet", fixture(t))
+	stdout, _, code := invoke(t, "graph", "export", "--quiet", fixture(t))
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}
@@ -228,7 +228,7 @@ func TestExportDefaultsToMermaid(t *testing.T) {
 func TestExportToFile(t *testing.T) {
 	root := fixture(t)
 	dest := filepath.Join(t.TempDir(), "graph.json")
-	stdout, stderr, code := invoke(t, "export", "--format", "json", "--quiet", "-o", dest, root)
+	stdout, stderr, code := invoke(t, "graph", "export", "--format", "json", "--quiet", "-o", dest, root)
 	if code != 0 {
 		t.Fatalf("exit = %d\n%s", code, stderr)
 	}
@@ -264,12 +264,12 @@ func TestExportToFile(t *testing.T) {
 func TestExportIsReproducible(t *testing.T) {
 	root := fixture(t)
 	for _, format := range []string{"mermaid", "dot", "graphml", "json"} {
-		first, _, code := invoke(t, "export", "--format", format, "--quiet", root)
+		first, _, code := invoke(t, "graph", "export", "--format", format, "--quiet", root)
 		if code != 0 {
 			t.Fatalf("%s: exit = %d", format, code)
 		}
 		for i := 0; i < 3; i++ {
-			again, _, _ := invoke(t, "export", "--format", format, "--quiet", root)
+			again, _, _ := invoke(t, "graph", "export", "--format", format, "--quiet", root)
 			if again != first {
 				t.Fatalf("%s: output differs between runs", format)
 			}
@@ -287,10 +287,9 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 	}{
 		{"no arguments", nil},
 		{"unknown command", []string{"frobnicate"}},
-		{"unknown format", []string{"export", "--format", "svg", root}},
-		{"unknown flag", []string{"graph", "--nope", root}},
-		{"two paths", []string{"graph", root, root}},
-		{"help flag on a command", []string{"graph", "-h"}},
+		{"unknown format", []string{"graph", "export", "--format", "svg", root}},
+		{"unknown flag", []string{"graph", "show", "--nope", root}},
+		{"two paths", []string{"graph", "show", root, root}},
 	}
 	for _, tc := range cases {
 		_, stderr, code := invoke(t, tc.args...)
@@ -318,6 +317,203 @@ func TestHelpExitsZero(t *testing.T) {
 	}
 }
 
+// Help works at every level, not just the root, and each level lists its own children.
+// The reason to assert it here rather than trust it is that this used to be two
+// implementations: `model` printed its own help and the root printed a different
+// format, so one could gain a group the other did not know how to describe.
+func TestHelpWorksAtEveryLevel(t *testing.T) {
+	for _, c := range commands() {
+		if c.run != nil {
+			continue
+		}
+		for _, arg := range []string{"-h", "--help", "help"} {
+			stdout, stderr, code := invoke(t, c.name, arg)
+			if code != 0 {
+				t.Errorf("%s %s: exit = %d, want 0\n%s", c.name, arg, code, stderr)
+			}
+			if !strings.Contains(stdout, "signpost "+c.name+" <command>") {
+				t.Errorf("%s %s: usage line does not name the group:\n%s", c.name, arg, stdout)
+			}
+			for _, s := range c.subs {
+				if !strings.Contains(stdout, s.name) {
+					t.Errorf("%s %s: omits subcommand %q\n%s", c.name, arg, s.name, stdout)
+				}
+			}
+		}
+	}
+}
+
+// A leaf command's `-h` is an answer, so it exits 0 and it goes to stdout. Both halves
+// were wrong at once: `-h` reached runOr as flag.ErrHelp and fell through to 2 while the
+// root and the groups exited 0, and the whole of the text went to stderr, so `signpost
+// graph show -h | less` showed nothing and the shell saw a failure.
+//
+// stderr is asserted empty rather than merely smaller because the first fix passed a
+// looser check: the prose moved to stdout and fs.PrintDefaults' flag list stayed behind
+// on stderr, which is help split down the middle and reads as working from either side
+// alone.
+func TestLeafHelpExitsZeroOnStdout(t *testing.T) {
+	for _, path := range leafPaths(commands(), nil) {
+		for _, arg := range []string{"-h", "--help"} {
+			stdout, stderr, code := invoke(t, append(append([]string{}, path...), arg)...)
+			name := strings.Join(path, " ")
+			if code != 0 {
+				t.Errorf("%s %s: exit = %d, want 0\n%s", name, arg, code, stderr)
+			}
+			if !strings.Contains(stdout, "usage: signpost "+name) {
+				t.Errorf("%s %s: stdout does not carry the usage line:\n%s", name, arg, stdout)
+			}
+			// The flag list is the half that lived on the wrong stream, and every leaf
+			// has at least one flag to print.
+			if !strings.Contains(stdout, "  -") {
+				t.Errorf("%s %s: stdout has no flag list, so PrintDefaults went elsewhere:\n%s",
+					name, arg, stdout)
+			}
+			if stderr != "" {
+				t.Errorf("%s %s: wrote to stderr:\n%s", name, arg, stderr)
+			}
+		}
+	}
+}
+
+// leafPaths returns the full argument path of every runnable command, so a test covers
+// commands added later without being edited. `version` is skipped: it takes no flags and
+// has no usage text, which is the one leaf the help contract does not describe.
+func leafPaths(cmds []command, prefix []string) [][]string {
+	var out [][]string
+	for _, c := range cmds {
+		path := append(append([]string{}, prefix...), c.name)
+		switch {
+		case c.name == "version":
+		case c.run != nil:
+			out = append(out, path)
+		default:
+			out = append(out, leafPaths(c.subs, path)...)
+		}
+	}
+	return out
+}
+
+// A group's own name is never an action. The whole reason `graph` grew a `show` is that
+// a name which is sometimes a command and sometimes a namespace has to be learned
+// twice, and the failure this guards is a later change quietly giving a group a default
+// verb — at which point `signpost graph` starts analysing a repository again and the
+// rule in commands() is a comment describing something untrue.
+func TestAGroupNameIsNotItselfAnAction(t *testing.T) {
+	for _, c := range commands() {
+		if c.run != nil {
+			continue
+		}
+		if len(c.subs) == 0 {
+			t.Errorf("%q has neither a run function nor subcommands, so it cannot be invoked", c.name)
+		}
+		_, stderr, code := invoke(t, c.name)
+		if code != 2 {
+			t.Errorf("bare %q: exit = %d, want 2 — a group must not run something\n%s", c.name, code, stderr)
+		}
+		// And it has to say what to type instead. Exiting 2 in silence would be the
+		// same dead end with a different exit code.
+		for _, s := range c.subs {
+			if !strings.Contains(stderr, s.name) {
+				t.Errorf("bare %q: stderr does not offer %q\n%s", c.name, s.name, stderr)
+			}
+		}
+	}
+}
+
+// The verbs v0.1.0 shipped were renamed without an alias, so the one thing owed to
+// somebody typing the old spelling is being told where it went. `gh`, whose command
+// shape this borrows, does not do this — a renamed command there is simply unknown.
+//
+// Both directions are asserted, because a hint that fires too eagerly is its own bug:
+// `frobnicate` was never a signpost command and must not be reported as one that moved.
+func TestARenamedVerbSaysWhereItWent(t *testing.T) {
+	for old, now := range moved {
+		_, stderr, code := invoke(t, old, ".")
+		if code != 2 {
+			t.Errorf("%q: exit = %d, want 2", old, code)
+		}
+		if !strings.Contains(stderr, "signpost "+now) {
+			t.Errorf("%q: stderr does not name `signpost %s`:\n%s", old, now, stderr)
+		}
+	}
+	_, stderr, _ := invoke(t, "frobnicate")
+	if strings.Contains(stderr, "is now") {
+		t.Errorf("a command that never existed was reported as renamed:\n%s", stderr)
+	}
+}
+
+// `signpost graph .` was the v0.1.0 spelling, and it is now a group handed a path. The
+// literal truth — unknown command "." — sends the reader hunting for a typo they did
+// not make, so a group that used to be a command says so and names the verb that
+// inherited its behaviour.
+//
+// The negative half is what keeps this from swallowing everything: inside a group that
+// carries the note, a genuine typo must still be treated as a typo.
+func TestAGroupThatUsedToBeACommandSaysSo(t *testing.T) {
+	var was []command
+	for _, c := range commands() {
+		if c.was != "" {
+			was = append(was, c)
+		}
+	}
+	if len(was) == 0 {
+		t.Skip("no group carries a `was` note")
+	}
+	for _, c := range was {
+		_, stderr, code := invoke(t, c.name, ".")
+		if code != 2 {
+			t.Errorf("%s .: exit = %d, want 2", c.name, code)
+		}
+		if !strings.Contains(stderr, "signpost "+c.name+" "+c.was) {
+			t.Errorf("%s .: does not name `signpost %s %s`:\n%s", c.name, c.name, c.was, stderr)
+		}
+		if strings.Contains(stderr, `unknown command "."`) {
+			t.Errorf("%s .: reported the path as an unknown command:\n%s", c.name, stderr)
+		}
+	}
+
+	_, stderr, _ := invoke(t, "graph", "expot", ".")
+	if !strings.Contains(stderr, "Did you mean") {
+		t.Errorf("a typo inside a `was` group lost its suggestion:\n%s", stderr)
+	}
+}
+
+// A typo gets one suggestion, and only when there is exactly one candidate close
+// enough to be almost certainly right. The negative half is the half worth having: a
+// suggester that always guesses is noise, and `xyzzy` resembles nothing here.
+func TestATypoGetsOneSuggestion(t *testing.T) {
+	_, stderr, code := invoke(t, "verfiy", ".")
+	if code != 2 {
+		t.Errorf("exit = %d, want 2", code)
+	}
+	if !strings.Contains(stderr, "signpost verify") {
+		t.Errorf("no suggestion for a one-transposition typo:\n%s", stderr)
+	}
+
+	_, stderr, _ = invoke(t, "xyzzy")
+	if strings.Contains(stderr, "Did you mean") {
+		t.Errorf("guessed at a name resembling nothing:\n%s", stderr)
+	}
+	// It still has to be usable, so with no guess to offer it falls back to listing
+	// what does exist.
+	if !strings.Contains(stderr, "build") {
+		t.Errorf("no suggestion and no command list either:\n%s", stderr)
+	}
+}
+
+// Suggestions are per level: a group's subcommand typo is compared against that
+// group's children, not the top-level verbs.
+func TestASuggestionIsScopedToItsLevel(t *testing.T) {
+	_, stderr, code := invoke(t, "graph", "expot", ".")
+	if code != 2 {
+		t.Errorf("exit = %d, want 2", code)
+	}
+	if !strings.Contains(stderr, "signpost graph export") {
+		t.Errorf("suggestion is not scoped to the group:\n%s", stderr)
+	}
+}
+
 func TestVersion(t *testing.T) {
 	for _, args := range [][]string{{"version"}, {"--version"}, {"-v"}} {
 		stdout, _, code := invoke(t, args...)
@@ -333,7 +529,7 @@ func TestVersion(t *testing.T) {
 // A path that does not exist is an error, not an empty graph. Reporting "0 nodes" for
 // a typo'd path is the kind of quiet wrong answer that wastes an afternoon.
 func TestMissingPathIsAnError(t *testing.T) {
-	_, stderr, code := invoke(t, "graph", filepath.Join(t.TempDir(), "nope"))
+	_, stderr, code := invoke(t, "graph", "show", filepath.Join(t.TempDir(), "nope"))
 	if code == 0 {
 		t.Error("a missing path exited 0")
 	}
@@ -346,7 +542,7 @@ func TestMissingPathIsAnError(t *testing.T) {
 // error: signpost run in a fresh repo should say so, not fail.
 func TestEmptyRepositoryIsNotAnError(t *testing.T) {
 	root := t.TempDir()
-	stdout, stderr, code := invoke(t, "graph", root)
+	stdout, stderr, code := invoke(t, "graph", "show", root)
 	if code != 0 {
 		t.Fatalf("exit = %d\n%s", code, stderr)
 	}
@@ -359,8 +555,8 @@ func TestEmptyRepositoryIsNotAnError(t *testing.T) {
 // it is a repeatable flag rather than a comma-separated list.
 func TestIgnorePatternsAreApplied(t *testing.T) {
 	root := fixture(t)
-	base, _, _ := invoke(t, "export", "--format", "json", "--quiet", root)
-	ignored, _, code := invoke(t, "export", "--format", "json", "--quiet",
+	base, _, _ := invoke(t, "graph", "export", "--format", "json", "--quiet", root)
+	ignored, _, code := invoke(t, "graph", "export", "--format", "json", "--quiet",
 		"--ignore", "internal/store/**", root)
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
@@ -375,8 +571,8 @@ func TestIgnorePatternsAreApplied(t *testing.T) {
 
 func TestNoClusterSkipsSubgraphs(t *testing.T) {
 	root := fixture(t)
-	with, _, _ := invoke(t, "export", "--quiet", root)
-	without, _, code := invoke(t, "export", "--quiet", "--no-cluster", root)
+	with, _, _ := invoke(t, "graph", "export", "--quiet", root)
+	without, _, code := invoke(t, "graph", "export", "--quiet", "--no-cluster", root)
 	if code != 0 {
 		t.Fatalf("exit = %d", code)
 	}

@@ -23,9 +23,12 @@ import (
 // because an operator who ran a check wants the check to fail.
 func runModelCheck(args []string, out, errOut io.Writer) error {
 	fs := flag.NewFlagSet("model check", flag.ContinueOnError)
-	fs.SetOutput(errOut)
+	// One writer for the whole of this command's usage, so the prose above and
+	// PrintDefaults' flag list cannot land on different streams.
+	help := helpStream(args, out, errOut)
+	fs.SetOutput(help)
 	fs.Usage = func() {
-		u := newPrinter(errOut)
+		u := newPrinter(help)
 		u.printf("usage: signpost model check [flags]\n")
 		u.printf("\nSend one schema-constrained request to the configured backend and report\n")
 		u.printf("what came back. Exits non-zero if the backend does not work.\n\n")
@@ -124,37 +127,8 @@ func yesNo(b bool) string {
 	return "no"
 }
 
-// runModel dispatches the model subcommands.
-//
-// A group rather than a flat `signpost model-check`, because check is the first of
-// several — enable and list belong here too — and a group keeps them discoverable
-// together instead of scattered through the top-level verb list.
-func runModel(args []string, out, errOut io.Writer) error {
-	subs := []command{
-		{"check", "send one request to the configured backend and report what came back", runModelCheck},
-	}
-	if len(args) == 0 {
-		modelUsage(errOut, subs)
-		return errUsage
-	}
-	switch args[0] {
-	case "-h", "--help", "help":
-		modelUsage(out, subs)
-		return flag.ErrHelp
-	}
-	for _, s := range subs {
-		if s.name == args[0] {
-			return s.run(args[1:], out, errOut)
-		}
-	}
-	return fmt.Errorf("%w: unknown model subcommand %q", errUsage, args[0])
-}
-
-func modelUsage(w io.Writer, subs []command) {
-	p := newPrinter(w)
-	p.printf("usage: signpost model <subcommand> [flags]\n\n")
-	for _, s := range subs {
-		p.printf("  %-8s %s\n", s.name, s.summary)
-	}
-	p.printf("\nRun `signpost model <subcommand> -h` for flags.\n")
-}
+// `model` used to dispatch its own subcommands here, with its own help printer and its
+// own unknown-subcommand message. Both are gone: dispatch in main.go routes every
+// level, so `model` and `graph` cannot describe themselves differently and a third
+// group costs no code. The argument for the group itself still holds — `check` is the
+// first of several, and `enable` and `list` belong beside it.

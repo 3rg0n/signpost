@@ -33,7 +33,7 @@ Worth stating plainly, because the answer determines most of the threat model:
   entire fact struct to a string and searches it for the secret bodies, so a
   leak through any field fails the build rather than only the fields intended to
   hold one.
-- **No network in the deterministic pass.** `signpost graph`, `signpost export`,
+- **No network in the deterministic pass.** `signpost graph show`, `signpost graph export`,
   and `signpost build` make no outbound connections. The semantic pass (v0.2) is
   the only code that talks to anything, and it is opt-in.
 

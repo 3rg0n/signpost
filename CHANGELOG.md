@@ -6,9 +6,78 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+#### 2026-08-02
+
+- **Breaking: `signpost export` is now `signpost graph export`, and `signpost graph` is now
+  `signpost graph show`.** One rule now decides the shape of every verb: a noun with more than
+  one operation becomes a group, a noun with one stays flat, and *a group's own name is never
+  an action*. That last clause is what forced `show` — with `export` beside it, `graph` would
+  have been simultaneously a command and a namespace, which has to be learned twice and is
+  ambiguous the first time somebody types `signpost graph` expecting either behaviour.
+
+  `build` and `verify` stay flat, deliberately. Neither is an operation on an addressable
+  resource — there is one bundle per repository, not a collection to list — and a bare `build`
+  is the convention `go build`, `cargo build`, and `docker build` already set. Uniform
+  noun-verb grouping would have cost the primary command a word to buy a consistency nobody
+  was confused by.
+
+  No aliases. The old spellings are gone rather than deprecated: v0.1.0 is public but nothing
+  depends on it, and an alias is a second spelling to document, test, and keep working
+  forever. What replaces them is cheaper and finite — an old verb reports where it went
+  (`"export" is now signpost graph export`), and `signpost graph .`, which used to be a valid
+  invocation, says the group's behaviour moved to `graph show` rather than reporting `.` as an
+  unknown command. Both notes are deletable once the old spellings leave people's shell
+  history.
+
+  The shape is `gh`'s, and the rule above is the one `gh` follows without ever stating —
+  which is why `gh repo list` and `gh search repos` both exist. Stating it is what stops the
+  surface drifting a verb at a time. Two things are better than `gh` here: a renamed command
+  is not simply unknown, and a mistyped one gets a suggestion when exactly one candidate is
+  within a typo's distance — one candidate or none, since a suggester that always guesses is
+  noise.
+
+  Underneath, dispatch is one recursive function over one command tree, with the top level
+  modelled as an unnamed group. `model` previously hand-rolled its own dispatch, help printer,
+  and unknown-subcommand message, so a second group meant a second copy and two places for
+  `signpost -h` and `signpost model -h` to drift apart. Help now works at every level in one
+  format, group names are marked as taking a subcommand, and a group with no runnable name
+  cannot silently acquire a default verb — a test asserts it, because that is exactly how the
+  rule above would erode.
+
+- The command surface is now a rule rather than a layout, recorded in
+  [ADR 0012](docs/adr/0012-a-group-name-is-never-an-action.md): a noun with more than one
+  operation becomes a group, a noun with one stays flat, and a group's own name is never an
+  action. It is an ADR because the surface is a public contract whose failure mode is erosion
+  — six months of individually reasonable additions with nothing to check them against.
+
+- Configuration is decided in
+  [ADR 0011](docs/adr/0011-configuration-file-format-and-location.md): `.signpost.yml` at the
+  repository root and nowhere else, precedence flag > environment > file > default, and a
+  config key may only change a default — never what a flag or a gate *means*. It was owed
+  before the CLI could be restructured, since a config file changes what a flag means. Nothing
+  is implemented; the decision is recorded, including that flags which decide whether a check
+  fails (`-as-of-bundle`, `-fail-on-cycle`, thresholds) are permanently not configurable, so a
+  repository cannot quiet its own gate by committing a file.
+
 ### Fixed
 
 #### 2026-08-02
+
+- **`-h` on a command exited 2 and printed its help to stderr.** So
+  `signpost graph show -h | less` showed nothing and the shell saw a failure, while
+  `signpost -h` and `signpost graph -h` exited 0 and printed to stdout. Requested help is an
+  answer, not a misuse: `-h` now exits 0 and writes to stdout at every level.
+
+  Both halves come from Go's `flag` package, which reports `-h` as a parse error and writes
+  usage to the flagset's own output — so a leaf command inherits the wrong exit code and the
+  wrong stream unless it is made not to, and a terminal hides both, since the two streams are
+  one screen there and nobody reads the exit code of a help invocation. Each leaf now picks one
+  writer for the whole of its usage, prose and flag list together; the first attempt at this
+  fixed only the prose and left `PrintDefaults`' output on stderr, which is help split down the
+  middle and reads as working from either side alone. Tests assert exit 0 with an empty stderr
+  for every leaf, and CI repeats it against the built binary.
 
 - **`-include-vendored` did nothing.** Its help text promises to *analyse vendored
   third-party code instead of only recording it*, and the walk honoured it: vendored

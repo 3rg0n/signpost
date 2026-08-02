@@ -820,18 +820,39 @@ without a reasoning channel.
 ## 6. Commands
 
 ```
-signpost build [path]          # deterministic pipeline; writes .signpost/
-signpost build -semantic       # and summarise modules with the configured backend
-signpost verify [path]         # conformance + link + staleness; non-zero on failure
-signpost why "<question>"      # traverse the bundle and answer, citing pages
-signpost path <A> <B>          # shortest typed path between two concepts
-signpost export --mermaid|--dot|--graphml
-signpost model check           # prove the configured backend works; non-zero if not
-signpost install-hooks         # optional local post-commit hook
+signpost build [path]              # deterministic pipeline; writes .signpost/
+signpost build -semantic           # and summarise modules with the configured backend
+signpost verify [path]             # conformance + link + staleness; non-zero on failure
+signpost graph show [path]         # report structure: hubs, cycles, bridges, islands
+signpost graph export -format ...  # mermaid, dot, graphml, or json
+signpost model check               # prove the configured backend works; non-zero if not
+signpost ask why "<question>"      # traverse the bundle and answer, citing pages
+signpost ask path <A> <B>          # shortest typed path between two concepts
+signpost hooks install             # optional local post-commit hook
+signpost version
 ```
 
-`why` and `path` are pure bundle traversal — no model, no network. They exist so
-an agent can ask a question without loading the whole bundle into context.
+`ask why` and `ask path` are pure bundle traversal — no model, no network. They exist
+so an agent can ask a question without loading the whole bundle into context.
+
+### 6.0 What is grouped, and what is not
+
+One rule decides where every verb goes: **a noun with more than one operation becomes a
+group, a noun with one stays flat, and a group's own name is never an action.** So
+`signpost graph` prints its subcommands and `graph show` does what a bare `graph` did in
+v0.1.0, while `build` and `verify` stay flat because a bare `build` is the convention `go
+build` and `cargo build` already set.
+
+The reasoning, the alternative rejected (uniform noun-verb grouping), and the cost of the
+third clause are in
+[ADR 0012](adr/0012-a-group-name-is-never-an-action.md).
+
+Dispatch is one recursive function over one command tree, with the top level modelled as
+an unnamed group. Every level's help, unknown-command message, and exit code therefore
+come from the same code, so a new group cannot describe itself differently from an
+existing one. Two behaviours exist for the v0.1.0 rename and are meant to be deleted: an
+old verb reports where it went, and a mistyped one gets a suggestion when exactly one
+candidate is within a typo's distance.
 
 ### 6.1 Human-review preservation
 
@@ -967,9 +988,9 @@ root, members on cluster pages. It is the zero-setup skim, not the real visual.
 Exports for anyone with their own tooling:
 
 ```
-signpost export --graphml   # Gephi, yEd, Cytoscape
-signpost export --dot       # Graphviz
-signpost export --json      # the graph, for the viewer and for scripts
+signpost graph export -format graphml   # Gephi, yEd, Cytoscape
+signpost graph export -format dot       # Graphviz
+signpost graph export -format json      # the graph, for the viewer and for scripts
 ```
 
 **GraphML is the interop win.** It carries typed edges, confidence levels, cluster
@@ -989,7 +1010,7 @@ and `graph.html` — a browsable node-link view of this repository's own graph. 
 install, no local server, nothing to run, and a URL a person can paste into a
 review.
 
-The seam is `graph.json`, produced by `signpost export -format json` in the deploy
+The seam is `graph.json`, produced by `signpost graph export -format json` in the deploy
 job and **not committed**: it has no value without the page that reads it, and a
 committed copy would be a second artifact that can go stale.
 
