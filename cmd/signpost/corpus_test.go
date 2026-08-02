@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/manifest"
 	"github.com/3rg0n/signpost/internal/okf"
 )
@@ -1307,6 +1308,109 @@ func TestCorpusVendoredCodeIsOffTheMapUntilAskedFor(t *testing.T) {
 		if _, ok := on[rel]; !ok {
 			t.Errorf("%s is in the default bundle and absent with -include-vendored", rel)
 		}
+	}
+}
+
+// The .signpost.yml reader, on a repository that has one. ADR 0011's whole claim is that a
+// committed file changes the *bundle* — so the assertion is the bundle, through the binary, on a
+// tree where a key has something to act on.
+//
+// This is not what cmd/signpost/config_test.go covers. Those tests drive precedence on a
+// two-module Go fixture, where `include_vendored` has nothing vendored to include: the fixture
+// grows a node_modules for the occasion. The corpus already carries a committed
+// `ts/node_modules/@corpus-vendor/logger`, which is the condition, and the same key reaching the
+// same place through the file rather than the flag is a second path to a filter that has already
+// failed once — issue #11's six consumers filtered on `File.Vendored` with no reference to the
+// option, so the flag moved the file count and nothing else.
+func TestCorpusConfigShapesTheBundle(t *testing.T) {
+	const (
+		vendoredModule = "logger"
+		vendoredDep    = "vendored-only-tinycolor"
+	)
+
+	// Written into the copy, then committed, because that is how the file arrives in a real
+	// repository — and because an uncommitted file would leave the tree dirty for the history
+	// pass to describe.
+	dir := corpusRepo(t)
+	writeConfig(t, dir, "include_vendored: true\n")
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "configure signpost")
+
+	if _, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir); code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	pages := bundlePages(t, dir)
+
+	var gotModule, gotDep string
+	for rel, src := range pages {
+		if strings.Contains(rel, vendoredModule) {
+			gotModule = rel
+		}
+		if strings.Contains(src, vendoredDep) {
+			gotDep = rel
+		}
+	}
+	// Both halves, for the reason TestCorpusVendoredCodeIsOffTheMapUntilAskedFor names: the
+	// extraction half and the manifest half fail separately, so a key that reached only one of
+	// them produces a module page whose own declaration signpost read and threw away.
+	if gotModule == "" {
+		t.Errorf("include_vendored: true in %s produced no page for the vendored module. The key "+
+			"reaches the walk and no further, which is issue #11 by a second route.\n\nPages:\n  %s",
+			config.File, pageNames(pages))
+	}
+	if gotDep == "" {
+		t.Errorf("include_vendored: true in %s did not reach the manifest reader: nothing names %s, "+
+			"which only the vendored package.json declares.\n\nPages:\n  %s",
+			config.File, vendoredDep, pageNames(pages))
+	}
+
+	// The negative boundary, and it is the half that fails if the reader stops reading values:
+	// the same file saying false must produce the default bundle. Asserted on the same tree, so
+	// the only difference between the two runs is the one line.
+	//
+	// Rebuilt in place rather than on a fresh copy, which makes this stricter than a comparison
+	// of two independent builds: the pages the first build wrote are still on disk, so a page for
+	// the vendored module that the second build fails to *remove* fails here too. That is the
+	// stale-page path, and it is the concrete way "the config was honoured" and "the bundle
+	// reflects the config" come apart.
+	writeConfig(t, dir, "include_vendored: false\n")
+	if _, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir); code != 0 {
+		t.Fatalf("the second build failed: exit = %d\n%s", code, stderr)
+	}
+	for rel, src := range bundlePages(t, dir) {
+		if strings.Contains(rel, vendoredModule) {
+			t.Errorf("%s survives include_vendored: false. Either the value was ignored and any "+
+				"present key reads as true, or the page it wrote before was not removed", rel)
+		}
+		if strings.Contains(src, vendoredDep) {
+			t.Errorf("%s cites %s with include_vendored: false", rel, vendoredDep)
+		}
+	}
+}
+
+// A repository cannot weaken its own gate by committing a file — ADR 0011's second class, on the
+// tree where it would be attempted. The clause erodes by somebody adding a key later, so the
+// assertion is that the build *stops*: exit 2, naming the key, rather than a bundle built to a
+// quieter standard.
+//
+// Beside the stage above rather than only in internal/config because the reader returning an
+// error and the command exiting 2 are separate facts, and the corpus is where the second one is
+// asserted on a repository somebody could plausibly commit this to.
+func TestCorpusGateWeakeningConfigStopsTheBuild(t *testing.T) {
+	dir := corpusRepo(t)
+	writeConfig(t, dir, "# make CI quieter\nfail_on_cycle: false\n")
+
+	_, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 2 {
+		t.Fatalf("exit = %d, want 2: a committed file turned off a check\n%s", code, stderr)
+	}
+	if !strings.Contains(stderr, "fail_on_cycle") {
+		t.Errorf("the error does not name the key:\n%s", stderr)
+	}
+	// No bundle, which is the part that matters. A build that reported the error and wrote pages
+	// anyway would leave CI comparing against a bundle nobody's configuration produced.
+	if _, err := os.Stat(filepath.Join(dir, okf.BundleDir)); !os.IsNotExist(err) {
+		t.Errorf("a bundle was written despite the refused key: %v", err)
 	}
 }
 

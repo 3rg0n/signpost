@@ -45,6 +45,13 @@ func runGraphShow(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// -top and -fail-on-cycle are not configurable and take no part in this: the first is a
+	// property of one reader's invocation, the second decides whether the command fails.
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	applyConfig(fs, cfg, &pf)
 
 	// context.Background() rather than a cancellable one: this process has nothing to
 	// cancel from, and the only subprocess in the pipeline carries its own timeout.

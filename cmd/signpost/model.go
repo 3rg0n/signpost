@@ -8,6 +8,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/model"
 )
 
@@ -32,6 +33,9 @@ func runModelCheck(args []string, out, errOut io.Writer) error {
 		u.printf("usage: signpost model check [flags]\n")
 		u.printf("\nSend one schema-constrained request to the configured backend and report\n")
 		u.printf("what came back. Exits non-zero if the backend does not work.\n\n")
+		u.printf("The backend and model may also be set by `backend:` and `model:` keys in\n"+
+			"%s, which these flags and the environment both beat (ADR 0011). There is\n"+
+			"no key for a credential.\n\n", config.File)
 		u.printf("Configuration is read from the environment:\n")
 		u.printf("  %-28s inferd, openai, or none (default none)\n", model.EnvBackend)
 		u.printf("  %-28s model id for the openai backend\n", model.EnvModel)
@@ -54,13 +58,18 @@ func runModelCheck(args []string, out, errOut io.Writer) error {
 		return fmt.Errorf("%w: model check takes no positional arguments", errUsage)
 	}
 
-	b, err := model.New(model.Config{
-		Backend: model.Kind(*backend),
-		Model:   *name,
-		BaseURL: *baseURL,
-		Addr:    *addr,
-		Version: version,
-	})
+	// The working directory, because this command takes no path and should not grow one: it
+	// checks a backend, not a repository. Run from a subdirectory it finds no file and reports
+	// the environment's backend, which is ADR 0011's no-upward-walk rule showing through rather
+	// than a gap — and it is why the help above says where the file has to be.
+	//
+	// Read at all because this is the command that answers "why is my semantic pass doing
+	// nothing", and a `backend:` key it ignored would make it answer that question wrongly.
+	cfg, err := loadConfig(".")
+	if err != nil {
+		return err
+	}
+	b, err := model.New(modelConfig(*backend, *name, *baseURL, *addr, cfg))
 	if err != nil {
 		return err
 	}

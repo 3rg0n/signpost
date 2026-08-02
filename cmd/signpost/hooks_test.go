@@ -208,34 +208,50 @@ func TestResolveCheckPrecedence(t *testing.T) {
 		name  string
 		flag  string
 		env   string
+		file  string
 		want  hook.Check
 		wantE bool
 	}{
 		{name: "nothing set is fast", want: hook.CheckFast},
 		{name: "environment alone", env: "verify", want: hook.CheckVerify},
 		{name: "flag alone", flag: "verify", want: hook.CheckVerify},
+		{name: "file alone", file: "verify", want: hook.CheckVerify},
 		// The flag wins, and it wins in the direction that is easy to get wrong: a flag
 		// asking for the cheap check must not be overridden by an environment variable
 		// asking for the expensive one.
 		{name: "flag beats environment", flag: "fast", env: "verify", want: hook.CheckFast},
 		{name: "flag beats environment the other way", flag: "verify", env: "fast", want: hook.CheckVerify},
+		// The file is the bottom layer above the default, so both directions of both
+		// boundaries are asserted. `env beats file` in the fast direction is the one that
+		// would pass by coincidence if the layers were reversed and the default were fast.
+		{name: "environment beats file", env: "fast", file: "verify", want: hook.CheckFast},
+		{name: "environment beats file the other way", env: "verify", file: "fast", want: hook.CheckVerify},
+		{name: "flag beats file", flag: "fast", file: "verify", want: hook.CheckFast},
+		{name: "flag beats file and environment", flag: "fast", env: "verify", file: "verify", want: hook.CheckFast},
 		// Blank is not a value. An exported-but-empty variable is the normal state of a
 		// variable somebody unset, and it must not be an error.
 		{name: "empty environment is not a value", env: "", want: hook.CheckFast},
 		{name: "whitespace environment is not a value", env: "   ", want: hook.CheckFast},
+		{name: "empty file value falls through to the default", file: "", want: hook.CheckFast},
+		{name: "empty environment does not mask the file", env: "", file: "verify", want: hook.CheckVerify},
 		// The negatives: a mode nobody recognises is an error, not a silent fall back to
-		// fast, in both places it can arrive from.
+		// fast, in every place it can arrive from.
 		{name: "unknown flag", flag: "quick", wantE: true},
 		{name: "unknown environment", env: "quick", wantE: true},
-		// And an unknown flag is still an error when the environment is valid, because the
+		// The file layer cannot normally hold a bad value — config.Load rejects one — so this
+		// asserts the behaviour if it ever did: an error, not a fall back to fast.
+		{name: "unknown file value", file: "quick", wantE: true},
+		// And an unknown flag is still an error when a lower layer is valid, because the
 		// flag is what the user typed most recently.
 		{name: "unknown flag with a valid environment", flag: "quick", env: "fast", wantE: true},
+		{name: "unknown flag with a valid file", flag: "quick", file: "fast", wantE: true},
+		{name: "unknown environment with a valid file", env: "quick", file: "fast", wantE: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := resolveCheck(tc.flag, tc.env)
+			got, err := resolveCheck(tc.flag, tc.env, tc.file)
 			if tc.wantE {
 				if err == nil {
-					t.Fatalf("resolveCheck(%q, %q) = %q, want an error", tc.flag, tc.env, got)
+					t.Fatalf("resolveCheck(%q, %q, %q) = %q, want an error", tc.flag, tc.env, tc.file, got)
 				}
 				return
 			}
@@ -243,7 +259,8 @@ func TestResolveCheckPrecedence(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got != tc.want {
-				t.Errorf("resolveCheck(%q, %q) = %q, want %q", tc.flag, tc.env, got, tc.want)
+				t.Errorf("resolveCheck(%q, %q, %q) = %q, want %q",
+					tc.flag, tc.env, tc.file, got, tc.want)
 			}
 		})
 	}

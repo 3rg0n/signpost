@@ -163,7 +163,44 @@ Two things are deliberate about the output:
 
 Pass verify the same flags as the build it is checking. `-repo` feeds every page's
 `resource:`, so a mismatch there reports a real difference that describes the
-invocation rather than the bundle.
+invocation rather than the bundle — which is the main reason to put those flags in a
+config file instead.
+
+## Configuring it
+
+Optional. A `.signpost.yml` at the repository root sets the defaults for the flags every
+run would otherwise repeat, so `build` and `verify` cannot drift apart:
+
+```yaml
+repo: example.com/org/repo   # what every page's resource: names
+ignore:                      # additional .gitignore-syntax patterns
+  - generated/**
+include_vendored: false      # analyse a committed node_modules or vendor/
+include_fixtures: false      # analyse test fixtures
+no_history: false            # skip the git pass
+max_commits: 2000            # how far back the history pass reads
+backend: none                # inferd | openai | none, for -semantic
+model: google.gemma-3-12b-it # passed through verbatim
+hooks:
+  check: fast                # fast | verify, for the local hook
+```
+
+That is the whole list, and the list is short on purpose. **A key may only change a
+default.** Anything deciding whether a check *fails* stays a flag — `-as-of-bundle`,
+`-fail-on-cycle` — because a repository that can weaken its own gate by committing a file
+is not gated. Those keys are refused with a reason rather than ignored, so a diff that
+tries fails CI instead of quietly passing a weaker one. **There is nowhere to put a
+credential**: the file is committed, so `api_key` is refused by name and
+`SIGNPOST_OPENAI_API_KEY` is where it goes.
+
+Three more things worth knowing. Precedence is **flag > environment > file > default**,
+and a flag wins even when set to the zero value, so `-include-vendored=false` overrides
+`include_vendored: true` in the file. The file is read from the root and nowhere else — no
+user-level config, no `-config` path, no search upward, because a search path is how the
+same checkout produces two different bundles for two people. And a file signpost cannot
+read is **exit 2 and no bundle**, never a silent fall back to defaults: a missing colon is
+the difference between the analysis you asked for and one that reported success.
+[ADR 0011](docs/adr/0011-configuration-file-format-and-location.md) has the reasoning.
 
 ## Summaries from a model
 
@@ -268,7 +305,9 @@ signpost hooks uninstall                  # remove it
 It reports and never gates — the hook cannot fail a commit, does not rebuild
 anything, and `signpost verify` in CI is the check that actually fails. It defaults
 to a commit comparison that costs milliseconds; `signpost hooks run -check verify`
-runs the accurate one, and `SIGNPOST_HOOK_CHECK=verify` makes that the default.
+runs the accurate one, `SIGNPOST_HOOK_CHECK=verify` makes that the default for one
+shell, and `hooks: {check: verify}` in `.signpost.yml` makes it the default for the
+repository.
 
 Two things it will tell you about, because both surprise people. It **appends** to
 any `post-commit` hook already there and `hooks uninstall` removes only its own
@@ -296,6 +335,7 @@ in a repository without a bundle.
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
 | `signpost hooks` — optional local post-commit reminder | done |
+| `.signpost.yml` — per-repository defaults, no gate keys | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |

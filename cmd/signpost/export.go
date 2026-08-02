@@ -43,6 +43,13 @@ func runExport(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// -format and -o are not configurable: both describe what this caller wanted rendered and
+	// where, which is not repository state (ADR 0011).
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	applyConfig(fs, cfg, &pf)
 
 	a, err := analyse(context.Background(), path, pf)
 	if err != nil {

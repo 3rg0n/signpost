@@ -296,6 +296,41 @@ jobs:
           # never ran.
           check 'verify' 'name the modes it accepts' hooks run -check quick .
 
+          # A .signpost.yml signpost cannot use is exit 2 and no bundle, on every
+          # command that reads one. Asserted on the real binary because the exit
+          # code is the whole contract here: a fall back to defaults would build a
+          # bundle nobody's configuration asked for and exit 0, and the file that
+          # was supposed to shape it would be a file somebody wrote for nothing.
+          #
+          # In its own directory under ${RUNNER_TEMP}, for two reasons. A
+          # .signpost.yml in the workspace would be counted by the census steps
+          # below and would shape the bundle this job verifies; and the file has to
+          # be at a repository root by design, so there is nowhere else to put it.
+          cfgdir="${RUNNER_TEMP}/cfg"
+          mkdir -p "$cfgdir"
+          printf 'package main\n\nfunc main() {}\n' > "${cfgdir}/main.go"
+
+          # Second class: a key deciding whether a check fails. The one that must
+          # never become settable, and the one a diff would try.
+          printf 'fail_on_cycle: false\n' > "${cfgdir}/.signpost.yml"
+          for verb in build verify "graph show"; do
+            # shellcheck disable=SC2086
+            check 'fail_on_cycle' 'name the refused key' $verb -quiet "$cfgdir"
+          done
+          [ ! -d "${cfgdir}/.signpost" ] || {
+            echo "a bundle was written from a config that was refused"
+            fail=1
+          }
+
+          # And a file signpost cannot read. Tab indentation on purpose: it is a
+          # construct the manifest readers tolerate by design, since they read
+          # other tools' files and one odd line must not fail a build. For
+          # signpost's own file it is exit 2, because stepping over it would mean
+          # analysing the tree the way the file said not to and reporting success.
+          printf 'hooks:\n\tcheck: verify\n' > "${cfgdir}/.signpost.yml"
+          check '.signpost.yml' 'name the file it could not read' build -quiet "$cfgdir"
+          rm -rf "$cfgdir"
+
           [ "$fail" -eq 0 ] || exit 1
           echo "the command surface is intact"
 

@@ -61,6 +61,16 @@ func runVerify(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// The same load `build` does, in the same place, because verify's answer is a comparison
+	// against what build produces: a verify that walked the tree differently would report a
+	// difference describing the two invocations rather than the bundle. -as-of-bundle above
+	// stays out of it — ADR 0011's second class, and there is no key for it.
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	applyConfig(fs, cfg, &pf)
+	applyRepo(fs, cfg, repo)
 
 	a, err := analyse(context.Background(), path, pf)
 	if err != nil {

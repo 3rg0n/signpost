@@ -10,6 +10,47 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-02
 
+- **`.signpost.yml` — a repository states how it wants to be analysed.** Optional, at the
+  repository root. Nine keys, each of which sets the default for a flag: `include_vendored`,
+  `include_fixtures`, `ignore`, `no_history`, `max_commits`, `repo`, `backend`, `model`, and
+  `hooks.check`. `repo` is the one that earns the file on its own — it feeds every page's
+  `resource:`, so `build` and `verify` must pass the same value, and signpost's own CI passes it
+  in five places across four workflows.
+
+  **A key may only change a default, and that is the whole design.** Anything that decides
+  whether a check *fails* stays a flag — `-as-of-bundle`, `-fail-on-cycle` — because a repository
+  that can weaken its own gate by committing a file is not gated. So does anything that is a
+  property of one invocation rather than of the repository: `-quiet`, `-o`, `-format`, `-top`.
+  Those keys are **refused by name with a reason**, not ignored: somebody who writes
+  `fail_on_cycle: false` believes they configured something, and a tool that reads the file, does
+  the opposite, and exits 0 has told them their gate is what they asked for. There is also
+  nowhere to put a credential — the file is committed, so `api_key` and `openai` are refused
+  pointing at `SIGNPOST_OPENAI_API_KEY`.
+
+  Precedence is **flag > environment > file > default**, one order with no per-key exceptions.
+  The flag wins even when set to the zero value, which needs `flag.Visit` rather than a
+  comparison against zero: `-include-vendored=false` and an absent flag carry the same value and
+  must not carry the same decision. Read from the root and nowhere else — no user-level file, no
+  `XDG_CONFIG_HOME`, no `-config` outside the tree, no walk upward — because a config search path
+  is how the same checkout starts producing different bundles for two people, and the committed
+  bundle's byte-stability does not survive that.
+
+  **Unlike the manifest readers, this one is intolerant.** Those step over what they cannot
+  interpret by design (ADR 0001), because they read files other people wrote for other tools.
+  This file is signpost's own, so *any* diagnostic is exit 2 and no bundle — including the ones
+  the tolerant reader merely notes. `include_vendored true`, missing its colon, would otherwise
+  mean analysing the repository the way the file said not to while reporting success. `${VAR}`
+  interpolation is refused for the same reason rather than stored verbatim: design §5 once
+  sketched `api_key: ${SIGNPOST_OPENAI_API_KEY}`, ADR 0011 withdrew it, and a `model:
+  ${SIGNPOST_MODEL}` reaching the backend as a model id produces a 400 that says nothing about
+  the config file. The file is repository content and is not exempt from the walk it configures.
+
+  Recorded as [ADR 0011](docs/adr/0011-configuration-file-format-and-location.md), written before
+  the implementation because the second and third classes are what erode: nothing about the code
+  stops somebody adding `fail_on_cycle` later, so the test that refuses every key in both classes
+  is the clause, and the corpus asserts a committed `fail_on_cycle: false` stops the build with no
+  bundle written.
+
 - **`signpost hooks install` — an optional local `post-commit` reminder.** Prints one line when
   `.signpost/` has fallen behind the code, for anyone building the bundle locally rather than in
   CI. `signpost hooks uninstall` removes it; `signpost hooks run` is what the hook calls and is
@@ -38,7 +79,7 @@ All notable changes to this project are documented here. Format follows
   code commit", which reports a commit that touched only `LICENSE` as behind. `-check verify`
   runs the same `verify -as-of-bundle` comparison CI gates on — about a second here, and it
   names the pages that would actually change. `SIGNPOST_HOOK_CHECK` sets the default for an
-  invocation, and a `hooks.check` key in `.signpost.yml` will set it per repository. The accurate
+  invocation, and a `hooks.check` key in `.signpost.yml` sets it per repository. The accurate
   mode calls `verify` rather than reimplementing it: a second answer to "is the bundle current"
   would eventually disagree with the gate.
 

@@ -760,16 +760,32 @@ variable would mean a build that silently spends tokens and ships repository
 content to a third party because something unrelated was set, so the semantic pass
 is opt-in and nothing but explicit configuration turns it on.
 
-Configuration, `.signpost.yml` or environment:
+Configuration is split, and [ADR 0011](adr/0011-configuration-file-format-and-location.md)
+is where the line falls. *Which* model is a property of the repository, so it goes in
+`.signpost.yml`. *Whether* to spend one is a decision each run makes, so `-semantic`
+stays a flag. And the credential is read from the environment only — the file is
+committed, and a format with a place for an API key is a format that eventually has one
+in it, so the reader refuses `api_key` and `openai` by name rather than ignoring them.
 
 ```yaml
+# .signpost.yml, at the repository root and nowhere else
 backend: inferd            # inferd | openai | none (default none)
-model:   auto              # backend-resolved; stamped into generated.by
-budget:  { max_calls: 400, max_tokens: 2000000 }
-openai:
-  base_url: ${SIGNPOST_OPENAI_BASE_URL}
-  api_key:  ${SIGNPOST_OPENAI_API_KEY}   # env only, never in the file
+model:   google.gemma-3-12b-it   # passed through verbatim; stamped into generated.by
 ```
+
+```sh
+# the environment: the credential, and the endpoint that needs it
+SIGNPOST_OPENAI_BASE_URL=... SIGNPOST_OPENAI_API_KEY=... signpost build -semantic
+```
+
+An earlier sketch of this section put `base_url` and `api_key` in the file as
+`${SIGNPOST_OPENAI_API_KEY}`. ADR 0011 withdrew both the keys and the interpolation
+syntax: an expansion syntax exists mainly to put secrets in files, and there is nothing
+here that wants to expand one. So `${...}` anywhere in the document is now an error, not
+a value — because the alternative is silent, `model: ${SIGNPOST_MODEL}` reaching the
+backend verbatim as a model id and the resulting 400 saying nothing about the file.
+`budget`, also sketched here, is refused for a different reason: nothing reads it yet,
+and a key that looks configured and is not is worse than its absence.
 
 **Fail-open, following thlibo's ADR 0006.** If the configured backend is
 unreachable, signpost emits the deterministic bundle, records the skip in
@@ -898,6 +914,53 @@ The four rules above are [ADR 0013](adr/0013-the-local-hook-reports-and-ci-gates
 which also records the measurements behind the two checks and why `-as-of-bundle` is the
 accurate one — a strict `verify` after a code commit reported 38 problems here where
 `-as-of-bundle` reported the 1 that was real.
+
+### 6.0.2 `.signpost.yml` may only change a default
+
+A repository states how it wants to be analysed in `.signpost.yml` at its root.
+[ADR 0011](adr/0011-configuration-file-format-and-location.md) has the reasoning; three
+rules are the whole of it.
+
+**The root and nowhere else.** No user-level file, no `XDG_CONFIG_HOME`, no `-config`
+pointing outside the tree, no walk upward. A config search path is how the same checkout
+starts producing different bundles for two people, and §8.1's byte-stability requirement
+does not survive that.
+
+**A key may only change a default.** These eight, plus `hooks.check`:
+
+```yaml
+include_vendored: false      # analyse committed node_modules and vendor/
+include_fixtures: false      # analyse test fixtures
+ignore: [generated/**]       # additional .gitignore-syntax patterns
+no_history: false            # skip the git pass
+max_commits: 2000            # how far back the history pass reads
+repo: example.com/org/repo    # the resource URI every page is stamped with
+backend: none                # inferd | openai | none
+model: google.gemma-3-12b-it # passed through verbatim
+hooks: { check: fast }       # fast | verify
+```
+
+Anything that decides whether a check *fails* stays a flag — `-as-of-bundle`,
+`-fail-on-cycle`, any future threshold — because a repository that can weaken its own gate
+by committing a file is not gated. So is anything that is a property of one invocation
+rather than of the repository: `-quiet`, `-o`, `-format`, `-verbose`, `-top`. Those keys
+are **refused by name with a reason**, not ignored, because somebody who writes
+`fail_on_cycle: false` believes they have configured something, and a tool that reads the
+file, does the opposite, and exits 0 has told them their gate is what they asked for.
+
+**One precedence order, no exceptions per key:** flag > environment > file > default. The
+flag wins even when it is set to the zero value, which is why the reader asks
+`flag.Visit` whether a flag was passed rather than comparing against zero —
+`-include-vendored=false` and an absent flag carry the same value and must not carry the
+same decision.
+
+Unlike the manifest readers, which step over what they cannot interpret because they read
+other people's files (ADR 0001), this reader is intolerant: **any** diagnostic is exit 2,
+including the ones those readers tolerate. `include_vendored true`, missing its colon, is
+a line the tolerant reader notes and steps over, and stepping over it would mean analysing
+the repository the way the file said not to while reporting success. The file is also
+repository content and is not exempt from the walk it configures — signpost does not get
+to be invisible in its own map.
 
 ### 6.1 Human-review preservation
 

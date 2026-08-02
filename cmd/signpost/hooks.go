@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/hook"
 )
 
@@ -146,8 +147,9 @@ func runHooksRun(args []string, out, errOut io.Writer) error {
 		u.printf("  verify  run the same comparison `signpost verify -as-of-bundle` runs.\n" +
 			"          Reports the pages that would actually change, and costs about a\n" +
 			"          second.\n")
-		u.printf("\nSet %s to change the default for one invocation. A `hooks.check`\n"+
-			"key in .signpost.yml will set it per repository.\n", hook.EnvCheck)
+		u.printf("\nSet %s to change the default for one invocation, or a `hooks.check`\n"+
+			"key in %s to set it for the repository. This flag beats both.\n",
+			hook.EnvCheck, config.File)
 		u.printf("\nFlags:\n")
 		fs.PrintDefaults()
 	}
@@ -163,7 +165,11 @@ func runHooksRun(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	mode, err := resolveCheck(*check, os.Getenv(hook.EnvCheck))
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	mode, err := resolveCheck(*check, os.Getenv(hook.EnvCheck), cfg.HooksCheck)
 	if err != nil {
 		// A misuse, and the one thing here that is worth an error: a mode nobody recognises
 		// means the check the user configured is not running, and falling back silently
@@ -182,9 +188,15 @@ func runHooksRun(args []string, out, errOut io.Writer) error {
 	return nil
 }
 
-// resolveCheck applies ADR 0011's precedence: flag, then environment, then the default.
-func resolveCheck(flagValue, envValue string) (hook.Check, error) {
-	for _, v := range []string{flagValue, envValue} {
+// resolveCheck applies ADR 0011's precedence: flag, then environment, then the file, then the
+// default.
+//
+// The first non-empty value wins and is parsed; a later layer is never consulted to recover
+// from an earlier one being wrong. That matters for the file layer specifically — config.Load
+// has already rejected an unparseable mode, so a value reaching here is valid, and a fallback
+// would only exist to paper over a bug.
+func resolveCheck(flagValue, envValue, fileValue string) (hook.Check, error) {
+	for _, v := range []string{flagValue, envValue, fileValue} {
 		if strings.TrimSpace(v) == "" {
 			continue
 		}

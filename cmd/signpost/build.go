@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/model"
 	"github.com/3rg0n/signpost/internal/okf"
 	"github.com/3rg0n/signpost/internal/practice"
@@ -69,6 +70,14 @@ func runBuild(args []string, out, errOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Read from the root, before the walk, because the walk's options come out of it. See
+	// config.go for why every analysing command does this in the same place.
+	cfg, err := loadConfig(path)
+	if err != nil {
+		return err
+	}
+	applyConfig(fs, cfg, &pf)
+	applyRepo(fs, cfg, repo)
 
 	a, err := analyse(context.Background(), path, pf)
 	if err != nil {
@@ -87,7 +96,7 @@ func runBuild(args []string, out, errOut io.Writer) error {
 		reportPractices(newPrinter(errOut), pr)
 	}
 	if *sem {
-		sr, err := runSemantic(a, *semTimeout)
+		sr, err := runSemantic(a, *semTimeout, cfg)
 		if err != nil {
 			return err
 		}
@@ -113,8 +122,11 @@ func runBuild(args []string, out, errOut io.Writer) error {
 // URL — because that is a mistake in the invocation and failing open on it would mean a
 // typo silently producing a deterministic bundle. Everything that happens *after* the
 // backend is built fails open inside semantic.Run, per §5.
-func runSemantic(a *analysis, timeout time.Duration) (*semantic.Result, error) {
-	b, err := model.New(model.Config{Version: version})
+func runSemantic(a *analysis, timeout time.Duration, cfg *config.Config) (*semantic.Result, error) {
+	// No -backend or -model flag on `build`, so the file sits directly under the environment
+	// here. Which model to call is a property of the repository and configurable; *whether* to
+	// call one is not, which is why -semantic itself has no key (ADR 0009, ADR 0011).
+	b, err := model.New(modelConfig("", "", "", "", cfg))
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +134,9 @@ func runSemantic(a *analysis, timeout time.Duration) (*semantic.Result, error) {
 		// -semantic with no backend configured. An error, not a skip: the flag is a request
 		// to spend a model, and answering it with a silent deterministic build is how a
 		// scheduled workflow runs for a month producing nothing while reporting success.
-		return nil, fmt.Errorf("%w: -semantic needs a backend: set %s=inferd or %s=openai "+
-			"(run `signpost model check` to test one)",
-			errUsage, model.EnvBackend, model.EnvBackend)
+		return nil, fmt.Errorf("%w: -semantic needs a backend: set %s=inferd or %s=openai, or "+
+			"a `backend:` key in %s (run `signpost model check` to test one)",
+			errUsage, model.EnvBackend, model.EnvBackend, config.File)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

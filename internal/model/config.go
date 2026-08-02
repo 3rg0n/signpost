@@ -22,6 +22,20 @@ const (
 	KindNone Kind = "none"
 )
 
+// ParseKind reads a backend name, naming the alternatives on failure.
+//
+// Exported so that a caller which selects a backend without building one — the
+// .signpost.yml reader, which validates at load time — checks against this list rather
+// than a second copy of it. New's default case would catch the same typo, but only on a
+// run that asked for a semantic pass, which can be weeks after the file was written.
+func ParseKind(s string) (Kind, error) {
+	switch k := Kind(strings.ToLower(strings.TrimSpace(s))); k {
+	case KindInferd, KindOpenAI, KindNone:
+		return k, nil
+	}
+	return "", fmt.Errorf("unknown backend %q; want %s, %s, or %s", s, KindInferd, KindOpenAI, KindNone)
+}
+
 // Config selects and configures a backend.
 //
 // Credentials are read from the environment and never from a file, which is the one
