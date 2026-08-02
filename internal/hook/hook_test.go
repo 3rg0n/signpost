@@ -100,6 +100,24 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+// sameDir reports whether two paths name the same directory, which is not the same question
+// as whether they are the same string.
+//
+// os.SameFile rather than comparing resolved strings, because it asks the filesystem: it
+// answers for a macOS /var -> /private/var symlink, a Windows 8.3 short name, and a junction
+// alike, and none of those is a string transformation.
+func sameDir(a, b string) (bool, error) {
+	fa, err := os.Stat(a)
+	if err != nil {
+		return false, err
+	}
+	fb, err := os.Stat(b)
+	if err != nil {
+		return false, err
+	}
+	return os.SameFile(fa, fb), nil
+}
+
 func read(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -190,7 +208,13 @@ func TestResolveFollowsCoreHooksPath(t *testing.T) {
 	if p.Shared {
 		t.Error("a hooks directory inside the repository was reported as shared")
 	}
-	if p.Dir != filepath.Clean(inside) {
+	// Compared resolved, not byte for byte. t.TempDir() hands back an unresolved path and git
+	// hands back a resolved one, and the two name the same directory: on macOS /var is a
+	// symlink to /private/var, and on a Windows runner the temp path is an 8.3 short name
+	// (RUNNER~1). Both were green here and red in CI, which is what this comparison is for.
+	if same, err := sameDir(p.Dir, inside); err != nil {
+		t.Fatal(err)
+	} else if !same {
 		t.Errorf("Dir = %q, want %q", p.Dir, inside)
 	}
 }
@@ -210,6 +234,47 @@ func TestResolveReportsASharedHooksDirectory(t *testing.T) {
 	}
 	if !p.Shared {
 		t.Errorf("a hooks directory outside the repository was not reported as shared: %q", p.Dir)
+	}
+	if !p.Redirected {
+		t.Error("Redirected = false with core.hooksPath set")
+	}
+}
+
+// The negative boundary of the test above, and a real defect before it existed: a hooks
+// directory that *is* inside the repository was reported as shared with every repository on
+// the machine — which is the warning install prints, and the thing that tells a person the
+// file is not theirs to edit.
+//
+// It happens because git resolves one side of the comparison and not the other, verified
+// against git rather than assumed: `--show-toplevel` comes back with symlinks expanded, and an
+// absolute `core.hooksPath` comes back exactly as it was written. So the repository has to be
+// *reached* through a symlink for the two to disagree — a symlink below the toplevel is inside
+// it either way, which is why the first version of this test passed against the defect. macOS
+// is in this state by default, since /var is a symlink to /private/var and t.TempDir() lives
+// under it; the symlink here is explicit so the case exists on every platform.
+func TestResolveDoesNotCallAnInsideDirectoryShared(t *testing.T) {
+	base := t.TempDir()
+	t.Parallel()
+	real := filepath.Join(base, "real")
+	mustMkdir(t, real)
+	run(t, real, "init", "-q")
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(real, link); err != nil {
+		// Unprivileged Windows cannot create one, and that is not a failure of this package.
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	hooks := filepath.Join(link, ".githooks")
+	mustMkdir(t, hooks)
+	// Absolute, which is the form git returns verbatim. A relative value is joined onto the
+	// toplevel git already resolved, so it cannot produce the mismatch.
+	run(t, link, "config", "--local", "core.hooksPath", hooks)
+
+	p, err := Resolve(context.Background(), link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Shared {
+		t.Errorf("a hooks directory inside the repository was reported as shared: Dir = %q", p.Dir)
 	}
 	if !p.Redirected {
 		t.Error("Redirected = false with core.hooksPath set")
@@ -331,8 +396,10 @@ func TestInstallWritesWhereGitLooks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := filepath.Dir(res.Path); got != filepath.Clean(elsewhere) {
-		t.Errorf("installed to %q, want %q", got, elsewhere)
+	if same, err := sameDir(filepath.Dir(res.Path), elsewhere); err != nil {
+		t.Fatal(err)
+	} else if !same {
+		t.Errorf("installed to %q, want %q", filepath.Dir(res.Path), elsewhere)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".git", "hooks", "post-commit")); err == nil {
 		t.Error("a hook was written to .git/hooks, which git ignores when core.hooksPath is set")

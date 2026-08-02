@@ -109,6 +109,27 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-02
 
+- **`hooks install` reported a hooks directory inside the repository as shared with every
+  repository on the machine**, when the repository was reached through a symlink. That warning
+  is what tells a person the file they are about to have edited is not only theirs, so getting
+  it wrong in this direction is a warning about somebody else's tool that is not there.
+
+  git resolves one side of the comparison and not the other: `--show-toplevel` comes back with
+  symlinks expanded, and an absolute `core.hooksPath` comes back exactly as it was written. So
+  the two disagree whenever the repository's own path contains a symlink — macOS is in that
+  state by default, since `/var` is a symlink to `/private/var`. Both sides are now resolved
+  before comparison, and `Paths.Dir` is left as git reported it, because that is the path git
+  will use and the path the person set.
+
+  Found by a CI failure on macOS and Windows runners that this host could not reproduce, in an
+  assertion comparing a `t.TempDir()` path against a git-reported one — a real asymmetry
+  surfacing as a test bug. Windows passed locally only because this developer's home directory
+  escapes 8.3 short-name mangling, and macOS has no local run at all. The test half now asks
+  the filesystem (`os.SameFile`) rather than comparing strings, and the product half has its
+  own case with the symlink in the repository's path prefix rather than below it — which is
+  where the defect actually lives, and which the first attempt at that test got wrong and a
+  mutation caught.
+
 - **`-h` on a command exited 2 and printed its help to stderr.** So
   `signpost graph show -h | less` showed nothing and the shell saw a failure, while
   `signpost -h` and `signpost graph -h` exited 0 and printed to stdout. Requested help is an

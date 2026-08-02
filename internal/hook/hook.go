@@ -132,8 +132,30 @@ func Resolve(ctx context.Context, dir string) (*Paths, error) {
 		Scope:      hooksPathScope(ctx, dir),
 	}
 	p.Redirected = p.Scope != ""
-	p.Shared = !within(filepath.Clean(top), p.Dir) && !within(filepath.Clean(gitDir), p.Dir)
+	// Resolved on both sides, because git resolves one and not the other. `--show-toplevel`
+	// comes back with symlinks expanded; an absolute `core.hooksPath` comes back exactly as
+	// it was written. So a hooks directory inside a repository reached through a symlink —
+	// /tmp on macOS is one, and a junction to a checkout is another — compares unequal to a
+	// toplevel naming the same place, and would be reported as shared with every repository
+	// on the machine. Dir itself is left as git reported it: that is the path git will use
+	// and the path the person set, and rewriting it in the install output would answer a
+	// question nobody asked.
+	shared := resolve(p.Dir)
+	p.Shared = !within(resolve(top), shared) && !within(resolve(gitDir), shared)
 	return p, nil
+}
+
+// resolve expands symlinks, falling back to a cleaned path when it cannot.
+//
+// The fallback is the case that matters: the hooks directory frequently does not exist yet,
+// and EvalSymlinks fails outright on a path that is not there. An unresolvable path compares
+// as itself, which is the behaviour this had before and is right for a directory install is
+// about to create.
+func resolve(path string) string {
+	if r, err := filepath.EvalSymlinks(path); err == nil {
+		return filepath.Clean(r)
+	}
+	return filepath.Clean(path)
 }
 
 // hooksPathScope reports where core.hooksPath was set, or "" if it was not.
