@@ -885,7 +885,12 @@ jobs:
           # The counterpart that still fails: dropping the import instead of resolving it
           # would satisfy the check above, and losing the cross-package coupling is the other
           # way to be wrong — in a monorepo it is the main structural fact there is.
-          grep -q "to: /modules/$(basename "$core")" "$api" || {
+          # `./` because both pages are under modules/ and edge targets are page-relative:
+          # a sibling is `./name.md`, and the leading `/` this once asserted would now never
+          # match. Kept as a literal rather than loosened to `to: .*$(basename …)` — the form
+          # is part of what makes the bundle browsable on GitHub, so an assertion that stops
+          # noticing a regression to the absolute form is not worth having.
+          grep -qF "to: ./$(basename "$core")" "$api" || {
             echo "api imports @corpus/core by published name and there is no imports edge"
             echo "from $(basename "$api") to $(basename "$core"). The reference was dropped"
             echo "rather than resolved."
@@ -940,7 +945,7 @@ jobs:
 
           fail=0
           check() {
-            grep -q "kind: imports, to: /modules/$(basename "$2")" "$1" || {
+            grep -qF "kind: imports, to: ./$(basename "$2")" "$1" || {
               echo "no imports edge $(basename "$1" .md) -> $(basename "$2" .md): $3"; fail=1; }
           }
           check "$api" "$src" \
@@ -956,7 +961,11 @@ jobs:
           # claims any bare specifier as internal until something matches, which is worse than
           # the bug. Asserted on the edge, not the page — a reference page exists for every
           # declared dependency whether or not an import ever reaches it.
-          grep -rq 'to: /references/npm-react' "${bundle}/modules" || {
+          # `../references/` rather than `/references/`: the linking page is under modules/,
+          # so a cross-directory target climbs one level. This is the assertion the relative
+          # move was most likely to break silently — it is the negative boundary for the whole
+          # step, and a pattern that can no longer match makes it fail for the wrong reason.
+          grep -rqF 'to: ../references/npm-react' "${bundle}/modules" || {
             echo "nothing imports react any more. Alias matching is claiming specifiers it was"
             echo "given no mapping for and routing them into this repository, which hides what"
             echo "the code actually pulls in from outside."
