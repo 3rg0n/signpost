@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@2f488fb2af7df22b5c7ec19a6b59a33f145599f3
+resource: git://github.com/3rg0n/signpost@6a6794a08365fb0ce1257f9a9d8a36c6c7e4fe38
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # How work is done here
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, and Cargo aliases.
-- 44 test files in the tree.
+- 46 test files in the tree.
 
 ### What blocks a merge
 
@@ -47,7 +47,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 18 documentation files in the tree, outside the bundle.
+- 19 documentation files in the tree, outside the bundle.
 
 ### Observability
 
@@ -58,8 +58,8 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No agent instructions were found, so an agent working here has only the code to go on.
   - Looked in `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`.
-- 13 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 7 other files.
+- 14 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 8 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes

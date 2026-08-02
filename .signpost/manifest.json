@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@2f488fb2af7df22b5c7ec19a6b59a33f145599f3",
+  "resource": "git://github.com/3rg0n/signpost@6a6794a08365fb0ce1257f9a9d8a36c6c7e4fe38",
   "date": "2026-08-02",
   "counts": {
-    "nodes": 33,
-    "edges": 57,
-    "clusters": 23
+    "nodes": 35,
+    "edges": 59,
+    "clusters": 24
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 57,
+    "extracted": 59,
     "inferred": 0
   },
   "pages": [
@@ -21,6 +21,7 @@
     "modules/export.md",
     "modules/extract.md",
     "modules/graph.md",
+    "modules/hook.md",
     "modules/manifest.md",
     "modules/model.md",
     "modules/okf.md",
@@ -42,6 +43,7 @@
     "references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md",
     "references/adr-0011-configuration-file-format-and-location.md",
     "references/adr-0012-a-group-name-is-never-an-action.md",
+    "references/adr-0013-the-local-hook-reports-and-ci-gates.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",

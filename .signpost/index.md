@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 33 concepts, 57 relationships."
-resource: git://github.com/3rg0n/signpost@2f488fb2af7df22b5c7ec19a6b59a33f145599f3
+description: "Structural map of this repository: 35 concepts, 59 relationships."
+resource: git://github.com/3rg0n/signpost@6a6794a08365fb0ce1257f9a9d8a36c6c7e4fe38
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # Repository map
@@ -19,11 +19,11 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](/modules/signpost.md) — 27 relationships (8 in, 19 out)
+- [cmd/signpost](/modules/signpost.md) — 28 relationships (8 in, 20 out)
 - [internal/discover](/modules/discover.md) — 14 relationships (10 in, 4 out)
 - [internal/manifest](/modules/manifest.md) — 13 relationships (8 in, 5 out)
+- [internal/okf](/modules/okf.md) — 11 relationships (6 in, 5 out)
 - [internal/assemble](/modules/assemble.md) — 10 relationships (3 in, 7 out)
-- [internal/okf](/modules/okf.md) — 10 relationships (5 in, 5 out)
 
 ### Modules
 
@@ -32,12 +32,13 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/export](/modules/export.md) — 6 go files; 22 exported symbols.
 - [internal/extract](/modules/extract.md) — 14 go files; 189 exported symbols.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
+- [internal/hook](/modules/hook.md) — 2 go files; 38 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 23 go files; 239 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
 - [internal/okf](/modules/okf.md) — 13 go files; 194 exported symbols.
 - [internal/practice](/modules/practice.md) — 3 go files; 29 exported symbols.
 - [internal/semantic](/modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](/modules/signpost.md) — 13 go files; 66 exported symbols; entrypoint main; package main.
+- [cmd/signpost](/modules/signpost.md) — 15 go files; 78 exported symbols; entrypoint main; package main.
 - [site](/modules/site.md) — 1 javascript file.
 - [internal/vcs](/modules/vcs.md) — 6 go files; 55 exported symbols.
 
@@ -55,6 +56,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0010: a stale page is deleted only when nobody wrote on it](/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md) — Architecture decision (Accepted), 21 rules read from 0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md.
 - [ADR 0011: configuration file format and location](/references/adr-0011-configuration-file-format-and-location.md) — Architecture decision (Accepted), 27 rules read from 0011-configuration-file-format-and-location.md.
 - [ADR 0012: a group name is never an action](/references/adr-0012-a-group-name-is-never-an-action.md) — Architecture decision (Accepted), 23 rules read from 0012-a-group-name-is-never-an-action.md.
+- [ADR 0013: the local hook reports and ci gates](/references/adr-0013-the-local-hook-reports-and-ci-gates.md) — Architecture decision (Accepted), 23 rules read from 0013-the-local-hook-reports-and-ci-gates.md.
 - [README.md](/references/readme-md.md) — Architecture decision, 9 rules read from README.md.
 
 ### External dependencies
