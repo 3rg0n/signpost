@@ -1,0 +1,90 @@
+docs/design.md
+  s_f6c0b1ac81cb95::t_5cb6d618f0f965 823-832,835-839
+  s_f6c0b1ac81cb95::t_46b693f7a33b79 991-993,1013
+  s_f6c0b1ac81cb95::t_3b02c7aa663137 840-855
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_f0eac04c04b6b6 9-48,55-63
+  s_f6c0b1ac81cb95::t_cd48c47d78b8a5 68-81
+  s_f6c0b1ac81cb95::t_b23dd0c2847e73 49-54
+cmd/signpost/model.go
+  s_f6c0b1ac81cb95::t_0caf91a7e50f2e 26-29,31
+  s_f6c0b1ac81cb95::t_1a710f44472da3 130-134
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_59c73e5f2eb812 562,655,849
+cmd/signpost/graph.go
+  s_f6c0b1ac81cb95::t_0caf91a7e50f2e 25-28,30
+  s_f6c0b1ac81cb95::t_daa098a4175127 13,20-24,31
+site/index.html
+  s_f6c0b1ac81cb95::t_5bf9bb81be8f41 77,309
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_7ec9a5785aaf8d 47-48,172
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_1029287823086f 94-99,102-103,108,114-116,119-121,123,128,131-135,140-142,147,153-154,217
+  s_f6c0b1ac81cb95::t_3c32d14ac54300 100-101,104-107,109-113,117,122,127,130,137,139
+  s_f6c0b1ac81cb95::t_b09fca0f1a568a 144-146,148-152,157-161,164-175,177,180,182,184,187-196
+  s_f6c0b1ac81cb95::t_57c62e9f3ea0c5 6-9
+  s_f6c0b1ac81cb95::t_cf3a89c8ac3790 330-334
+  s_f6c0b1ac81cb95::t_b6f4636163388d 74
+  s_f6c0b1ac81cb95::t_7e25c9d13874f3 246-257,261,263
+  s_f6c0b1ac81cb95::t_86786d7d86927f 45-49
+  s_f6c0b1ac81cb95::t_99e7e7de29e6ef 273-277,281
+  s_f6c0b1ac81cb95::t_d70ff667902aa5 22
+  s_f6c0b1ac81cb95::t_72fe1281828bec 78
+  s_f6c0b1ac81cb95::t_224b9d59418c21 216,284-305
+  s_f6c0b1ac81cb95::t_6319bd3757ce87 317-324,326-329,335-347,349
+  s_f6c0b1ac81cb95::t_674a3a5db4db01 30-36,40,42-44,52-69,72-73,75-77,79-81
+  s_f6c0b1ac81cb95::t_6e0f7407c3f67b 143,155-156,162-163,176,178-179,181,183,185-186,197-215,218-237
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_0caf91a7e50f2e 31-34,36
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_7ec9a5785aaf8d 280,295,329-330,401
+  s_f6c0b1ac81cb95::t_38d4734d8cd0d2 238-268
+  s_f6c0b1ac81cb95::t_c01f02657fb1cb 196-199,201-211,213,215-220,222-224,226,228,230,232-235
+  s_f6c0b1ac81cb95::t_56387258385cda 225,227,231,236
+  s_f6c0b1ac81cb95::t_03f6f7a143b513 181-195,200,212,214,221,229,237,269-271
+SECURITY.md
+  s_f6c0b1ac81cb95::t_7ec9a5785aaf8d 36
+site/graph.html
+  s_f6c0b1ac81cb95::t_7ec9a5785aaf8d 62,120-121
+.github/workflows/pages.yml
+  s_f6c0b1ac81cb95::t_7ec9a5785aaf8d 67
+cmd/signpost/main_test.go
+  s_f6c0b1ac81cb95::t_84212cff6bb2a3 346-396
+  s_f6c0b1ac81cb95::t_849595205881e1 446-481
+  s_f6c0b1ac81cb95::t_59c73e5f2eb812 52,73,117,152,167,170,194,207,219,231,267,272,290-292,532,545,558-559,574-575
+  s_f6c0b1ac81cb95::t_7039edcb1c62b5 320-345,397-445,482-516
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_1fad3598cf6b18 30
+  s_f6c0b1ac81cb95::t_7b37ed893ca3fc 31
+docs/adr/0012-a-group-name-is-never-an-action.md
+  s_f6c0b1ac81cb95::t_92a24b74e67e47 1-17,32-97,105-113
+  s_f6c0b1ac81cb95::t_15848ae715b136 98-104
+  s_f6c0b1ac81cb95::t_72d1da8c38e9dd 18-31
+docs/adr/0011-configuration-file-format-and-location.md
+  s_f6c0b1ac81cb95::t_d675b4206e7146 1-153
+cmd/signpost/verify.go
+  s_f6c0b1ac81cb95::t_0caf91a7e50f2e 27-30,32
+README.md
+  s_f6c0b1ac81cb95::t_5bf9bb81be8f41 16-17,271
+cmd/signpost/model_test.go
+  s_f6c0b1ac81cb95::t_275014665bd198 187,190-191,193-195
+cmd/signpost/export.go
+  s_f6c0b1ac81cb95::t_fbcea59d727238 16,18,25
+  s_f6c0b1ac81cb95::t_0caf91a7e50f2e 19-22,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2f488fb2af7df22b5c7ec19a6b59a33f145599f3",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
