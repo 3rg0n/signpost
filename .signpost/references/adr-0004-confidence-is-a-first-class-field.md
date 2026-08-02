@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0004: confidence is a first class field"
 description: "Architecture decision (Accepted), 24 rules read from 0004-confidence-is-a-first-class-field.md."
-resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/docs/adr/0004-confidence-is-a-first-class-field.md
+resource: git://github.com/3rg0n/signpost@d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/docs/adr/0004-confidence-is-a-first-class-field.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
