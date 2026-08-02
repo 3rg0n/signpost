@@ -1,0 +1,122 @@
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_1041a971dc3832 1733-1768,1771-1921,1923-1943
+  s_f6c0b1ac81cb95::t_62b1dcad08d41b 6-8,15-16
+  s_f6c0b1ac81cb95::t_02e15f4fcf9a07 449-528
+  s_f6c0b1ac81cb95::t_c9036248c40867 1922
+  s_f6c0b1ac81cb95::t_6013143a64dce7 1769-1770
+internal/telemetry/exporter_test.go
+  s_f6c0b1ac81cb95::t_7c2c6e7385b8ed 58-60
+  s_f6c0b1ac81cb95::t_af2515bbebe719 1-57,61-223
+go.mod
+  s_f6c0b1ac81cb95::t_c4a18e7b7f781f 4-5,12-14,16-17,19
+  s_f6c0b1ac81cb95::t_dc23b06384662e 6-11,15,18
+docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md
+  s_f6c0b1ac81cb95::t_1554152b30b88a 1-8,19-36,40-59,71-196,198-203,220,228-229,236-247,255-265
+  s_f6c0b1ac81cb95::t_997194f78a84cc 60-70
+  s_f6c0b1ac81cb95::t_7540e6ae460bc4 230-235
+  s_f6c0b1ac81cb95::t_d53010c1207b99 37-39
+  s_f6c0b1ac81cb95::t_964e29052a755b 9-18
+  s_f6c0b1ac81cb95::t_6aa373cf3b8781 204-219
+  s_f6c0b1ac81cb95::t_797b7670e637bd 248-254
+  s_f6c0b1ac81cb95::t_35c4befd72d73c 221-227
+  s_f6c0b1ac81cb95::t_d8a7b75533b921 197
+internal/telemetry/telemetry_test.go
+  s_f6c0b1ac81cb95::t_904a0e7e49211d 356-358,360-362
+  s_f6c0b1ac81cb95::t_01bdd4d93a0573 1-6,8-9,11-23,28-31,33-43,68-278,305,316,330-338,343-355,359,363-495
+  s_f6c0b1ac81cb95::t_0cfbd95e9812a7 24-27,32,44-67
+  s_f6c0b1ac81cb95::t_080330a9dc6b1f 279-304,306-313,315,317-329
+  s_f6c0b1ac81cb95::t_980644d30349cb 7,10
+  s_f6c0b1ac81cb95::t_e96f37d1b2eb2e 339-342
+  s_f6c0b1ac81cb95::t_e4f5d47d6a86fb 314
+.github/dependabot.yml
+  s_f6c0b1ac81cb95::t_4599cf98bc72e7 11
+  s_f6c0b1ac81cb95::t_c7be8ef73115e6 12-14
+internal/telemetry/exporter.go
+  s_f6c0b1ac81cb95::t_6802f854f8dc08 429
+  s_f6c0b1ac81cb95::t_f75fc2e7ebf0c8 434-439
+  s_f6c0b1ac81cb95::t_7d79dff3df4c6c 371
+  s_f6c0b1ac81cb95::t_d7e6bc86e04c2c 1-43,45,47-361,364-370,372-428,430-433,440-449
+  s_f6c0b1ac81cb95::t_2ad1845a618275 44
+  s_f6c0b1ac81cb95::t_d392f1930a7672 362-363
+  s_f6c0b1ac81cb95::t_4a8958324a4783 46
+docs/design.md
+  s_f6c0b1ac81cb95::t_804aae13627ef2 1325-1328
+  s_f6c0b1ac81cb95::t_52a4e674bdcee4 92
+  s_f6c0b1ac81cb95::t_55af337b34eaf1 93
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_187af3872b8a08 245-255,257-268
+  s_f6c0b1ac81cb95::t_6c5c86a2e60580 169
+  s_f6c0b1ac81cb95::t_b7609076d01e2d 256
+  s_f6c0b1ac81cb95::t_5530a42af5d06c 13-53
+  s_f6c0b1ac81cb95::t_613f9b2057e19a 168,170-189
+internal/telemetry/telemetry.go
+  s_f6c0b1ac81cb95::t_c9bc30d58c4630 1-73,82-97,99-105,107-114,116-125,127-128,130,148-230,243-265
+  s_f6c0b1ac81cb95::t_ac5a8f07303678 231-242
+  s_f6c0b1ac81cb95::t_c15a290fb6ee5a 98
+  s_f6c0b1ac81cb95::t_bea66e63dbec41 106
+  s_f6c0b1ac81cb95::t_58873bd96a0ffc 115
+  s_f6c0b1ac81cb95::t_eb0f3b8154cdde 126,129,131-144,146-147
+  s_f6c0b1ac81cb95::t_23c88201e7677d 145
+  s_f6c0b1ac81cb95::t_3092ea77071a2e 74-81
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_38d504edec32a3 102-112
+  s_f6c0b1ac81cb95::t_8251e0321d0a38 17,24-25
+cmd/signpost/pipeline.go
+  s_f6c0b1ac81cb95::t_679111cd160c48 125
+  s_f6c0b1ac81cb95::t_d0b2564770c021 17
+  s_f6c0b1ac81cb95::t_07c26f9729dbec 79-89,91-109,111,114-124,126-130,134-148,150,155-173,175
+site/index.html
+  s_f6c0b1ac81cb95::t_d405c2c3a67b44 234-239
+internal/telemetry/helpers_test.go
+  s_f6c0b1ac81cb95::t_27f895139c0102 1-93
+README.md
+  s_f6c0b1ac81cb95::t_7d1ee2ea9f0a53 379-380
+  s_f6c0b1ac81cb95::t_1e6ef5c2d727dd 387-397
+  s_f6c0b1ac81cb95::t_cc825d1fe43ff6 378
+  s_f6c0b1ac81cb95::t_d5f5227a15c491 384-386
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_9cee0a9fbb20c9 355-360,376-379,394-402
+  s_f6c0b1ac81cb95::t_bd6a192239958f 393
+  s_f6c0b1ac81cb95::t_fed33ca9fb56d4 403-405
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_fe38b4cc4a964c 1204-1272
+  s_f6c0b1ac81cb95::t_4e6011a26f0d2f 1358
+  s_f6c0b1ac81cb95::t_1b48ef776b8193 1471-1476,1488,1491-1493,1495-1499,1513-1516,1519-1520,1536-1539,1543-1551
+  s_f6c0b1ac81cb95::t_80a6b9be77ac8e 1282-1284,1298-1305,1312-1313,1320-1325,1340,1343-1344,1352-1353
+  s_f6c0b1ac81cb95::t_78201728918d5c 1372-1374
+  s_f6c0b1ac81cb95::t_8e2b30a47cb739 1482,1487,1490,1500
+  s_f6c0b1ac81cb95::t_1d629fa651dc65 1518,1522
+  s_f6c0b1ac81cb95::t_98d008d6ad54c4 1273-1281,1285-1297,1306-1311,1314-1319,1326-1333,1335-1338,1341,1345,1356,1359-1371,1375-1470,1477-1481,1483-1486,1489,1494,1501-1512,1517,1521,1523-1535,1540-1542,1552
+  s_f6c0b1ac81cb95::t_333c81523a2009 1334,1339,1342,1346-1351,1354-1355,1357
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_ea208d0a3ca51f 33-37
+  s_f6c0b1ac81cb95::t_fc64e93c29f6e5 38
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_37a5b9dfbdbb79 146-181
+  s_f6c0b1ac81cb95::t_fd258e416e708c 93-117
+internal/practice/practice_test.go
+  s_f6c0b1ac81cb95::t_10d7d3be86934e 120-124
+  s_f6c0b1ac81cb95::t_e192003e128395 151-257
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_7f861d2d95412f 8
+  s_f6c0b1ac81cb95::t_b826b01b2bfefe 9
+  s_f6c0b1ac81cb95::t_71cce0445228ba 138-147
+go.sum
+  s_f6c0b1ac81cb95::t_81befc399655dd 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "278591843f208cdf9fab889edbe7d6dc5e89c551",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
