@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 37 concepts, 80 relationships."
-resource: git://github.com/3rg0n/signpost@7b0b140d2186f812025e8cd1a89497d5af6fbeba
+description: "Structural map of this repository: 49 concepts, 87 relationships."
+resource: git://github.com/3rg0n/signpost@278591843f208cdf9fab889edbe7d6dc5e89c551
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # Repository map
@@ -19,10 +19,10 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](./modules/signpost.md) — 32 relationships (10 in, 22 out)
+- [cmd/signpost](./modules/signpost.md) — 33 relationships (10 in, 23 out)
+- [AGENTS.md](./references/agents-md.md) — 16 relationships (0 in, 16 out)
 - [internal/discover](./modules/discover.md) — 15 relationships (11 in, 4 out)
 - [internal/manifest](./modules/manifest.md) — 15 relationships (10 in, 5 out)
-- [AGENTS.md](./references/agents-md.md) — 15 relationships (0 in, 15 out)
 - [internal/okf](./modules/okf.md) — 12 relationships (7 in, 5 out)
 
 ### Modules
@@ -37,10 +37,11 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/manifest](./modules/manifest.md) — 23 go files; 239 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 196 exported symbols.
-- [internal/practice](./modules/practice.md) — 3 go files; 29 exported symbols.
+- [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 17 go files; 92 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 17 go files; 95 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 1 javascript file.
+- [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
 
 ### Documents
@@ -58,6 +59,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0011: configuration file format and location](./references/adr-0011-configuration-file-format-and-location.md) — Architecture decision (Accepted), 27 rules read from 0011-configuration-file-format-and-location.md.
 - [ADR 0012: a group name is never an action](./references/adr-0012-a-group-name-is-never-an-action.md) — Architecture decision (Accepted), 23 rules read from 0012-a-group-name-is-never-an-action.md.
 - [ADR 0013: the local hook reports and ci gates](./references/adr-0013-the-local-hook-reports-and-ci-gates.md) — Architecture decision (Accepted), 23 rules read from 0013-the-local-hook-reports-and-ci-gates.md.
+- [ADR 0014: adopt the otel sdk and write the exporter](./references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md) — Architecture decision (Accepted), 44 rules read from 0014-adopt-the-otel-sdk-and-write-the-exporter.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 9 rules read from README.md.
 
@@ -70,6 +72,16 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [actions/setup-go](./references/github-actions-actions-setup-go.md) — github-actions dependency actions/setup-go (b7ad1dad31e06c5925ef5d2fc7ad053ef454303e)
 - [actions/upload-pages-artifact](./references/github-actions-actions-upload-pages-artifact.md) — github-actions dependency actions/upload-pages-artifact (fc324d3547104276b827a68afc52ff2a11cc49c9)
 - [golangci/golangci-lint-action](./references/github-actions-golangci-golangci-lint-action.md) — github-actions dependency golangci/golangci-lint-action (ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a)
+- [github.com/cespare/xxhash/v2](./references/go-github-com-cespare-xxhash-v2.md) — go dependency github.com/cespare/xxhash/v2 (v2.3.0)
+- [github.com/go-logr/logr](./references/go-github-com-go-logr-logr.md) — go dependency github.com/go-logr/logr (v1.4.3)
+- [github.com/go-logr/stdr](./references/go-github-com-go-logr-stdr.md) — go dependency github.com/go-logr/stdr (v1.2.2)
+- [github.com/google/uuid](./references/go-github-com-google-uuid.md) — go dependency github.com/google/uuid (v1.6.0)
+- [go.opentelemetry.io/auto/sdk](./references/go-go-opentelemetry-io-auto-sdk.md) — go dependency go.opentelemetry.io/auto/sdk (v1.2.1)
+- [go.opentelemetry.io/otel](./references/go-go-opentelemetry-io-otel.md) — go dependency go.opentelemetry.io/otel (v1.44.0)
+- [go.opentelemetry.io/otel/metric](./references/go-go-opentelemetry-io-otel-metric.md) — go dependency go.opentelemetry.io/otel/metric (v1.44.0)
+- [go.opentelemetry.io/otel/sdk](./references/go-go-opentelemetry-io-otel-sdk.md) — go dependency go.opentelemetry.io/otel/sdk (v1.44.0)
+- [go.opentelemetry.io/otel/trace](./references/go-go-opentelemetry-io-otel-trace.md) — go dependency go.opentelemetry.io/otel/trace (v1.44.0)
+- [golang.org/x/sys](./references/go-golang-org-x-sys.md) — go dependency golang.org/x/sys (v0.45.0)
 <!-- /signpost:managed:index -->
 
 ## Notes

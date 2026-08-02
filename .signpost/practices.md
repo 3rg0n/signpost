@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@7b0b140d2186f812025e8cd1a89497d5af6fbeba
+resource: git://github.com/3rg0n/signpost@278591843f208cdf9fab889edbe7d6dc5e89c551
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # How work is done here
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, and Cargo aliases.
-- 48 test files in the tree.
+- 51 test files in the tree.
 
 ### What blocks a merge
 
@@ -29,8 +29,8 @@ Each line is something this repository states, or something it does not. A missi
 
 ### Dependencies
 
-- **Not declared.** The Go dependencies are declared but not pinned by any lockfile in the tree, so two builds can resolve different versions.
-  - Looked in `go.mod`.
+- The Go dependencies are pinned by a lockfile.
+  - Stated in `go.sum`.
 - Automated dependency updates are configured.
   - Stated in `.github/dependabot.yml` and `renovate.json`.
 
@@ -47,19 +47,19 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 19 documentation files in the tree, outside the bundle.
+- 20 documentation files in the tree, outside the bundle.
 
 ### Observability
 
-- **Not declared.** No observability library is a declared dependency, so a failure in production is diagnosed from whatever the code happens to log.
-  - Looked in declared dependencies of every manifest read.
+- An observability library is a declared dependency: `go.opentelemetry.io/auto/sdk`, `go.opentelemetry.io/otel`, `go.opentelemetry.io/otel/metric`, `go.opentelemetry.io/otel/sdk`, `go.opentelemetry.io/otel/trace`. Whether anything is instrumented with it is not something a manifest can say.
+  - Stated in `go.mod` line 6.
 
 ### Instructions for agents
 
 - 14 stated rules for agents working in this repository.
   - Stated in `AGENTS.md`.
-- 14 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 8 other files.
+- 15 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 9 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes

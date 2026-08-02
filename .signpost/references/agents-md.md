@@ -2,7 +2,7 @@
 type: Document
 title: AGENTS.md
 description: "Stated constraints, 14 rules read from AGENTS.md."
-resource: git://github.com/3rg0n/signpost@7b0b140d2186f812025e8cd1a89497d5af6fbeba/AGENTS.md
+resource: git://github.com/3rg0n/signpost@278591843f208cdf9fab889edbe7d6dc5e89c551/AGENTS.md
 tags: [agent-rules, constraint]
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
@@ -23,6 +23,7 @@ edges:
   - { kind: documents, to: ../modules/semantic.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/signpost.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/site.md, confidence: extracted, source: AGENTS.md }
+  - { kind: documents, to: ../modules/telemetry.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/vcs.md, confidence: extracted, source: AGENTS.md }
 ---
 # AGENTS.md
@@ -37,7 +38,7 @@ Stated constraints, 14 rules read from AGENTS.md.
 1 file:
 - `AGENTS.md`
 
-- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/vcs](../modules/vcs.md)
+- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/telemetry](../modules/telemetry.md), [internal/vcs](../modules/vcs.md)
 <!-- /signpost:managed:structure -->
 
 ## Notes
