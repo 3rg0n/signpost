@@ -2,7 +2,7 @@
 type: Module
 title: internal/manifest
 description: 23 go files; 239 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/manifest
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/manifest
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "5" }
@@ -16,11 +16,11 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: /modules/assemble.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/discover.md, confidence: extracted, weight: 3 }
-  - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 14, source: internal/manifest/container.go }
-  - { kind: co_changes, to: /modules/practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 3 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 14, source: internal/manifest/container.go }
+  - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
 ---
 # internal/manifest
 
@@ -56,9 +56,9 @@ edges:
 - `internal/manifest/yaml.go`
 - `internal/manifest/yaml_test.go`
 
-- **Changes with**: [internal/assemble](/modules/assemble.md) ×2, [internal/discover](/modules/discover.md) ×3, [internal/practice](/modules/practice.md) ×2, [cmd/signpost](/modules/signpost.md) ×4
+- **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/discover](./discover.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×4
 
-- **Imports**: [internal/discover](/modules/discover.md) ×14
+- **Imports**: [internal/discover](./discover.md) ×14
 <!-- /signpost:managed:structure -->
 
 ## Notes

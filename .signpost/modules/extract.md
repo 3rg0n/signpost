@@ -2,7 +2,7 @@
 type: Module
 title: internal/extract
 description: 14 go files; 189 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/extract
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/extract
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "4" }
@@ -16,8 +16,8 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 75% }
 edges:
-  - { kind: co_changes, to: /modules/discover.md, confidence: extracted, weight: 2 }
-  - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 12, source: internal/extract/extract.go }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 2 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 12, source: internal/extract/extract.go }
 ---
 # internal/extract
 
@@ -44,9 +44,9 @@ edges:
 - `internal/extract/typescript.go`
 - `internal/extract/typescript_test.go`
 
-- **Changes with**: [internal/discover](/modules/discover.md) ×2
+- **Changes with**: [internal/discover](./discover.md) ×2
 
-- **Imports**: [internal/discover](/modules/discover.md) ×12
+- **Imports**: [internal/discover](./discover.md) ×12
 <!-- /signpost:managed:structure -->
 
 ## Notes

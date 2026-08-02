@@ -2,7 +2,7 @@
 type: Module
 title: internal/discover
 description: 5 go files; 65 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/discover
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/discover
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "5" }
@@ -16,10 +16,10 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: /modules/extract.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/manifest.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: /modules/practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
 ---
 # internal/discover
 
@@ -37,7 +37,7 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Changes with**: [internal/extract](/modules/extract.md) ×2, [internal/manifest](/modules/manifest.md) ×3, [internal/practice](/modules/practice.md) ×2, [cmd/signpost](/modules/signpost.md) ×3
+- **Changes with**: [internal/extract](./extract.md) ×2, [internal/manifest](./manifest.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×3
 <!-- /signpost:managed:structure -->
 
 ## Notes

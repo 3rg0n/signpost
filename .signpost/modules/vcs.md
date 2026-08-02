@@ -2,7 +2,7 @@
 type: Module
 title: internal/vcs
 description: 6 go files; 55 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/vcs
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/vcs
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "4" }
@@ -16,9 +16,9 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 50% }
 edges:
-  - { kind: co_changes, to: /modules/okf.md, confidence: extracted, weight: 2 }
-  - { kind: imports, to: /modules/okf.md, confidence: extracted, weight: 1, source: internal/vcs/git_test.go }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
+  - { kind: imports, to: ./okf.md, confidence: extracted, weight: 1, source: internal/vcs/git_test.go }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
 ---
 # internal/vcs
 
@@ -37,9 +37,9 @@ edges:
 - `internal/vcs/parse_test.go`
 - `internal/vcs/vcs.go`
 
-- **Changes with**: [internal/okf](/modules/okf.md) ×2, [cmd/signpost](/modules/signpost.md) ×4
+- **Changes with**: [internal/okf](./okf.md) ×2, [cmd/signpost](./signpost.md) ×4
 
-- **Imports**: [internal/okf](/modules/okf.md) ×1
+- **Imports**: [internal/okf](./okf.md) ×1
 <!-- /signpost:managed:structure -->
 
 ## Notes

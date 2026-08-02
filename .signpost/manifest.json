@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f",
+  "resource": "git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0",
   "date": "2026-08-02",
   "counts": {
-    "nodes": 36,
-    "edges": 65,
+    "nodes": 37,
+    "edges": 80,
     "clusters": 24
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 65,
+    "extracted": 80,
     "inferred": 0
   },
   "pages": [
@@ -45,6 +45,7 @@
     "references/adr-0011-configuration-file-format-and-location.md",
     "references/adr-0012-a-group-name-is-never-an-action.md",
     "references/adr-0013-the-local-hook-reports-and-ci-gates.md",
+    "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",

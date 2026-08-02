@@ -2,7 +2,7 @@
 type: Module
 title: internal/config
 description: 2 go files; 26 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/config
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/config
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "1" }
@@ -16,9 +16,9 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: imports, to: /modules/hook.md, confidence: extracted, weight: 1, source: internal/config/config.go }
-  - { kind: imports, to: /modules/manifest.md, confidence: extracted, weight: 1, source: internal/config/config.go }
-  - { kind: imports, to: /modules/model.md, confidence: extracted, weight: 2, source: internal/config/config.go }
+  - { kind: imports, to: ./hook.md, confidence: extracted, weight: 1, source: internal/config/config.go }
+  - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 1, source: internal/config/config.go }
+  - { kind: imports, to: ./model.md, confidence: extracted, weight: 2, source: internal/config/config.go }
 ---
 # internal/config
 
@@ -33,7 +33,7 @@ edges:
 - `internal/config/config.go`
 - `internal/config/config_test.go`
 
-- **Imports**: [internal/hook](/modules/hook.md) ×1, [internal/manifest](/modules/manifest.md) ×1, [internal/model](/modules/model.md) ×2
+- **Imports**: [internal/hook](./hook.md) ×1, [internal/manifest](./manifest.md) ×1, [internal/model](./model.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

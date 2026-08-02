@@ -2,7 +2,7 @@
 type: Module
 title: internal/export
 description: 6 go files; 22 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/export
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/export
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "1" }
@@ -17,7 +17,7 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: imports, to: /modules/graph.md, confidence: extracted, weight: 6, source: internal/export/dot.go }
+  - { kind: imports, to: ./graph.md, confidence: extracted, weight: 6, source: internal/export/dot.go }
 ---
 # internal/export
 
@@ -36,7 +36,7 @@ edges:
 - `internal/export/json.go`
 - `internal/export/mermaid.go`
 
-- **Imports**: [internal/graph](/modules/graph.md) ×6
+- **Imports**: [internal/graph](./graph.md) ×6
 <!-- /signpost:managed:structure -->
 
 ## Notes

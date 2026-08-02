@@ -2,7 +2,7 @@
 type: Module
 title: internal/hook
 description: 2 go files; 39 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/hook
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/hook
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "2" }
@@ -16,7 +16,7 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: imports, to: /modules/okf.md, confidence: extracted, weight: 1, source: internal/hook/hook_test.go }
+  - { kind: imports, to: ./okf.md, confidence: extracted, weight: 1, source: internal/hook/hook_test.go }
 ---
 # internal/hook
 
@@ -31,7 +31,7 @@ edges:
 - `internal/hook/hook.go`
 - `internal/hook/hook_test.go`
 
-- **Imports**: [internal/okf](/modules/okf.md) ×1
+- **Imports**: [internal/okf](./okf.md) ×1
 <!-- /signpost:managed:structure -->
 
 ## Notes

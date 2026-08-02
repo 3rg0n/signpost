@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # How work is done here
@@ -56,8 +56,8 @@ Each line is something this repository states, or something it does not. A missi
 
 ### Instructions for agents
 
-- **Not declared.** No agent instructions were found, so an agent working here has only the code to go on.
-  - Looked in `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`.
+- 14 stated rules for agents working in this repository.
+  - Stated in `AGENTS.md`.
 - 14 architecture decision records state why things are the way they are.
   - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 8 other files.
 <!-- /signpost:managed:practices -->

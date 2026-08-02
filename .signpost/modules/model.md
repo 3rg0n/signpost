@@ -2,7 +2,7 @@
 type: Module
 title: internal/model
 description: 15 go files; 98 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/model
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/model
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "2" }
@@ -16,7 +16,7 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 50% }
 edges:
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
 ---
 # internal/model
 
@@ -44,7 +44,7 @@ edges:
 - `internal/model/untrusted.go`
 - `internal/model/untrusted_test.go`
 
-- **Changes with**: [cmd/signpost](/modules/signpost.md) ×2
+- **Changes with**: [cmd/signpost](./signpost.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

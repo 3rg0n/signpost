@@ -2,7 +2,7 @@
 type: Module
 title: internal/practice
 description: 3 go files; 29 exported symbols.
-resource: git://github.com/3rg0n/signpost@c884853679a6052d1bc328206e22bee97a192b0f/internal/practice
+resource: git://d0ea89253a2bdcb6948c4746ef4cd98bce8db2b0/internal/practice
 generated: { by: signpost/dev, at: "2026-08-02" }
 attributes:
   - { name: commits, value: "2" }
@@ -16,11 +16,11 @@ attributes:
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: /modules/discover.md, confidence: extracted, weight: 2 }
-  - { kind: imports, to: /modules/discover.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
-  - { kind: co_changes, to: /modules/manifest.md, confidence: extracted, weight: 2 }
-  - { kind: imports, to: /modules/manifest.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
-  - { kind: co_changes, to: /modules/signpost.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 2 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
+  - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 2 }
+  - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
 ---
 # internal/practice
 
@@ -36,9 +36,9 @@ edges:
 - `internal/practice/practice_test.go`
 - `internal/practice/render.go`
 
-- **Changes with**: [internal/discover](/modules/discover.md) ×2, [internal/manifest](/modules/manifest.md) ×2, [cmd/signpost](/modules/signpost.md) ×2
+- **Changes with**: [internal/discover](./discover.md) ×2, [internal/manifest](./manifest.md) ×2, [cmd/signpost](./signpost.md) ×2
 
-- **Imports**: [internal/discover](/modules/discover.md) ×2, [internal/manifest](/modules/manifest.md) ×2
+- **Imports**: [internal/discover](./discover.md) ×2, [internal/manifest](./manifest.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes
