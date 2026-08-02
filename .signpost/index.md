@@ -3,7 +3,7 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 35 concepts, 59 relationships."
-resource: git://github.com/3rg0n/signpost@6a6794a08365fb0ce1257f9a9d8a36c6c7e4fe38
+resource: git://github.com/3rg0n/signpost@fadeb55a3a6491fcdc86fefb2cd864043a9f9f5e
 generated: { by: signpost/dev, at: "2026-08-02" }
 ---
 # Repository map
@@ -32,7 +32,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/export](/modules/export.md) — 6 go files; 22 exported symbols.
 - [internal/extract](/modules/extract.md) — 14 go files; 189 exported symbols.
 - [internal/graph](/modules/graph.md) — 4 go files; 69 exported symbols.
-- [internal/hook](/modules/hook.md) — 2 go files; 38 exported symbols.
+- [internal/hook](/modules/hook.md) — 2 go files; 39 exported symbols.
 - [internal/manifest](/modules/manifest.md) — 23 go files; 239 exported symbols.
 - [internal/model](/modules/model.md) — 15 go files; 97 exported symbols.
 - [internal/okf](/modules/okf.md) — 13 go files; 194 exported symbols.
