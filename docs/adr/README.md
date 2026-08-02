@@ -29,6 +29,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0010](0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md) | A stale page is deleted only when nobody wrote on it | Accepted |
 | [0011](0011-configuration-file-format-and-location.md) | Configuration lives in `.signpost.yml`, and a config key may only change a default | Accepted |
 | [0012](0012-a-group-name-is-never-an-action.md) | A group name is never an action, and a noun with one operation stays flat | Accepted |
+| [0013](0013-the-local-hook-reports-and-ci-gates.md) | The local hook reports, CI gates, and the hook is a guest in somebody else's file | Accepted |
 
 ## Decisions still owed one
 

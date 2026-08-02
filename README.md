@@ -256,6 +256,28 @@ attributes for a directory inside that commit change once it lands. If you need 
 atomic commit, build with `-no-history`: a structure-only bundle has nothing that
 moves, and it verifies clean.
 
+**A local reminder, optional.** `signpost hooks install` adds a `post-commit` hook
+that prints one line when `.signpost/` has fallen behind the code:
+
+```
+signpost hooks install                    # add it
+signpost hooks install -h                 # what it will write, and where
+signpost hooks uninstall                  # remove it
+```
+
+It reports and never gates — the hook cannot fail a commit, does not rebuild
+anything, and `signpost verify` in CI is the check that actually fails. It defaults
+to a commit comparison that costs milliseconds; `signpost hooks run -check verify`
+runs the accurate one, and `SIGNPOST_HOOK_CHECK=verify` makes that the default.
+
+Two things it will tell you about, because both surprise people. It **appends** to
+any `post-commit` hook already there and `hooks uninstall` removes only its own
+lines, so a git-lfs hook survives both. And if you have `core.hooksPath` set — in
+`~/.gitconfig`, say — git reads hooks only from there and ignores `.git/hooks`
+entirely, so that is where the hook goes; when that directory is shared with every
+repository on your machine, the install output says so. The lines added do nothing
+in a repository without a bundle.
+
 ## Status
 
 **v0.1.0 — deterministic core, complete.** No model required, no network.
@@ -273,6 +295,7 @@ moves, and it verifies clean.
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
+| `signpost hooks` — optional local post-commit reminder | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |

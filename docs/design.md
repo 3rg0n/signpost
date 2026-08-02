@@ -829,6 +829,8 @@ signpost model check               # prove the configured backend works; non-zer
 signpost ask why "<question>"      # traverse the bundle and answer, citing pages
 signpost ask path <A> <B>          # shortest typed path between two concepts
 signpost hooks install             # optional local post-commit hook
+signpost hooks uninstall           # remove it, leaving any other hook alone
+signpost hooks run                 # what the hook calls; reports, never fails
 signpost version
 ```
 
@@ -853,6 +855,49 @@ come from the same code, so a new group cannot describe itself differently from 
 existing one. Two behaviours exist for the v0.1.0 rename and are meant to be deleted: an
 old verb reports where it went, and a mistyped one gets a suggestion when exactly one
 candidate is within a typo's distance.
+
+### 6.0.1 The local hook reports; CI gates
+
+`hooks install` adds a `post-commit` hook that prints one line when the committed bundle
+has fallen behind the code. It is a convenience, and the division from CI is the whole of
+its design:
+
+- **The hook never fails a commit.** It is `post-commit`, so the commit object already
+  exists when it runs, and it exits 0 whatever it finds. `signpost verify` in CI is what
+  gates. A hook that could break `git commit` over an optional knowledge artifact gets
+  deleted within a day and takes the tool with it.
+- **It never rebuilds.** §8.0 keeps the bundle off branches so that two branches do not
+  both regenerate `.signpost/` and make merges painful; a hook that rebuilt on commit
+  would recreate exactly that, on every branch.
+- **It is appended, never written over.** A `post-commit` hook already exists on a great
+  many machines — git-lfs installs one — and the lines go on the end between markers, so
+  `hooks uninstall` can remove signpost's and leave the rest.
+- **It goes where git actually looks.** When `core.hooksPath` is set at any scope,
+  including in `~/.gitconfig`, that directory is the only place git reads hooks from and
+  `.git/hooks` is ignored entirely, so writing to `.git/hooks` would install a file that
+  never runs. `hooks install` follows the resolved path and says so, including when the
+  path is shared with every repository on the machine. The block is guarded to do nothing
+  in a repository without a bundle, which is what makes that defensible.
+
+Two checks, configurable, because they trade accuracy against a cost paid on every
+commit:
+
+| `-check` | Cost | Answers |
+|---|---|---|
+| `fast` (default) | milliseconds; two `git log -1` | is the newest code commit newer than the newest `.signpost/` commit |
+| `verify` | ~1s on this repository | which pages would actually change, via `verify -as-of-bundle` |
+
+`fast` is the default because a second on every commit is what makes a hook an
+irritation, and its inaccuracy is one-directional and stated: a commit touching only
+`LICENSE` moves the code commit without changing a page, and `fast` calls that behind.
+`verify` calls the real `verify` rather than reimplementing the comparison, so the hook
+cannot come to disagree with the gate. Precedence is `-check` > `SIGNPOST_HOOK_CHECK` >
+`hooks.check` in `.signpost.yml` > `fast`, per [ADR 0011](adr/0011-configuration-file-format-and-location.md).
+
+The four rules above are [ADR 0013](adr/0013-the-local-hook-reports-and-ci-gates.md),
+which also records the measurements behind the two checks and why `-as-of-bundle` is the
+accurate one — a strict `verify` after a code commit reported 38 problems here where
+`-as-of-bundle` reported the 1 that was real.
 
 ### 6.1 Human-review preservation
 

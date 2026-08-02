@@ -6,6 +6,50 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+#### 2026-08-02
+
+- **`signpost hooks install` — an optional local `post-commit` reminder.** Prints one line when
+  `.signpost/` has fallen behind the code, for anyone building the bundle locally rather than in
+  CI. `signpost hooks uninstall` removes it; `signpost hooks run` is what the hook calls and is
+  useful by hand.
+
+  It reports and never gates. The hook cannot fail a commit, does not rebuild anything, and is
+  `post-commit` rather than `pre-commit` — a rebuild on every commit on every branch is exactly
+  the merge pain the "bundle is built only on the default branch" rule exists to avoid. CI's
+  `signpost verify` remains the only thing that fails a build over a stale bundle, and
+  CONTRIBUTING says so explicitly, because a hook that is *expected* is a gate enforced on
+  machines nobody can inspect.
+
+  Two behaviours will surprise people, so both are in the install output and the README. It
+  **appends** a marked block to whatever `post-commit` hook is already there and uninstall takes
+  out only its own lines, so a git-lfs hook survives both. And it installs where
+  `git rev-parse --git-path hooks` points, which honours `core.hooksPath` at any scope — when
+  that is set, git reads hooks from that one directory for every repository on the machine and
+  ignores `.git/hooks` entirely, so writing to `.git/hooks` anyway would install a file that
+  never runs while reporting success. git-lfs resolved this the same way in
+  [git-lfs/git-lfs#3240](https://github.com/git-lfs/git-lfs/issues/3240). The block carries
+  three guards — `[ -d .signpost ]`, `command -v signpost`, and `|| true` — so it is inert in a
+  repository without a bundle, on a machine without signpost, and under `set -e`.
+
+  Two check modes, defaulting to the cheap one because this runs on every commit. `fast` is two
+  `git log -1` calls and costs milliseconds; it answers "the bundle was written before the newest
+  code commit", which reports a commit that touched only `LICENSE` as behind. `-check verify`
+  runs the same `verify -as-of-bundle` comparison CI gates on — about a second here, and it
+  names the pages that would actually change. `SIGNPOST_HOOK_CHECK` sets the default for an
+  invocation, and a `hooks.check` key in `.signpost.yml` will set it per repository. The accurate
+  mode calls `verify` rather than reimplementing it: a second answer to "is the bundle current"
+  would eventually disagree with the gate.
+
+  Recorded as
+  [ADR 0013](docs/adr/0013-the-local-hook-reports-and-ci-gates.md), because both halves are
+  conventions that erode silently — clause 1 will be argued against as "a `pre-commit` hook
+  would stop the bad commit existing", and clause 4 is invisible when broken. The test that
+  covers them drives a real `git commit` with a stub on `PATH`: mode, shebang, location,
+  Git-for-Windows `sh` dispatch, and the never-gates property are one assertion, and none of
+  them is reachable from a unit test.
+
 ### Changed
 
 #### 2026-08-02

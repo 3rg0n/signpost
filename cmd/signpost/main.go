@@ -78,6 +78,11 @@ func commands() []command {
 		{name: "model", summary: "inspect the configured model backend", subs: []command{
 			{name: "check", summary: "send one request to the configured backend and report what came back", run: runModelCheck},
 		}},
+		{name: "hooks", summary: "manage the optional local git hook", subs: []command{
+			{name: "install", summary: "add a post-commit hook that reports a stale bundle", run: runHooksInstall},
+			{name: "uninstall", summary: "remove signpost's lines from the post-commit hook", run: runHooksUninstall},
+			{name: "run", summary: "report whether .signpost/ is behind the code; what the hook calls", run: runHooksRun},
+		}},
 		{name: "version", summary: "print the version", run: runVersion},
 	}
 }

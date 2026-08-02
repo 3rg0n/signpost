@@ -53,6 +53,15 @@ on an empty graph, so an exit-code check would pass on a total collapse. If a
 change legitimately moves the node or edge counts below the floors in
 `.github/workflows/ci.yml`, move the floor in the same commit and say why.
 
+**`signpost hooks install` is not part of the gate, and will not become part of
+it.** It adds a `post-commit` hook that prints one line when `.signpost/` has
+fallen behind the code — a convenience for anyone building the bundle locally, and
+nothing more. It cannot fail a commit, it does not rebuild anything, and skipping
+it changes nothing about whether your change lands: `signpost verify` in CI is what
+gates. It is worth knowing that it appends to whatever `post-commit` hook you
+already have, that `hooks uninstall` removes only its own lines, and that it
+installs where `core.hooksPath` points when you have one set.
+
 ## A fixed bug becomes a corpus regression
 
 `testdata/corpus` is a synthetic repository — all four first-class languages, four

@@ -363,15 +363,51 @@ func TestLeafHelpExitsZeroOnStdout(t *testing.T) {
 			if !strings.Contains(stdout, "usage: signpost "+name) {
 				t.Errorf("%s %s: stdout does not carry the usage line:\n%s", name, arg, stdout)
 			}
-			// The flag list is the half that lived on the wrong stream, and every leaf
-			// has at least one flag to print.
-			if !strings.Contains(stdout, "  -") {
+			// The flag list is the half that lived on the wrong stream, so it has to be
+			// asserted separately from the prose — but only where there is one. `hooks
+			// install` and `hooks uninstall` take no flags, and requiring a list there
+			// would push them into printing an empty `Flags:` heading to satisfy a test.
+			if _, ok := flaglessLeaves[name]; !ok && !strings.Contains(stdout, "  -") {
 				t.Errorf("%s %s: stdout has no flag list, so PrintDefaults went elsewhere:\n%s",
 					name, arg, stdout)
 			}
 			if stderr != "" {
 				t.Errorf("%s %s: wrote to stderr:\n%s", name, arg, stderr)
 			}
+		}
+	}
+}
+
+// flaglessLeaves are the commands that take no flags, so their help has no flag list to
+// check. An explicit list rather than "assert a flag list only if one appears", because the
+// bug this test exists for is a flag list going to the wrong stream — and a check that
+// tolerates its absence would pass on exactly that.
+//
+// TestEveryFlaglessLeafReallyHasNoFlags keeps the list honest in the other direction.
+var flaglessLeaves = map[string]struct{}{
+	"hooks install":   {},
+	"hooks uninstall": {},
+}
+
+// The exemption above is load-bearing, so it gets checked from the other side: a command
+// listed as flagless that later grows a flag would otherwise stop being covered by the help
+// contract without anything saying so.
+func TestEveryFlaglessLeafReallyHasNoFlags(t *testing.T) {
+	for name := range flaglessLeaves {
+		stdout, _, _ := invoke(t, append(strings.Split(name, " "), "-h")...)
+		if strings.Contains(stdout, "\n  -") {
+			t.Errorf("%s is listed as flagless but its help prints a flag list:\n%s", name, stdout)
+		}
+	}
+	// And nothing in the list may be a name that does not exist, which is how an exemption
+	// outlives the command it was written for and starts covering nothing.
+	leaves := map[string]struct{}{}
+	for _, p := range leafPaths(commands(), nil) {
+		leaves[strings.Join(p, " ")] = struct{}{}
+	}
+	for name := range flaglessLeaves {
+		if _, ok := leaves[name]; !ok {
+			t.Errorf("flaglessLeaves names %q, which is not a leaf command", name)
 		}
 	}
 }

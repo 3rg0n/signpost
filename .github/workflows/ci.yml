@@ -225,6 +225,8 @@ jobs:
           check 'show'       "offer show"           graph
           check '<command>' 'print the group usage' model
           check 'check'      "offer check"          model
+          check '<command>' 'print the group usage' hooks
+          check 'install'    "offer install"        hooks
 
           # A renamed verb says where it went. `export` is unknown now; `graph .`
           # parses as a group handed a path, which is exactly the v0.1.0 spelling.
@@ -260,11 +262,39 @@ jobs:
           helps
           helps graph
           helps model
+          helps hooks
           helps build
           helps verify
           helps graph show
           helps graph export
           helps model check
+          helps hooks install
+          helps hooks uninstall
+          helps hooks run
+
+          # The hook reports and never gates. That division is what makes the hook
+          # safe to install, and it is asserted on the real binary because the
+          # failure is invisible from a terminal: `hooks run` exiting non-zero on a
+          # stale bundle would put a red line in every developer's shell after
+          # every commit, and the unit test that covers it would still pass if the
+          # exit code were mapped somewhere between the command and the process.
+          #
+          # Run on the bundle this job just verified, so the answer is "current"
+          # and the assertion is only about the exit code.
+          for mode in fast verify; do
+            code=0
+            ./signpost hooks run -check "$mode" . >/dev/null 2>"$err" || code=$?
+            if [ "$code" -ne 0 ]; then
+              echo "signpost hooks run -check ${mode}: exit ${code}, want 0 — the hook must never gate"
+              cat "$err"
+              fail=1
+            fi
+          done
+
+          # And an unusable check mode is a misuse rather than a silent fall back
+          # to the cheap check, which would report "current" from a check that
+          # never ran.
+          check 'verify' 'name the modes it accepts' hooks run -check quick .
 
           [ "$fail" -eq 0 ] || exit 1
           echo "the command surface is intact"
