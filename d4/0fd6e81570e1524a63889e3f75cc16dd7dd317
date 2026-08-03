@@ -1,0 +1,79 @@
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_4f1110f47d3357 496-504,511-531
+  s_f6c0b1ac81cb95::t_abc2af9884f3ca 53-55
+  s_f6c0b1ac81cb95::t_ca60908b79eab2 281-282,292-323,532
+  s_f6c0b1ac81cb95::t_25ae26a849e7bf 283-291
+  s_3f706e3f4b4643::t_7db2c5d897aa62 533
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_bbf88f33ce6626 243-302
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_646ca61caadc57 177-191,193-216,218-222,224-244
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_4fc298b2dfb350 975-990
+  s_f6c0b1ac81cb95::t_4a6f402cede746 916
+  s_f6c0b1ac81cb95::t_78c959bc7777b3 991-1081
+  s_f6c0b1ac81cb95::t_57598c9b4332a9 951
+  s_f6c0b1ac81cb95::t_5c82d361ed8378 874-877
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_60a8de3493da21 1093-1094,1100-1110
+  s_f6c0b1ac81cb95::t_13c6a3736b33ae 909-968
+  s_f6c0b1ac81cb95::t_ad29f4ef6fab76 1050-1055
+  s_126aec4081f728::t_a7f1ebc749df99 1111-1113
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_c6a854fa13f4f0 171-172
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_6146832a678c8a 229-233,236-288,293-299
+  s_f6c0b1ac81cb95::t_c31edfbf87ae2d 234-235,289-292
+testdata/corpus/py/services/beta/api/client.py
+  s_f6c0b1ac81cb95::t_192d5c5b8ebc1f 1-16
+testdata/corpus/py/services/alpha/pyproject.toml
+  s_f6c0b1ac81cb95::t_d6329aa716f88f 1-11
+testdata/corpus/py/services/beta/pyproject.toml
+  s_f6c0b1ac81cb95::t_7c649ec4f1bcb2 1-11
+testdata/corpus/py/services/beta/api/__init__.py
+  s_f6c0b1ac81cb95::t_36d7b96540b129 1
+testdata/corpus/py/services/beta/handler.py
+  s_f6c0b1ac81cb95::t_4cf56263cf7562 1-21
+testdata/corpus/py/services/alpha/api/client.py
+  s_f6c0b1ac81cb95::t_bf2a50c8bee894 1-14
+testdata/corpus/py/services/alpha/handler.py
+  s_f6c0b1ac81cb95::t_f3c6a238f8a04b 22-28,30,33
+  s_f6c0b1ac81cb95::t_e834c29794d180 1-21,29,31-32,34
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_bf987df6725135 54
+  s_f6c0b1ac81cb95::t_fd3c41279d3447 70-112
+testdata/corpus/py/services/alpha/api/__init__.py
+  s_f6c0b1ac81cb95::t_7f2e73ef8ec29c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d40fd6e81570e1524a63889e3f75cc16dd7dd317",
+  "prompts": {},
+  "sessions": {
+    "s_126aec4081f728": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27423376-a69e-4c48-a6dc-36ba96a5574e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
