@@ -1,17 +1,17 @@
 ---
 type: Module
 title: internal/assemble
-description: 6 go files; 48 exported symbols.
-resource: git://github.com/3rg0n/signpost@278591843f208cdf9fab889edbe7d6dc5e89c551/internal/assemble
-generated: { by: signpost/dev, at: "2026-08-02" }
+description: 6 go files; 51 exported symbols.
+resource: git://github.com/3rg0n/signpost@d40fd6e81570e1524a63889e3f75cc16dd7dd317/internal/assemble
+generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:
-  - { name: commits, value: "6" }
-  - { name: exported, value: "48" }
+  - { name: commits, value: "7" }
+  - { name: exported, value: "51" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-01" }
-  - { name: lines_added, value: "3470" }
-  - { name: lines_removed, value: "9" }
+  - { name: last_commit, value: "2026-08-03" }
+  - { name: lines_added, value: "3686" }
+  - { name: lines_removed, value: "45" }
   - { name: owners, value: "@3rg0n" }
   - { name: package, value: assemble }
   - { name: top_author, value: 3rg0n }
@@ -22,13 +22,13 @@ edges:
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 4, source: internal/assemble/assemble.go }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 4, source: internal/assemble/assemble.go }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 6 }
   - { kind: imports, to: ./vcs.md, confidence: extracted, weight: 3, source: internal/assemble/assemble.go }
 ---
 # internal/assemble
 
 <!-- signpost:managed:summary -->
-6 go files; 48 exported symbols.
+6 go files; 51 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -42,7 +42,7 @@ edges:
 - `internal/assemble/id.go`
 - `internal/assemble/resolve.go`
 
-- **Changes with**: [internal/manifest](./manifest.md) ×2, [cmd/signpost](./signpost.md) ×5
+- **Changes with**: [internal/manifest](./manifest.md) ×2, [cmd/signpost](./signpost.md) ×6
 
 - **Imports**: [internal/discover](./discover.md) ×4, [internal/extract](./extract.md) ×2, [internal/graph](./graph.md) ×4, [internal/manifest](./manifest.md) ×4, [internal/vcs](./vcs.md) ×3
 <!-- /signpost:managed:structure -->

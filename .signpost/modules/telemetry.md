@@ -2,8 +2,8 @@
 type: Module
 title: internal/telemetry
 description: 5 go files; 24 exported symbols.
-resource: git://github.com/3rg0n/signpost@278591843f208cdf9fab889edbe7d6dc5e89c551/internal/telemetry
-generated: { by: signpost/dev, at: "2026-08-02" }
+resource: git://github.com/3rg0n/signpost@d40fd6e81570e1524a63889e3f75cc16dd7dd317/internal/telemetry
+generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:
   - { name: commits, value: "1" }
   - { name: exported, value: "24" }
