@@ -1,0 +1,28 @@
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_c961ee8bad6322 208-209
+  s_f6c0b1ac81cb95::t_f015e2fb1719a7 198-207,210
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_130aa524b6bc5c 677-686
+  s_f6c0b1ac81cb95::t_d4742f008398c0 661-676,687-695
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_7ab0c6ca383e1c 180-193
+  s_f6c0b1ac81cb95::t_fe53627366d1d2 202-205,207
+  s_f6c0b1ac81cb95::t_591f1007771cf3 151-155
+  s_f6c0b1ac81cb95::t_e5961d3191798b 129-150,156-179,194-201,206,208-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "85dd633121010b7764e0f88596b42f9be3a0aeed",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
