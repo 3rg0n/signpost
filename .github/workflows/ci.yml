@@ -161,9 +161,18 @@ jobs:
         # endpoint also covers pull requests, which share the sequence, so a `Fixes`
         # on a PR number is accepted as the valid reference it is.
         #
-        # Only the bare `#n` form is checked. `owner/repo#n` and a full URL both name
-        # another repository's tracker, where a number this repository cannot resolve
-        # is correct, and neither can close anything here.
+        # Only the bare `#n` form is checked, and it is the *keyword* that makes it a
+        # reference, not the position. GitHub reads closing keywords anywhere in the
+        # message, so there is no "quoting it in prose" — the first version of this
+        # step failed on its own commit, which described the bug by writing
+        # `Closes #29` in a paragraph. That is the check being right: had #29 existed,
+        # the sentence explaining the defect would have closed it. Discuss a bad
+        # trailer without re-arming it, by naming the commit instead of the keyword.
+        #
+        # `owner/repo#n` and a full issue URL are not checked, and that is a scope
+        # limit rather than a claim they are inert: both do close, in the repository
+        # they name, which this step cannot vouch for — the token is scoped to this
+        # one. A number this repository cannot resolve is correct there.
         env:
           GH_TOKEN: ${{ github.token }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -214,7 +223,9 @@ jobs:
                 echo "${sha:0:7} says it closes #${n}, and #${n} does not exist in"
                 echo "${GITHUB_REPOSITORY}. GitHub renders that as a link to a 404 and"
                 echo "closes nothing. If the number came from a planner or another"
-                echo "tracker, name it in the body instead, or write owner/repo#${n}."
+                echo "tracker, name it without a closing keyword — the keyword is what"
+                echo "makes it a reference, and it works anywhere in the message, so"
+                echo "there is no position that quotes one safely."
                 fail=1
               else
                 # A rate limit or a revoked token must not read as a clean message.

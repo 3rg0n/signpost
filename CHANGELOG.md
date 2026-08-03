@@ -663,11 +663,11 @@ All notable changes to this project are documented here. Format follows
 #### 2026-08-03
 
 - **Commit `2785918` closes issues that do not exist, and the history is not being
-  rewritten to fix it.** Its trailers read `Closes #29` and `Closes #35`. Those are ids
-  from a local task list, not this repository's issues, which stop at
-  [#14](https://github.com/3rg0n/signpost/issues/14). GitHub renders both as links to
-  404s and closed nothing. The two real changes are the telemetry work and the
-  empty-manifest lockfile fix, both described in this file under 2026-08-02.
+  rewritten to fix it.** Its last two trailers name issues 29 and 35, which are ids from a
+  local task list rather than this repository's issues — those stop at
+  [#14](https://github.com/3rg0n/signpost/issues/14). GitHub renders both as links to 404s
+  and closed nothing. The two real changes are the telemetry work and the empty-manifest
+  lockfile fix, both described in this file under 2026-08-02.
 
   Nothing is unrecoverable about the numbers themselves — but they cannot be made to
   refer to anything either. GitHub shares one sequence between issues and pull requests,
@@ -685,13 +685,27 @@ All notable changes to this project are documented here. Format follows
   is a real cost paid to correct something already inert. So the record is forward-only:
   this entry is the correction, and the trailers stay as they were written.
 
-  **What changes is that it cannot happen again.** CI now parses the `Closes`, `Fixes`
-  and `Resolves` trailers of every pushed commit and asks GitHub whether each number
-  exists, failing the run when one does not. The check reads the answer from the API
-  rather than comparing against a highest-known number, because a number below the
-  ceiling can still be wrong — a deleted issue, or a transferred one — and a ceiling
-  learned from `gh issue list` is silently stale the moment somebody files something.
-  `CONTRIBUTING.md` now states the convention the trailer belongs to.
+  **What changes is that it cannot happen again.** CI now reads the `Closes`, `Fixes` and
+  `Resolves` references of every commit in a pushed range and asks GitHub whether each
+  number exists, failing the run when one comes back 404. Asked of the API rather than
+  compared against a highest-known number, because a number *below* the ceiling can still
+  be wrong — a deleted issue, or one transferred away — and a ceiling learned from `gh
+  issue list` is stale the moment somebody files something. The endpoint covers pull
+  requests too, which share the sequence, so a `Fixes` on a PR number is accepted as the
+  valid reference it is.
+
+  **The check failed its own commit, and that is the more useful finding.** The first
+  version of this entry and of the commit message carrying it both quoted the bad
+  reference verbatim to explain the defect. GitHub reads closing keywords *anywhere* in a
+  commit message — not only in a trailer block — so the sentence describing the bug was
+  itself a live closing instruction. The step reported it against the commit adding the
+  step. Nothing closed, because those numbers still resolve to nothing, but the same
+  paragraph written about a real issue would have closed it silently while claiming to
+  document why closing it was wrong. There is no position in a commit message that quotes
+  a closing keyword safely, so the convention in `CONTRIBUTING.md` is to name the commit
+  rather than the reference. `owner/repo#n` and full issue URLs also close, in the
+  repository they name; the check does not cover them, because its token is scoped to this
+  one and a number this repository cannot resolve is correct there.
 
 ## [0.1.0] — 2026-08-01
 
