@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0007: the bundle names the commit it describes"
 description: "Architecture decision (Accepted), 21 rules read from 0007-the-bundle-names-the-commit-it-describes.md."
-resource: git://github.com/3rg0n/signpost@d40fd6e81570e1524a63889e3f75cc16dd7dd317/docs/adr/0007-the-bundle-names-the-commit-it-describes.md
+resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed/docs/adr/0007-the-bundle-names-the-commit-it-describes.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:

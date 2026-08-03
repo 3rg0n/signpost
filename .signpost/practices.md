@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@d40fd6e81570e1524a63889e3f75cc16dd7dd317
+resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed
 generated: { by: signpost/dev, at: "2026-08-03" }
 ---
 # How work is done here
@@ -22,7 +22,7 @@ Each line is something this repository states, or something it does not. A missi
 
 ### What blocks a merge
 
-- 10 jobs can block a merge: `corpus (a repository signpost did not write)`, `dependency gate`, `deploy`, `installer parses (5.1 and 7)`, `lint`, `rebuild the bundle`, and 4 others.
+- 11 jobs can block a merge: `commit trailers name real issues`, `corpus (a repository signpost did not write)`, `dependency gate`, `deploy`, `installer parses (5.1 and 7)`, `lint`, and 5 others.
   - Stated in `.github/workflows/ci.yml` line 23, `.github/workflows/pages.yml` line 36, and `.github/workflows/signpost.yml` line 43.
 - 2 further CI jobs run outside that gate — on a schedule, a tag, or manually.
   - Stated in `.github/workflows/release.yml` line 17 and `.github/workflows/signpost-semantic.yml` line 41.

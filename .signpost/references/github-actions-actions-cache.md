@@ -2,7 +2,7 @@
 type: External Dependency
 title: actions/cache
 description: github-actions dependency actions/cache (55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
-resource: git://github.com/3rg0n/signpost@d40fd6e81570e1524a63889e3f75cc16dd7dd317
+resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed
 tags: [direct, external, github-actions]
 generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:
