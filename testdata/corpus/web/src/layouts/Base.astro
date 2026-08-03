@@ -1,0 +1,16 @@
+---
+// Corpus fixture: not compiled, not run.
+//
+// An .astro file is the shape that hid the coverage hole. signpost has no
+// classification for the extension, so this file reaches no extractor and no
+// manifest reader — and before Result.Unclassified nothing counted it either. A
+// directory whose only source is this one produces no module node at all, which is
+// the symptom on a real repository: a workspace reported as a single JavaScript
+// module built from its config file, with the two pages it actually contains
+// unmentioned anywhere in the bundle or the coverage report.
+const title = "corpus";
+---
+<html>
+  <head><title>{title}</title></head>
+  <body><slot /></body>
+</html>

@@ -303,6 +303,17 @@ imports/exports versus a hand-labeled expectation. The score is reported in
 present in the repo, the affected pages say so in `status` and the bundle records
 it in `skipped_checks`. Absence of measurement is never presented as a clean bill.
 
+**A gap has two kinds and they get two lines.** "No extractor for `.kt`" says signpost
+recognised the language and cannot read it. "N file(s) of no recognised kind" says it
+could not determine what the file was, so no reader was ever offered it. Folding them
+into one line lets a repository whose only frontend is `.astro` read as covered, which
+is how the second kind went unreported for the whole of v0.1.0: the classification was
+written in one place and read in none, while the two classes that *can* come back
+empty-handed each carried an `Unhandled` map the report prints. Which extensions are in
+the source table decided whether the gap was visible at all — `.sh` and `.sql` land
+there as an unhandled *language* and get counted; `.astro` and `.vue` never reached the
+stage that counts — and every extractor added widens that table.
+
 **Running signpost on signpost is not sufficient, and the gap is structural.** The
 CI dogfood job exercises the paths this repository contains, and this repository is
 Go with kebab-case filenames. It cannot reach the TypeScript, Python, or Rust

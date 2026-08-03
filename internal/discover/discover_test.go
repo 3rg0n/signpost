@@ -752,3 +752,102 @@ func TestIsBinary(t *testing.T) {
 		}
 	}
 }
+
+// Unclassified counts what nothing else does, and counts only that.
+//
+// The negative half is the point. A method that reported every file no reader
+// claimed would fire on a README, a .gitignore signpost deliberately parses, and a
+// package.json — all of which are classified, routed, and read. That line would be
+// noise on every repository, and a coverage line nobody reads is worse than no line:
+// it teaches the reader to skip the place the real gaps are reported.
+func TestUnclassifiedCountsOnlyFilesOfNoRecognisedKind(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		// Genuinely unrecognised: no class, so no reader is ever offered them.
+		"web/src/App.astro": "---\nimport B from './B.astro'\n---\n<B />\n",
+		"web/src/Card.vue":  "<script setup>import y from './y'</script>\n",
+		"web/src/site.css":  "body { color: red }\n",
+		"deploy/app.conf":   "listen = 8080\n",
+		".helmignore":       "*.md\n",
+		// Classified, and must not be counted. Each is a different class, because
+		// the failure mode is a method that keys on "did a reader produce facts"
+		// rather than on the classification.
+		"main.go":            "package main\n\nfunc main() {}\n",  // source
+		"go.mod":             "module example.com/m\n\ngo 1.26\n", // manifest
+		"README.md":          "# hi\n",                            // doc
+		"compose.yaml":       "services:\n  api:\n    build: .\n", // infra
+		"config.json":        "{}\n",                              // data
+		"CODEOWNERS":         "* @team\n",                         // ownership
+		"api.proto":          "syntax = \"proto3\";\n",            // contract
+		"migrations/001.sql": "CREATE TABLE t (id int);\n",        // migration
+	})
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+
+	got := res.Unclassified()
+	want := map[string]int{
+		".astro": 1, ".vue": 1, ".css": 1, ".conf": 1, ".helmignore": 1,
+	}
+	if len(got) != len(want) {
+		t.Errorf("Unclassified() = %v, want %v", got, want)
+	}
+	for k, n := range want {
+		if got[k] != n {
+			t.Errorf("Unclassified()[%q] = %d, want %d (full: %v)", k, got[k], n, got)
+		}
+	}
+	// Named individually so a failure says which classified file leaked in, rather
+	// than only that the count moved.
+	for _, k := range []string{".go", ".mod", ".md", ".yaml", ".json", "codeowners", ".proto", ".sql"} {
+		if n, ok := got[k]; ok {
+			t.Errorf("classified file counted as unclassified: %q (%d)", k, n)
+		}
+	}
+}
+
+// A binary is classified correctly and holds nothing to read, so it is not a gap in
+// coverage. Counting it would bury the extensions that are gaps under the ones that
+// never could be: a repository with forty PNGs would report forty unread files and
+// hide the one .astro that is genuinely unread.
+func TestUnclassifiedExcludesBinaries(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"web/src/App.astro": "<div />\n",
+	})
+	if err := os.WriteFile(filepath.Join(root, "logo.png"), []byte("\x89PNG\x00\x00\x00\rIHDR"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if f := find(t, res, "logo.png"); f.Class != ClassOther || !f.Binary {
+		t.Fatalf("logo.png: Class = %q, Binary = %v; want other/true — the test asserts nothing otherwise",
+			f.Class, f.Binary)
+	}
+	got := res.Unclassified()
+	if _, ok := got[".png"]; ok {
+		t.Errorf("binary counted as unclassified: %v", got)
+	}
+	if got[".astro"] != 1 {
+		t.Errorf("Unclassified()[.astro] = %d, want 1 (full: %v)", got[".astro"], got)
+	}
+}
+
+// An extensionless file is named by its basename, because the name is the only thing
+// identifying it — and lowercased, so a bundle built on a case-insensitive
+// filesystem reports the same key as one built on Linux.
+func TestUnclassifiedNamesExtensionlessFilesByBasename(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"NOTICE":        "copyright\n",
+		"tools/RUNBOOK": "step 1\n",
+	})
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	got := res.Unclassified()
+	if got["notice"] != 1 || got["runbook"] != 1 {
+		t.Errorf("Unclassified() = %v, want notice and runbook counted once each", got)
+	}
+}

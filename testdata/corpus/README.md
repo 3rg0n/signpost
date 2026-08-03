@@ -221,6 +221,37 @@ The CI job repeats both against a collector outside the process, because a span 
 — a timestamp as a JSON number rather than a string, an ID as base64 rather than hex — round-trips
 correctly through signpost's own reader and is rejected by every real collector.
 
+## A language signpost cannot name at all
+
+`web/` holds two `.astro` files and a `README.md`, and none of the three is here to be read.
+They are here to be *counted*.
+
+`ClassOther` is what discovery assigns to a file whose kind it cannot determine. Every other
+class routes to an extractor or a manifest reader, and the two that can still come back
+empty-handed report it — `extract.RunResult` and `manifest.RunResult` each carry an `Unhandled`
+map the coverage report prints. `ClassOther` had no counterpart: it was written in one place and
+read in none, so a file landing there left the pipeline with nothing recording that it existed.
+
+Found on a repository whose entire landing page was two `.astro` files. The coverage report
+named `.sh` and `.sql` — both in `sourceExts` as `LangOther`, so extraction counts them — and
+said nothing about the pages, while the bundle described that workspace as a one-file JavaScript
+module built from `astro.config.mjs`. Which extension is *in* `sourceExts` decided whether the
+gap was visible at all, and every extractor still to be written adds one.
+
+`TestCorpusCountsWhatItCannotClassify` reads both halves off one report:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | the two `.astro` files, the `.svg`, and `LICENSE` are counted and named | the shipped bug: a repository's only frontend absent from a report that claims to say what went unread |
+| negative | `web/README.md` is not on the line, nor any classified file — no source, manifest, doc, or binary | a line that fires on every repository, which teaches people to skip the one place coverage gaps are admitted |
+| structural | it stays a *separate* line from `no extractor for` | folding them loses the difference between "cannot read this language" and "cannot tell what this file is" — a missing extractor versus a missing classification |
+
+Two `.astro` files rather than one, because the count is the assertion and one file cannot
+distinguish counting files from counting extensions. `web/README.md` sits beside them so an
+implementation that counted by directory fails, and binaries are excluded on purpose: a `.png`
+was classified correctly and has nothing in it to read, so counting it would bury the extensions
+that are gaps under the ones that never could be.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs
@@ -247,6 +278,13 @@ and one standard-library import. Then raise the expected count in
 should` step in `ci.yml`, and confirm the new specifier is named in the table above. Without
 it the language is covered only by positives, which cannot distinguish a resolver that reads
 the manifest from one that says yes to everything.
+
+Two counts are asserted here and both fail on a new language, deliberately — a count is the
+only assertion that fails in *both* directions, so each is a place a change has to be
+declared rather than absorbed. Adding an extractor for `.astro` lowers the unclassified count
+by two and raises the extracted one; expect `TestCorpusCountsWhatItCannotClassify` and the
+`Unclassified files are counted, not swallowed` step in `ci.yml` to fail, and move the two
+`web/` files out of the table above into the language sections when they do.
 
 Nothing here is compiled or executed. These are inputs to a parser, so they need to be
 syntactically real and do not need to be correct programs.

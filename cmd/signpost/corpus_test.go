@@ -1081,6 +1081,99 @@ func TestCorpusPythonPackageRootsResolve(t *testing.T) {
 	}
 }
 
+// TestCorpusCountsWhatItCannotClassify is the regression for the coverage hole that had no
+// counterpart anywhere in the pipeline.
+//
+// `ClassOther` is what discovery assigns to a file it cannot name. Every other class routes to
+// an extractor or a manifest reader, and the two that can still come back empty-handed say so
+// — `extract.RunResult` and `manifest.RunResult` each carry an `Unhandled` map that the
+// coverage report prints. `ClassOther` had no such counterpart: it was written in one place
+// and read in none, so a file landing there left the pipeline with nothing recording that it
+// had existed.
+//
+// Found on a repository whose entire landing page was two `.astro` files. The report named
+// `.sh` and `.sql` — both of which are in `sourceExts` as `LangOther`, so extraction counts
+// them — and said nothing about the pages, while the bundle described that workspace as a
+// one-file JavaScript module built from `astro.config.mjs`. Every one of the seven extractors
+// still to be written adds an extension to `sourceExts`, which is why this is fixed before
+// them rather than after: each would otherwise widen the same hole in a new place.
+//
+// Asserted on the count and then on the names, for the reason TestCorpusResolvesExactlyWhatIt
+// Should gives: the printed list truncates to the six most frequent, so a substring check
+// would silently stop covering whichever entry sorts last. The count is what fails in both
+// directions — a reader that stopped counting lowers it, and one that counted classified files
+// raises it.
+func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
+	dir := corpusRepo(t)
+	// No -quiet: the coverage report is on stderr and -quiet is what suppresses it.
+	_, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build failed: exit = %d\n%s", code, stderr)
+	}
+
+	// Two `.astro` and not one, so the count cannot be satisfied by an implementation that
+	// reports an extension once however many files carry it.
+	const wantFiles = 4
+	wantKeys := []string{".astro (2)", ".svg (1)", "license (1)"}
+
+	got, ok := unclassifiedCount(stderr)
+	if !ok {
+		t.Fatalf("no `no recognised kind` line in the coverage report. The corpus holds an "+
+			"unclassified .astro, .svg and LICENSE, so silence here means discovery is "+
+			"claiming to have accounted for files nothing read:\n%s", stderr)
+	}
+	if got != wantFiles {
+		t.Errorf("%d file(s) of no recognised kind, want %d.\n\nHigher means a classified file "+
+			"is being reported as unread — a README, a manifest, or a binary, any of which "+
+			"makes this line fire on every repository and teaches people to skip it. Lower "+
+			"means a genuinely unread file stopped being counted, which is the defect this "+
+			"asserts against.\n\nExpected: %s\n\nReport:\n%s",
+			got, wantFiles, strings.Join(wantKeys, ", "), stderr)
+	}
+	line := coverageLine(stderr, "no recognised kind")
+	for _, want := range wantKeys {
+		if !strings.Contains(line, want) {
+			t.Errorf("the unclassified line does not name %q: %q", want, line)
+		}
+	}
+
+	// The negative half, and the half that decides whether the line is worth printing. Each of
+	// these is classified, routed, and read; a method keyed on "did a reader produce facts"
+	// rather than on the classification would report all of them. `web/README.md` sits in the
+	// same directory as the two .astro files precisely so an implementation that counted by
+	// directory fails here.
+	for _, notWanted := range []string{".md", ".go", ".ts", ".py", ".rs", ".toml", ".json", ".yaml", ".png", "codeowners", "makefile"} {
+		if strings.Contains(line, notWanted) {
+			t.Errorf("%q is named on the unclassified line, but the corpus classifies and reads "+
+				"it: %q", notWanted, line)
+		}
+	}
+	// And it stays a separate line from the languages that have no extractor. Folding the two
+	// together is how the defect would come back: `.astro` would be counted, printed beside
+	// `.sh`, and the distinction between "cannot read this language" and "cannot tell what
+	// this file is" — which is the difference between a missing extractor and a missing
+	// classification — would be gone.
+	if ext := coverageLine(stderr, "no extractor for"); strings.Contains(ext, ".astro") {
+		t.Errorf("the unclassified .astro is named on the no-extractor line: %q", ext)
+	}
+}
+
+// unclassifiedCount reads the file count out of the `no recognised kind` line.
+//
+// The file count and not the number of distinct extensions, because the question the line
+// answers is how much of the repository went unread. One extension covering forty files is a
+// bigger hole than four extensions covering one each.
+func unclassifiedCount(stderr string) (int, bool) {
+	for _, line := range strings.Split(stderr, "\n") {
+		var files int
+		if _, err := fmt.Sscanf(strings.TrimSpace(line),
+			"%d file(s) of no recognised kind:", &files); err == nil {
+			return files, true
+		}
+	}
+	return 0, false
+}
+
 // unresolvedCount reads the specifier count out of a coverage report on stderr.
 //
 // The specifier count, not the import count: the two differ once one unresolvable name is

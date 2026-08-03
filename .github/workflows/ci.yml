@@ -532,6 +532,31 @@ jobs:
             cat coverage.txt
             exit 1
           fi
+          # And the other admission, which is a different one. The line above says
+          # signpost knows what PowerShell is and cannot read it; this says it could
+          # not tell what the file was, so no reader was offered it at all. This tree
+          # has site/*.html, site/*.css, LICENSE, and CNAME — none of which is a
+          # recognised kind — so silence here means the count stopped being taken.
+          # It went untaken for the whole of v0.1.0: the classification was written in
+          # one place and read in none.
+          if ! grep -q 'file(s) of no recognised kind' coverage.txt; then
+            echo "expected an unclassified-file line for site/*.html, LICENSE, CNAME"
+            cat coverage.txt
+            exit 1
+          fi
+          # Not folded into one line. A single line naming both would satisfy the two
+          # greps above while losing the distinction they exist to draw, so each is
+          # checked for the other's extensions.
+          if sed -n 's/^  no extractor for: //p' coverage.txt | grep -q '\.html'; then
+            echo "an unclassified extension is on the no-extractor line"
+            cat coverage.txt
+            exit 1
+          fi
+          if sed -n 's/^  [0-9]* file(s) of no recognised kind: //p' coverage.txt | grep -q '\.ps1'; then
+            echo "an unhandled language is on the unclassified line"
+            cat coverage.txt
+            exit 1
+          fi
           echo "coverage report is well-formed and names its gaps"
 
       # The checkout above sets fetch-depth: 0 specifically so history can be read.
@@ -1223,6 +1248,65 @@ jobs:
             fi
           done
           echo "gaps: ${got} specifier(s), each a deliberate near-miss, none fabricated"
+
+      # The same shape of assertion for the other kind of gap: a file whose *kind* signpost
+      # could not determine, as against a language it recognises and has no extractor for.
+      #
+      # `ClassOther` is what discovery assigns to the second case. Every other class routes to
+      # an extractor or a manifest reader, and the two that can come back empty-handed report it
+      # — extract.RunResult and manifest.RunResult each carry an Unhandled map this report
+      # prints. ClassOther had no counterpart: written in one place, read in none. On a
+      # repository whose entire landing page was two .astro files, the report named `.sh` and
+      # `.sql` — both in sourceExts as LangOther, so extraction counts them — and said nothing
+      # about the pages, while the bundle called that workspace a one-file JavaScript module
+      # built from astro.config.mjs. Whether the extension was in sourceExts decided whether the
+      # gap was visible at all, and every extractor still to be written adds one.
+      #
+      # Reusing the capture from the step above: same build, same repository, and the coverage
+      # report is written once.
+      - name: Unclassified files are counted, not swallowed
+        run: |
+          set -euo pipefail
+          gaps="${RUNNER_TEMP}/gaps.txt"
+          got=$(sed -n 's/^ *\([0-9]*\) file(s) of no recognised kind:.*/\1/p' "$gaps" | head -1)
+          [ -n "$got" ] || {
+            echo "no unclassified line in the coverage report. testdata/corpus holds two .astro"
+            echo "files, an .svg, and a LICENSE, none of which is a recognised kind, so silence"
+            echo "here means discovery is claiming to have accounted for files nothing read."
+            cat "$gaps"
+            exit 1
+          }
+          # Two .astro rather than one, so the count cannot be satisfied by an implementation
+          # that reports an extension once however many files carry it.
+          want=4
+          [ "$got" = "$want" ] || {
+            echo "${got} file(s) of no recognised kind, want ${want}."
+            echo
+            echo "Higher means a classified file is being reported as unread — a README, a"
+            echo "manifest, or a binary, any of which makes this line fire on every repository"
+            echo "and teaches people to skip the one place coverage gaps are admitted. Lower"
+            echo "means a genuinely unread file stopped being counted."
+            cat "$gaps"
+            exit 1
+          }
+          line=$(sed -n 's/^ *[0-9]* file(s) of no recognised kind: //p' "$gaps" | head -1)
+          for frag in '.astro (2)' '.svg (1)' 'license (1)'; do
+            case "$line" in
+              *"$frag"*) ;;
+              *) echo "the unclassified line does not name ${frag}: ${line}"; exit 1 ;;
+            esac
+          done
+          # The negative half. Each of these is classified, routed, and read; `web/README.md`
+          # sits in the same directory as the two .astro files precisely so an implementation
+          # counting by directory fails here. And it stays a separate line from the languages
+          # with no extractor — folding them loses the difference between "cannot read this
+          # language" and "cannot tell what this file is".
+          for frag in .md .go .ts .py .rs .toml .json .yaml .png codeowners; do
+            case "$line" in
+              *"$frag"*) echo "${frag} is on the unclassified line, but the corpus reads it: ${line}"; exit 1 ;;
+            esac
+          done
+          echo "unclassified: ${got} file(s), each genuinely unread, no classified file among them"
 
       # -include-vendored, which spent v0.1.0 doing nothing (issue #11). The walk honoured
       # the flag and read the files; every consumer downstream filtered them back out on

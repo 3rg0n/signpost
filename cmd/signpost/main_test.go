@@ -13,9 +13,13 @@ import (
 // fixture writes a small multi-language repository and returns its path.
 //
 // Small but not trivial: an import cycle to find, a service to name, a dependency
-// declared and imported, and a language with no extractor, because those are the
-// four things the commands report on and a fixture without them would let a silent
-// regression pass.
+// declared and imported, a language with no extractor, and a file of no recognised
+// kind at all, because those are the things the commands report on and a fixture
+// without them would let a silent regression pass.
+//
+// The last two are deliberately different files. `.kt` is a source language signpost
+// knows and cannot read; `.astro` is a file it cannot classify, so no reader is ever
+// offered it. One fixture file could not tell the two coverage lines apart.
 func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -26,6 +30,7 @@ func fixture(t *testing.T) string {
 		"internal/store/store.go": "package store\n\nimport \"example.com/app/internal/auth\"\n\nfunc Get() bool { return auth.Check() }\n",
 		"compose.yaml":            "services:\n  api:\n    build: .\n    ports:\n      - \"8080:8080\"\n",
 		"scratch.kt":              "fun main() { println(\"no extractor for this\") }\n",
+		"web/Card.astro":          "---\nconst x = 1\n---\n<div>{x}</div>\n",
 	}
 	for p, content := range files {
 		full := filepath.Join(root, filepath.FromSlash(p))
@@ -84,6 +89,32 @@ func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	if !strings.Contains(stderr, "no extractor for") || !strings.Contains(stderr, ".kt") {
 		t.Errorf("unhandled language not reported by extension:\n%s", stderr)
 	}
+	// The .astro file is a different admission and gets a different line. It is not a
+	// language with no extractor: it has no classification, so no reader was offered
+	// it and nothing downstream recorded that it existed. Reported separately because
+	// folding it into the line above would let a repository whose only frontend is
+	// .astro read as fully covered — the shape this was found in.
+	if !strings.Contains(stderr, "no recognised kind") || !strings.Contains(stderr, ".astro") {
+		t.Errorf("unclassified file not reported:\n%s", stderr)
+	}
+	// And the two lines stay distinct. A single line naming both extensions would
+	// satisfy the two checks above while losing the distinction they exist to draw.
+	if strings.Contains(coverageLine(stderr, "no extractor for"), ".astro") {
+		t.Errorf("unclassified file folded into the no-extractor line:\n%s", stderr)
+	}
+	if strings.Contains(coverageLine(stderr, "no recognised kind"), ".kt") {
+		t.Errorf("unreadable language folded into the unclassified line:\n%s", stderr)
+	}
+}
+
+// coverageLine returns the one line of a coverage report containing want, or "".
+func coverageLine(report, want string) string {
+	for _, line := range strings.Split(report, "\n") {
+		if strings.Contains(line, want) {
+			return line
+		}
+	}
+	return ""
 }
 
 // Issue #11, through the binary and stated the way the issue states it: the flag moved the

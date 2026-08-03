@@ -75,31 +75,34 @@
         <figure class="term">
           <figcaption class="term__cap">signpost, run on its own repository</figcaption>
           <pre class="term__body"><span class="term__prompt">$</span> signpost graph show .
-analysed 143 files: 25 nodes, 27 edges
+analysed 166 files: 49 nodes, 87 edges
 <span class="u">  no extractor for: .ps1 (1), .sh (1)</span>
-  history: 21 commits, 4 co-change pair(s)
+<span class="u">  8 file(s) of no recognised kind: .html (2), .css (1), .svg (1), cname (1), and 3 more</span>
+  history: 73 commits, 17 co-change pair(s)
 
-  25 nodes, 27 edges, 18 clusters
+  49 nodes, 87 edges, 33 clusters
 
 hubs (top 10 by degree)
-  /modules/signpost      in 2    out 10
-  /modules/okf           in 4    out 4
-  /modules/vcs           in 4    out 3
-  /modules/assemble      in 1    out 5
+  /modules/signpost      in 10   out 23
+  /modules/discover      in 11   out 4
+  /modules/manifest      in 10   out 5
+  /modules/assemble      in 4    out 7
 
-cross-cluster edges (7)
+cross-cluster edges (44)
   /modules/assemble -imports-&gt; /modules/graph
-  /modules/signpost -imports-&gt; /modules/discover
+  /modules/config -imports-&gt; /modules/manifest
 
-disconnected components (17)
-  9 nodes: /modules/assemble, /modules/discover, and 7 more
+disconnected components (30)
+  20 nodes: /modules/assemble, /modules/config, and 18 more
   1 nodes: /references/adr-0001-hand-written-tolerant-yaml-reader</pre>
         </figure>
         <p class="term__note">
           <span class="u-key" aria-hidden="true"></span>
-          The second line is signpost reporting two files it has no extractor
-          for. Coverage is not opt-in: the absence of a measurement is never a
-          clean bill of health.
+          The two dim lines are the gaps. The first is a language signpost knows
+          and has no extractor for; the second is files it could not identify at
+          all, which is a different admission and gets a different line.
+          Coverage is not opt-in: the absence of a measurement is never a clean
+          bill of health.
           <a href="graph.html">See this graph rendered.</a>
         </p>
       </section>

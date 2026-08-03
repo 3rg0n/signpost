@@ -19,6 +19,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -556,6 +557,45 @@ func (r *Result) Sources() []File {
 		}
 	}
 	return out
+}
+
+// Unclassified counts the files this walk could not name, keyed by extension and
+// by basename for the extensionless, highest count first being the caller's job.
+//
+// ClassOther is the one classification that means "signpost does not know what this
+// is": every other class routes to an extractor or a manifest reader, and the two
+// that can still come back empty-handed report it themselves — extract.RunResult and
+// manifest.RunResult both carry an Unhandled map. ClassOther had no such counterpart,
+// so a file landing here left the pipeline with nothing recording that it had. On a
+// repository whose only frontend source was two `.astro` files, that made the coverage
+// report name `.sh` and `.sql` while the pages it did not read went unmentioned — the
+// silence design §4.2 exists to forbid.
+//
+// Binaries are excluded. A `.png` is not a gap in coverage: it was classified
+// correctly and there is nothing in it to read, and counting it would bury the
+// extensions that are gaps under the ones that never could be.
+func (r *Result) Unclassified() map[string]int {
+	out := map[string]int{}
+	for _, f := range r.Files {
+		if f.Class != ClassOther || f.Binary || !r.Analyses(f) {
+			continue
+		}
+		out[unclassifiedKey(f.Path)]++
+	}
+	return out
+}
+
+// unclassifiedKey names a file's shape the way manifest.unhandledKey does: an
+// extension groups the actionable case, and a basename covers the files whose name is
+// the only thing identifying them — `.gitignore`, `.helmignore`.
+// Slash-separated throughout, per File.Path, so this is path and not path/filepath:
+// on Linux filepath would read a backslash as an ordinary character in a name.
+func unclassifiedKey(rel string) string {
+	base := path.Base(rel)
+	if e := path.Ext(base); e != "" {
+		return strings.ToLower(e)
+	}
+	return strings.ToLower(base)
 }
 
 // ByClass returns files of a given class, excluding binaries and — unless the walk

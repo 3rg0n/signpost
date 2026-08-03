@@ -204,12 +204,19 @@ func reportCoverage(w io.Writer, a *analysis) {
 	if len(a.Source.Unhandled) > 0 {
 		p.printf("  no extractor for: %s\n", unhandledDetail(a))
 	}
+	// Separate from the line above, because the two are different admissions. "no
+	// extractor for .kt" says signpost knows what Kotlin is and cannot read it; this
+	// says it could not tell what the file was at all, so no reader was even offered
+	// it. Conflating them would hide the second behind the first.
+	if u := a.Discovered.Unclassified(); len(u) > 0 {
+		p.printf("  %d file(s) of no recognised kind: %s\n", totalCount(u), topCounts(u, 6))
+	}
 	if n := len(a.Source.Failures); n > 0 {
 		p.printf("  %d file(s) failed extraction: %s\n", n, topFailures(a.Source.Failures))
 	}
 	if n := totalCount(a.Assembled.Unresolved); n > 0 {
 		p.printf("  %d import(s) unresolved across %d specifier(s): %s\n",
-			n, len(a.Assembled.Unresolved), topUnresolved(a.Assembled.Unresolved, 5))
+			n, len(a.Assembled.Unresolved), topCounts(a.Assembled.Unresolved, 5))
 	}
 	reportHistory(p, a)
 	// A dropped edge means assemble created an edge to a node it never created,
@@ -262,11 +269,11 @@ func totalCount[K comparable](m map[K]int) int {
 	return total
 }
 
-// topUnresolved returns the most frequent unresolved specifiers, highest count
-// first. Frequency rather than all of them, because the useful signal is which
-// dependency the map is missing, and a repository can have hundreds of distinct
-// specifiers resolving to the same handful of causes.
-func topUnresolved(m map[string]int, limit int) string {
+// topCounts renders the most frequent keys of a count map, highest count first and
+// ties broken by key so the line is stable. Frequency rather than all of them,
+// because the useful signal is which few causes dominate: a repository can have
+// hundreds of distinct unresolved specifiers coming from the same handful of gaps.
+func topCounts(m map[string]int, limit int) string {
 	type kv struct {
 		k string
 		n int

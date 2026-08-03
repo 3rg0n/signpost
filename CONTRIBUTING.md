@@ -24,7 +24,7 @@ touched. CI runs them; run them locally first.
 gofmt -l .              # must print nothing
 go build ./...
 go vet ./...
-go test -count=2 ./...  # twice, because determinism is a requirement here
+go test -count=2 -timeout 30m ./...  # twice, because determinism is a requirement here
 staticcheck ./...
 golangci-lint run ./...
 gosec -quiet ./...
@@ -37,6 +37,11 @@ repositories it analyses, so nondeterministic output is commit churn in someone
 else's repo. Several packages have tests that render the same graph five times
 and compare bytes; a change that makes output depend on map iteration order
 fails there.
+
+`-timeout 30m` is what CI uses, and running without it wastes a cycle: `internal/vcs`
+and `cmd/signpost` both shell out to real `git` against real repositories, and two
+runs of each exceed the 10-minute default. A timeout panics with a stack trace that
+looks like a hang in whichever test held the process, not like a timeout.
 
 CI also runs signpost on signpost, which is the only check that exercises
 discovery, extraction, manifest reading, resolution, clustering, and export

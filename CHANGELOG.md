@@ -242,6 +242,38 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-03
 
+- **Files signpost could not identify were not reported anywhere, so a repository whose only
+  frontend it could not read looked covered.** Discovery assigns a class to every file, and
+  every class but one routes somewhere: to an extractor, or to a manifest reader. The two that
+  can still come back empty-handed say so — each carries an `Unhandled` map the coverage report
+  prints. The class meaning *"signpost cannot tell what this is"* had no counterpart. It was
+  written in one place and read in none, so a file landing there left the pipeline with nothing
+  recording it had existed.
+
+  Found on a repository whose entire landing page was two `.astro` files. The report named
+  `.sh` and `.sql`, said nothing about the pages, and the bundle described that workspace as a
+  one-file JavaScript module built from `astro.config.mjs`. The difference is which extensions
+  the source table contains: `.sh` and `.sql` are in it as an unhandled *language*, so
+  extraction counts them; `.astro` and `.vue` are not, so they never reached the stage that
+  counts. **Every extractor added widens that table**, which is why this is fixed before the
+  next seven rather than after — each would otherwise open the same hole somewhere new.
+
+  **Two lines, not one, because they are different admissions.** "No extractor for `.kt`" says
+  signpost knows what Kotlin is and cannot read it. "N file(s) of no recognised kind" says it
+  could not determine what the file was, so no reader was offered it at all. Folding them lets
+  the second hide behind the first. Binaries are excluded on purpose: a `.png` was classified
+  correctly and has nothing in it to read, and counting it would bury the extensions that are
+  gaps under the ones that never could be.
+
+  The corpus carries `web/` — two `.astro` files, and a `README.md` beside them that must *not*
+  appear on the line. Two files rather than one, since the count is the assertion and one file
+  cannot distinguish counting files from counting extensions; the README because an
+  implementation keyed on "did a reader produce facts about this directory" would report it.
+  Asserted in the Go suite, again in CI through the real binary, and on signpost's own tree,
+  which now reports its `site/*.html`, `LICENSE`, and `CNAME`. Verified by mutation: dropping
+  the binary exclusion, counting every class, and skipping the case fold each fail a different
+  test.
+
 - **A Python package's absolute imports resolved against the repository, not the package, so a
   monorepo lost its internal edges.** `from api.client import make_api_request` names a
   top-level package, and the only thing that makes it resolvable is the directory holding that
