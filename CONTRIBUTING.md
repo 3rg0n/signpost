@@ -195,6 +195,19 @@ rule exists to prevent.
 Write the commit message as a description of the change and why it was made.
 Open the PR against `main`; CI runs the gate above plus a determinism check.
 
+**A `Closes` trailer names an issue in this repository, and CI checks that it
+exists.** `Closes #14`, `Fixes #14` and `Resolves #14` all instruct GitHub to close
+issue 14 on merge, so the number has to be one GitHub can resolve — the `commit
+references an issue that exists` step asks the API about every number in those
+trailers and fails the run when one comes back 404. Numbers from a local planner, a
+tracker in another system, or another repository are not issue numbers here: reference
+those in the message body by name, or as `owner/repo#n` if they are on GitHub. This
+exists because it shipped once. Commit
+[`2785918`](https://github.com/3rg0n/signpost/commit/2785918) carries `Closes #29` and
+`Closes #35` from a local task list; both render as links to 404s, and both stay as
+written, because rewriting that commit rewrites the bundle commit behind it and leaves
+53 pages stamped with a sha that no longer exists.
+
 Bug reports are most useful with the repository shape that triggered them — a
 minimal directory tree and the command you ran. `signpost graph show .` output on a
 real repo is often enough.

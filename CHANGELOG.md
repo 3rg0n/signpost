@@ -658,6 +658,41 @@ All notable changes to this project are documented here. Format follows
   anything. The recommendation stands anyway, for the ordinary reason that pinning LF
   keeps diffs readable. Documented in [design §6.4](docs/design.md).
 
+### Notes
+
+#### 2026-08-03
+
+- **Commit `2785918` closes issues that do not exist, and the history is not being
+  rewritten to fix it.** Its trailers read `Closes #29` and `Closes #35`. Those are ids
+  from a local task list, not this repository's issues, which stop at
+  [#14](https://github.com/3rg0n/signpost/issues/14). GitHub renders both as links to
+  404s and closed nothing. The two real changes are the telemetry work and the
+  empty-manifest lockfile fix, both described in this file under 2026-08-02.
+
+  Nothing is unrecoverable about the numbers themselves — but they cannot be made to
+  refer to anything either. GitHub shares one sequence between issues and pull requests,
+  and this repository has merged 8 pull requests and opened 14 issues, so 29 and 35 are
+  permanently unassignable: filing an issue now yields 15.
+
+  **The rewrite is the wrong fix, and the cost is countable.** Rewriting `2785918` rewrites
+  the three commits after it, and one of those carries the bundle: 53 of its files name a
+  `git://github.com/3rg0n/signpost@<sha>` provenance stamp, 52 of them in a `resource:`
+  key. [ADR 0007](docs/adr/0007-the-bundle-names-the-commit-it-describes.md) puts that
+  stamp *inside the bytes being compared* — it is what makes a committed artifact
+  auditable without running anything — so a `filter-repo` pass converts a wrong link in a
+  commit message into 53 pages naming a commit that no longer exists, in the artifact this
+  project exists to produce. Every external reference to those shas breaks with them. That
+  is a real cost paid to correct something already inert. So the record is forward-only:
+  this entry is the correction, and the trailers stay as they were written.
+
+  **What changes is that it cannot happen again.** CI now parses the `Closes`, `Fixes`
+  and `Resolves` trailers of every pushed commit and asks GitHub whether each number
+  exists, failing the run when one does not. The check reads the answer from the API
+  rather than comparing against a highest-known number, because a number below the
+  ceiling can still be wrong — a deleted issue, or a transferred one — and a ceiling
+  learned from `gh issue list` is silently stale the moment somebody files something.
+  `CONTRIBUTING.md` now states the convention the trailer belongs to.
+
 ## [0.1.0] — 2026-08-01
 
 The deterministic core, complete. v0.0.1 named the three things that had to land

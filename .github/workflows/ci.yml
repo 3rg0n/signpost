@@ -126,6 +126,106 @@ jobs:
                exit 1 ;;
           esac
 
+  commits:
+    name: commit trailers name real issues
+    runs-on: ubuntu-24.04
+    # The only job that reads the issue tracker. Scoped here rather than raised at the
+    # workflow level so the other eight jobs keep `contents: read` and nothing else.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The check reads commit messages over a range, so it needs the commits at
+          # both ends. A pull_request checkout is shallow by default and the base sha
+          # would not be present.
+          fetch-depth: 0
+
+      - name: commit references an issue that exists
+        # `Closes #29` in a merged commit is an instruction GitHub acts on, and a
+        # number GitHub cannot resolve is a link to a 404 sitting in the permanent
+        # record. This shipped once: commit 2785918 carries `Closes #29` and
+        # `Closes #35` from a local task list, in a repository whose issues stop at
+        # #14. Nothing closed, and the history is not being rewritten to fix it:
+        # rewriting that commit rewrites the bundle commit behind it, and ADR 0007
+        # puts the provenance stamp inside the bytes, so 53 pages would end up naming
+        # a sha that no longer exists — a wrong link in a message traded for a
+        # dangling identifier in the artifact. Forward-only, which is this step.
+        #
+        # Asked of the API rather than compared against a highest-known number. A
+        # ceiling read from `gh issue list` is stale the moment somebody files
+        # something, and it cannot catch a number *below* it that still resolves to
+        # nothing — a deleted issue, or one transferred to another repository. The
+        # endpoint also covers pull requests, which share the sequence, so a `Fixes`
+        # on a PR number is accepted as the valid reference it is.
+        #
+        # Only the bare `#n` form is checked. `owner/repo#n` and a full URL both name
+        # another repository's tracker, where a number this repository cannot resolve
+        # is correct, and neither can close anything here.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -uo pipefail
+          empty=0000000000000000000000000000000000000000
+          if [ -z "$BASE" ] || [ "$BASE" = "$empty" ]; then
+            # A scheduled run, a first push to a branch, or a manual dispatch: no range
+            # exists. Checking the whole history instead would fail on 2785918 forever.
+            echo "no commit range for this event; nothing to check"
+            exit 0
+          fi
+          if git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            shas=$(git rev-list "${BASE}..${HEAD_SHA}") || {
+              echo "could not list ${BASE}..${HEAD_SHA}; the check itself failed"
+              exit 1
+            }
+          else
+            # A force-push: `before` names a commit that was rewritten away and is not
+            # in this checkout. The tip is still worth checking, and narrowing to it is
+            # better than either failing on a range that cannot exist or skipping
+            # silently, which would let a bad trailer through on exactly the push that
+            # rewrote it.
+            echo "${BASE} is not in this checkout; checking ${HEAD_SHA} alone"
+            shas=$HEAD_SHA
+          fi
+          [ -n "$shas" ] || { echo "no new commits in ${BASE}..${HEAD_SHA}"; exit 0; }
+
+          fail=0
+          checked=0
+          for sha in $shas; do
+            # GitHub's closing keywords, case-insensitive, with the optional colon it
+            # accepts. The reference has to follow the keyword directly, which is why
+            # `owner/repo#n` does not match: `owner` sits between them.
+            #
+            # `\b` on the left, because without it `unfixed #99` and `discloses #99`
+            # match and this step fails a build over prose GitHub ignores — the wrong
+            # direction for a gate, since a false alarm is what gets one switched off.
+            refs=$(git log -1 --format=%B "$sha" \
+              | grep -Eio '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]*:?[[:space:]]*#[0-9]+' \
+              | grep -Eo '[0-9]+' | sort -un) || true
+            for n in $refs; do
+              checked=$((checked + 1))
+              if out=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${n}" --jq '.number' 2>&1); then
+                echo "${sha:0:7} closes #${out}, which exists"
+              elif printf '%s' "$out" | grep -q '404'; then
+                echo "${sha:0:7} says it closes #${n}, and #${n} does not exist in"
+                echo "${GITHUB_REPOSITORY}. GitHub renders that as a link to a 404 and"
+                echo "closes nothing. If the number came from a planner or another"
+                echo "tracker, name it in the body instead, or write owner/repo#${n}."
+                fail=1
+              else
+                # A rate limit or a revoked token must not read as a clean message.
+                echo "the existence check for #${n} failed rather than answering: ${out}"
+                exit 1
+              fi
+            done
+          done
+          [ "$fail" -eq 0 ] || exit 1
+          echo "${checked} closing reference(s) across $(echo "$shas" | wc -l) commit(s), each resolvable"
+
   installer:
     name: installer parses (5.1 and 7)
     # A Windows runner because that is the only place PowerShell 5.1 exists, and 5.1
