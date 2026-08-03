@@ -226,6 +226,77 @@ func TestPythonRelativeAndAbsoluteImports(t *testing.T) {
 	}
 }
 
+// A Python monorepo resolves an absolute import against the package that declares it, and
+// that package is not the repository root. Before per-package roots this returned nothing:
+// `resolvePython` tried the root and `src` only.
+func TestPythonPackageRootResolvesAbsoluteImport(t *testing.T) {
+	out := build(t, map[string]string{
+		"services/alpha/pyproject.toml":  "[project]\nname = \"alpha\"\nversion = \"1.0\"\n",
+		"services/alpha/handler.py":      "from api.client import fetch\n\ndef run():\n    return fetch()\n",
+		"services/alpha/api/__init__.py": "",
+		"services/alpha/api/client.py":   "def fetch():\n    return 1\n",
+	})
+	if !hasEdge(out.Graph, "/modules/alpha", "/modules/api", graph.EdgeImports) {
+		t.Errorf("no alpha -> api edge. `api.client` is absolute and names a top-level package, "+
+			"which resolves against the directory holding pyproject.toml; unresolved = %v",
+			out.Unresolved)
+	}
+	if _, bad := out.Unresolved["python api.client"]; bad {
+		t.Errorf("api.client reported as a gap: %v", out.Unresolved)
+	}
+}
+
+// And the boundary in the other direction, which is the one that invents structure. Two
+// packages holding the same module path is the shape that makes a repo-wide root list wrong:
+// the specifier cannot distinguish them, so only the root's scope can.
+func TestPythonPackageRootDoesNotReachASibling(t *testing.T) {
+	out := build(t, map[string]string{
+		"services/alpha/pyproject.toml":  "[project]\nname = \"alpha\"\nversion = \"1.0\"\n",
+		"services/alpha/handler.py":      "from api.client import fetch\n\ndef run():\n    return fetch()\n",
+		"services/alpha/api/__init__.py": "",
+		"services/alpha/api/client.py":   "def fetch():\n    return 1\n",
+		"services/beta/pyproject.toml":   "[project]\nname = \"beta\"\nversion = \"1.0\"\n",
+		"services/beta/handler.py":       "from api.client import fetch\n\ndef run():\n    return fetch()\n",
+		"services/beta/api/__init__.py":  "",
+		"services/beta/api/client.py":    "def fetch():\n    return 2\n",
+	})
+	g := out.Graph
+	// Each package's own api directory. The IDs are assigned in path order, so alpha's is
+	// `/modules/api` and beta's collides and becomes `/modules/api-2`.
+	if !hasEdge(g, "/modules/alpha", "/modules/api", graph.EdgeImports) ||
+		!hasEdge(g, "/modules/beta", "/modules/api-2", graph.EdgeImports) {
+		var got []string
+		for _, e := range g.Edges() {
+			if e.Kind == graph.EdgeImports {
+				got = append(got, e.From+" -> "+e.To)
+			}
+		}
+		t.Errorf("each package must import its own api; imports = %v", got)
+	}
+	if hasEdge(g, "/modules/alpha", "/modules/api-2", graph.EdgeImports) ||
+		hasEdge(g, "/modules/beta", "/modules/api", graph.EdgeImports) {
+		t.Error("one package's absolute import resolved into the other's code. Neither declares " +
+			"the other and neither can see it, so this is an edge between two packages that " +
+			"cannot import each other — invented structure, reported as extracted")
+	}
+}
+
+// A requirements.txt is a pin list, not a package boundary, and `requirements/base.txt` is a
+// real spelling. Registering its directory as a resolution root would make `requirements/` a
+// package and resolve imports into a directory holding no code at all.
+func TestRequirementsDirectoryIsNotAPythonRoot(t *testing.T) {
+	out := build(t, map[string]string{
+		"requirements/base.txt": "httpx>=0.27\n",
+		"requirements/api.py":   "def helper():\n    return 1\n",
+		"pkg/__init__.py":       "",
+		"pkg/main.py":           "from api import helper\n\ndef run():\n    return helper()\n",
+	})
+	if hasEdge(out.Graph, "/modules/pkg", "/modules/requirements", graph.EdgeImports) {
+		t.Error("a requirements directory became a resolution root, so `from api import helper` " +
+			"resolved into the directory holding the pin lists")
+	}
+}
+
 func TestTypeScriptRelativeAndPackageImports(t *testing.T) {
 	out := build(t, map[string]string{
 		"package.json":      "{\"name\":\"app\",\"dependencies\":{\"react\":\"^18.0.0\",\"@scope/util\":\"^1.0.0\"}}",

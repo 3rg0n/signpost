@@ -240,6 +240,66 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+#### 2026-08-03
+
+- **A Python package's absolute imports resolved against the repository, not the package, so a
+  monorepo lost its internal edges.** `from api.client import make_api_request` names a
+  top-level package, and the only thing that makes it resolvable is the directory holding that
+  package's `pyproject.toml` being on the interpreter's path. Resolution tried exactly two
+  roots — the repository root and `src` — on the reasoning that those cover essentially every
+  Python project. True of a project. False of a monorepo, which is where the imports are: one
+  measured repository has 28 `pyproject.toml` files, and that single specifier appears in 340
+  imports, every one reported as a dependency nobody declares while nine sibling packages each
+  held their own `api/client.py`. Same class of defect as the tsconfig `paths` gap fixed on
+  2026-08-01, which was worth 14% of that repository's edges.
+
+  **A root has to be scoped or it invents structure, and those nine `api/client.py` files are
+  why.** A root list governing the whole repository would resolve one package's `api.client`
+  to whichever of the nine sorted first — an edge between two packages that cannot see each
+  other, reported with the confidence of something extracted and with nothing in the bundle
+  marking it as a guess. That is worse than the gap it replaces. So a root governs only the
+  files beneath it, nearest first, and the repository root stays last so a single-package or
+  `src`-layout tree with no manifest in the walk still resolves as it did.
+
+  **`pyproject.toml` only, of the two Python manifests signpost reads.** A `requirements.txt`
+  pins what to install and declares no package; `requirements/base.txt` is a real and common
+  spelling, and registering its directory would make `requirements/` a resolution root and
+  invent edges into a directory holding no code. A unit test holds that boundary directly.
+
+  Two corpus packages now hold the same module path deliberately, because the fix fails in
+  both directions and only one of them is visible in a count: `py/services/alpha/handler.py`
+  and `py/services/beta/handler.py` contain the byte-identical line `from api.client import
+  fetch`, resolving to different files. No per-package root leaves both unresolved; an
+  unscoped root sends both to the same place. The corpus asserts both edges exist and that
+  neither crosses, in the Go suite and again in CI through the real binary.
+
+- **`winreg` and `msvcrt` were reported as external dependencies, so portable Python looked
+  like the analysis had failed.** The standard-library list was hand-kept, on the reasoning
+  that a missing entry degrades to "unresolved" — visible and correctable rather than silent.
+  That reasoning was wrong in a direction it did not anticipate: the names it omitted were not
+  obscure, they were *platform-specific*. `winreg` and `msvcrt` are Windows-only; `fcntl`,
+  `grp`, `pwd` and `termios` are Unix-only. A list assembled from code read on one platform
+  omits exactly what the other platform's code imports, so a repository doing conditional
+  imports for portability was reported as depending on packages nobody can install — and the
+  gap count, the number a reader uses to judge whether the map covers their repository, was
+  inflated by the most portable code in the tree. The list against
+  `sys.stdlib_module_names` was 146 entries with 74 missing and none extra.
+
+  It is now generated from `sys.stdlib_module_names` rather than patched, because patching the
+  two names found on this host would leave the same list short for the other platform. Kept as
+  a literal rather than read at runtime: signpost does not require a Python interpreter to read
+  Python. The modules PEP 594 and PEP 632 removed stay in, because signpost reads a repository
+  rather than a running process — a project pinned to `requires-python = ">=3.8"` imports `cgi`
+  and `distutils` correctly, and there is no PyPI package named `cgi` to mistake this for.
+
+  **A longer table is a wider surface for a loose match, which is the other boundary.** The
+  corpus imports `winreg_helpers`, which opens with the six characters of the stdlib `winreg`
+  and is the standard library of nothing; it must be reported as a gap. `pathe` against the
+  Node builtin `path` is the same shape. Both spellings of the platform split — `winreg` and
+  `fcntl` — sit in one tree so the list cannot be completed for one platform and left short
+  for the other, and the absence checks match the whole name rather than a fragment, since a
+  fragment check for `winreg` would be satisfied by the very page that must not exist.
+
 #### 2026-08-02
 
 - **A manifest declaring no dependencies was reported as unpinned, so the practices page told

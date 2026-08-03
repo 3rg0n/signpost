@@ -871,6 +871,10 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 //     `@corpus/app/`, whose trailing slash is the only thing separating them;
 //   - python `httpx_extras` — declared `httpx` plus a suffix, in the underscore spelling that
 //     PEP 503 normalization rewrites;
+//   - python `winreg_helpers` — opens with the six characters of the stdlib `winreg`, which is
+//     the boundary on the other side of the completed pyStdlib list: a longer table is a wider
+//     surface for a prefix match, and a package reclassified as the runtime is a gap nobody is
+//     told about;
 //   - rust `serde_yaml::Value` — a real crate that is not the declared `serde`, in the
 //     underscore spelling the dash/underscore equivalence exists to accept;
 //   - typescript `pathe/utils` — an npm package whose name opens with the four characters
@@ -908,8 +912,8 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// is what carries the assertion and the names are what make a failure legible.
 	want := []string{
 		"go example.com/corpus/greeterx/format",
-		"python greeter",
 		"python httpx_extras",
+		"python winreg_helpers",
 		"rust corpus_greeter::Greeting",
 		"rust serde_yaml::Value",
 		"typescript @corpus/apples/juice",
@@ -944,7 +948,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		t.Fatalf("export did not produce JSON: %v", err)
 	}
 	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe"} {
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -966,6 +970,113 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 			if n.Kind == "External Dependency" && strings.Contains(n.Title, frag) {
 				t.Errorf("%q is an external dependency page; it is the language runtime", n.Title)
 			}
+		}
+	}
+	// The platform-specific stdlib, matched exactly rather than by substring: `winreg_helpers`
+	// is a deliberate near-miss asserted above, and a substring check for `winreg` would be
+	// satisfied by the very page that must not exist.
+	//
+	// These two are why pyStdlib is now generated from sys.stdlib_module_names rather than kept
+	// by hand. `winreg` is Windows-only and `fcntl` is Unix-only, so a list assembled from code
+	// read on one platform omits precisely what the other platform's code imports — and a
+	// repository doing conditional imports for portability was reported as depending on
+	// packages nobody can install. Both spellings sit in this corpus so the list cannot be
+	// completed for one platform and left short for the other.
+	for _, name := range []string{"winreg", "fcntl"} {
+		for _, n := range g.Nodes {
+			if n.Kind == "External Dependency" && strings.EqualFold(n.Title, name) {
+				t.Errorf("%q is an external dependency page. It is platform-specific standard "+
+					"library, and nobody publishes or patches it — a page for it is a "+
+					"supply-chain entry for the interpreter", n.Title)
+			}
+		}
+	}
+}
+
+// TestCorpusPythonPackageRootsResolve is the regression for the per-package resolution root,
+// and it is the Python analogue of issue #13.
+//
+// `resolvePython` tried exactly two roots — the repository root and `src` — with a comment
+// claiming those account for essentially every Python project. That is true of a project and
+// false of a monorepo, which is where the imports are. Measured on one: 28 `pyproject.toml`
+// files, and `from api.client import make_api_request` written in 340 imports, each resolving
+// against the package that declares it. signpost reported every one as a dependency nobody
+// declares, while nine sibling packages each held their own `api/client.py`.
+//
+// Two packages here, deliberately holding the same module path, because the fix has a failure
+// mode in each direction and neither assertion means anything alone:
+//
+//   - a root list that governed the whole repository would resolve both imports to whichever
+//     `api/client.py` sorted first, which is an edge between two packages that cannot see each
+//     other — worse than the gap it replaces, because nothing reports it as a guess;
+//   - no per-package root at all leaves both unresolved, which is the shipped bug.
+//
+// Asserted on the exact pair of edges rather than on a count, since a count of two is
+// satisfied by both imports landing in the same package.
+func TestCorpusPythonPackageRootsResolve(t *testing.T) {
+	dir := buildCorpus(t)
+
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct{ ID, Kind, Path, Title string }
+		Edges []struct{ From, To, Kind string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	byPath := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	imports := func(from, to string) bool {
+		f, tt := byPath[from], byPath[to]
+		if f == "" || tt == "" {
+			t.Fatalf("no module node for %q or %q, so this test asserts nothing", from, to)
+		}
+		for _, e := range g.Edges {
+			if e.From == f && e.To == tt && e.Kind == "imports" {
+				return true
+			}
+		}
+		return false
+	}
+
+	// The positives: each package's absolute import reaches its own code.
+	for _, c := range []struct{ from, to string }{
+		{"py/services/alpha", "py/services/alpha/api"},
+		{"py/services/beta", "py/services/beta/api"},
+	} {
+		if !imports(c.from, c.to) {
+			t.Errorf("no imports edge %s -> %s. `from api.client import fetch` is absolute and "+
+				"names a top-level package, so it resolves only against the package root that "+
+				"declares it — the repository root and src/ hold no api/ at all", c.from, c.to)
+		}
+	}
+	// And `py/tests` importing `greeter` by top-level name, which is the same mechanism at the
+	// repository's own package root. It was in the expected-unresolved list before this fix, as
+	// an accepted gap rather than a boundary.
+	if !imports("py/tests", "py/greeter") {
+		t.Error("no imports edge py/tests -> py/greeter. `from greeter import greet` resolves " +
+			"against py/, which is a package root because py/pyproject.toml declares one")
+	}
+
+	// The negatives, and they are what a repo-wide root list fails. The specifier is identical
+	// in both handlers, so only the scope of the root distinguishes them.
+	for _, c := range []struct{ from, to string }{
+		{"py/services/alpha", "py/services/beta/api"},
+		{"py/services/beta", "py/services/alpha/api"},
+	} {
+		if imports(c.from, c.to) {
+			t.Errorf("imports edge %s -> %s. These two packages each declare their own "+
+				"pyproject.toml and neither declares the other, so a root governing the whole "+
+				"repository routed one package's `api.client` into the other's code — structure "+
+				"that does not exist, reported with the confidence of something extracted",
+				c.from, c.to)
 		}
 	}
 }

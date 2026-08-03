@@ -1,0 +1,11 @@
+[project]
+# A package inside a package. `py/pyproject.toml` is a root and so is this directory, which
+# is what makes the two same-named `api` packages here distinguishable only by scope.
+name = "corpus-alpha"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["httpx>=0.28"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

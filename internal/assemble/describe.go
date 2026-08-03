@@ -174,39 +174,74 @@ func isStdlib(lang discover.Lang, raw string) bool {
 //
 // A list rather than a rule, because Python has no syntactic marker distinguishing
 // `import os` from `import requests` — the only difference is which one is installed.
-// It covers what appears in real code; a stdlib module missing from it is counted as
-// unresolved, which is a visible, correctable inaccuracy rather than a silent one.
+//
+// Complete rather than representative, and the difference is the point. This began as a
+// hand-kept list of what appears in common code, on the reasoning that a missing entry
+// degrades to "unresolved" — visible and correctable rather than silent. That reasoning was
+// wrong in one direction it did not anticipate: the names it omitted were not obscure, they
+// were *platform-specific*. `winreg` and `msvcrt` are Windows-only and `fcntl`, `grp`, `pwd`
+// and `termios` are Unix-only, so a list assembled from code read on one platform omits
+// exactly the modules the other platform's code imports. A repository doing conditional
+// imports for portability was reported as depending on packages nobody can install, and the
+// gap count — the number a reader uses to judge whether the map covers their repository —
+// was inflated by the most portable code in the tree.
+//
+// Generated from `sys.stdlib_module_names`, less the private `_`-prefixed names, which are
+// implementation internals nothing imports directly. Kept as a literal rather than derived at
+// runtime because signpost does not require a Python interpreter to read Python.
 var pyStdlib = map[string]bool{
-	"abc": true, "argparse": true, "array": true, "ast": true, "asyncio": true,
-	"base64": true, "binascii": true, "bisect": true, "builtins": true, "bz2": true,
-	"calendar": true, "cmath": true, "cmd": true, "codecs": true, "collections": true,
-	"colorsys": true, "concurrent": true, "configparser": true, "contextlib": true,
-	"contextvars": true, "copy": true, "csv": true, "ctypes": true, "dataclasses": true,
-	"datetime": true, "decimal": true, "difflib": true, "dis": true, "email": true,
-	"enum": true, "errno": true, "faulthandler": true, "filecmp": true, "fileinput": true,
-	"fnmatch": true, "fractions": true, "functools": true, "gc": true, "getpass": true,
-	"gettext": true, "glob": true, "graphlib": true, "gzip": true, "hashlib": true,
-	"heapq": true, "hmac": true, "html": true, "http": true, "imaplib": true,
-	"importlib": true, "inspect": true, "io": true, "ipaddress": true, "itertools": true,
-	"json": true, "keyword": true, "linecache": true, "locale": true, "logging": true,
-	"lzma": true, "mailbox": true, "math": true, "mimetypes": true, "mmap": true,
-	"multiprocessing": true, "netrc": true, "numbers": true, "operator": true, "os": true,
-	"pathlib": true, "pdb": true, "pickle": true, "pkgutil": true, "platform": true,
-	"plistlib": true, "pprint": true, "profile": true, "pstats": true, "pty": true,
+	"__future__": true, "abc": true, "annotationlib": true, "antigravity": true,
+	"argparse": true, "array": true, "ast": true, "asyncio": true, "atexit": true,
+	"base64": true, "bdb": true, "binascii": true, "bisect": true, "builtins": true,
+	"bz2": true, "cProfile": true, "calendar": true, "cmath": true, "cmd": true, "code": true,
+	"codecs": true, "codeop": true, "collections": true, "colorsys": true, "compileall": true,
+	"compression": true, "concurrent": true, "configparser": true, "contextlib": true,
+	"contextvars": true, "copy": true, "copyreg": true, "csv": true, "ctypes": true,
+	"curses": true, "dataclasses": true, "datetime": true, "dbm": true, "decimal": true,
+	"difflib": true, "dis": true, "doctest": true, "email": true, "encodings": true,
+	"ensurepip": true, "enum": true, "errno": true, "faulthandler": true, "fcntl": true,
+	"filecmp": true, "fileinput": true, "fnmatch": true, "fractions": true, "ftplib": true,
+	"functools": true, "gc": true, "genericpath": true, "getopt": true, "getpass": true,
+	"gettext": true, "glob": true, "graphlib": true, "grp": true, "gzip": true,
+	"hashlib": true, "heapq": true, "hmac": true, "html": true, "http": true, "idlelib": true,
+	"imaplib": true, "importlib": true, "inspect": true, "io": true, "ipaddress": true,
+	"itertools": true, "json": true, "keyword": true, "linecache": true, "locale": true,
+	"logging": true, "lzma": true, "mailbox": true, "marshal": true, "math": true,
+	"mimetypes": true, "mmap": true, "modulefinder": true, "msvcrt": true,
+	"multiprocessing": true, "netrc": true, "nt": true, "ntpath": true, "nturl2path": true,
+	"numbers": true, "opcode": true, "operator": true, "optparse": true, "os": true,
+	"pathlib": true, "pdb": true, "pickle": true, "pickletools": true, "pkgutil": true,
+	"platform": true, "plistlib": true, "poplib": true, "posix": true, "posixpath": true,
+	"pprint": true, "profile": true, "pstats": true, "pty": true, "pwd": true,
+	"py_compile": true, "pyclbr": true, "pydoc": true, "pydoc_data": true, "pyexpat": true,
 	"queue": true, "quopri": true, "random": true, "re": true, "readline": true,
-	"reprlib": true, "resource": true, "runpy": true, "sched": true, "secrets": true,
-	"select": true, "selectors": true, "shelve": true, "shlex": true, "shutil": true,
-	"signal": true, "site": true, "smtplib": true, "socket": true, "socketserver": true,
-	"sqlite3": true, "ssl": true, "stat": true, "statistics": true, "string": true,
+	"reprlib": true, "resource": true, "rlcompleter": true, "runpy": true, "sched": true,
+	"secrets": true, "select": true, "selectors": true, "shelve": true, "shlex": true,
+	"shutil": true, "signal": true, "site": true, "smtplib": true, "socket": true,
+	"socketserver": true, "sqlite3": true, "sre_compile": true, "sre_constants": true,
+	"sre_parse": true, "ssl": true, "stat": true, "statistics": true, "string": true,
 	"stringprep": true, "struct": true, "subprocess": true, "symtable": true, "sys": true,
-	"sysconfig": true, "syslog": true, "tarfile": true, "tempfile": true, "termios": true,
-	"textwrap": true, "threading": true, "time": true, "timeit": true, "tkinter": true,
-	"token": true, "tokenize": true, "tomllib": true, "trace": true, "traceback": true,
-	"tracemalloc": true, "tty": true, "types": true, "typing": true, "unicodedata": true,
-	"unittest": true, "urllib": true, "uuid": true, "venv": true, "warnings": true,
-	"wave": true, "weakref": true, "webbrowser": true, "wsgiref": true, "xml": true,
-	"xmlrpc": true, "zipapp": true, "zipfile": true, "zipimport": true, "zlib": true,
-	"zoneinfo": true, "__future__": true,
+	"sysconfig": true, "syslog": true, "tabnanny": true, "tarfile": true, "tempfile": true,
+	"termios": true, "textwrap": true, "this": true, "threading": true, "time": true,
+	"timeit": true, "tkinter": true, "token": true, "tokenize": true, "tomllib": true,
+	"trace": true, "traceback": true, "tracemalloc": true, "tty": true, "turtle": true,
+	"turtledemo": true, "types": true, "typing": true, "unicodedata": true, "unittest": true,
+	"urllib": true, "uuid": true, "venv": true, "warnings": true, "wave": true,
+	"weakref": true, "webbrowser": true, "winreg": true, "winsound": true, "wsgiref": true,
+	"xml": true, "xmlrpc": true, "zipapp": true, "zipfile": true, "zipimport": true,
+	"zlib": true, "zoneinfo": true,
+
+	// Removed from the standard library by PEP 594 and PEP 632, and still the standard
+	// library of the interpreter the code being read runs on. signpost reads a repository,
+	// not a running process: a project pinned to `requires-python = ">=3.8"` imports `cgi`
+	// and `distutils` correctly, and reporting them as unresolved dependencies would make
+	// every such repository look like the analysis had failed. There is no PyPI package
+	// named `cgi` to mistake this for.
+	"aifc": true, "asynchat": true, "asyncore": true, "audioop": true, "cgi": true,
+	"cgitb": true, "chunk": true, "crypt": true, "distutils": true, "imghdr": true,
+	"imp": true, "lib2to3": true, "mailcap": true, "msilib": true, "nis": true,
+	"nntplib": true, "ossaudiodev": true, "pipes": true, "smtpd": true, "sndhdr": true,
+	"spwd": true, "sunau": true, "telnetlib": true, "uu": true, "xdrlib": true,
 }
 
 // nodeBuiltin is Node's built-in module names.

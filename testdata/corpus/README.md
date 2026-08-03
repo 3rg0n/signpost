@@ -51,6 +51,7 @@ matcher slightly too loose swallows it, and which nothing declares.
 | `httpx_extras` | the declared `httpx` | PEP 503 name normalization applied as a prefix match |
 | `serde_yaml::Value` | the declared `serde` | Cargo's dash/underscore equivalence applied too widely |
 | `pathe/utils` | the Node builtin `path` | a builtin matched as a string prefix instead of by first path segment |
+| `winreg_helpers` | the Python stdlib `winreg` | a stdlib name matched as a string prefix — the same looseness as the row above, against a table of 220 names rather than 44 |
 
 Each must be reported as a gap and land nowhere else. Two wrong homes are possible and both
 are worse than the gap: an edge into this repository invents structure, and an external node
@@ -66,8 +67,49 @@ the runtime: in no manifest, patched by nobody, so no node and no reported gap. 
 addressed by subpath, `fs/promises` and `node:test/reporters`, which is
 [issue #14](https://github.com/3rg0n/signpost/issues/14): the whole specifier was looked up in a
 table holding `fs`, so the subpath missed and was reported as a dependency the repository failed
-to resolve. `pathe/utils` above is the boundary on the other side of that rule — the last row of
-the table is what stops the fix from being a prefix comparison.
+to resolve. `pathe/utils` and `winreg_helpers` above are the boundary on the other side of that
+rule — those two rows are what stop the fix from being a prefix comparison.
+
+Two of the stdlib imports are *platform-specific*, which is a boundary of its own:
+`py/services/alpha/handler.py` imports the Windows-only `winreg` and
+`py/services/beta/handler.py` the Unix-only `fcntl`, both guarded the way portable code spells
+it. The Python stdlib list used to be hand-kept, and a hand-kept list assembled from code read
+on one platform omits precisely what the other platform's code imports — so the most portable
+code in a tree produced the most gaps, reported as dependencies nobody can install. Both
+spellings sit here so the list cannot be completed for one platform and left short for the
+other. Their absence checks match the whole name rather than a fragment, because a fragment
+check for `winreg` is satisfied by the `winreg_helpers` page that must not exist.
+
+## Two packages that cannot see each other
+
+`py/services/alpha/handler.py` and `py/services/beta/handler.py` contain the byte-identical
+line `from api.client import fetch`, and each resolves to a different file. Both packages
+declare their own `pyproject.toml`, neither declares the other, and each holds its own
+`api/client.py`.
+
+An absolute Python import names a top-level package, so the only thing that makes it
+resolvable is the directory holding that package's manifest being on the interpreter's path.
+Resolution used to try exactly two roots — the repository root and `src` — which covers a
+project and not a monorepo, and a monorepo is where the imports are: one measured repository
+has 28 `pyproject.toml` files and writes that one specifier in 340 imports, every one reported
+as a dependency nobody declares while nine sibling packages each held their own
+`api/client.py`. This is the Python shape of
+[issue #13](https://github.com/3rg0n/signpost/issues/13), which was worth 14% of a
+repository's edges.
+
+`TestCorpusPythonPackageRootsResolve` reads both directions off one graph, and the pair is why
+the specifier is identical in both files:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | `py/services/alpha` imports `py/services/alpha/api`, and `beta` likewise | the shipped bug: a monorepo's internal edges reported as unresolved external names |
+| negative | neither package imports the other's `api` | worse than the gap — a repo-wide root list resolves both to whichever `api/client.py` sorts first, an edge between packages that cannot see each other, reported with the confidence of something extracted |
+
+Only the *scope* of the root can distinguish them, since the specifier cannot. A unit test in
+`internal/assemble` holds the third boundary, which this tree cannot express: a
+`requirements/base.txt` must not make `requirements/` a resolution root. It pins what to
+install and declares no package, so a root there invents edges into a directory holding no
+code.
 
 ## The bundle's own lifecycle
 

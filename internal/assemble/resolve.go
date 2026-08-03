@@ -50,6 +50,9 @@ type resolver struct {
 	tsAliases []tsAlias
 	// crates are Cargo manifest directories, longest first, same reason.
 	crates []string
+	// pyRoots are directories holding a Python package manifest, longest first: each is
+	// a path an absolute import resolves against for the files beneath it.
+	pyRoots []string
 	// deps maps a normalized dependency key to the external node it belongs to.
 	deps map[string]string
 	// ecosystems are the ecosystems any manifest declared, sorted, for the
@@ -275,6 +278,49 @@ func (r *resolver) addCrate(file string) {
 	})
 }
 
+// addPyRoot records a directory that a Python absolute import resolves against.
+//
+// One per `pyproject.toml`, and it is that file's presence that makes the directory a root
+// rather than any naming convention: it declares a package, so the interpreter running the
+// code beneath it has that directory on its path — installed, reached by an editable
+// install, or simply the working directory.
+//
+// `pyproject.toml` alone, of the two Python manifests signpost reads. A `requirements.txt`
+// pins what to install and declares no package, and `requirements/base.txt` is a real and
+// common spelling — registering its directory would make `requirements/` a resolution root
+// and invent edges into a directory holding no code.
+//
+// This is the Python analogue of addGoModule and addNpmPackage, and its absence was the
+// same class of bug. `resolvePython` tried exactly two roots, the repository root and
+// `src`, on the reasoning that they account for essentially every Python project. That is
+// true of a project. It is false of a monorepo, which is where the imports are, and the
+// shape is not exotic: 28 package manifests in one measured repository, each package
+// importing its own code by top-level name. `from api.client import make_api_request`
+// appears in 340 imports there, resolves against the package that declares it, and signpost
+// reported every one as a gap while nine sibling packages each had their own `api/client.py`.
+//
+// Registering the repository root unconditionally is what keeps the src-layout and
+// single-package cases working when no manifest was read at all — a repository whose
+// manifest sits outside the walk, or which has none.
+func (r *resolver) addPyRoot(dir string) {
+	for _, d := range r.pyRoots {
+		if d == dir {
+			return
+		}
+	}
+	r.pyRoots = append(r.pyRoots, dir)
+	// Longest first, so a file inside a package resolves against that package before the
+	// repository root. Both are on the path in principle; the nearer one is the one whose
+	// code the file can see, and preferring the root would route a package's own import
+	// into a same-named directory in a sibling package.
+	sort.Slice(r.pyRoots, func(i, j int) bool {
+		if len(r.pyRoots[i]) != len(r.pyRoots[j]) {
+			return len(r.pyRoots[i]) > len(r.pyRoots[j])
+		}
+		return r.pyRoots[i] < r.pyRoots[j]
+	})
+}
+
 // addDep registers a declared dependency under every key an import of it might use.
 //
 // The gap between a distribution name and the name you import is real and routine:
@@ -447,16 +493,42 @@ func (r *resolver) resolvePython(from, raw string) (string, bool) {
 		return "", true
 	}
 	rel := strings.ReplaceAll(raw, ".", "/")
-	// Absolute imports resolve against the interpreter's path, which for a repository
-	// is its root or a src/ directory — the two layouts that account for essentially
-	// every Python project.
-	for _, root := range []string{"", "src"} {
-		if id := r.pyTarget(path.Join(root, rel)); id != "" {
-			return id, true
+	// Absolute imports resolve against the interpreter's path, and for a repository that is
+	// the package root governing this file — nearest first — plus each root's `src`, which
+	// is the other layout the packaging tools support. pyRootsFor is what keeps a package's
+	// import inside its own package rather than in a same-named directory next door.
+	for _, root := range r.pyRootsFor(from) {
+		for _, layout := range []string{"", "src"} {
+			if id := r.pyTarget(path.Join(root, layout, rel)); id != "" {
+				return id, true
+			}
 		}
 	}
 	first, _, _ := strings.Cut(raw, ".")
 	return r.depOrEmpty("pypi", []string{raw, first}), false
+}
+
+// pyRootsFor returns the package roots an import in `from` resolves against, nearest first.
+//
+// A root governs only the files beneath it, and that scoping is the whole of the care needed
+// here. Nine packages in one measured repository each hold their own `api/client.py`, and a
+// repo-wide root list would resolve `from api.client import ...` in one package to whichever
+// of the nine sorted first — an edge between two packages that cannot see each other, which
+// is worse than the gap it replaces because nothing reports it. Same reason tsPathAlias
+// checks an alias's scope.
+//
+// The repository root is always last, so a layout with no manifest at all still resolves.
+func (r *resolver) pyRootsFor(from string) []string {
+	out := make([]string, 0, len(r.pyRoots)+1)
+	for _, root := range r.pyRoots {
+		if root == "" || from == root || strings.HasPrefix(from, root+"/") {
+			out = append(out, root)
+		}
+	}
+	if len(out) == 0 || out[len(out)-1] != "" {
+		out = append(out, "")
+	}
+	return out
 }
 
 // pyTarget resolves a slash path to a package directory or a module file's directory.

@@ -906,6 +906,66 @@ jobs:
           }
           echo "workspace: @corpus/core resolved internally, react still external"
 
+      # A Python package's absolute import resolves against the package, not the repository.
+      #
+      # The Python analogue of the tsconfig gap below, and the same class of defect.
+      # `resolvePython` tried exactly two roots — the repository root and `src` — with a
+      # comment claiming those cover essentially every Python project. True of a project,
+      # false of a monorepo, which is where the imports are: 28 `pyproject.toml` files in one
+      # measured repository, and `from api.client import make_api_request` written in 340
+      # imports, each resolving against the package that declares it. Every one was reported
+      # as a dependency nobody declares, while nine sibling packages each held their own
+      # `api/client.py`.
+      #
+      # Two packages here hold that same module path deliberately, because the fix fails in
+      # both directions: no per-package root leaves both unresolved, and a root governing the
+      # whole repository sends both imports to whichever `api/client.py` sorts first — an edge
+      # between two packages that cannot see each other, which is worse than the gap because
+      # nothing in the bundle reports it as a guess.
+      - name: A Python package resolves against its own root, not its sibling's
+        run: |
+          set -euo pipefail
+          bundle="${RUNNER_TEMP}/corpus/.signpost"
+          alpha=$(grep -rl 'title: py/services/alpha$' "${bundle}/modules") || {
+            echo "no module page for py/services/alpha; this step asserts nothing"; exit 1; }
+          beta=$(grep -rl 'title: py/services/beta$' "${bundle}/modules") || {
+            echo "no module page for py/services/beta; this step asserts nothing"; exit 1; }
+          alpha_api=$(grep -rl 'title: py/services/alpha/api$' "${bundle}/modules") || {
+            echo "no module page for py/services/alpha/api; this step asserts nothing"; exit 1; }
+          beta_api=$(grep -rl 'title: py/services/beta/api$' "${bundle}/modules") || {
+            echo "no module page for py/services/beta/api; this step asserts nothing"; exit 1; }
+
+          fail=0
+          # The positives: each package reaches its own code. Both pages are under modules/,
+          # so an edge to a sibling is `./name.md`.
+          grep -qF "to: ./$(basename "$alpha_api")" "$alpha" || {
+            echo "no imports edge from py/services/alpha to its own api package."
+            echo "\`from api.client import fetch\` is absolute and names a top-level package,"
+            echo "so it resolves only against the directory holding that package's"
+            echo "pyproject.toml. Neither the repository root nor src/ holds an api/ at all."
+            fail=1
+          }
+          grep -qF "to: ./$(basename "$beta_api")" "$beta" || {
+            echo "no imports edge from py/services/beta to its own api package."
+            fail=1
+          }
+          # The negatives, and they are what a repo-wide root list fails. The specifier is
+          # byte-identical in both handlers, so only the root's scope distinguishes them.
+          if grep -qF "to: ./$(basename "$beta_api")" "$alpha"; then
+            echo "py/services/alpha imports py/services/beta/api. These two packages each"
+            echo "declare their own pyproject.toml and neither declares the other, so a"
+            echo "resolution root governing the whole repository routed one package's"
+            echo "\`api.client\` into the other's code — structure that does not exist,"
+            echo "reported with the confidence of something extracted."
+            fail=1
+          fi
+          if grep -qF "to: ./$(basename "$alpha_api")" "$beta"; then
+            echo "py/services/beta imports py/services/alpha/api, same defect reversed."
+            fail=1
+          fi
+          [ "$fail" -eq 0 ] || exit 1
+          echo "python roots: each package resolved its own api/, neither reached the other's"
+
       # A codebase states what its own import specifiers mean, and nothing else states it.
       #
       # `compilerOptions.paths` is that statement: `@fider/services` is `public/services`
@@ -987,9 +1047,12 @@ jobs:
       # `example.com/corpus/greeter`; `@corpus/apples/juice` against the alias prefix
       # `@corpus/app/`, separated only by a slash; `httpx_extras` against the declared `httpx`,
       # in the spelling PEP 503 normalization rewrites; `serde_yaml::Value` against the declared
-      # `serde`, in the spelling Cargo's dash/underscore equivalence accepts. Each must be
-      # reported as a gap and land nowhere else — an edge inside this repository invents
-      # structure, an external node invents a supply-chain entry nobody declared.
+      # `serde`, in the spelling Cargo's dash/underscore equivalence accepts; `winreg_helpers`
+      # against the stdlib `winreg`, which is the boundary on the other side of the completed
+      # pyStdlib list — a longer table is a wider surface for a prefix match, and a package
+      # silently reclassified as the runtime is exactly the gap this count exists to surface.
+      # Each must be reported as a gap and land nowhere else — an edge inside this repository
+      # invents structure, an external node invents a supply-chain entry nobody declared.
       #
       # The count carries the assertion because the printed list is truncated to the five most
       # frequent, so a grep for any single specifier passes by matching `and 1 more`. Verified
@@ -1027,9 +1090,24 @@ jobs:
           # repository, so the count above is the primary assertion and this is the corroborating
           # one: a near-miss folded into a declared dependency shows up here as nothing at all,
           # while one fabricated outright shows up as a file.
-          for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe promises; do
+          for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe \
+                      promises winreg-helpers winreg_helpers; do
             if ls "${bundle}/references/" | grep -qi "$frag"; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
+              exit 1
+            fi
+          done
+          # The platform-specific stdlib, matched on the whole filename rather than as a
+          # fragment: `winreg_helpers` above is a deliberate near-miss, and a fragment check
+          # for `winreg` would be satisfied by the very page that must not exist. These two are
+          # why pyStdlib is generated from sys.stdlib_module_names rather than kept by hand —
+          # `winreg` is Windows-only and `fcntl` Unix-only, so a hand-kept list omits exactly
+          # what the other platform's code imports, and portable code produced the most gaps.
+          for name in winreg fcntl; do
+            if [ -f "${bundle}/references/pypi-${name}.md" ]; then
+              echo "references/pypi-${name}.md is a page for platform-specific standard"
+              echo "library. Nobody publishes or patches it, so a reference page for it is a"
+              echo "supply-chain entry for the interpreter itself."
               exit 1
             fi
           done

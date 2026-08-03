@@ -168,6 +168,8 @@ func (b *builder) index() {
 				b.res.addNpmPackage(f.Path, f.Module.Name)
 			case manifest.KindCargo:
 				b.res.addCrate(f.Path)
+			case manifest.KindPyProject:
+				b.res.addPyRoot(dirOf(f.Path))
 			case manifest.KindTSConfig:
 				b.res.addTSConfig(f.Path, f.Resolution)
 			}
