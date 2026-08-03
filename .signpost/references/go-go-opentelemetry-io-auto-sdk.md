@@ -2,7 +2,7 @@
 type: External Dependency
 title: go.opentelemetry.io/auto/sdk
 description: go dependency go.opentelemetry.io/auto/sdk (v1.2.1)
-resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed
+resource: git://github.com/3rg0n/signpost@168ccfd4ee0b087f79607409cdc39e074991f1df
 tags: [external, go]
 generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:

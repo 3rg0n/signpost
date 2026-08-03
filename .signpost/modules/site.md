@@ -2,7 +2,7 @@
 type: Module
 title: site
 description: 1 javascript file.
-resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed/site
+resource: git://github.com/3rg0n/signpost@168ccfd4ee0b087f79607409cdc39e074991f1df/site
 generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:
   - { name: commits, value: "7" }

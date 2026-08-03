@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0006: generator and viewer are separate repositories"
 description: "Architecture decision (Superseded), 22 rules read from 0006-generator-and-viewer-are-separate-repositories.md."
-resource: git://github.com/3rg0n/signpost@85dd633121010b7764e0f88596b42f9be3a0aeed/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
+resource: git://github.com/3rg0n/signpost@168ccfd4ee0b087f79607409cdc39e074991f1df/docs/adr/0006-generator-and-viewer-are-separate-repositories.md
 tags: [adr, constraint, superseded]
 generated: { by: signpost/dev, at: "2026-08-03" }
 attributes:
