@@ -1,16 +1,16 @@
 ---
 type: Module
 title: internal/discover
-description: 5 go files; 65 exported symbols.
-resource: git://github.com/3rg0n/signpost@168ccfd4ee0b087f79607409cdc39e074991f1df/internal/discover
-generated: { by: signpost/dev, at: "2026-08-03" }
+description: 5 go files; 69 exported symbols.
+resource: git://github.com/3rg0n/signpost@fbc7f1f27170cf2f96edc3e3c83110c51e196bc5/internal/discover
+generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
-  - { name: commits, value: "5" }
-  - { name: exported, value: "65" }
+  - { name: commits, value: "6" }
+  - { name: exported, value: "69" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-02" }
-  - { name: lines_added, value: "2179" }
+  - { name: last_commit, value: "2026-08-04" }
+  - { name: lines_added, value: "2318" }
   - { name: lines_removed, value: "22" }
   - { name: package, value: discover }
   - { name: top_author, value: 3rg0n }
@@ -19,12 +19,13 @@ edges:
   - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
 ---
 # internal/discover
 
 <!-- signpost:managed:summary -->
-5 go files; 65 exported symbols.
+5 go files; 69 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -37,7 +38,7 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Changes with**: [internal/extract](./extract.md) ×2, [internal/manifest](./manifest.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×3
+- **Changes with**: [internal/extract](./extract.md) ×2, [internal/manifest](./manifest.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×4, [site](./site.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

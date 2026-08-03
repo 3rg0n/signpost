@@ -2,9 +2,9 @@
 type: External Dependency
 title: github.com/go-logr/stdr
 description: go dependency github.com/go-logr/stdr (v1.2.2)
-resource: git://github.com/3rg0n/signpost@168ccfd4ee0b087f79607409cdc39e074991f1df
+resource: git://github.com/3rg0n/signpost@fbc7f1f27170cf2f96edc3e3c83110c51e196bc5
 tags: [external, go]
-generated: { by: signpost/dev, at: "2026-08-03" }
+generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: github.com/go-logr/stdr }
