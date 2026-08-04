@@ -216,14 +216,25 @@ carries it. `owner/repo#14` and a full issue URL close too, in the repository th
 name. CI does not check those, because its token is scoped to this repository and a
 number this one cannot resolve is correct there.
 
-This is written down because it shipped twice. Commit
+This is written down because it shipped three times. Commit
 [`2785918`](https://github.com/3rg0n/signpost/commit/2785918) carries two closing
 references to numbers from a local task list, in a repository whose issues stop at 14;
 both render as links to 404s. Then the commit adding this check failed it, by writing
 one of those same references into a paragraph explaining the defect — had the number
-existed, the explanation would have closed it. `2785918` stays as written, because
-rewriting it rewrites the bundle commit behind it and leaves 53 pages stamped with a
-sha that no longer exists.
+existed, the explanation would have closed it. Then
+[`a1e2463`](https://github.com/3rg0n/signpost/commit/a1e2463) did the first thing again
+with `#21`, a number from the same task list, having read this section to get the
+*position* rule right. `2785918` stays as written, because rewriting it rewrites the
+bundle commit behind it and leaves 53 pages stamped with a sha that no longer exists,
+and `a1e2463` stays for the same reason: CI had already rebuilt the bundle on it.
+
+The repeat says something the two rules above do not. A task number and an issue number
+have the same `#n` shape, the position rule is the memorable half, and there is no local
+hook for this — the post-commit hook builds the bundle and nothing reads the message, so
+CI is the only place a bad reference is caught, one push too late. Before writing a
+closing keyword, ask whether the number is one *this* repository can resolve:
+`gh issue view <n> --repo 3rg0n/signpost`. A number from a planner belongs in the
+message without a keyword, where it is a note rather than an instruction.
 
 Bug reports are most useful with the repository shape that triggered them — a
 minimal directory tree and the command you ran. `signpost graph show .` output on a
