@@ -337,24 +337,51 @@ func TestCorpusHostilePathsAreQuoted(t *testing.T) {
 //
 // By name, not by count. A count says something changed; a name says the Python extractor
 // stopped running.
+//
+// The name is the directory, taken from the page's title, rather than the page's filename.
+// Several of these directories are called `src` and only one of them can be src.md, so the
+// filenames of the others carry a suffix that identifies the directory and is deliberately
+// not predictable from ordering — asserting on it would be asserting on the ID scheme,
+// which is not what this test is about.
 func TestCorpusFindsEveryLanguage(t *testing.T) {
 	dir := buildCorpus(t)
 	pages := bundlePages(t, dir)
 
-	for _, want := range []struct{ language, page string }{
-		{"Go", "modules/greeter.md"},
-		{"Go (a second module, so collision resolution runs)", "modules/hello.md"},
-		{"Rust", "modules/src.md"},
-		{"TypeScript", "modules/src-2.md"},
-		{"Python", "modules/greeter-2.md"},
-		{"TypeScript, bracketed directory", "modules/slug.md"},
-		{"TypeScript, parenthesised directory", "modules/marketing.md"},
-	} {
-		if _, ok := pages[want.page]; !ok {
-			t.Errorf("%s: no page at %s. Pages written:\n  %s",
-				want.language, want.page, pageNames(pages))
+	byTitle := map[string]string{}
+	for name, body := range pages {
+		if !strings.HasPrefix(name, "modules/") {
+			continue
+		}
+		if title := frontmatterTitle(body); title != "" {
+			byTitle[title] = name
 		}
 	}
+
+	for _, want := range []struct{ language, dir string }{
+		{"Go", "go/greeter"},
+		{"Go (a second module, so collision resolution runs)", "go/cmd/hello"},
+		{"Rust", "rust/src"},
+		{"TypeScript", "ts/src"},
+		{"Python", "py/greeter"},
+		{"TypeScript, bracketed directory", "ts/app/tools/[slug]"},
+		{"TypeScript, parenthesised directory", "ts/app/(marketing)"},
+	} {
+		if _, ok := byTitle[want.dir]; !ok {
+			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
+				want.language, want.dir, pageNames(pages))
+		}
+	}
+}
+
+// frontmatterTitle reads the title line out of a page, which for a module page is its
+// repo-relative directory.
+func frontmatterTitle(body string) string {
+	for _, line := range strings.Split(body, "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "title:"); ok {
+			return strings.Trim(strings.TrimSpace(rest), `"`)
+		}
+	}
+	return ""
 }
 
 // TestCorpusReadsEveryManifest asserts each ecosystem's dependencies reached the bundle.
@@ -1262,6 +1289,86 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 				"by design: %q", rt, line)
 		}
 	}
+}
+
+// TestCorpusPageNamesSurviveAnUnrelatedEdit is the ID-stability assertion, at the level where
+// the cost is actually paid: a committed bundle.
+//
+// A page's name is its node ID (ADR 0003), and every other page links to it by that name. So a
+// renamed page is not one file moving — it is that file, plus every page linking to it, rewritten
+// in the diff of a commit that may not have touched the directory at all. Nothing in the graph is
+// wrong afterwards, which is exactly why this needs asserting: `verify` passes, the tests pass,
+// and the only symptom is a reviewer looking at forty changed pages for a one-directory change and
+// having no way to tell which of them mean something.
+//
+// The corpus is the right place for it because it is the shape that triggers it. Four directories
+// here are called `src` and two are called `api` or `greeter`, which is ordinary for a polyglot
+// repository and is what the old positional counter numbered — so the name a page got depended on
+// how many same-named directories sorted ahead of it, and adding one anywhere renumbered the rest.
+//
+// The edit below adds a Go package in a directory called `src` — a new member of the largest
+// collision group, and the shape that renumbered every later member. It sorts ahead of the
+// TypeScript and Rust `src` directories, which under a counter is the worst position: it took a
+// number that already belonged to somebody and pushed every one after it along by one.
+func TestCorpusPageNamesSurviveAnUnrelatedEdit(t *testing.T) {
+	pageNamesFor := func(dir string) map[string]string {
+		byTitle := map[string]string{}
+		for name, body := range bundlePages(t, dir) {
+			if strings.HasPrefix(name, "modules/") {
+				byTitle[frontmatterTitle(body)] = name
+			}
+		}
+		return byTitle
+	}
+
+	before := pageNamesFor(buildCorpus(t))
+	// The fixture has to actually collide, or this test passes on a corpus that cannot show the
+	// defect. Two directories sharing a page name is what makes one of them suffixed.
+	if before["rust/src"] == before["ts/src"] || before["rust/src"] == "" || before["ts/src"] == "" {
+		t.Fatalf("the corpus no longer has two `src` directories with distinct pages, so this "+
+			"test covers nothing: rust/src=%q ts/src=%q", before["rust/src"], before["ts/src"])
+	}
+
+	dir := corpusRepo(t)
+	// `go/src`, so it sorts ahead of `rust/src` and `ts/src`.
+	pkg := filepath.Join(dir, "go", "src")
+	if err := os.MkdirAll(pkg, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "telemetry.go"),
+		[]byte("// Package telemetry is added by a test to stand for an ordinary new package.\npackage telemetry\n\n// Count does nothing.\nfunc Count() int { return 0 }\n"),
+		0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "add a package")
+	if _, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir); code != 0 {
+		t.Fatalf("build after the edit: exit = %d\n%s", code, stderr)
+	}
+	after := pageNamesFor(dir)
+
+	if after["go/src"] == "" {
+		t.Fatalf("the added package got no page, so the edit under test did not happen. Pages:\n  %s",
+			strings.Join(sortedTitles(after), "\n  "))
+	}
+	for title, name := range before {
+		if got := after[title]; got != name {
+			t.Errorf("%s moved from %s to %s. Nothing in that directory changed — a Go package was "+
+				"added elsewhere — so this rename rewrites its page and every page linking to it in "+
+				"a commit that has nothing to do with it",
+				title, name, got)
+		}
+	}
+}
+
+// sortedTitles lists a title-keyed map's keys, for failure messages.
+func sortedTitles(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k+" -> "+m[k])
+	}
+	sort.Strings(out)
+	return out
 }
 
 // unlinkedCount reads the specifier count out of the `reached no page` line.

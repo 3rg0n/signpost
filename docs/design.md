@@ -127,6 +127,19 @@ node's ID.
 per OKF §8 — headings by concern, one line per concept with a description — so the
 model can pick the three pages it needs instead of reading the bundle.
 
+**A page name is a contract, so it is derived from the thing it names.** The filename is the node
+ID and every other page links to it by that ID, and the bundle is committed, so renaming a page
+rewrites that file plus every page citing it. Names collide — slugging is lossy by design, and a
+polyglot repository has several directories called `src` — and a colliding name is suffixed with a
+short hash of the entry's own key, so `rust/src` gets `src-1slg0rn.md`. Not a counter — a counter
+made a page's name
+depend on how many same-named directories sorted ahead of it, so adding one renumbered the rest and
+deleting one shifted them down, each time in a commit that had not touched those directories. Which
+member gets the bare `src` is decided by counting the names before any is assigned, because deciding
+on first sight hands the readable name to whoever the walk reaches first and takes it off the
+incumbent. ADR [0015](adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md) has the
+measurements, the two rejected alternatives, and the one residual case.
+
 ### 3.1 Page shape
 
 ```markdown

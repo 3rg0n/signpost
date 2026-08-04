@@ -329,10 +329,20 @@ func TestPythonPackageRootDoesNotReachASibling(t *testing.T) {
 		"services/beta/api/client.py":    "def fetch():\n    return 2\n",
 	})
 	g := out.Graph
-	// Each package's own api directory. The IDs are assigned in path order, so alpha's is
-	// `/modules/api` and beta's collides and becomes `/modules/api-2`.
-	if !hasEdge(g, "/modules/alpha", "/modules/api", graph.EdgeImports) ||
-		!hasEdge(g, "/modules/beta", "/modules/api-2", graph.EdgeImports) {
+	// Each package's own api directory. Both slug to `api`, so one holds `/modules/api`
+	// and the other carries a suffix derived from its path — asked for by path here
+	// rather than spelled literally, because the suffix is deliberately not something a
+	// reader should be able to predict from ordering.
+	ids := map[string]string{}
+	for _, n := range g.NodesOfKind(graph.KindModule) {
+		ids[n.Path] = n.ID
+	}
+	alphaAPI, betaAPI := ids["services/alpha/api"], ids["services/beta/api"]
+	if alphaAPI == "" || betaAPI == "" || alphaAPI == betaAPI {
+		t.Fatalf("want two distinct api module nodes; got alpha=%q beta=%q", alphaAPI, betaAPI)
+	}
+	if !hasEdge(g, "/modules/alpha", alphaAPI, graph.EdgeImports) ||
+		!hasEdge(g, "/modules/beta", betaAPI, graph.EdgeImports) {
 		var got []string
 		for _, e := range g.Edges() {
 			if e.Kind == graph.EdgeImports {
@@ -341,8 +351,8 @@ func TestPythonPackageRootDoesNotReachASibling(t *testing.T) {
 		}
 		t.Errorf("each package must import its own api; imports = %v", got)
 	}
-	if hasEdge(g, "/modules/alpha", "/modules/api-2", graph.EdgeImports) ||
-		hasEdge(g, "/modules/beta", "/modules/api", graph.EdgeImports) {
+	if hasEdge(g, "/modules/alpha", betaAPI, graph.EdgeImports) ||
+		hasEdge(g, "/modules/beta", alphaAPI, graph.EdgeImports) {
 		t.Error("one package's absolute import resolved into the other's code. Neither declares " +
 			"the other and neither can see it, so this is an edge between two packages that " +
 			"cannot import each other — invented structure, reported as extracted")
@@ -1071,6 +1081,261 @@ func TestIDCollisionsAreDisambiguated(t *testing.T) {
 			t.Errorf("duplicate ID %q", m.ID)
 		}
 		seen[m.ID] = true
+	}
+}
+
+// moduleIDsByPath maps each module node's directory to the ID it was assigned.
+func moduleIDsByPath(t *testing.T, files map[string]string) map[string]string {
+	t.Helper()
+	out := build(t, files)
+	m := make(map[string]string)
+	for _, n := range out.Graph.NodesOfKind(graph.KindModule) {
+		m[n.Path] = n.ID
+	}
+	return m
+}
+
+// A directory that did not change keeps its page, whatever else the repository gains or
+// loses. The ID is the page's filename and the concept path every other page links
+// against, so a rename is not cosmetic — it rewrites unrelated pages across a committed
+// bundle, and it does it in the diff of a commit that never touched that directory.
+//
+// The counter this replaced failed on exactly the edits below. Both are things that
+// happen to a repository every week.
+func TestAnUnchangedDirectoryKeepsItsIDWhenTheRepositoryChanges(t *testing.T) {
+	base := map[string]string{
+		"a/auth/x.go":    "package auth\n\nfunc A() {}\n",
+		"b/auth/y.go":    "package auth\n\nfunc B() {}\n",
+		"c/a-u-t-h/z.go": "package auth\n\nfunc C() {}\n",
+	}
+	with := func(edit func(map[string]string)) map[string]string {
+		next := make(map[string]string, len(base)+1)
+		for k, v := range base {
+			next[k] = v
+		}
+		edit(next)
+		return next
+	}
+
+	before := moduleIDsByPath(t, base)
+	if before["b/auth"] == "" || before["b/auth"] == before["a/auth"] {
+		t.Fatalf("fixture no longer collides, so this test proves nothing: %v", before)
+	}
+
+	// A fourth directory whose name collides with the same group, sorting ahead of every
+	// existing member. This is the position that breaks a first-come rule as well as a
+	// counter: the newcomer is seen first, so it takes the bare readable name off whoever
+	// held it, and both that page and the newcomer's are new files in the diff.
+	ahead := moduleIDsByPath(t, with(func(m map[string]string) {
+		m["0/auth/n.go"] = "package auth\n\nfunc N() {}\n"
+	}))
+	for _, dir := range []string{"a/auth", "b/auth", "c/a-u-t-h"} {
+		if ahead[dir] != before[dir] {
+			t.Errorf("%s moved from %q to %q because a directory sorting ahead of it was "+
+				"added; every page linking to %s is now rewritten too",
+				dir, before[dir], ahead[dir], dir)
+		}
+	}
+
+	// A suffixed member of the group deleted. Under the counter every member after the
+	// deleted one shifted down — b/auth was auth-3 here and became auth-2, again
+	// without changing. a/auth is left in place so the bare name does not change hands;
+	// that case is its own test below.
+	group := with(func(m map[string]string) {
+		m["aa/auth/n.go"] = "package auth\n\nfunc N() {}\n"
+	})
+	withMiddle := moduleIDsByPath(t, group)
+	delete(group, "aa/auth/n.go")
+	if got := moduleIDsByPath(t, group)["b/auth"]; got != withMiddle["b/auth"] {
+		t.Errorf("b/auth moved from %q to %q because a different directory in its "+
+			"collision group was deleted", withMiddle["b/auth"], got)
+	}
+
+	// The negative boundary: not moving is worthless if nothing ever moves, which is
+	// what a scheme that gave every module the same ID would also satisfy. A directory
+	// that genuinely is new must still get a page of its own.
+	after := moduleIDsByPath(t, with(func(m map[string]string) {
+		m["d/auth/w.go"] = "package auth\n\nfunc D() {}\n"
+	}))
+	if after["d/auth"] == "" {
+		t.Errorf("the new directory got no module node at all: %v", after)
+	}
+	for path, id := range after {
+		if path != "d/auth" && id == after["d/auth"] {
+			t.Errorf("new directory d/auth shares ID %q with %s, which merges two "+
+				"directories into one page", id, path)
+		}
+	}
+}
+
+// The stability guarantee holds for every prefix, not only for modules — a service page and
+// a data-store page are linked to by name exactly as a module page is.
+//
+// Worth its own test because each prefix is a separate reservation with its own list, and
+// the lists are the part that rots: a pass that starts naming something new, or stops
+// filtering something, silently drops back to order-dependent IDs for that prefix while
+// every other test stays green. Services and data stores are also the two that fold by name
+// before assigning, which makes them the ones where over-counting a reservation is possible.
+func TestIDsAreStableForServicesAndDataStoresToo(t *testing.T) {
+	// Each prefix gets a real slug collision — `web-ui` and `web_ui` are two distinct
+	// services that slug alike, as `app_log` and `app-log` are two distinct tables — because
+	// a reservation only does anything where names collide. Plus a second file declaring one
+	// service, which is the fold.
+	base := map[string]string{
+		"compose.yaml": "services:\n  web-ui:\n    image: docker.io/library/nginx:1\n  web_ui:\n" +
+			"    image: docker.io/library/nginx:1\n  api:\n    image: docker.io/library/nginx:1\n",
+		"deploy/api.yaml": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\n" +
+			"  namespace: prod\nspec:\n  replicas: 2\n",
+		"db/migrations/0001_a.sql": "CREATE TABLE app_log (id int);\n",
+		"db/migrations/0002_b.sql": "CREATE TABLE \"app-log\" (id int);\n",
+	}
+	ids := func(files map[string]string) map[string]string {
+		out := build(t, files)
+		m := map[string]string{}
+		for _, n := range out.Graph.Nodes() {
+			switch n.Kind {
+			case graph.KindService, graph.KindDataStore:
+				m[string(n.Kind)+" "+n.Title] = n.ID
+			}
+		}
+		return m
+	}
+
+	before := ids(base)
+	// The fold: `api` is declared twice and must be one node with the bare name, not a
+	// suffixed pair. A reservation that counted declarations rather than entries would
+	// suffix it.
+	if before["Service api"] != "/services/api" {
+		t.Errorf("Service api = %q, want /services/api: two files declaring one service is "+
+			"one node, so nothing collides with it", before["Service api"])
+	}
+	// The collisions have to be real for the edit below to test anything: if these ever
+	// stop sharing a short name, the test passes while asserting nothing.
+	if before["Service web-ui"] == "/services/web-ui" || before["Service web_ui"] == "/services/web-ui" {
+		t.Fatalf("neither colliding service may hold the bare name, or the reservation is not "+
+			"being applied to this prefix at all: %v", before)
+	}
+	if before["Data Store app_log"] == "/data/app-log" || before["Data Store app-log"] == "/data/app-log" {
+		t.Fatalf("neither colliding table may hold the bare name: %v", before)
+	}
+
+	next := make(map[string]string, len(base)+2)
+	for k, v := range base {
+		next[k] = v
+	}
+	// A third member of each colliding group, spelled so it sorts ahead of the two already
+	// there — the position that takes the bare name under a first-come rule and so the one
+	// that moves an existing page.
+	next["compose.yaml"] = "services:\n  WEB-UI:\n    image: docker.io/library/nginx:1\n" +
+		"  web-ui:\n    image: docker.io/library/nginx:1\n  web_ui:\n" +
+		"    image: docker.io/library/nginx:1\n  api:\n    image: docker.io/library/nginx:1\n"
+	next["db/migrations/0000_c.sql"] = "CREATE TABLE APP_LOG (id int);\n"
+
+	after := ids(next)
+	if after["Service WEB-UI"] == "" || after["Data Store APP_LOG"] == "" {
+		t.Fatalf("the added service and table got no nodes, so the edit under test did not "+
+			"happen: %v", after)
+	}
+	for what, id := range before {
+		if got := after[what]; got != id {
+			t.Errorf("%s moved from %q to %q; nothing about it changed", what, id, got)
+		}
+	}
+}
+
+// The one residual, recorded rather than claimed away: a name is suffixed because more
+// than one thing wants it, so when a collision group shrinks to a single member that
+// member stops needing the suffix and its page moves to the bare name.
+//
+// Deliberate. The alternative is suffixing every name in the bundle whether it collides
+// or not — `signpost` becoming `signpost-1f4ka9` in a repository with nothing else called
+// that — which trades away the readability of every page in every repository to hold still
+// in a case that needs a directory to be deleted. The churn is also bounded: it is the
+// last member of that one group, not the bundle.
+//
+// Written as a test because it is the one shape where the guarantee above does not hold,
+// and a reader finding a moved page deserves to find the reason in the suite rather than
+// deduce it. Should this ever be revisited, this test is what changes.
+func TestDeletingTheBareNameHolderMovesOnlyItsOwnGroup(t *testing.T) {
+	before := moduleIDsByPath(t, map[string]string{
+		"a/auth/x.go":  "package auth\n\nfunc A() {}\n",
+		"b/auth/y.go":  "package auth\n\nfunc B() {}\n",
+		"z/store/s.go": "package store\n\nfunc S() {}\n",
+	})
+	after := moduleIDsByPath(t, map[string]string{
+		"b/auth/y.go":  "package auth\n\nfunc B() {}\n",
+		"z/store/s.go": "package store\n\nfunc S() {}\n",
+	})
+	// Both were suffixed while they shared the name; with the other gone, b/auth is the
+	// only thing called auth and takes the bare name. Documented, not desired.
+	if before["b/auth"] == "/modules/auth" {
+		t.Fatalf("setup: b/auth already held the bare name, so the shrink this test is "+
+			"about cannot happen: %v", before)
+	}
+	if after["b/auth"] != "/modules/auth" {
+		t.Errorf("b/auth = %q, want /modules/auth: with the only other auth gone it is "+
+			"the sole holder of the short name", after["b/auth"])
+	}
+	// A directory outside the group is untouched, which is the part that must hold: the
+	// churn is bounded by the collision, not spread across the bundle.
+	if after["z/store"] != before["z/store"] {
+		t.Errorf("z/store moved from %q to %q; it shares no name with the deleted "+
+			"directory and must not move at all", before["z/store"], after["z/store"])
+	}
+}
+
+// A name that slugs directly onto another entry's suffixed ID must still not merge with
+// it. Nothing stops a directory from being called `api-1f4ka9`, and the suffix is only a
+// discriminator, not a reserved namespace — so the collision check has to be on the
+// finished ID rather than on the short name that produced it.
+//
+// Built through ids rather than through a repository, because the fixture needs to know
+// the hash to name a directory after it.
+func TestANameThatSlugsOntoASuffixedIDIsStillDistinct(t *testing.T) {
+	x := newIDs()
+	first := x.assign(prefixModule, "a/api", "api")
+	second := x.assign(prefixModule, "b/api", "api")
+	if first != prefixModule+"api" || second == first {
+		t.Fatalf("setup: first=%q second=%q, want the bare name and a distinct suffixed one",
+			first, second)
+	}
+	// A third directory whose own name is what the second was given.
+	third := x.assign(prefixModule, "c/"+strings.TrimPrefix(second, prefixModule),
+		strings.TrimPrefix(second, prefixModule))
+	if third == second || third == first {
+		t.Errorf("a directory named %q took the ID %q, which already belongs to another "+
+			"directory: two things on one page is a merged node, not a naming wart",
+			strings.TrimPrefix(second, prefixModule), third)
+	}
+}
+
+// Two same-named directories whose keys hash to the same 32 bits. Then the suffix does
+// not discriminate either, and something still has to.
+//
+// This is not hypothetical at the scale signpost is aimed at: 32 bits collides by the
+// birthday bound somewhere around a hundred thousand keys, and the pair below was found
+// by search rather than constructed, so a large monorepo can reach it. It is also why
+// the ID is checked for use rather than assumed unique once suffixed.
+func TestTwoDirectoriesWhoseKeysHashAlikeStillGetDistinctIDs(t *testing.T) {
+	// Found by enumerating `/modules/pN/auth`; both keys give fnv32a base36 1qhazc2.
+	const a, b = "p46047/auth", "p540990/auth"
+	if keyHash(prefixModule+a) != keyHash(prefixModule+b) {
+		t.Fatalf("fixture stale: %s and %s no longer hash alike, so this test covers "+
+			"nothing — find a new pair or delete it", a, b)
+	}
+	// Three, not two: the first entry takes the bare name, so it is the second and third
+	// that are both pushed onto the suffix and discover the hash does not separate them.
+	x := newIDs()
+	bare := x.assign(prefixModule, "aaa/auth", "auth")
+	first := x.assign(prefixModule, a, "auth")
+	second := x.assign(prefixModule, b, "auth")
+	if first == bare || second == bare {
+		t.Fatalf("setup: %q / %q collided with the bare name %q", first, second, bare)
+	}
+	if second == first {
+		t.Errorf("both directories got %q: their names collide and so do their key "+
+			"hashes, and the ID must still be unique because a shared ID is one page "+
+			"claiming to describe two directories", first)
 	}
 }
 

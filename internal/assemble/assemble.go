@@ -119,6 +119,12 @@ type builder struct {
 
 func (b *builder) run() error {
 	b.index()
+	// Every short name counted before any is assigned, so that a name two things want is
+	// suffixed for both of them and neither depends on which was seen first. It has to be
+	// one pass over all of them rather than one per pass below, because /references/ has
+	// two sources — an external dependency and an ADR both land there — and a collision
+	// across the two is no different from one within either.
+	b.reserveIDs()
 	if err := b.addModules(); err != nil {
 		return err
 	}
@@ -152,6 +158,70 @@ func (b *builder) run() error {
 	b.addCoChangeEdges()
 	b.dropped = b.g.DropDangling()
 	return nil
+}
+
+// reserveIDs counts every short name that will be assigned, before any of them is.
+//
+// The lists here have to match what the add* passes actually name, entry for entry, which
+// is why the two that filter — externals, and the document kinds — are read through the
+// same helper or the same switch rather than re-derived. A name counted for something that
+// never gets a page suffixes the page that does get one, for a collision that does not
+// exist; a name missed leaves that entry order-dependent again.
+//
+// Only names matter, not keys: reserve is asking which short names more than one thing
+// wants.
+func (b *builder) reserveIDs() {
+	dirs := make([]string, 0, len(b.moduleFiles))
+	for d := range b.moduleFiles {
+		dirs = append(dirs, moduleName(d))
+	}
+	b.ids.reserve(prefixModule, dirs)
+
+	if b.in.Manifests == nil {
+		return
+	}
+	order, byKey := b.externals()
+	refs := make([]string, 0, len(order))
+	for _, key := range order {
+		e := byKey[key]
+		refs = append(refs, e.eco+"-"+e.name)
+	}
+	// Services and data stores are folded by name before they are assigned — one node per
+	// service across every compose file that defines it — so the same name twice is one
+	// entry and not a collision. Deduplicated here for that reason: counting occurrences
+	// would suffix the page of every service named in two files.
+	services, data := map[string]bool{}, map[string]bool{}
+	var interfaces []string
+	for _, f := range b.in.Manifests.Facts {
+		for _, s := range f.Services {
+			if s.Name == "" || s.Kind == "helm-values" {
+				continue
+			}
+			services[s.Name] = true
+		}
+		for _, m := range f.Migrations {
+			for _, t := range m.Tables {
+				data[t] = true
+			}
+		}
+		switch f.Kind {
+		case manifest.KindProto, manifest.KindOpenAPI, manifest.KindGraphQL:
+			if len(f.Contracts) > 0 {
+				interfaces = append(interfaces, contractName(f))
+			}
+		case manifest.KindADR, manifest.KindAgentRules:
+			if len(f.Rules) > 0 {
+				// The same prefix as the externals above, and reserve accumulates, so a
+				// document and a dependency wanting one name is counted as the collision
+				// it is.
+				refs = append(refs, documentName(f))
+			}
+		}
+	}
+	b.ids.reserve(prefixReference, refs)
+	b.ids.reserve(prefixService, sortedKeys(services))
+	b.ids.reserve(prefixInterface, interfaces)
+	b.ids.reserve(prefixData, sortedKeys(data))
 }
 
 // index records what exists, before anything is named.
@@ -284,11 +354,21 @@ func (b *builder) addModules() error {
 	return nil
 }
 
-// addExternals creates one node per declared dependency.
+// ext is one external dependency, folded across every manifest that declares it.
+type ext struct {
+	eco, name string
+	versions  []string
+	scopes    []string
+	sources   []string
+	manifests []string
+}
+
+// externals folds the declared dependencies into the entries that will become pages, in
+// assignment order.
 //
-// Declared, never imported: see the resolver's doc comment. The node is keyed by
-// ecosystem and name so `serde` the crate and `serde` an npm package would be two
-// nodes, because they are two things with two separate advisory streams.
+// Declared, never imported: see the resolver's doc comment. Keyed by ecosystem and name so
+// `serde` the crate and `serde` an npm package are two entries, because they are two things
+// with two separate advisory streams.
 //
 // **A monorepo's own packages are excluded, and this is a correctness rule rather than
 // a tidiness one.** A workspace declares its sibling packages as ordinary dependencies
@@ -300,17 +380,12 @@ func (b *builder) addModules() error {
 // exclusion: 60 of 81 scoped "external dependencies" were directories in the tree.
 // The declaration is not discarded — addDeclaredDepEdges draws it onto the module that
 // holds the package's source instead, which is what it was always describing.
-func (b *builder) addExternals() error {
-	if b.in.Manifests == nil {
-		return nil
-	}
-	type ext struct {
-		eco, name string
-		versions  []string
-		scopes    []string
-		sources   []string
-		manifests []string
-	}
+//
+// Its own function rather than part of addExternals because reserveIDs needs exactly this
+// list — the same grouping and the same exclusion — before any ID is assigned. Recomputing
+// it there would be two places that have to agree about which declarations become pages,
+// and a disagreement suffixes a page for a collision that does not exist.
+func (b *builder) externals() ([]string, map[string]*ext) {
 	byKey := make(map[string]*ext)
 	var order []string
 	for _, f := range b.in.Manifests.Facts {
@@ -333,17 +408,33 @@ func (b *builder) addExternals() error {
 	}
 	sort.Strings(order)
 
+	// A package this repository contains is not an external dependency, whatever the
+	// manifest calls it. Dropped here rather than skipped mid-assignment so that both
+	// callers see the same set: no page is written for it and nothing points at one, and
+	// the declaration still becomes an edge onto the package's own module in
+	// addDeclaredDepEdges.
+	kept := order[:0]
 	for _, key := range order {
-		e := byKey[key]
-		// A package this repository contains is not an external dependency, whatever the
-		// manifest calls it. Skipped before the ID is assigned, so no page is written and
-		// nothing points at one; the declaration still becomes an edge onto the package's
-		// own module in addDeclaredDepEdges.
-		if e.eco == "npm" {
+		if e := byKey[key]; e.eco == "npm" {
 			if _, inRepo := b.res.npmSibling(e.name); inRepo {
 				continue
 			}
 		}
+		kept = append(kept, key)
+	}
+	return kept, byKey
+}
+
+// addExternals creates one node per declared dependency. Which declarations become nodes,
+// and why some do not, is externals above.
+func (b *builder) addExternals() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	order, byKey := b.externals()
+
+	for _, key := range order {
+		e := byKey[key]
 		// The ecosystem is part of the ID, not just the key: two same-named packages
 		// in different registries must not collide into one page.
 		id := b.ids.assign(prefixReference, key, e.eco+"-"+e.name)

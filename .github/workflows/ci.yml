@@ -1387,6 +1387,90 @@ jobs:
           done
           echo "unlinked: ${got} specifier(s), each placed exactly and holding no page"
 
+      # A page's name is its node ID and every other page links to it by that name (ADR 0003),
+      # so a renamed page is that file plus every page citing it, rewritten in the diff of a
+      # commit that need not have touched the directory. Nothing in the graph is wrong
+      # afterwards, which is why it needs asserting here: `verify` passes and every other check
+      # in this job passes, and the only symptom is the thing this step measures — the diff.
+      #
+      # Four directories in the corpus are called `src`, which is ordinary for a polyglot
+      # repository and is what the old positional counter numbered: a page's name depended on
+      # how many same-named directories sorted ahead of it, so adding one renumbered the rest.
+      # The edit below adds a Go package in `go/src` — a new member of the largest collision
+      # group, sorting ahead of the Rust and TypeScript members, which is the position that took
+      # a number already in use and pushed every later one along.
+      #
+      # `git status` rather than a name comparison, because this is the assertion
+      # TestCorpusPageNamesSurviveAnUnrelatedEdit cannot make. That test rebuilds and compares
+      # names in process; this one commits the bundle first, so what it measures is what a
+      # reviewer sees. A rename shows up as a delete plus an add of a path never seen before,
+      # and pages linking to the old name show up as modified.
+      #
+      # Its own copy of the tree: this stage commits a bundle and then edits the repository,
+      # and the stages after it measure the untouched one.
+      - name: A committed bundle's page names survive an unrelated edit
+        run: |
+          set -euo pipefail
+          corpus="${RUNNER_TEMP}/corpus-ids"
+          cp -r testdata/corpus "$corpus"
+          git -C "$corpus" init --quiet --initial-branch=main
+          git -C "$corpus" config user.name "Corpus Author"
+          git -C "$corpus" config user.email "corpus@example.invalid"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the corpus"
+          # The bundle committed, which is how signpost is meant to be used and the only state
+          # in which a rename costs anything.
+          ./signpost build --quiet -repo example.com/corpus "$corpus"
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "the bundle"
+          # The fixture has to collide, or the edit below proves nothing. Two `src` directories
+          # sharing a short name is what makes any of them suffixed in the first place.
+          collisions=$(ls "${corpus}/.signpost/modules/" | grep -c '^src-' || true)
+          [ "$collisions" -ge 2 ] || {
+            echo "only ${collisions} suffixed src page(s) in the corpus bundle, want at least 2."
+            echo "Without a collision group this step measures nothing, so the corpus has"
+            echo "stopped covering the case rather than the code having been fixed."
+            ls "${corpus}/.signpost/modules/"
+            exit 1
+          }
+          mkdir -p "${corpus}/go/src"
+          cat >"${corpus}/go/src/telemetry.go" <<'GO'
+          // Package telemetry stands for an ordinary new package. Added by CI.
+          package telemetry
+
+          // Count does nothing.
+          func Count() int { return 0 }
+          GO
+          git -C "$corpus" add -A
+          GIT_AUTHOR_DATE=2026-01-01T00:00:00Z GIT_COMMITTER_DATE=2026-01-01T00:00:00Z \
+            git -C "$corpus" commit --quiet -m "add a package"
+          ./signpost build --quiet -repo example.com/corpus "$corpus"
+          # Every path git reports as deleted. One new package adds pages and touches the ones
+          # that link to it; it can delete a page only by taking its name off something.
+          deleted=$(git -C "$corpus" status --porcelain -- .signpost | sed -n 's/^ *D //p')
+          [ -z "$deleted" ] || {
+            echo "the build deleted page(s) after an unrelated package was added:"
+            echo "$deleted"
+            echo
+            echo "Each is a page whose name moved. The concept it described still exists — no"
+            echo "directory was removed — so its file was rewritten under a new name, along with"
+            echo "every page linking to it, in a commit that only added a Go package elsewhere."
+            git -C "$corpus" status --porcelain -- .signpost
+            exit 1
+          }
+          # The negative half. The added package must reach a page of its own, or the assertion
+          # above is satisfied by a build that did nothing.
+          added=$(git -C "$corpus" status --porcelain -- .signpost | sed -n 's/^?? //p')
+          case "$added" in
+            *modules/src*) ;;
+            *) echo "no new src page for go/src, so the edit under test did not happen:"
+               git -C "$corpus" status --porcelain -- .signpost
+               exit 1 ;;
+          esac
+          echo "page names held: ${collisions} colliding page(s), nothing deleted, go/src added"
+
       # -include-vendored, which spent v0.1.0 doing nothing (issue #11). The walk honoured
       # the flag and read the files; every consumer downstream filtered them back out on
       # File.Vendored with no reference to the option, so the flag read vendored code off

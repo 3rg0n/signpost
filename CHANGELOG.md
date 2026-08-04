@@ -163,6 +163,53 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+#### 2026-08-04
+
+- **A colliding page name is now suffixed with a hash of the thing it names rather than a
+  position, so `src-2.md` becomes `src-1slg0rn.md`
+  ([ADR 0015](docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md)).** A one-time
+  rename in every adopted bundle that has a collision; a bundle without one, including signpost's
+  own, is byte-identical.
+
+  The name is a contract. It is the node ID, every other page links to it by that ID, and the
+  bundle is committed — so a renamed page is that file *plus every page citing it*, rewritten in
+  the diff of a commit that need not have touched the directory. The suffix was a counter in path
+  order, which made a page's name depend on how many same-named directories sorted ahead of it: in
+  a tree with `a/auth`, `b/auth` and `c/a-u-t-h`, adding `aa/auth` renamed `b/auth`'s page from
+  `auth-2` to `auth-3`, and deleting `a/auth` renamed it again to `auth`. Twice, for a directory
+  that had not changed. Adding a directory that did not collide moved nothing, which is what
+  locates the cost: it is paid by every later member of the group. `ZT-duo-cc-plugins`, a
+  repository with a bundle already, carries a `tests-2.md` named this way.
+
+  Nothing in the graph is wrong afterwards, which is why it needed asserting rather than noticing:
+  `verify` passes, every test passes, and the symptom is a reviewer facing forty changed pages for
+  a one-directory change with no way to tell which mean something. The bundle's whole claim is
+  that it is reviewable.
+
+  **Hashing the key was not sufficient on its own.** Somebody still has to get the bare readable
+  `src`, and giving it to whoever the walk sees first means a newcomer sorting ahead of the
+  incumbent takes the name off it — and adding a `src` to a repository that has two is an ordinary
+  edit, so roughly half of such additions would rename someone else's page. So the names are
+  counted before any is assigned and a shared one is suffixed for *every* member including the
+  first. That was found by a corpus test failing on `rust/src moved from modules/src.md to
+  modules/src-1slg0rn.md`, not by reasoning about it.
+
+  One residual, recorded rather than claimed away: when a collision group shrinks to a single
+  member, that member stops needing a suffix and moves to the bare name. Bounded to that group.
+  Closing it means suffixing every page in every bundle whether it collides or not, which trades
+  the readability of all of them for stability in a case that needs a directory deleted.
+
+  Held at two levels because they catch different things. `TestCorpusPageNamesSurviveAnUnrelatedEdit`
+  rebuilds in process on all three platforms, so a filesystem that folds case differently shows up
+  there; the corpus job's *A committed bundle's page names survive an unrelated edit* commits the
+  bundle first and asserts `git status` reports no deletion, which is the reviewer-facing cost and
+  the thing no in-process test can measure — a rename is a delete plus an add of a path never seen
+  before. Both add a Go package in `go/src`, a new member of the largest collision group sorting
+  ahead of the Rust and TypeScript members, which under a counter is the worst position available.
+  Five mutations, each killed by a distinct assertion: restoring the counter, hashing the slug
+  instead of the key, ignoring the reservation, dropping the terminating counter, and skipping the
+  reservation for services or for data stores.
+
 #### 2026-08-02
 
 - **The zero-dependency claim is withdrawn from the README, the landing page, and

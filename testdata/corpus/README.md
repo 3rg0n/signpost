@@ -289,6 +289,51 @@ only internal import drew no edge for as long as the corpus has existed. Nothing
 because no assertion here named a Go internal edge and the coverage report had no line for it.
 Adding the count found it on the first run, along with `use super::*` resolving out of the crate.
 
+## Four directories called `src`
+
+Ordinary, and the reason this tree can show a defect signpost's own repository cannot. `rust/src`,
+`ts/src`, `ts/packages/api/src` and `ts/packages/core/src` all slug to `src`; `py/services/alpha/api`
+and `py/services/beta/api` both slug to `api`; `go/greeter` and `py/greeter` both slug to `greeter`.
+Six colliding pages in a fifty-file repository. signpost's own bundle has none, so nothing about
+page naming under collision is observable by running signpost on signpost.
+
+A page's name **is** its node ID and every other page links to it by that name ([ADR 0003](../../docs/adr/0003-directory-granularity-for-module-nodes.md)),
+so a page that gets renamed is that file *plus every page citing it*, rewritten in the diff of a
+commit that need not have touched the directory. Nothing in the graph is wrong afterwards. That is
+what made it worth a test: `verify` passes, every other assertion passes, and the only symptom is a
+reviewer facing forty changed pages for a one-directory change with no way to tell which mean
+something.
+
+The suffix used to be a counter — `src`, `src-2`, `src-3`, `src-4` in path order — so a page's name
+depended on how many same-named directories sorted ahead of it. Adding one renumbered every later
+member and deleting one shifted them all down. `ZT-duo-cc-plugins`, a real repository, carries a
+`tests-2.md` whose name is decided that way. The suffix is now derived from the entry's own key, so
+it depends on that entry and on whether its short name is shared, and on nothing else.
+
+Two tests, at two levels, because they catch different things:
+
+| Test | What it does | What only it can catch |
+|---|---|---|
+| `TestCorpusPageNamesSurviveAnUnrelatedEdit` | builds, adds `go/src`, rebuilds in process, compares names by frontmatter `title` | runs on all three platforms, so a filesystem that folds case or normalises differently shows up here |
+| **ci.yml** — `A committed bundle's page names survive an unrelated edit` | commits the bundle first, then adds `go/src` and asserts `git status` reports no deletion | the reviewer-facing cost. A rename is a delete plus an add of a path never seen before; only a committed bundle can show it |
+
+The edit both use is a Go package in `go/src` — a new member of the largest collision group, sorting
+ahead of the Rust and TypeScript members. Under a counter that is the worst position available: it
+takes a number already in use and pushes every later one along by one.
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | no pre-existing page's name changes, and nothing is deleted | the shipped bug: a rename storm in a commit that added one package |
+| negative | `go/src` gets a page of its own, distinct from every other `src` | an assertion satisfied by a build that did nothing, or by two directories sharing one page |
+| structural | at least two `src-*` pages exist before the edit | without a collision group there is nothing to renumber, so the test would pass on a corpus that cannot show the defect |
+
+The one residual is recorded rather than claimed away, in
+`TestDeletingTheBareNameHolderMovesOnlyItsOwnGroup`: a name is suffixed because more than one thing
+wants it, so when a collision group shrinks to a single member that member stops needing its suffix
+and moves to the bare name. The alternative is suffixing every page in every bundle whether it
+collides or not, which trades the readability of all of them for stability in a case that requires a
+directory to be deleted.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs
