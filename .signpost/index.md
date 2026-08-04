@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 49 concepts, 89 relationships."
-resource: git://github.com/3rg0n/signpost@3bfbbaa669d02739674da97f5f1f490d8843e7ba
+description: "Structural map of this repository: 50 concepts, 89 relationships."
+resource: git://github.com/3rg0n/signpost@86072bf2e78fb84ab888f58a38c9494af3fac29a
 generated: { by: signpost/dev, at: "2026-08-04" }
 ---
 # Repository map
@@ -27,7 +27,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 
 ### Modules
 
-- [internal/assemble](./modules/assemble.md) — 6 go files; 54 exported symbols.
+- [internal/assemble](./modules/assemble.md) — 6 go files; 59 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
 - [internal/discover](./modules/discover.md) — 5 go files; 69 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
@@ -39,7 +39,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/okf](./modules/okf.md) — 13 go files; 196 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 17 go files; 98 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 17 go files; 99 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 1 javascript file.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
@@ -60,6 +60,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0012: a group name is never an action](./references/adr-0012-a-group-name-is-never-an-action.md) — Architecture decision (Accepted), 23 rules read from 0012-a-group-name-is-never-an-action.md.
 - [ADR 0013: the local hook reports and ci gates](./references/adr-0013-the-local-hook-reports-and-ci-gates.md) — Architecture decision (Accepted), 23 rules read from 0013-the-local-hook-reports-and-ci-gates.md.
 - [ADR 0014: adopt the otel sdk and write the exporter](./references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md) — Architecture decision (Accepted), 44 rules read from 0014-adopt-the-otel-sdk-and-write-the-exporter.md.
+- [ADR 0015: a colliding page name is suffixed from its own key](./references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md) — Architecture decision (Accepted), 25 rules read from 0015-a-colliding-page-name-is-suffixed-from-its-own-key.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 9 rules read from README.md.
 

@@ -1,24 +1,24 @@
 ---
 type: Module
 title: cmd/signpost
-description: 17 go files; 98 exported symbols; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@3bfbbaa669d02739674da97f5f1f490d8843e7ba/cmd/signpost
+description: 17 go files; 99 exported symbols; entrypoint main; package main.
+resource: git://github.com/3rg0n/signpost@86072bf2e78fb84ab888f58a38c9494af3fac29a/cmd/signpost
 tags: [entrypoint]
 generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
-  - { name: commits, value: "23" }
+  - { name: commits, value: "24" }
   - { name: entrypoints, value: main }
-  - { name: exported, value: "98" }
+  - { name: exported, value: "99" }
   - { name: files, value: "17" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-04" }
-  - { name: lines_added, value: "6656" }
-  - { name: lines_removed, value: "213" }
+  - { name: lines_added, value: "6774" }
+  - { name: lines_removed, value: "224" }
   - { name: package, value: main }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 83% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 7 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 8 }
   - { kind: imports, to: ./assemble.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
   - { kind: imports, to: ./config.md, confidence: extracted, weight: 6, source: cmd/signpost/build.go }
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 4 }
@@ -45,7 +45,7 @@ edges:
 # cmd/signpost
 
 <!-- signpost:managed:summary -->
-17 go files; 98 exported symbols; entrypoint main; package main.
+17 go files; 99 exported symbols; entrypoint main; package main.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -70,7 +70,7 @@ edges:
 - `cmd/signpost/verify.go`
 - `cmd/signpost/verify_test.go`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×7, [internal/discover](./discover.md) ×4, [internal/manifest](./manifest.md) ×4, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×7, [internal/practice](./practice.md) ×3, [internal/semantic](./semantic.md) ×3, [site](./site.md) ×5, [internal/vcs](./vcs.md) ×4
+- **Changes with**: [internal/assemble](./assemble.md) ×8, [internal/discover](./discover.md) ×4, [internal/manifest](./manifest.md) ×4, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×7, [internal/practice](./practice.md) ×3, [internal/semantic](./semantic.md) ×3, [site](./site.md) ×5, [internal/vcs](./vcs.md) ×4
 
 - **Imports**: [internal/assemble](./assemble.md) ×1, [internal/config](./config.md) ×6, [internal/discover](./discover.md) ×1, [internal/export](./export.md) ×1, [internal/extract](./extract.md) ×1, [internal/graph](./graph.md) ×2, [internal/hook](./hook.md) ×2, [internal/manifest](./manifest.md) ×2, [internal/model](./model.md) ×5, [internal/okf](./okf.md) ×5, [internal/practice](./practice.md) ×1, [internal/semantic](./semantic.md) ×1, [internal/telemetry](./telemetry.md) ×2, [internal/vcs](./vcs.md) ×2
 <!-- /signpost:managed:structure -->
