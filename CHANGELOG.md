@@ -8,6 +8,49 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-04
+
+- **`signpost build -suggest-agents-md` prints the pointer an agent needs, and a build says when
+  nothing points at the bundle.** Two halves of one gap. A committed bundle is not a discovered
+  bundle: given the same task in two repositories that both had one, an agent used it in the one
+  whose instructions named `.signpost/` and ignored it entirely in the one that did not — reading
+  eleven files by hand to re-derive structure sitting in twenty-eight pages it never opened.
+  Models are trained to read `README.md` and `AGENTS.md`; nothing trains them to look inside a
+  dot-directory they have never heard of.
+
+  **The flag writes nothing at all.** Not `AGENTS.md`, and not the bundle it would otherwise have
+  built — it prints three sentences to stdout and exits, so `signpost build -suggest-agents-md >>
+  AGENTS.md` is the whole adoption step and the `>>` is the human's to type. That is design §6.2
+  held to literally: signpost writes `.signpost/` and nothing else, because a generator that
+  overwrites a file encoding somebody's intent is how teams learn to distrust tooling. A flag on
+  `build` rather than a verb, because [ADR 0012](docs/adr/0012-a-group-name-is-never-an-action.md)
+  would otherwise make `suggest` a group with one operation and no sibling in sight.
+
+  **The note is keyed on the index page, not the bundle directory, and the corpus is what settled
+  that.** A build whose `AGENTS.md`, `CLAUDE.md`, `.cursorrules`,
+  `.github/copilot-instructions.md`, and `README.md` all fail to name `.signpost/index.md` says
+  so on stderr and names the flag that fixes it. Matching the directory instead looked equivalent
+  and was not: the corpus README explains that the test harness writes a `.signpost/` and deletes
+  it, which is a sentence about the tool rather than somewhere to start, and the looser rule read
+  it as adoption and went quiet on a repository that had adopted nothing. It costs a false
+  negative the other way — a file pointing at `practices.md` and never at the index gets the note
+  anyway — which is the right direction: the note costs a line, and the silence cost the check.
+
+  On stderr, not suppressed by `-quiet`, and the build still exits zero. Nothing is wrong with the
+  bundle, and a non-zero exit over a file signpost is forbidden to write would be reporting a
+  fault it created.
+
+- **A repository with no git at all builds, on best effort.** Git and a forge are the recommended
+  setup and, where present, are authoritative for what is tracked and which commit the bundle
+  describes. They are not a requirement. A tarball with no `.git` gets every page a repository
+  with history would get, under the same names — a page's identity comes from the tree, not the
+  log ([ADR 0015](docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md)) — with the
+  history line reporting `history not read` and no `resource:` or `generated:` stamp anywhere,
+  because a commit nobody can check is worse than none. `verify` reports its staleness check as
+  skipped and exits zero. This was already the behaviour; it is now asserted end-to-end against
+  the corpus with the `.git` directory removed, and `docs/design.md` no longer claims git is
+  present wherever signpost runs.
+
 #### 2026-08-02
 
 - **OpenTelemetry traces for signpost's own run, off unless asked for.** Six spans — `analyse`

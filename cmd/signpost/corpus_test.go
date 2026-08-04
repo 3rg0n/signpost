@@ -2398,3 +2398,161 @@ func TestCorpusBuildIsByteStable(t *testing.T) {
 		}
 	}
 }
+
+// TestCorpusBuildsWithNoGitAtAll is the tarball case: somebody sends you a repository as an
+// archive, you unpack it, and there is no .git anywhere.
+//
+// Unlikely and a corner, but the interesting part is what "best effort" has to mean for it to
+// be safe. Git is authoritative where it is present — it decides what is tracked, what is
+// versioned, and which branch a bundle belongs to — and none of that is signpost's to
+// reimplement. What signpost owes a tree with no git is a bundle built from the files, and
+// silence on every claim that only a commit could support.
+//
+// So this stage asserts the degradation is honest in both directions, which is the pair that
+// makes it a boundary rather than a smoke test. Positive: the pages that describe the *files*
+// are all still there, byte-identical to the ones a git build writes, because nothing about a
+// module's structure came from history. Negative: not one page carries a `resource:` or a
+// `generated:` key, because both come from the commit and a page stamped with provenance
+// nobody can check is worse than an unstamped one. A build that fell back to the clock, to a
+// zero sha, or to `git://@` would pass every other test in this file.
+//
+// The corpus rather than a two-file fixture, because the condition to catch is a reader that
+// needs git for something other than history — a resolution root, a file list, an ignore rule
+// — and that only shows up across four languages and forty files.
+func TestCorpusBuildsWithNoGitAtAll(t *testing.T) {
+	// The git build first, as the comparison. Same tree, same flags, so any difference below
+	// is history and nothing else.
+	withGit := bundlePages(t, buildCorpus(t))
+
+	dir := corpusRepo(t)
+	if err := os.RemoveAll(filepath.Join(dir, ".git")); err != nil {
+		t.Fatal(err)
+	}
+	// The guard. Without it a change to corpusRepo that stopped creating a repository would
+	// make this stage assert nothing while passing.
+	if _, err := os.Stat(filepath.Join(dir, ".git")); !os.IsNotExist(err) {
+		t.Fatalf(".git is still there, so this stage is testing a git build: %v", err)
+	}
+
+	stdout, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("a tree with no git failed to build: exit = %d\n%s", code, stderr)
+	}
+	// Said out loud, per §4.2. A bundle with no co-change edges looks identical whether the
+	// repository has no coupling or signpost read no history, and the reader would take the
+	// first for the second.
+	if !strings.Contains(stderr, "history not read: not a git repository") {
+		t.Errorf("the build did not say why it read no history:\n%s", stderr)
+	}
+	if !strings.Contains(stdout, "page(s):") {
+		t.Errorf("no pages were reported:\n%s", stdout)
+	}
+
+	pages := bundlePages(t, dir)
+
+	// The negative boundary, and the one that matters: no provenance anywhere.
+	for _, rel := range sortedPageNames(pages) {
+		fm := pages[rel]
+		if i := strings.Index(fm, "\n---"); i > 0 {
+			fm = fm[:i]
+		}
+		for _, key := range []string{"resource:", "generated:"} {
+			if strings.Contains(fm, key) {
+				t.Errorf("%s carries %s with no commit to name, so it claims provenance "+
+					"nobody can check:\n%s", rel, key, fm)
+			}
+		}
+	}
+
+	// The positive boundary. Every page a git build wrote about the *files* is still written,
+	// with the same name — the ID scheme is content-derived (ADR 0015) and takes nothing from
+	// history, so a page that moved or vanished here means a reader reached for git to decide
+	// something it should not have.
+	for _, rel := range sortedPageNames(withGit) {
+		if _, ok := pages[rel]; !ok {
+			t.Errorf("%s was written from a git checkout and not from the same tree without "+
+				"one. Pages written:\n  %s", rel, pageNames(pages))
+		}
+	}
+
+	// And verify accepts it, naming the check it could not run. A staleness check that has no
+	// commit to compare against and reports "ok" is the false pass verify exists to prevent,
+	// so the skip has to be named.
+	vout, verr, vcode := invoke(t, "verify", "-repo", "example.com/corpus", dir)
+	if vcode != 0 {
+		t.Fatalf("verify rejected a bundle built from the same tree it is checking: "+
+			"exit = %d\n%s\n%s", vcode, vout, verr)
+	}
+	if !strings.Contains(vout, "skipped") {
+		t.Errorf("verify passed without naming the staleness check as skipped, so an "+
+			"unstamped bundle reads as a verified one:\n%s", vout)
+	}
+}
+
+// TestCorpusSaysNothingPointsAtTheBundle is the adoption gap, asserted on a repository that
+// has an AGENTS.md and still does not point at the map.
+//
+// This is the failure mode a green build cannot show. Every page is correct, verify passes,
+// and no agent ever opens the directory — because nothing a model is trained to read mentions
+// it. The corpus is the right shape for it precisely because it *does* have an AGENTS.md and a
+// README.md, so a check that fired on the file's absence rather than on its content would pass
+// here and be useless in the field.
+func TestCorpusSaysNothingPointsAtTheBundle(t *testing.T) {
+	dir := corpusRepo(t)
+	target := okf.BundleDir + "/" + okf.IndexPage
+	// The guard: the corpus states rules for agents and points at no map. If it ever gains a
+	// pointer, this stage stops testing what it claims to.
+	agents, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(agents), target) {
+		t.Fatalf("the corpus AGENTS.md now names %s, so this stage cannot reach the "+
+			"unpointed case", target)
+	}
+	// And the condition that made this check precise rather than nearly right. The corpus
+	// README mentions `.signpost/` in prose about the harness — a sentence explaining that a
+	// build writes one — which is not a pointer at anything. A check keyed on the directory
+	// read that as adoption and stayed silent; keyed on the index page it does not. This is
+	// asserted rather than commented because the looser rule passed every other stage here.
+	readme, err := os.ReadFile(filepath.Join(dir, "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(readme), okf.BundleDir) {
+		t.Fatalf("the corpus README no longer mentions %s at all, so this stage no longer "+
+			"covers prose-that-is-not-a-pointer", okf.BundleDir)
+	}
+	if strings.Contains(string(readme), target) {
+		t.Fatalf("the corpus README now points at %s, so this stage cannot reach the "+
+			"unpointed case", target)
+	}
+
+	_, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stderr, "nothing points at the bundle") {
+		t.Errorf("a repository whose instructions never name %s was not told so:\n%s",
+			okf.BundleDir, stderr)
+	}
+
+	// The fix works on this repository: append the stub, rebuild, and the note is gone. The
+	// two halves together are what make the note actionable rather than decorative — a
+	// suggestion that does not silence the thing suggesting it is a suggestion nobody follows
+	// twice.
+	stub, _, code := invoke(t, "build", "-suggest-agents-md", dir)
+	if code != 0 {
+		t.Fatalf("-suggest-agents-md: exit = %d", code)
+	}
+	rewrite(t, filepath.Join(dir, "AGENTS.md"), string(agents)+"\n"+stub)
+
+	_, stderr, code = invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("rebuild: exit = %d\n%s", code, stderr)
+	}
+	if strings.Contains(stderr, "nothing points at the bundle") {
+		t.Errorf("the stub signpost suggested does not satisfy the check that suggested "+
+			"it:\n%s", stderr)
+	}
+}

@@ -94,6 +94,14 @@ skip it, `-max-commits` to change how far back the walk goes. In CI, check out
 with `fetch-depth: 0`: a shallow clone yields real but truncated signals, and
 signpost says so rather than presenting them as the whole history.
 
+Git is the recommended setup and, where it is there, it is authoritative: what is
+tracked, what is ignored, and which commit the bundle describes are git's business.
+But it is not required. Run signpost on a tarball with no `.git` and you still get a
+bundle — every page, under the same names — with the history line reporting `history
+not read` and the pages carrying no `resource:` or `generated:` stamp at all, because a
+commit nobody can check is worse than no commit. `verify` reports its staleness check as
+skipped and exits zero.
+
 ## What it writes
 
 `signpost build` writes `.signpost/`: an `index.md` to start from, one page per
@@ -154,8 +162,29 @@ it is the whole fix.
 
 signpost will not write those files for you — they encode your intent, and a generator
 that overwrites them is how teams learn to distrust tooling
-([design §6.2](docs/design.md)). It only reads them, to report whether a repository
-states any rules for the agents working in it.
+([design §6.2](docs/design.md)). What it will do is draft the line and let you place it:
+
+```bash
+signpost build -suggest-agents-md            # prints a stub, writes nothing at all
+signpost build -suggest-agents-md >> AGENTS.md
+```
+
+The flag prints and exits — no bundle, no edit to `AGENTS.md`, nothing on disk. The `>>`
+is yours to type, which is the boundary rather than an inconvenience.
+
+And because a bundle nothing points at is the one failure a green build cannot show, a
+build that finds no pointer says so:
+
+```
+nothing points at the bundle: no AGENTS.md and no README.md names .signpost/index.md,
+so an agent has no reason to open it
+  run `signpost build -suggest-agents-md >> AGENTS.md` to add one, or write your own
+```
+
+It looks in the five files a model is trained to open — `AGENTS.md`, `CLAUDE.md`,
+`.cursorrules`, `.github/copilot-instructions.md`, `README.md` — for the index page by
+name. Mentioning `.signpost/` in passing is not a pointer: a paragraph explaining what
+the directory is does not tell an agent where to start.
 
 ## What it checks
 

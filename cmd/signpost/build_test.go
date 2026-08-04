@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -233,6 +236,205 @@ func TestBuildOnAnEmptyRepository(t *testing.T) {
 	if idx := bundleFile(t, root, okf.IndexPage); !strings.Contains(idx, "0 concepts") {
 		t.Errorf("the index does not say the repository was empty:\n%s", idx)
 	}
+}
+
+// The pointer stub prints, and it names the page an agent should open.
+//
+// index.md rather than the directory: a directory listing is not a starting point, and
+// index.md is the page written to be one.
+func TestSuggestAgentsMdPrintsAPointerAtTheIndex(t *testing.T) {
+	root := fixture(t)
+	stdout, stderr, code := invoke(t, "build", "-suggest-agents-md", root)
+	if code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stdout, okf.BundleDir+"/"+okf.IndexPage) {
+		t.Errorf("the stub does not name %s/%s:\n%s", okf.BundleDir, okf.IndexPage, stdout)
+	}
+	// Appendable. A stub not ending in a newline joins the last line of the file it is
+	// appended to, which is the one way `>> AGENTS.md` can corrupt somebody's file.
+	if !strings.HasSuffix(stdout, "\n") {
+		t.Errorf("the stub does not end in a newline, so appending it would join a line:\n%q", stdout)
+	}
+	// Markdown a person can drop in, not a bare path.
+	if !strings.Contains(stdout, "#") {
+		t.Errorf("the stub has no heading, so it does not read as a section:\n%s", stdout)
+	}
+}
+
+// The negative boundary, and the one design §6.2 forbids breaking: the flag writes nothing.
+// Not the bundle it would otherwise have built, and above all not AGENTS.md — signpost writes
+// .signpost/ and nothing else, and a generator that overwrote the file encoding somebody's
+// intent is how teams learn to distrust tooling.
+func TestSuggestAgentsMdWritesNothingAtAll(t *testing.T) {
+	root := fixture(t)
+	// An AGENTS.md already there, with content, because overwriting an existing one is the
+	// specific harm. Its bytes are the assertion.
+	agents := filepath.Join(root, "AGENTS.md")
+	const mine = "# my rules\n\nDo not touch this file.\n"
+	if err := os.WriteFile(agents, []byte(mine), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before := treeSnapshot(t, root)
+
+	if _, stderr, code := invoke(t, "build", "-suggest-agents-md", root); code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+
+	if got := treeSnapshot(t, root); !maps.Equal(got, before) {
+		t.Errorf("-suggest-agents-md changed the tree.\n before: %v\n  after: %v",
+			sortedKeysOf(before), sortedKeysOf(got))
+	}
+	if b, err := os.ReadFile(agents); err != nil || string(b) != mine {
+		t.Errorf("AGENTS.md was rewritten: %q (err %v)", string(b), err)
+	}
+	// And no bundle: the flag is not a build with an extra line of output.
+	if _, err := os.Stat(filepath.Join(root, okf.BundleDir)); !os.IsNotExist(err) {
+		t.Errorf("a bundle was written by a flag that only prints: %v", err)
+	}
+}
+
+// A repository whose instructions do not name the bundle is told so, because that is the
+// failure a green build cannot show: every page correct, verify passing, and no agent opening
+// it.
+func TestBuildSaysWhenNothingPointsAtTheBundle(t *testing.T) {
+	root := fixture(t)
+	_, stderr, code := invoke(t, "build", root)
+	if code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stderr, "nothing points at the bundle") {
+		t.Errorf("an unpointed bundle was not reported:\n%s", stderr)
+	}
+	// The note names the fix. A line saying only that something is missing leaves the reader
+	// to compose a sentence, which is the work the flag exists to remove.
+	if !strings.Contains(stderr, "-suggest-agents-md") {
+		t.Errorf("the note does not name the flag that fixes it:\n%s", stderr)
+	}
+}
+
+// The negative boundary on the note: a repository that *has* a pointer is not nagged. A
+// diagnostic that fires on a repository which already did the thing is one people learn to
+// filter out, and it takes the useful firings with it.
+func TestBuildIsQuietWhenAPointerExists(t *testing.T) {
+	// Written out rather than ranged over `pointerFiles`, which is the difference between a
+	// test and a tautology: a loop over the list under test loses a case when somebody deletes
+	// an entry, and passes while doing it. Deleting `README.md` from the list survived this
+	// test until the names were pinned here.
+	want := []string{
+		"AGENTS.md",
+		"CLAUDE.md",
+		".cursorrules",
+		".github/copilot-instructions.md",
+		"README.md",
+	}
+	if !slices.Equal(pointerFiles, want) {
+		t.Fatalf("pointerFiles changed to %v.\nEach entry is a file a model is trained to open "+
+			"before starting work, so adding or removing one changes which repositories get "+
+			"nagged. Update %v here deliberately.", pointerFiles, want)
+	}
+	// Every one of them, one at a time, because a repository states its rules in exactly one
+	// and recognising only AGENTS.md would nag the rest.
+	for _, name := range want {
+		t.Run(name, func(t *testing.T) {
+			root := fixture(t)
+			p := filepath.Join(root, filepath.FromSlash(name))
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			body := "# rules\n\nRead `" + okf.BundleDir + "/" + okf.IndexPage + "` first.\n"
+			if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			_, stderr, code := invoke(t, "build", root)
+			if code != 0 {
+				t.Fatalf("exit = %d\n%s", code, stderr)
+			}
+			if strings.Contains(stderr, "nothing points at the bundle") {
+				t.Errorf("%s names the bundle and the build still asked for a pointer:\n%s",
+					name, stderr)
+			}
+		})
+	}
+}
+
+// The other half of that boundary, and the one that makes the check worth having: a file that
+// exists but does not mention the bundle is not a pointer. Without this, `pointsAtTheBundle`
+// could be testing for the file's existence and pass every assertion above.
+func TestAnAgentsFileThatNeverNamesTheBundleIsNotAPointer(t *testing.T) {
+	root := fixture(t)
+	body := "# rules\n\nRun make test before pushing. Nothing here mentions the map.\n"
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, stderr, code := invoke(t, "build", root)
+	if code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stderr, "nothing points at the bundle") {
+		t.Errorf("an AGENTS.md that never names %s was accepted as a pointer:\n%s",
+			okf.BundleDir, stderr)
+	}
+}
+
+// Prose about the bundle directory is not a pointer at the map, and this is the boundary the
+// corpus found: its README explains that the harness writes `.signpost/`, which is a sentence
+// about the tool and not somewhere for an agent to start. A check keyed on the directory read
+// that as adoption and went quiet on a repository that had adopted nothing.
+func TestMentioningTheBundleDirectoryIsNotAPointer(t *testing.T) {
+	root := fixture(t)
+	body := "# rules\n\nThe test harness writes a bundle to `" + okf.BundleDir +
+		"/` and deletes it afterwards.\n"
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, stderr, code := invoke(t, "build", root)
+	if code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stderr, "nothing points at the bundle") {
+		t.Errorf("a README mentioning %s in passing was accepted as a pointer at the map:\n%s",
+			okf.BundleDir, stderr)
+	}
+}
+
+// treeSnapshot reads every file in the tree outside the bundle, keyed by slash path. Used to
+// assert a command wrote nothing, which needs the whole tree rather than one file: "it did not
+// touch AGENTS.md" and "it touched nothing" are different claims.
+func treeSnapshot(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		out[filepath.ToSlash(rel)] = string(b)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func sortedKeysOf(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Nothing executable lands in a directory that gets committed and often published.

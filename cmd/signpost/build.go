@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/3rg0n/signpost/internal/config"
@@ -63,12 +64,27 @@ func runBuild(args []string, out, errOut io.Writer) error {
 		"summarise modules with the configured model backend (§4.5); off by default")
 	semTimeout := fs.Duration("semantic-timeout", 10*time.Minute,
 		"how long the whole semantic pass may take before it stops and reports what it has")
+	// Design §6.2. A flag on `build` rather than a verb of its own because it is about the
+	// bundle build writes, and because ADR 0012 would otherwise make it a group: `suggest`
+	// with one operation today and no sibling in sight.
+	suggest := fs.Bool("suggest-agents-md", false,
+		"print a proposed AGENTS.md pointer to stdout and exit, writing nothing")
 	if err := parseFlags(fs, args); err != nil {
 		return err
 	}
 	path, err := repoPath(fs)
 	if err != nil {
 		return err
+	}
+	// Before the walk, and it neither analyses nor writes. The stub is fixed text — see
+	// agentsPointer — so spending a walk to print a constant would buy nothing, and printing
+	// it alone is what makes `signpost build -suggest-agents-md >> AGENTS.md` the whole of
+	// the adoption step. §6.2 is the boundary this respects: signpost writes .signpost/ and
+	// nothing else, so the redirection is the human's to type.
+	if *suggest {
+		p := newPrinter(out)
+		p.printf("%s", agentsPointer())
+		return p.Err()
 	}
 	// Read from the root, before the walk, because the walk's options come out of it. See
 	// config.go for why every analysing command does this in the same place.
@@ -113,7 +129,77 @@ func runBuild(args []string, out, errOut io.Writer) error {
 		return err
 	}
 	reportBuild(newPrinter(out), a.Discovered.Root, res)
+	// On stderr, after the report, and not suppressed by -quiet. A bundle nothing points at
+	// is the one failure mode a green build cannot show: every page is correct, verify passes,
+	// and no agent opens it. -quiet silences the routine coverage summary; this names a
+	// one-line fix, which is the same category as the §4.2 lines above it.
+	if !pointsAtTheBundle(a) {
+		reportPointer(newPrinter(errOut))
+	}
 	return nil
+}
+
+// pointerFiles are the files a model is trained to open, and so the only places a pointer at
+// the bundle does any work.
+//
+// An explicit list rather than a scan of every doc. The question is not whether the string
+// `.signpost` appears somewhere in the repository — it appears in the bundle's own pages, in a
+// workflow that runs signpost, and in a .gitignore — but whether it appears somewhere read
+// before the work starts. A broader search would find the first and report a repository as
+// pointed-at while no agent ever gets there.
+var pointerFiles = []string{
+	"AGENTS.md",
+	"CLAUDE.md",
+	".cursorrules",
+	".github/copilot-instructions.md",
+	"README.md",
+}
+
+// pointsAtTheBundle reports whether any of those files names the bundle's index page.
+//
+// The index page rather than the bundle directory, and that is the whole precision of this
+// check. `.signpost/` appears in prose that is not a pointer — a README paragraph explaining
+// that the harness writes one, a note about what is gitignored — and matching it would report
+// those repositories as pointed-at while no agent has been given anywhere to start. The corpus
+// README says exactly that about the directory and nothing about the page, which is what
+// caught the looser rule.
+//
+// It costs a false negative in the other direction: a file that points at `practices.md` or
+// `manifest.json` and never at the index gets the note anyway. That is the right way round.
+// The note costs a line and suggests something harmless; the silence the loose rule bought is
+// the failure this exists to catch.
+//
+// Content from the walk rather than a fresh read: the walk has already read these files,
+// applies the size caps, and normalises the paths, so re-reading them here would be a second
+// path-handling implementation to keep in agreement with the first. A file over the size cap
+// arrives truncated, so a mention in the elided middle of a very long README reads as absent —
+// the same trade, in the same direction.
+func pointsAtTheBundle(a *analysis) bool {
+	want := make(map[string]bool, len(pointerFiles))
+	for _, p := range pointerFiles {
+		want[p] = true
+	}
+	target := okf.BundleDir + "/" + okf.IndexPage
+	for _, f := range a.Discovered.Files {
+		if want[f.Path] && strings.Contains(f.Content, target) {
+			return true
+		}
+	}
+	return false
+}
+
+// reportPointer says the bundle has nothing pointing at it, and how to fix that.
+//
+// Named as what it is rather than as a warning: nothing is wrong with the bundle, and a build
+// that exited non-zero or said "warning" over a file signpost is forbidden to write (§6.2)
+// would be reporting a fault it created. The flag is named because the alternative is a line
+// telling somebody to go and compose a sentence.
+func reportPointer(p *printer) {
+	p.printf("nothing points at the bundle: no %s and no %s names %s/%s, so an agent has no "+
+		"reason to open it\n", pointerFiles[0], pointerFiles[len(pointerFiles)-1],
+		okf.BundleDir, okf.IndexPage)
+	p.printf("  run `signpost build -suggest-agents-md >> %s` to add one, or write your own\n",
+		pointerFiles[0])
 }
 
 // runSemantic builds the backend and runs the pass.
@@ -191,6 +277,33 @@ func reportSemantic(p *printer, r *semantic.Result) {
 		// stopped-early and cache-write lines, a prefix that was simply untrue.
 		p.printf("  %s\n", s)
 	}
+}
+
+// agentsPointer is the stub -suggest-agents-md prints.
+//
+// Three sentences, and the shortness is the design. What the bundle needs from AGENTS.md is
+// one thing — the path, stated somewhere a model already reads — and every sentence past that
+// is content signpost is asserting about somebody else's repository. A generated paragraph in
+// a hand-written file is also the thing a reader deletes, and it takes the pointer with it.
+//
+// The gap it closes is measured, not assumed. Given the same task in two repositories that
+// both had a bundle committed, an agent used it in the one whose instructions named
+// .signpost/ and ignored it entirely in the one that did not — re-deriving structure by hand
+// from eleven files that was sitting in twenty-eight pages it never opened. Models are
+// trained to read README.md and AGENTS.md; nothing trains them to look inside a dot-directory
+// they have never heard of.
+//
+// Markdown, ending in a newline, so appending it to an existing file cannot join the previous
+// line. It names index.md rather than the directory because a directory listing is not a
+// starting point, and index.md is the page written to be one.
+func agentsPointer() string {
+	return "## Repository map\n\n" +
+		"Read [`" + okf.BundleDir + "/" + okf.IndexPage + "`](" + okf.BundleDir + "/" +
+		okf.IndexPage + ") before starting work. It is a compiled map of this repository's " +
+		"structure — modules, dependencies, entrypoints, and what couples to what — " +
+		"regenerated by [signpost](https://github.com/3rg0n/signpost) and committed, so it " +
+		"describes the commit you have checked out. Start there rather than re-deriving the " +
+		"layout by reading files.\n"
 }
 
 // buildOptions maps the analysis's provenance onto the emitter's.

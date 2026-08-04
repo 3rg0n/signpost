@@ -304,9 +304,21 @@ is reachable from somewhere it is not, and that is how a threat model or an inci
 scope gets drawn around the wrong set of services. A missing edge prompts a question;
 a fabricated one prompts a conclusion.
 
-**Git signals** via `git log` (git is present wherever this runs): co-change pairs,
-churn per path, author concentration, last-touch date, first-commit date. Co-change
-is the cheapest way to find coupling that imports do not show.
+**Git signals** via `git log`: co-change pairs, churn per path, author concentration,
+last-touch date, first-commit date. Co-change is the cheapest way to find coupling that
+imports do not show.
+
+Git and a forge are the recommended setup, and where they are present they are
+authoritative: what is tracked, what is ignored, and which commit the bundle describes
+are theirs to decide, not signpost's. But git is not a requirement for producing a
+bundle. A tree that arrives as a tarball still gets one, on best effort: history signals
+are reported as not read, and the pages carry no `resource:` or `generated:` stamp at all
+rather than a commit nobody can check. `verify` reports its staleness check as skipped
+and exits zero. Every page a repository with history would get is still written, under
+the same name, because a page's identity comes from the tree and not the log
+([ADR 0015](adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md)). This is a
+corner case, not a supported mode of operation, and it degrades by saying less rather
+than by guessing.
 
 ### 4.2 Extractor accuracy is measured, not asserted
 
@@ -1021,8 +1033,18 @@ The mechanism that makes the bundle compound rather than churn:
 signpost writes `.signpost/` and nothing else. It does not write `AGENTS.md`,
 `README.md`, or `ARCHITECTURE.md` — those encode human intent and team
 convention, and a generator overwriting them is how teams learn to distrust
-tooling. `signpost build --suggest-agents-md` will print a proposed stub to stdout
-for a human to take or leave, and that is the extent of it.
+tooling. `signpost build -suggest-agents-md` prints a proposed stub to stdout for a
+human to take or leave, and that is the extent of it: it writes nothing — not
+`AGENTS.md`, not even the bundle — so the `>>` that appends it is the human's to type.
+
+The other half of that boundary is a build that says when nothing points at the bundle.
+A bundle no instructions name is the one failure a green build cannot show — every page
+correct, `verify` passing, and no agent ever opening it — so a build whose `AGENTS.md`,
+`CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`, and `README.md` all fail
+to name `.signpost/index.md` says so on stderr and names the flag that fixes it. The
+index page rather than the directory: `.signpost/` appears in prose that is not a pointer,
+and matching it reports a repository as pointed-at while no agent has been given anywhere
+to start.
 
 ### 6.3 YAML
 

@@ -334,6 +334,46 @@ and moves to the bare name. The alternative is suffixing every page in every bun
 collides or not, which trades the readability of all of them for stability in a case that requires a
 directory to be deleted.
 
+## A repository with no git, and a bundle nothing points at
+
+Two stages that hold at the edges of adoption rather than at the edges of extraction.
+
+`TestCorpusBuildsWithNoGitAtAll` is the tarball case: somebody sends you a tree with no `.git`.
+Git and a forge are the recommended setup and, where they exist, they own what is tracked and
+which commit the bundle describes — but they are not a requirement for producing one. The stage
+builds the corpus twice, once with history and once with the `.git` directory deleted, and asserts
+the second build is the first minus its provenance and nothing else.
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | every page the git build wrote is written again, under the same name | pages whose identity leaked out of the log rather than the tree ([ADR 0015](../../docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md)); a tarball would get a differently-named bundle |
+| negative | no page's frontmatter carries `resource:` or `generated:` | a page stamped with a commit nobody can check, which `verify` would then compare against nothing |
+| reporting | stderr says `history not read: not a git repository`, exit 0 | silence, which reads as *there was no history to read* rather than *this build could not read it* |
+| downstream | `verify` exits 0 and names its staleness check as `skipped` | a repository that cannot pass its own gate for a reason it never states |
+
+The guard is that `.git` is actually gone before the second build — a `RemoveAll` that silently
+failed would leave the stage re-asserting the first build's result and passing.
+
+`TestCorpusSaysNothingPointsAtTheBundle` covers the other end: a bundle no instructions name is
+the one failure a green build cannot show. The corpus is the right tree for it because it *has* an
+`AGENTS.md` and a `README.md`, and neither points at the map — so a build here must ask for a
+pointer, and must stop asking once the stub from `build -suggest-agents-md` is appended.
+
+That stage is also what found a defect in the check itself. The first version matched
+`.signpost/`, and this file says *`build` writes `.signpost/`, which has no business being
+committed here* — a sentence about the harness, not somewhere for an agent to start. The build
+read it as adoption and went quiet on a repository that had adopted nothing. The check now matches
+the bundle directory joined to the index page, and the stage asserts **both halves** of what makes
+it a test: this README must still mention `.signpost/` somewhere, and must still never name that
+joined path. Losing either turns the stage green while covering nothing — the first because
+prose-that-is-not-a-pointer would have left the tree, the second because there would be no
+unpointed case left to reach.
+
+Which is why the path is described here rather than written out. **This file cannot spell it**: a
+README in the corpus that names the index page makes the corpus a pointed-at repository, the build
+stops asking for a pointer, and the stage fails on its own documentation. That happened while this
+section was being written, and the guard is what caught it.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs
