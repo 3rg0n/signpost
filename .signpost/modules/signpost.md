@@ -1,22 +1,22 @@
 ---
 type: Module
 title: cmd/signpost
-description: 17 go files; 99 exported symbols; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@86072bf2e78fb84ab888f58a38c9494af3fac29a/cmd/signpost
+description: 17 go files; 107 exported symbols; entrypoint main; package main.
+resource: git://github.com/3rg0n/signpost@1c3262edbfef67324c2bf3a08c4eb3ba67dfd541/cmd/signpost
 tags: [entrypoint]
 generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
-  - { name: commits, value: "24" }
+  - { name: commits, value: "25" }
   - { name: entrypoints, value: main }
-  - { name: exported, value: "99" }
+  - { name: exported, value: "107" }
   - { name: files, value: "17" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-04" }
-  - { name: lines_added, value: "6774" }
+  - { name: lines_added, value: "7247" }
   - { name: lines_removed, value: "224" }
   - { name: package, value: main }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 83% }
+  - { name: top_author_share, value: 84% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 8 }
   - { kind: imports, to: ./assemble.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
@@ -45,7 +45,7 @@ edges:
 # cmd/signpost
 
 <!-- signpost:managed:summary -->
-17 go files; 99 exported symbols; entrypoint main; package main.
+17 go files; 107 exported symbols; entrypoint main; package main.
 <!-- /signpost:managed:summary -->
 
 ## Structure
