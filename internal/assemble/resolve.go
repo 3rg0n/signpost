@@ -713,6 +713,9 @@ func npmPackage(raw string) string {
 // `self::` and `super::` land in the file's own module or its parent, which is the
 // same directory or the one above; both resolve to a node the file usually already
 // belongs to, and a self-edge is dropped by the graph.
+//
+// Rust module paths and directories only line up loosely, which is what makes `super`
+// the awkward one — see the case below.
 func (r *resolver) resolveRust(from, raw string) (string, bool) {
 	segs := strings.Split(raw, "::")
 	switch segs[0] {
@@ -737,7 +740,7 @@ func (r *resolver) resolveRust(from, raw string) (string, bool) {
 		}
 		return "", true
 	case "super":
-		if id := r.moduleAt(dirOf(dirOf(from))); id != "" {
+		if id := r.moduleAt(rustSuperDir(from)); id != "" {
 			return id, true
 		}
 		return "", true
@@ -745,6 +748,43 @@ func (r *resolver) resolveRust(from, raw string) (string, bool) {
 	// A crate name in a use path is spelled with underscores even when the manifest
 	// declares it with dashes, which depKeys already accounts for.
 	return r.depOrEmpty("crates.io", []string{segs[0]}), false
+}
+
+// rustSuperDir returns the directory holding the parent module of the file at from.
+//
+// `super` is the parent *module*, and Rust's module tree is tied to the directory tree
+// only loosely, so which file the path is written in decides the answer. `mod.rs` is the
+// one spelling whose module *is* its directory, which puts its parent in the directory
+// above. Every other file is a module inside the module its directory stands for, so its
+// parent is that directory — `src/a.rs` is module `a` in the crate root, and the crate
+// root is `src`.
+//
+// A crate root, `lib.rs` or `main.rs`, has no parent module at all, so `super` in one can
+// only have been written inside an inline `mod` — and the parent of an inline module is
+// the crate root itself, which is the file's own directory. Same answer as the general
+// case, which is why they are not spelled out separately.
+//
+// That general case was resolving a directory too high, and it is the common one: `use
+// super::*` inside an inline `#[cfg(test)] mod tests` is by a wide margin the most
+// frequent `super` in the language. For `src/lib.rs` a directory up is where Cargo.toml
+// lives, which holds no source, so the import reached nothing — silently, because the
+// resolver was right that it is first-party and right to invent no external crate for it,
+// and those two correct decisions were between them the reason nothing recorded the gap.
+//
+// Resolving to the file's own module yields a self-edge, which the graph drops. That is
+// the right outcome rather than a workaround: a test module importing the file it is
+// written in tells a reader nothing the file did not already say.
+//
+// The ambiguity that remains is a `super` inside an inline module in a `mod.rs`, which
+// means that file's own directory where a top-level `super` in the same file means the one
+// above. Distinguishing them needs the nesting depth of the `use`, which the extractor
+// does not record; the top-level reading is taken because that is what `mod.rs` exists
+// for, and the cost of being wrong is one self-edge the graph would have dropped anyway.
+func rustSuperDir(from string) string {
+	if path.Base(from) == "mod.rs" {
+		return dirOf(dirOf(from))
+	}
+	return dirOf(from)
 }
 
 // crateOf returns the crate directory owning a file, "" when no Cargo manifest was

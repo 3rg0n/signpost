@@ -240,6 +240,57 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+#### 2026-08-04
+
+- **An import signpost placed inside the repository and found nothing at drew no edge and said
+  nothing, so a module could report importing nothing while importing plenty.** Three things can
+  happen to an import specifier: it resolves to a page; signpost cannot place the name at all,
+  which was already counted and reported; or signpost places it exactly — inside a Go module,
+  under a matched `paths` alias, down a relative path — and finds no node there. The third state
+  went unrecorded. The branch that handled it was empty, because a specifier was counted only
+  when it was *not* internal.
+
+  It stayed hidden because both of the resolver's decisions about such an import are right. The
+  specifier really is first-party, and inventing an external dependency for it would report a
+  package nobody publishes — the false supply-chain claim the resolver exists to avoid. Two
+  correct decisions were between them the reason nothing recorded the missing edge.
+
+  **Its own line, because it is its own fix.** An unresolved specifier needs a resolver that
+  knows the convention; an unlinked one is often nothing to fix — generated code genuinely is not
+  in the tree — and otherwise needs a reader for whatever sits at that path. A handful is
+  ordinary. A lot means a resolution root is missing, which is the shape the tsconfig `paths` gap
+  had: 542 absent edges on one repository, 14% of its graph, with no line anywhere admitting
+  them.
+
+  The count found two live defects on its first run against the corpus, both below. Neither was
+  visible to any existing assertion: every edge check in the harness names the edges it expects,
+  and none of them can notice an absent edge nobody listed.
+
+- **`use super::*` resolved out of the crate, so the commonest `super` in Rust reached nothing.**
+  `super` is the parent *module*, and Rust's module tree matches the directory tree only loosely.
+  Resolution went up a directory unconditionally, which is right only for `mod.rs` — the one
+  spelling whose module *is* its directory. Every other file is a module inside the module its
+  directory stands for, so its parent is that directory. For `src/lib.rs` a directory up is where
+  `Cargo.toml` lives, holding no source: the import landed outside the crate and linked to
+  nothing.
+
+  The case that matters is `use super::*` inside an inline `#[cfg(test)] mod tests`, which is by
+  a wide margin the most frequent `super` in the language, and where the parent module is the
+  enclosing file itself. That resolves to the file's own module and so to a self-edge, which the
+  graph drops — correctly: a test module importing the file it is written in tells a reader
+  nothing the file did not already say. What was wrong was reaching for the wrong directory to
+  get there. Mutation-tested in both directions: resolving always to the parent restores the
+  original defect, and resolving always to the file's own directory loses the `mod.rs` edge.
+
+- **A corpus fixture's only internal Go import had never resolved.** `go/go.mod` declares
+  `example.com/corpus/greeter` at `go/`, so the package in `go/greeter/` is that path plus its
+  directory. The fixture imported the bare module path, which names a directory holding `go.mod`
+  and no Go file. It had been that way since the corpus was written, and nothing caught it: no
+  assertion named a Go internal edge, and the coverage report had no line for an import that
+  resolves inside the repository and reaches nothing. Fixing it draws the edge, and the corrected
+  specifier now serves as the negative boundary for the count that found it — same import block,
+  same module, differing only in there being Go files at the end of it.
+
 #### 2026-08-03
 
 - **Files signpost could not identify were not reported anywhere, so a repository whose only

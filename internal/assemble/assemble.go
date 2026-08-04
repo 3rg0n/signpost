@@ -50,6 +50,22 @@ type Result struct {
 	// repository nor a declared dependency, keyed by specifier. A standard-library
 	// import is not counted: it is resolved, to nothing worth a node.
 	Unresolved map[string]int
+	// Unlinked counts import specifiers this repository owns and that point at no
+	// node, keyed by specifier.
+	//
+	// Separate from Unresolved because the two are different facts with different
+	// fixes. An unresolved specifier is a name signpost could not place at all; an
+	// unlinked one it placed exactly — inside a Go module, under a workspace package,
+	// down a relative path — and found nothing there to draw an edge to. The resolver
+	// is right to invent nothing for it: an external node would misreport the supply
+	// chain. But it was also reporting nothing, so a module whose imports all landed
+	// here appeared to import nothing at all, with the coverage report agreeing.
+	//
+	// A first-party import with no target is normal in small numbers — generated code,
+	// a build-tagged directory, a package whose files all exceed the size cap. In large
+	// numbers it means a resolution root is missing, which is what the tsconfig `paths`
+	// gap looked like from the outside: 542 edges absent, nothing saying so.
+	Unlinked map[string]int
 	// DroppedEdges is the number of edges removed for pointing at a node that does
 	// not exist. Non-zero is a bug in this package, and the CLI reports it.
 	DroppedEdges int
@@ -67,12 +83,16 @@ func Build(in Input) (*Result, error) {
 		ids:        newIDs(),
 		res:        newResolver(),
 		unresolved: make(map[string]int),
+		unlinked:   make(map[string]int),
 		in:         in,
 	}
 	if err := b.run(); err != nil {
 		return nil, err
 	}
-	return &Result{Graph: b.g, Unresolved: b.unresolved, DroppedEdges: b.dropped}, nil
+	return &Result{
+		Graph: b.g, Unresolved: b.unresolved, Unlinked: b.unlinked,
+		DroppedEdges: b.dropped,
+	}, nil
 }
 
 type builder struct {
@@ -81,6 +101,7 @@ type builder struct {
 	res        *resolver
 	in         Input
 	unresolved map[string]int
+	unlinked   map[string]int
 	dropped    int
 
 	// moduleFiles groups source facts by the module directory they belong to, so a
@@ -659,9 +680,18 @@ func (b *builder) addImportEdges() {
 		for _, im := range f.Imports {
 			to, internal := b.res.resolveImport(f.Lang, f.Path, im.Raw)
 			if to == "" {
-				if !internal && !isStdlib(f.Lang, im.Raw) {
-					// Counted per specifier, so a repo importing one unresolvable
-					// package from forty files reports one gap, not forty.
+				// Counted per specifier in both maps, so a repo importing one
+				// unplaceable package from forty files reports one gap, not forty.
+				switch {
+				case internal:
+					// Placed inside this repository and pointing at no node. This
+					// branch used to be empty, which made it the quietest failure in
+					// the pipeline: the resolver knew the import was first-party,
+					// declined to invent an external node for it — correctly — and
+					// then nothing recorded that an edge had gone missing. A module
+					// whose every import landed here read as importing nothing.
+					b.unlinked[string(f.Lang)+" "+im.Raw]++
+				case !isStdlib(f.Lang, im.Raw):
 					b.unresolved[string(f.Lang)+" "+im.Raw]++
 				}
 				continue

@@ -1158,6 +1158,128 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 	}
 }
 
+// TestCorpusFirstPartyImportsThatReachNoPageAreCounted is the regression for the quietest
+// gap the pipeline had.
+//
+// An import that resolution places *inside* this repository and finds no node at is a missing
+// edge. The resolver's two decisions about it are both correct — the specifier is first-party,
+// and inventing an external dependency for it would report a package nobody publishes, which
+// is the one thing the resolver must never do. What was missing was any record that the edge
+// had gone: `addImportEdges` counted a specifier only when it was *not* internal, so the
+// internal branch was empty and a module whose every import landed there read as importing
+// nothing at all.
+//
+// This is not a small class. The tsconfig `paths` gap was 542 absent edges on one repository
+// with no line anywhere admitting them, and a first-party import reaching nothing is what every
+// missing resolution root looks like from the outside. The distinction from `Unresolved` is the
+// point of the separate count and not presentation: an unresolved specifier is a name signpost
+// could not place, and the fix is a resolver that knows about it; an unlinked one it placed
+// exactly, and the fix is either nothing at all — generated code is genuinely not there — or a
+// reader for whatever is at that path. Merging the two loses which of those a reader is looking
+// at.
+//
+// The corpus carries one deliberate case per shape, and they are deliberately in different
+// languages because the branch is per-language:
+//
+//   - go `example.com/corpus/greeter/internal/generated` — inside the declared module, at a
+//     directory holding a README and no Go file, which is the generated-code shape;
+//   - typescript `@corpus/assets/logo.svg` — a tsconfig `paths` pattern that matched exactly and
+//     maps onto an asset rather than source.
+//
+// Both must be counted here and neither may appear among the unresolved, since there is nothing
+// for anyone to go and declare.
+func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
+	dir := corpusRepo(t)
+	// No -quiet: the coverage report is on stderr and -quiet is what suppresses it.
+	_, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build failed: exit = %d\n%s", code, stderr)
+	}
+
+	want := []string{
+		"go example.com/corpus/greeter/internal/generated",
+		"typescript @corpus/assets/logo.svg",
+	}
+	got, ok := unlinkedCount(stderr)
+	if !ok {
+		t.Fatalf("no `reached no page` line in the coverage report. The corpus imports %d "+
+			"first-party specifiers that resolve to a real in-repo location holding no node, so "+
+			"silence here means those edges went missing with nothing recording it — the defect "+
+			"this asserts against:\n\n%s", len(want), stderr)
+	}
+	if got != len(want) {
+		t.Errorf("%d unlinked specifier(s), want %d.\n\nHigher means an import that should reach "+
+			"a page does not, and the new one is a real missing edge — the count is the only "+
+			"assertion here that catches that, since every edge assertion in this file names the "+
+			"edges it expects and cannot notice an absent one nobody listed. Lower means one of "+
+			"the two below stopped being counted, or was resolved to something it should not "+
+			"reach.\n\nThe %d expected:\n  %s\n\nReport:\n%s",
+			got, len(want), len(want), strings.Join(want, "\n  "), stderr)
+	}
+	line := coverageLine(stderr, "reached no page")
+	for _, w := range want {
+		if !strings.Contains(line, w) {
+			t.Errorf("the unlinked line does not name %q: %q", w, line)
+		}
+	}
+
+	// The negative boundary, and the half that makes the count mean something. Each of these
+	// resolves to a real page, so a branch that counted every first-party import rather than
+	// only the ones reaching nothing would name them here — and that version of the counter
+	// fires on every healthy repository, which teaches people to ignore the line.
+	//
+	// `example.com/corpus/greeter/greeter` is the one that matters most: it sits in the same
+	// import block as the unlinked specifier, in the same module, and differs only in there
+	// being Go files at the end of it.
+	for _, notWanted := range []string{
+		"example.com/corpus/greeter/greeter",
+		"@corpus/entry",
+		"@corpus/core",
+		"api.client",
+		"./greeter",
+	} {
+		if strings.Contains(line, notWanted) {
+			t.Errorf("%q is reported as reaching no page, but it resolves to a module page in "+
+				"this corpus: %q", notWanted, line)
+		}
+	}
+	// And the other direction: an unlinked specifier is not an unresolved one. Nothing about
+	// `internal/generated` is undeclared — it is inside the module — so asking a reader to go
+	// and declare it is the wrong instruction, and a single merged map is what would give it.
+	if u := coverageLine(stderr, "import(s) unresolved"); strings.Contains(u, "internal/generated") ||
+		strings.Contains(u, "logo.svg") {
+		t.Errorf("a first-party import that reached no page is reported as unresolved. The two "+
+			"are different facts with different fixes: unresolved means signpost could not "+
+			"place the name, unlinked means it placed it exactly and found nothing there. "+
+			"Unresolved line: %q", u)
+	}
+	// The stdlib is in neither, which is the third state. `fmt`, `os`, and `std::fmt` resolve
+	// to nothing on purpose — they are the runtime, and a gap reported for them is noise that
+	// buries the two real entries above.
+	for _, rt := range []string{" fmt", " os", "std::fmt", "node:fs"} {
+		if strings.Contains(line, rt) {
+			t.Errorf("%q is on the unlinked line; it is the language runtime and reaches no page "+
+				"by design: %q", rt, line)
+		}
+	}
+}
+
+// unlinkedCount reads the specifier count out of the `reached no page` line.
+//
+// The specifier count and not the import count, for the reason unresolvedCount gives: one
+// unplaceable name imported from forty files is one gap in the map, not forty.
+func unlinkedCount(stderr string) (int, bool) {
+	for _, line := range strings.Split(stderr, "\n") {
+		var imports, specifiers int
+		if _, err := fmt.Sscanf(strings.TrimSpace(line),
+			"%d first-party import(s) reached no page across %d specifier(s):",
+			&imports, &specifiers); err == nil {
+			return specifiers, true
+		}
+	}
+	return 0, false
+}
+
 // unclassifiedCount reads the file count out of the `no recognised kind` line.
 //
 // The file count and not the number of distinct extensions, because the question the line

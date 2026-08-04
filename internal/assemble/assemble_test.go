@@ -189,6 +189,74 @@ func TestUnresolvedIsCountedPerSpecifier(t *testing.T) {
 	}
 }
 
+// A first-party import pointing at no node is counted, and counted apart from the
+// specifiers that could not be placed at all.
+//
+// `example.com/app/gen` is inside the declared module, so the resolver knows exactly
+// where it belongs and correctly declines to invent an external node for it — a
+// reference page there would claim the repository depends on itself from outside. But
+// the branch that reached that conclusion recorded nothing, so the edge went missing
+// with no count anywhere admitting it. A module whose every import landed here read as
+// importing nothing, and the coverage report agreed.
+//
+// Both halves in one test because the fix has two directions and each is a distinct
+// wrong answer: routing the specifier to Unresolved tells the reader to go declare a
+// dependency on their own code, and leaving it uncounted is the shipped bug.
+func TestAFirstPartyImportWithNoTargetIsCountedSeparately(t *testing.T) {
+	out := build(t, map[string]string{
+		"go.mod": "module example.com/app\n\ngo 1.26\n",
+		// Two importers of the one specifier, so the per-specifier grouping is asserted
+		// here too rather than assumed to carry over from Unresolved.
+		"a.go": "package app\n\nimport (\n\t\"example.com/app/gen\"\n\t\"github.com/x/y\"\n)\n",
+		"b.go": "package app\n\nimport \"example.com/app/gen\"\n",
+		// gen/ exists and holds no source, which is what generated or build-tagged
+		// directories look like to the walk. Without a file here the directory is not in
+		// the tree at all and the import is a different case.
+		"gen/README.md": "# generated\n",
+	})
+	if len(out.Unlinked) != 1 || out.Unlinked["go example.com/app/gen"] != 2 {
+		t.Errorf("unlinked = %v, want one key counted twice", out.Unlinked)
+	}
+	// The negative: it must not also appear as unresolved. Reporting it there names a
+	// gap whose only available fix is wrong — the specifier is this repository's own,
+	// and nothing a manifest could declare would resolve it.
+	if _, bad := out.Unresolved["go example.com/app/gen"]; bad {
+		t.Errorf("a first-party specifier is reported unresolved: %v", out.Unresolved)
+	}
+	// And the two maps stay distinct in the other direction, which is what stops a fix
+	// that merged them from passing: an external near-miss belongs only in Unresolved.
+	if out.Unresolved["go github.com/x/y"] != 1 {
+		t.Errorf("unresolved = %v, want the external specifier counted once", out.Unresolved)
+	}
+	if _, bad := out.Unlinked["go github.com/x/y"]; bad {
+		t.Errorf("an external specifier is reported as first-party: %v", out.Unlinked)
+	}
+	// No node invented for either, which is the constraint the whole branch exists to
+	// honour: an external page for `example.com/app/gen` is a false supply-chain claim.
+	for _, n := range out.Graph.Nodes() {
+		if n.Kind == graph.KindExternal {
+			t.Errorf("invented external node %q for an unplaceable import", n.ID)
+		}
+	}
+}
+
+// Stdlib is in neither map. It is resolved — to nothing worth a node — and a repository
+// that imports `fmt` and `os` has no gap to fix.
+//
+// The boundary matters more now that there are two maps: `internal` is what routes a
+// specifier to Unlinked, and a stdlib import that came back internal by mistake would be
+// counted as a missing first-party page, making every honest Go file a coverage gap.
+func TestStdlibIsInNeitherGapMap(t *testing.T) {
+	out := build(t, map[string]string{
+		"go.mod": "module example.com/app\n\ngo 1.26\n",
+		"a.go":   "package app\n\nimport (\n\t\"fmt\"\n\t\"os\"\n\t\"path/filepath\"\n)\n",
+	})
+	if len(out.Unresolved) != 0 || len(out.Unlinked) != 0 {
+		t.Errorf("unresolved = %v, unlinked = %v, want both empty: fmt, os and "+
+			"path/filepath are the standard library", out.Unresolved, out.Unlinked)
+	}
+}
+
 func TestPythonRelativeAndAbsoluteImports(t *testing.T) {
 	out := build(t, map[string]string{
 		"pyproject.toml":       "[project]\nname = \"app\"\nversion = \"1.0\"\ndependencies = [\"requests>=2.0\", \"PyYAML\"]\n",
@@ -634,6 +702,53 @@ func TestRustCrateAndExternImports(t *testing.T) {
 	}
 	if _, bad := out.Unresolved["rust std::collections"]; bad {
 		t.Error("std is not a dependency")
+	}
+}
+
+// TestRustSuperIsTheEnclosingModuleNotTheParentDirectory pins the one Rust path where the
+// module tree and the directory tree come apart.
+//
+// `use super::*` inside an inline `#[cfg(test)] mod tests` is by a wide margin the commonest
+// `super` in the language, and the parent module there is the enclosing *file*. Resolving it
+// to the parent directory walks out of the crate: for `src/lib.rs` it lands on the crate root,
+// which holds `Cargo.toml` and no source, so the import reached nothing. It was silent because
+// the resolver was right that the import is first-party and right to invent no external crate
+// for it — the two facts that between them meant nothing recorded the gap.
+//
+// The negative half is what stops the fix from being "always use the file's own directory":
+// `mod.rs` is the one spelling whose module is its directory, so a `super` there does mean the
+// directory above, and a submodule in its own subdirectory is the layout where the two answers
+// differ.
+func TestRustSuperIsTheEnclosingModuleNotTheParentDirectory(t *testing.T) {
+	out := build(t, map[string]string{
+		"Cargo.toml": "[package]\nname = \"app\"\nversion = \"0.1.0\"\n",
+		// The inline test module: `super` is this file.
+		"src/lib.rs": "pub mod store;\n\npub fn top() {}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn works() { top(); }\n}\n",
+		// A submodule one directory down: `super` is the crate root module, `src`.
+		"src/store/mod.rs": "use super::top;\n\npub fn get() { top(); }\n",
+	})
+
+	// Nothing may be reported as unlinked: both spellings resolve, one to a self-edge the
+	// graph drops and one to a real edge. This is the assertion the defect failed.
+	if len(out.Unlinked) != 0 {
+		t.Errorf("unlinked = %v, want empty. A `super` that walked out of the crate reached no "+
+			"module, and the import drew no edge with nothing saying so", out.Unlinked)
+	}
+	if len(out.Unresolved) != 0 {
+		t.Errorf("unresolved = %v, want empty; `super` is never an external crate", out.Unresolved)
+	}
+	// The positive: the submodule's `super` is the parent module and that edge is real.
+	if !hasEdge(out.Graph, "/modules/store", "/modules/src", graph.EdgeImports) {
+		t.Errorf("no imports edge store -> src. `use super::top` in src/store/mod.rs names the "+
+			"crate root module: a mod.rs *is* its directory's module, so its parent is the "+
+			"directory above. Edges from store: %v", edgeTargets(out.Graph, "/modules/store"))
+	}
+	// And the negative that a directory-blind fix would break: `src` must not import `store`
+	// on the strength of the inline `use super::*`, which points the other way entirely.
+	if hasEdge(out.Graph, "/modules/src", "/modules/store", graph.EdgeImports) {
+		t.Error("imports edge src -> store. The only specifier in src/lib.rs is `super::*` in " +
+			"its own test module, which means src itself — an edge to the submodule is an " +
+			"invented dependency in the wrong direction")
 	}
 }
 

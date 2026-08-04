@@ -438,6 +438,18 @@ segment and full name, never by string prefix: `example.com/corpus/greeterx` is 
 module `example.com/corpus/greeter`, `httpx_extras` is not the declared `httpx`, and
 `pathe/utils` is not the Node builtin `path`, however much of a prefix they share.
 
+**A gap in resolution has two kinds, and they get two lines.** An *unresolved* specifier is a
+name signpost could not place at all; an *unlinked* one it placed exactly — inside a Go module,
+under a matched alias, down a relative path — and found no node at. The second was invisible
+until it was counted, because both of the resolver's decisions about it are correct: the
+specifier is first-party, and inventing an external node for it would be the false
+supply-chain claim above. The branch that handled it was therefore empty, and a module whose
+every import landed there reported importing nothing. The two are separate lines because the
+fixes are different work: an unresolved specifier needs a resolver that knows the convention,
+while an unlinked one is often nothing to fix at all — generated code genuinely is not in the
+tree — and otherwise needs a reader for whatever sits at that path. A handful is ordinary; a
+lot means a resolution root is missing, which is the shape the tsconfig `paths` gap had.
+
 **The runtime is neither a dependency nor a gap.** `import os`, `import "fmt"` and
 `import fs from "node:fs"` are resolved — to nothing that deserves a node. Nobody patches
 the standard library separately from the toolchain, so a reference page for it is a

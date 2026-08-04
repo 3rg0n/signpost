@@ -1308,6 +1308,85 @@ jobs:
           done
           echo "unclassified: ${got} file(s), each genuinely unread, no classified file among them"
 
+      # The third kind of gap, and the one that was silent everywhere: an import resolution
+      # placed *inside* this repository that reached no node. The edge is missing and the map is
+      # thinner than the code.
+      #
+      # Both of the resolver's decisions about such an import were right — the specifier is
+      # first-party, and inventing an external dependency for it would report a package nobody
+      # publishes, which is the one thing the resolver must never do. What was missing was any
+      # record. `addImportEdges` counted a specifier only when it was *not* internal, so the
+      # internal branch was empty and a module whose every import landed there read as importing
+      # nothing. The tsconfig `paths` gap was 542 absent edges on one repository with no line
+      # anywhere admitting them, and that is what every missing resolution root looks like from
+      # the outside.
+      #
+      # Separate from the unresolved count above because the fixes differ: unresolved means
+      # signpost could not place the name and needs a resolver that knows about it; unlinked
+      # means it placed the name exactly and found nothing there, where the fix is either
+      # nothing at all — generated code genuinely is not in the tree — or a reader for whatever
+      # sits at that path. One merged number cannot say which a reader is looking at.
+      #
+      # Reusing the same capture: same build, same repository, report written once.
+      - name: First-party imports that reach no page are counted
+        run: |
+          set -euo pipefail
+          gaps="${RUNNER_TEMP}/gaps.txt"
+          got=$(sed -n \
+            's/^ *[0-9]* first-party import(s) reached no page across \([0-9]*\) specifier(s).*/\1/p' \
+            "$gaps" | head -1)
+          [ -n "$got" ] || {
+            echo "no unlinked line in the coverage report. The corpus imports two first-party"
+            echo "specifiers that resolve to a real in-repo location holding no node, so silence"
+            echo "here means those edges went missing with nothing recording it."
+            cat "$gaps"
+            exit 1
+          }
+          want=2
+          [ "$got" = "$want" ] || {
+            echo "${got} unlinked specifier(s), want ${want}."
+            echo
+            echo "Higher means an import that should reach a page does not, and the new one is a"
+            echo "real missing edge — this count is the only assertion that catches that, since"
+            echo "every edge check in this job names the edges it expects and cannot notice an"
+            echo "absent one nobody listed. Lower means one of the two below stopped being"
+            echo "counted, or resolved to something it must not reach."
+            cat "$gaps"
+            exit 1
+          }
+          line=$(sed -n 's/^ *[0-9]* first-party import(s) reached no page across [0-9]* specifier(s): //p' "$gaps" | head -1)
+          # One per shape and deliberately in different languages, because the branch is
+          # per-language: a Go package directory inside the declared module holding a README and
+          # no Go file, and a tsconfig `paths` pattern that matched exactly and maps onto an
+          # asset rather than source.
+          for frag in 'go example.com/corpus/greeter/internal/generated' \
+                      'typescript @corpus/assets/logo.svg'; do
+            case "$line" in
+              *"$frag"*) ;;
+              *) echo "the unlinked line does not name ${frag}: ${line}"; exit 1 ;;
+            esac
+          done
+          # The negative half, and what makes the count mean anything. Each of these resolves to
+          # a real page, so a branch counting every first-party import rather than only the ones
+          # reaching nothing would name them — and that counter fires on every healthy
+          # repository. `example.com/corpus/greeter/greeter` is the one that matters: same import
+          # block, same module, differing only in there being Go files at the end of it.
+          for frag in 'example.com/corpus/greeter/greeter' '@corpus/entry' '@corpus/core'; do
+            case "$line" in
+              *"$frag"*) echo "${frag} reaches a module page in this corpus: ${line}"; exit 1 ;;
+            esac
+          done
+          # And the other direction: an unlinked specifier is not an unresolved one. Nothing
+          # about internal/generated is undeclared — it is inside the module — so telling a
+          # reader to declare it is the wrong instruction, and one merged map is what gives it.
+          unres=$(sed -n 's/^ *[0-9]* import(s) unresolved across [0-9]* specifier(s): //p' "$gaps" | head -1)
+          for frag in internal/generated logo.svg; do
+            case "$unres" in
+              *"$frag"*) echo "${frag} is reported as unresolved, not unlinked: ${unres}"; exit 1 ;;
+            esac
+          done
+          echo "unlinked: ${got} specifier(s), each placed exactly and holding no page"
+
       # -include-vendored, which spent v0.1.0 doing nothing (issue #11). The walk honoured
       # the flag and read the files; every consumer downstream filtered them back out on
       # File.Vendored with no reference to the option, so the flag read vendored code off

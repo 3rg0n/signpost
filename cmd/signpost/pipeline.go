@@ -169,6 +169,7 @@ func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, err
 		span.Count("signpost.nodes", nodes)
 		span.Count("signpost.edges", edges)
 		span.Count("signpost.unresolved", totalCount(r.Unresolved))
+		span.Count("signpost.unlinked", totalCount(r.Unlinked))
 		return r, nil
 	}()
 	if err != nil {
@@ -217,6 +218,16 @@ func reportCoverage(w io.Writer, a *analysis) {
 	if n := totalCount(a.Assembled.Unresolved); n > 0 {
 		p.printf("  %d import(s) unresolved across %d specifier(s): %s\n",
 			n, len(a.Assembled.Unresolved), topCounts(a.Assembled.Unresolved, 5))
+	}
+	// Its own line, because it is its own fix. The line above names specifiers signpost
+	// could not place at all; this names ones it placed inside this repository and found
+	// nothing at — so the edge is missing and the map is thinner than the code. A handful
+	// is ordinary (generated code, a build-tagged directory, files over the size cap); a
+	// lot means a resolution root is missing, which is the shape the tsconfig `paths` gap
+	// had: 542 absent edges and no line anywhere admitting it.
+	if n := totalCount(a.Assembled.Unlinked); n > 0 {
+		p.printf("  %d first-party import(s) reached no page across %d specifier(s): %s\n",
+			n, len(a.Assembled.Unlinked), topCounts(a.Assembled.Unlinked, 5))
 	}
 	reportHistory(p, a)
 	// A dropped edge means assemble created an edge to a node it never created,

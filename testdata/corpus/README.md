@@ -252,6 +252,43 @@ implementation that counted by directory fails, and binaries are excluded on pur
 was classified correctly and has nothing in it to read, so counting it would bury the extensions
 that are gaps under the ones that never could be.
 
+## An import that lands exactly nowhere
+
+Three things can happen to an import specifier, and until recently only two of them were
+counted. It resolves to a page; or signpost cannot place the name at all, which is *unresolved*;
+or signpost places it exactly — inside a Go module, under a `paths` alias, down a relative path
+— and finds no node there. That third state is *unlinked*: the edge is missing and the map is
+thinner than the code.
+
+It was the quietest failure in the pipeline, because both of the resolver's decisions about such
+an import are correct. The specifier *is* first-party, and inventing an external dependency for
+it would report a package nobody publishes — the fabricating failure the resolver must never
+produce. `addImportEdges` counted a specifier only when it was **not** internal, so the internal
+branch was empty, and a module whose every import landed there read as importing nothing.
+
+Two deliberate cases sit here, in different languages because the branch is per-language:
+
+| Specifier | Where it lands | The shape it stands for |
+|---|---|---|
+| `example.com/corpus/greeter/internal/generated` | inside the module `go/go.mod` declares, at a directory holding a README and no Go file | generated code, a build-tagged package, a directory whose files all exceeded the size cap |
+| `@corpus/assets/logo.svg` | a `paths` pattern matched whole, mapping onto `ts/assets/` | an asset alias — the mapping is real and its target is not extracted source |
+
+`TestCorpusFirstPartyImportsThatReachNoPageAreCounted` reads all three boundaries off one report:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| positive | both specifiers counted and named, and the **count** is 2 | the shipped bug, and the count is the only assertion in the harness that can notice a *new* missing edge — every other one names the edges it expects |
+| negative | `example.com/corpus/greeter/greeter`, `@corpus/entry` and `@corpus/core` are absent | a branch counting every first-party import fires on every healthy repository, which teaches people to skip the line |
+| structural | neither specifier appears among the unresolved, and no stdlib name appears in either | unresolved says *go and declare this*, which is the wrong instruction for a path the module already owns; one merged map cannot say which a reader is looking at |
+
+`example.com/corpus/greeter/greeter` is the negative that matters. It sits in the same import
+block as the unlinked one, in the same module, and differs only in there being Go files at the
+end of it. It is also there because it was itself broken: the fixture spelled it as the bare
+module path, which names `go/` — a directory holding `go.mod` and no source — so `go/cmd/hello`'s
+only internal import drew no edge for as long as the corpus has existed. Nothing caught it,
+because no assertion here named a Go internal edge and the coverage report had no line for it.
+Adding the count found it on the first run, along with `use super::*` resolving out of the crate.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs
@@ -279,12 +316,16 @@ should` step in `ci.yml`, and confirm the new specifier is named in the table ab
 it the language is covered only by positives, which cannot distinguish a resolver that reads
 the manifest from one that says yes to everything.
 
-Two counts are asserted here and both fail on a new language, deliberately — a count is the
-only assertion that fails in *both* directions, so each is a place a change has to be
-declared rather than absorbed. Adding an extractor for `.astro` lowers the unclassified count
-by two and raises the extracted one; expect `TestCorpusCountsWhatItCannotClassify` and the
+Three counts are asserted here and a new language moves at least one, deliberately — a count is
+the only assertion that fails in *both* directions, so each is a place a change has to be
+declared rather than absorbed. Adding an extractor for `.astro` lowers the unclassified count by
+two and raises the extracted one; expect `TestCorpusCountsWhatItCannotClassify` and the
 `Unclassified files are counted, not swallowed` step in `ci.yml` to fail, and move the two
-`web/` files out of the table above into the language sections when they do.
+`web/` files out of the table above into the language sections when they do. The unlinked count
+moves if the new language's fixtures import anything inside the repository that holds no node,
+which the *first-party* half of the instruction above is otherwise silent about: an import that
+signpost places and cannot link is a different failure from one it cannot place, and the language
+is covered for only one of them until both counts are stated.
 
 Nothing here is compiled or executed. These are inputs to a parser, so they need to be
 syntactically real and do not need to be correct programs.
