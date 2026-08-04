@@ -1,0 +1,55 @@
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_3f515955b54b55 535-559
+  s_f6c0b1ac81cb95::t_361b27a9fd5e14 1252-1310
+internal/discover/discover.go
+  s_f6c0b1ac81cb95::t_d9ff4e39f11195 562-590,593,596-600
+  s_f6c0b1ac81cb95::t_0fbbe2864473f6 591-592,594-595
+  s_f6c0b1ac81cb95::t_c64fd671804103 22
+docs/design.md
+  s_f6c0b1ac81cb95::t_0bc9e8f9ccca57 306-316
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_639be95e1f867c 1084-1176
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_e19f7c12ae7f15 245-276
+testdata/corpus/web/src/pages/index.astro
+  s_f6c0b1ac81cb95::t_a0cb64e95ffc07 1-7
+testdata/corpus/web/src/layouts/Base.astro
+  s_f6c0b1ac81cb95::t_a0cb64e95ffc07 1-16
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_4e222ba1cf74ae 282-288
+  s_f6c0b1ac81cb95::t_d8c25118270c50 224-254
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_fd224090fc9fb9 755-853
+testdata/corpus/web/README.md
+  s_f6c0b1ac81cb95::t_a0cb64e95ffc07 1-10
+cmd/signpost/pipeline.go
+  s_f6c0b1ac81cb95::t_19437bfa8a8b52 211
+  s_f6c0b1ac81cb95::t_5ae41ee067051f 272-276
+  s_f6c0b1ac81cb95::t_008d746e0521fd 207-210,212-213
+  s_f6c0b1ac81cb95::t_86b6c9bd289be0 219
+site/index.html
+  s_f6c0b1ac81cb95::t_a5c1428d3498a5 78,80-81,83,86-89,91,93,95-96,101-105
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_ed90c7df483b18 27
+  s_f6c0b1ac81cb95::t_8ad4e33e772e8d 41-45
+cmd/signpost/main_test.go
+  s_f6c0b1ac81cb95::t_90e05150a17e21 92-117
+  s_f6c0b1ac81cb95::t_04e406c5e28bf5 16-22
+  s_f6c0b1ac81cb95::t_9bf62a91b666a5 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fbc7f1f27170cf2f96edc3e3c83110c51e196bc5",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
