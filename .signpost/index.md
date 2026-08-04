@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 50 concepts, 89 relationships."
-resource: git://github.com/3rg0n/signpost@1c3262edbfef67324c2bf3a08c4eb3ba67dfd541
+description: "Structural map of this repository: 51 concepts, 89 relationships."
+resource: git://github.com/3rg0n/signpost@a1e2463d4fca030110997aa1e386717c3eccab92
 generated: { by: signpost/dev, at: "2026-08-04" }
 ---
 # Repository map
@@ -27,19 +27,19 @@ The places a wrong assumption propagates furthest, so the places to read first.
 
 ### Modules
 
-- [internal/assemble](./modules/assemble.md) — 6 go files; 59 exported symbols.
+- [internal/assemble](./modules/assemble.md) — 6 go files; 60 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
 - [internal/discover](./modules/discover.md) — 5 go files; 69 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
 - [internal/extract](./modules/extract.md) — 14 go files; 189 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
-- [internal/manifest](./modules/manifest.md) — 23 go files; 239 exported symbols.
+- [internal/manifest](./modules/manifest.md) — 27 go files; 256 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 196 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 17 go files; 107 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 17 go files; 108 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 1 javascript file.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
@@ -61,6 +61,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0013: the local hook reports and ci gates](./references/adr-0013-the-local-hook-reports-and-ci-gates.md) — Architecture decision (Accepted), 23 rules read from 0013-the-local-hook-reports-and-ci-gates.md.
 - [ADR 0014: adopt the otel sdk and write the exporter](./references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md) — Architecture decision (Accepted), 44 rules read from 0014-adopt-the-otel-sdk-and-write-the-exporter.md.
 - [ADR 0015: a colliding page name is suffixed from its own key](./references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md) — Architecture decision (Accepted), 25 rules read from 0015-a-colliding-page-name-is-suffixed-from-its-own-key.md.
+- [ADR 0016: a reader records what only it can know](./references/adr-0016-a-reader-records-what-only-it-can-know.md) — Architecture decision (Accepted), 19 rules read from 0016-a-reader-records-what-only-it-can-know.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 9 rules read from README.md.
 

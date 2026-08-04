@@ -1,24 +1,24 @@
 ---
 type: Module
 title: cmd/signpost
-description: 17 go files; 107 exported symbols; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@1c3262edbfef67324c2bf3a08c4eb3ba67dfd541/cmd/signpost
+description: 17 go files; 108 exported symbols; entrypoint main; package main.
+resource: git://github.com/3rg0n/signpost@a1e2463d4fca030110997aa1e386717c3eccab92/cmd/signpost
 tags: [entrypoint]
 generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
-  - { name: commits, value: "25" }
+  - { name: commits, value: "26" }
   - { name: entrypoints, value: main }
-  - { name: exported, value: "107" }
+  - { name: exported, value: "108" }
   - { name: files, value: "17" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-04" }
-  - { name: lines_added, value: "7247" }
+  - { name: lines_added, value: "7381" }
   - { name: lines_removed, value: "224" }
   - { name: package, value: main }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 84% }
+  - { name: top_author_share, value: 85% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 8 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 9 }
   - { kind: imports, to: ./assemble.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
   - { kind: imports, to: ./config.md, confidence: extracted, weight: 6, source: cmd/signpost/build.go }
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 4 }
@@ -27,7 +27,7 @@ edges:
   - { kind: imports, to: ./extract.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 2, source: cmd/signpost/graph.go }
   - { kind: imports, to: ./hook.md, confidence: extracted, weight: 2, source: cmd/signpost/hooks.go }
-  - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 5 }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 2, source: cmd/signpost/corpus_test.go }
   - { kind: co_changes, to: ./model.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./model.md, confidence: extracted, weight: 5, source: cmd/signpost/build.go }
@@ -45,7 +45,7 @@ edges:
 # cmd/signpost
 
 <!-- signpost:managed:summary -->
-17 go files; 107 exported symbols; entrypoint main; package main.
+17 go files; 108 exported symbols; entrypoint main; package main.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -70,7 +70,7 @@ edges:
 - `cmd/signpost/verify.go`
 - `cmd/signpost/verify_test.go`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×8, [internal/discover](./discover.md) ×4, [internal/manifest](./manifest.md) ×4, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×7, [internal/practice](./practice.md) ×3, [internal/semantic](./semantic.md) ×3, [site](./site.md) ×5, [internal/vcs](./vcs.md) ×4
+- **Changes with**: [internal/assemble](./assemble.md) ×9, [internal/discover](./discover.md) ×4, [internal/manifest](./manifest.md) ×5, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×7, [internal/practice](./practice.md) ×3, [internal/semantic](./semantic.md) ×3, [site](./site.md) ×5, [internal/vcs](./vcs.md) ×4
 
 - **Imports**: [internal/assemble](./assemble.md) ×1, [internal/config](./config.md) ×6, [internal/discover](./discover.md) ×1, [internal/export](./export.md) ×1, [internal/extract](./extract.md) ×1, [internal/graph](./graph.md) ×2, [internal/hook](./hook.md) ×2, [internal/manifest](./manifest.md) ×2, [internal/model](./model.md) ×5, [internal/okf](./okf.md) ×5, [internal/practice](./practice.md) ×1, [internal/semantic](./semantic.md) ×1, [internal/telemetry](./telemetry.md) ×2, [internal/vcs](./vcs.md) ×2
 <!-- /signpost:managed:structure -->

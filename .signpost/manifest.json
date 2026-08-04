@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@1c3262edbfef67324c2bf3a08c4eb3ba67dfd541",
+  "resource": "git://github.com/3rg0n/signpost@a1e2463d4fca030110997aa1e386717c3eccab92",
   "date": "2026-08-04",
   "counts": {
-    "nodes": 50,
+    "nodes": 51,
     "edges": 89,
-    "clusters": 34
+    "clusters": 35
   },
   "confidence": {
     "ambiguous": 0,
@@ -48,6 +48,7 @@
     "references/adr-0013-the-local-hook-reports-and-ci-gates.md",
     "references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md",
     "references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md",
+    "references/adr-0016-a-reader-records-what-only-it-can-know.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
