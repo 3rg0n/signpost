@@ -2,7 +2,7 @@
 type: Module
 title: internal/model
 description: 15 go files; 98 exported symbols.
-resource: git://github.com/3rg0n/signpost@a1e2463d4fca030110997aa1e386717c3eccab92/internal/model
+resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59/internal/model
 generated: { by: signpost/dev, at: "2026-08-04" }
 attributes:
   - { name: commits, value: "2" }
