@@ -1,0 +1,41 @@
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 122-127,163-226,357-367,369-371,383-388,411-416,418,423-437
+internal/assemble/id.go
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 51-72,76-80,84-119,137,140-156,163-175
+  s_f6c0b1ac81cb95::t_8f2004d3a66b95 176
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 340-345,350-367,369-381,384,1294-1372
+  s_f6c0b1ac81cb95::t_2b4b2a8541dffe 1373
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 1390-1473
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 332-345,354-355,1087-1340
+  s_f6c0b1ac81cb95::t_4f3eb0d4d186cb 1341
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 292-336
+docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 1-129
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 34
+docs/design.md
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 130-133,136-142
+  s_f6c0b1ac81cb95::t_72138e2332d114 134-135
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_f38472c7c44f50 166-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "86072bf2e78fb84ab888f58a38c9494af3fac29a",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
