@@ -286,6 +286,7 @@ part comparable tools mostly skip.** All of this is exact, cheap, and structural
 |---|---|
 | `go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml` | external deps, module identity, scripts, entrypoints |
 | `Containerfile` / `Dockerfile`, compose files | services, ports, base images, build inputs |
+| `*.tf`, `*.tfvars` | what runs, where state lives, which of the repository's own directories the infrastructure is composed from, secret *references* |
 | `.github/workflows/*` | how it builds, tests, and ships; what gates exist |
 | Helm charts, k8s manifests | deployable units, config surface, secrets *references* |
 | `*.proto`, OpenAPI, GraphQL SDL | interface contracts |
@@ -303,6 +304,34 @@ a reader acts on without re-deriving, so an over-broad attribution says a creden
 is reachable from somewhere it is not, and that is how a threat model or an incident
 scope gets drawn around the wrong set of services. A missing edge prompts a question;
 a fabricated one prompts a conclusion.
+
+So there is a third state, and it is not the same as "unknown". A compose file's
+top-level `secrets:` block declares credentials for the services beside it without
+saying which reads which, and handing them to all of them trades a false claim for no
+claim at all. A Terraform `variable "db_password"` is not that shape: one `.tf` file
+holds a dozen unrelated resources, and which of them reads the variable is stated in an
+expression the reader does not evaluate. Such a reference is kept and deliberately
+attributed to nothing — it still answers "does this file touch credentials", and it
+reaches no page. A fact with nowhere to go, rather than a fact in the wrong place.
+This is one half of
+[ADR 0016](adr/0016-a-reader-records-what-only-it-can-know.md): a reader records what no
+downstream consumer can re-derive, including that it could not attribute something.
+
+**A configuration is mostly wiring, and only some of it is a unit.** Terraform is read
+for what a reader can act on: resources that run something or hold state become units,
+and the policy attachments, firewall rules, and route table associations a real
+configuration declares by the hundred do not — a page for each would bury the one
+service among the plumbing around it. `data` blocks are read and never become units;
+they describe what another configuration owns. A secret store is the one exception to
+the "runs something" rule, on the same grounds as a k8s `Secret` document: the resource
+*is* the named credential, so where the credentials live is a thing a reader looks up.
+And a declared dependency whose target is a directory of this repository is not external
+— a local `module "queue" { source = "./modules/queue" }` is a composition edge, not a
+third-party reference page, which is the same distinction an npm workspace sibling gets.
+Whether a declaration resolved locally is recorded by the reader that saw the `./`, since
+`modules/rds` and `hashicorp/vpc/aws` are the same string shape and only the syntax
+distinguishes them — the other half of
+[ADR 0016](adr/0016-a-reader-records-what-only-it-can-know.md).
 
 **Git signals** via `git log`: co-change pairs, churn per path, author concentration,
 last-touch date, first-commit date. Co-change is the cheapest way to find coupling that

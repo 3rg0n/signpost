@@ -115,9 +115,17 @@ func TestRegistryOrderResolvesOverlaps(t *testing.T) {
 
 func TestRegistryDeclinesUnknownFiles(t *testing.T) {
 	r := DefaultRegistry()
-	// Terraform is real infrastructure this package does not read. Claiming it would be
-	// worse than reporting the gap.
-	for _, p := range []string{"infra/main.tf", "config/settings.ini", "README.md", "docs/guide.md"} {
+	// A file no reader understands must fall through to the unhandled count rather than
+	// be claimed by a route that would report nothing. `infra/main.tf` used to be the
+	// first entry on this list, and the Terraform route is what took it off.
+	//
+	// `.tfstate` stays on it, and not for want of a parser: state holds every attribute
+	// of every resource, credentials included, so the right place for it is a coverage
+	// number saying the repository has one.
+	for _, p := range []string{
+		"config/settings.ini", "README.md", "docs/guide.md",
+		"terraform.tfstate", "infra/terraform.tfstate.backup",
+	} {
 		if rt := r.Route(discover.File{Path: p}); rt != nil {
 			t.Errorf("%s claimed by %q, want no route", p, rt.Kind)
 		}
@@ -199,8 +207,8 @@ func TestRunReadsEveryNonSourceFile(t *testing.T) {
 		{Path: "go.mod", Class: discover.ClassManifest, Content: "module example.com/m\n\ngo 1.26\n"},
 		{Path: "main.go", Class: discover.ClassSource, Lang: discover.LangGo, Content: "package main\n"},
 		{Path: "Containerfile", Class: discover.ClassInfra, Content: "FROM cgr.dev/chainguard/static:latest\nCMD [\"/api\"]\n"},
-		{Path: "infra/main.tf", Class: discover.ClassInfra, Content: "resource \"aws_s3_bucket\" \"b\" {}\n"},
-		{Path: "infra/dns.tf", Class: discover.ClassInfra, Content: "resource \"aws_route53_zone\" \"z\" {}\n"},
+		{Path: "config/settings.ini", Class: discover.ClassData, Content: "[a]\nb = c\n"},
+		{Path: "config/other.ini", Class: discover.ClassData, Content: "[d]\ne = f\n"},
 		{Path: "vendor/other/go.mod", Class: discover.ClassManifest, Content: "module other\n", Vendored: true},
 		{Path: "logo.png", Class: discover.ClassOther, Binary: true},
 	}}
@@ -223,10 +231,13 @@ func TestRunReadsEveryNonSourceFile(t *testing.T) {
 	if out.Facts[1].Kind != KindGoMod || out.Facts[1].Module.Name != "example.com/m" {
 		t.Errorf("go.mod facts = %+v", out.Facts[1])
 	}
-	// Coverage is grouped by extension so a repo whose deployment is entirely Terraform
-	// reports one gap of two files rather than looking covered because its go.mod parsed.
-	if out.Unhandled[".tf"] != 2 {
-		t.Errorf("unhandled = %v, want two .tf files", out.Unhandled)
+	// Coverage is grouped by extension so a repo whose configuration lives in a format
+	// nothing reads reports one gap of two files rather than looking covered because its
+	// go.mod parsed. This used to assert `.tf`, which the Terraform route now claims;
+	// the grouping is what the case is about, so the fixture moved to a format that is
+	// still genuinely unread.
+	if out.Unhandled[".ini"] != 2 {
+		t.Errorf("unhandled = %v, want two .ini files", out.Unhandled)
 	}
 	if _, ok := out.Unhandled[".png"]; ok {
 		t.Error("a binary file is not an extraction gap")

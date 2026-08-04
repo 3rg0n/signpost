@@ -357,6 +357,10 @@ func (b *builder) addModules() error {
 // ext is one external dependency, folded across every manifest that declares it.
 type ext struct {
 	eco, name string
+	// local is the repo-relative directory a declaration named, when the reader
+	// resolved one. Set from Dep.Local, which is the only authority: a Terraform module
+	// source of `modules/rds` and one of `hashicorp/vpc/aws` are the same shape.
+	local     string
 	versions  []string
 	scopes    []string
 	sources   []string
@@ -400,6 +404,9 @@ func (b *builder) externals() ([]string, map[string]*ext) {
 				byKey[key] = e
 				order = append(order, key)
 			}
+			if d.Local && e.local == "" {
+				e.local = d.Source
+			}
 			e.versions = append(e.versions, d.Version)
 			e.scopes = append(e.scopes, string(d.Scope))
 			e.sources = append(e.sources, d.Source)
@@ -415,10 +422,22 @@ func (b *builder) externals() ([]string, map[string]*ext) {
 	// addDeclaredDepEdges.
 	kept := order[:0]
 	for _, key := range order {
-		if e := byKey[key]; e.eco == "npm" {
+		e := byKey[key]
+		if e.eco == "npm" {
 			if _, inRepo := b.res.npmSibling(e.name); inRepo {
 				continue
 			}
+		}
+		// The same rule for a declaration that named a directory in this repository
+		// outright. A Terraform `module "rds" { source = "../modules/rds" }` is the
+		// npm workspace sibling in another ecosystem: the manifest declares a
+		// dependency and the thing depended on is code in this tree, so a reference
+		// page for it says the repository imports its own infrastructure from
+		// somewhere else. Dropped whether or not a module node exists at that
+		// directory — a directory holding only `.tf` files has no extracted source
+		// and so no node, and an external page is still the wrong answer for it.
+		if e.local != "" {
+			continue
 		}
 		kept = append(kept, key)
 	}
@@ -827,6 +846,20 @@ func (b *builder) addDeclaredDepEdges() {
 				// source. This is the part of a monorepo's structure that is stated
 				// nowhere else: which packages a package is built against.
 				to, _ = b.res.npmSibling(d.Name)
+			}
+			if to == "" && d.Local {
+				// A declaration that named a directory in this repository, for the same
+				// reason and with the same outcome: no external node exists, so the edge
+				// lands on the module covering that directory. Which of its own
+				// directories a repository composes its infrastructure from is stated in
+				// no other file.
+				//
+				// The nearest ancestor holding a module rather than the directory itself,
+				// because a Terraform module directory holds `.tf` files and no extracted
+				// source, so nothing there is a node. Landing the edge on the ancestor
+				// that is one keeps the composition visible; requiring an exact match
+				// would drop it for every Terraform repository, which is all of them.
+				to = b.nearestModule(d.Source)
 			}
 			if to == "" {
 				continue

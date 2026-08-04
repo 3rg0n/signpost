@@ -98,6 +98,7 @@ const (
 	KindMakefile    Kind = "makefile"
 	KindTSConfig    Kind = "tsconfig"
 	KindLock        Kind = "lock"
+	KindTerraform   Kind = "terraform"
 )
 
 // Resolution is a file's statement about what its own import specifiers mean.
@@ -185,7 +186,22 @@ type Dep struct {
 	// because a git dependency has a different supply-chain posture entirely — it
 	// has no registry to publish an advisory against.
 	Source string
-	Line   int
+	// Local marks Source as a repo-relative directory in *this* repository, already
+	// resolved against the declaring file.
+	//
+	// A flag rather than a shape assemble can infer, because it cannot: a Terraform
+	// module source of `modules/rds` and one of `hashicorp/vpc/aws` are both bare
+	// slash-separated strings, and only the reader that saw whether the author wrote
+	// `./` knows which is which. Guessing by looking for a matching directory would
+	// resolve a registry module to a directory that happens to share its name.
+	//
+	// What it decides is whether a declaration becomes an external dependency page.
+	// It must not: a page for a directory in this repository claims the repository
+	// pulls its own infrastructure in from outside, which is the false claim
+	// externals() excludes npm workspace siblings for. The declaration is not
+	// discarded — addDeclaredDepEdges draws it onto the module holding that code.
+	Local bool
+	Line  int
 }
 
 // Script is a named command a project defines.
@@ -356,7 +372,25 @@ type SecretRef struct {
 	// direction that matters most: it tells a reader a credential is reachable from
 	// somewhere it is not.
 	Service string
-	Line    int
+	// Unattributed marks a reference that belongs to the file as a whole and must not
+	// be handed to any of the units in it.
+	//
+	// The third state Service alone cannot express. An empty Service means "shared with
+	// this file's services", which is what a compose top-level `secrets:` block is: the
+	// file declares credentials for the services beside it without saying which reads
+	// which, so handing them to all of them trades a false claim for no claim at all.
+	//
+	// A Terraform `variable "db_password"` is not that. One `.tf` file holds a dozen
+	// unrelated resources, and a sensitive variable is an input to the configuration —
+	// which resource references it is stated in an expression this reader does not
+	// evaluate. Shared with all of them, it reported an ECS service and an S3 state
+	// backend as each reading three credentials neither of them names.
+	//
+	// So the reference is kept and deliberately attributed to nothing. It stays in
+	// SecretNames, which asks whether a file touches credentials at all, and it reaches
+	// no page — a fact with nowhere to go rather than a fact in the wrong place.
+	Unattributed bool
+	Line         int
 }
 
 // Normalize sorts and dedupes every fact list so two readings of the same file
@@ -449,6 +483,11 @@ func (f *Facts) Normalize() {
 		if a.Service != b.Service {
 			return a.Service < b.Service
 		}
+		// Attribution leads the rest for the same reason Service does: it keeps the two
+		// kinds apart so the neighbour scan below cannot fold across them.
+		if a.Unattributed != b.Unattributed {
+			return !a.Unattributed
+		}
 		if a.Name != b.Name {
 			return a.Name < b.Name
 		}
@@ -484,6 +523,10 @@ func dedupeDeps(in []Dep) []Dep {
 		if last.Name == d.Name && last.Scope == d.Scope && last.Version == d.Version {
 			if last.Source == "" {
 				last.Source = d.Source
+				// Local travels with the Source it describes. Taking one without the
+				// other would leave a repo-relative directory unflagged, which is an
+				// external dependency page for a directory in this repository.
+				last.Local = d.Local
 			}
 			continue
 		}
@@ -527,6 +570,10 @@ func dedupeImages(in []Image) []Image {
 // So is the same secret read by two different services. Two services reading one
 // credential is precisely the coupling this reader exists to surface, and folding
 // them would erase one of the two readers — so Service is part of the identity.
+//
+// And so is attribution. A file can name one credential both as an input it does not
+// attribute and as something a named unit reads; folding those would silently pick one
+// of the two claims, and which one it picked would depend on sort order.
 func dedupeSecretRefs(in []SecretRef) []SecretRef {
 	if len(in) < 2 {
 		return in
@@ -534,7 +581,8 @@ func dedupeSecretRefs(in []SecretRef) []SecretRef {
 	out := in[:1]
 	for _, s := range in[1:] {
 		last := &out[len(out)-1]
-		if last.Service != s.Service || last.Name != s.Name || last.Key != s.Key {
+		if last.Unattributed != s.Unattributed ||
+			last.Service != s.Service || last.Name != s.Name || last.Key != s.Key {
 			out = append(out, s)
 			continue
 		}
@@ -646,10 +694,15 @@ func (f *Facts) SecretNames() []string {
 // top-level `secrets:` block declares credentials for the file's services without
 // saying which, and dropping those would trade a false claim for a missing one.
 // A reference naming a *different* service is never included, which is the whole
-// point — that is the misattribution this function exists to prevent.
+// point — that is the misattribution this function exists to prevent. Nor is one the
+// reader marked Unattributed, which is the same prevention for a file whose units are
+// unrelated to each other rather than sharing a declaration.
 func (f *Facts) SecretNamesFor(service string) []string {
 	out := make([]string, 0, len(f.SecretRefs))
 	for _, s := range f.SecretRefs {
+		if s.Unattributed {
+			continue
+		}
 		if s.Service == "" || s.Service == service {
 			out = append(out, s.Name)
 		}

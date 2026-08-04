@@ -204,9 +204,78 @@ All notable changes to this project are documented here. Format follows
   Git-for-Windows `sh` dispatch, and the never-gates property are one assertion, and none of
   them is reachable from a unit test.
 
+- **Terraform and `.tfvars` are read: what runs, where state lives, which of the repository's own
+  directories the infrastructure is composed from, and credentials by name only.** A configuration
+  states the two things nothing else in a repository states — what is actually deployed, and which
+  of its own directories that deployment is assembled from — and it is also the file most likely to
+  hold a live credential, sitting one line from the name that credential is known by. Both
+  boundaries land in the same reader.
+
+  Sources become a manifest route rather than a language extractor, because `.tf` is
+  infrastructure and not code: providers and modules become dependencies, workload resources and
+  the state backend become services, and `required_version` becomes the module's language version.
+  The parser is hand-written HCL — blocks, labels, attributes, nested blocks — and handles the four
+  places a brace count goes wrong: braces inside interpolations inside strings, braces in plain
+  strings, heredocs, and both comment forms. A miscount is silent rather than diagnostic; it
+  reparents the rest of the file, so resources below it stop being top-level and their pages vanish
+  with no error anywhere.
+
+  **A configuration is mostly wiring, and only some of it is a unit.** Resources that run
+  something or hold state become services; the policy attachments, firewall rules, route table
+  associations, and topic subscriptions a real configuration declares by the hundred do not. A page
+  for each would bury the one thing that runs among the plumbing around it. `data` blocks are read
+  and never become units — they describe what another configuration owns. The one exception is a
+  secret store, on the same grounds a k8s `Secret` document already gets: the resource *is* the
+  named credential, so where the credentials in a configuration live is something a reader looks
+  up. `.tfstate` is excluded outright: it holds every attribute of every resource, credentials
+  included, and a reader that opened it would publish them.
+
+  **Names, never values.** Sensitive variables, sensitive outputs, secret stores, generated
+  passwords, and credential-shaped `.tfvars` assignments are recorded by name; the backend records
+  which backend holds state and not the bucket beside the access key. The corpus carries five live
+  values, each one line from a name that does reach the bundle, and asserts none of them appears
+  anywhere in it — the *beside* is what distinguishes a reader that stops at the name from one that
+  never ran.
+
 ### Changed
 
 #### 2026-08-04
+
+- **A declared dependency whose target is a directory of this repository is a composition edge, not
+  a reference page.** A local Terraform module — `module "queue" { source = "./modules/queue" }` —
+  used to become an External Dependency page for first-party infrastructure, which is the npm
+  workspace-sibling defect reached by a different road: the supply-chain view named the
+  repository's own code as something pulled in from outside, and the one statement anywhere in the
+  tree of which of its directories the deployment is assembled from was routed to a leaf node.
+  A declaration now carries whether it resolved locally, because the reader that saw the `./` is
+  the only thing that can know: `modules/rds` and `hashicorp/vpc/aws` are the same
+  slash-separated shape, and a guess from the shape gets exactly one of them wrong whichever way
+  it guesses. Terraform's own rule is the test — local only if it starts with `./` or `../`.
+  Recorded with the entry below as
+  [ADR 0016](docs/adr/0016-a-reader-records-what-only-it-can-know.md): both are the same decision,
+  that a reader records what no downstream consumer can re-derive.
+
+- **A credential reference can now be attributed to nothing, which is not the same as attributed
+  to everything.** An unattributed reference meant "shared with this file's services", which is
+  what a compose top-level `secrets:` block is — the file declares credentials for the services
+  beside it without saying which reads which, and handing them to all of them trades a false claim
+  for no claim. A Terraform `variable "db_password"` is not that shape: one `.tf` file holds a
+  dozen unrelated resources, and which of them reads the variable is stated in an expression the
+  reader does not evaluate. Read as the compose convention, an ECS task and an S3 state backend
+  each claimed to read three credentials neither of them names. Such a reference is now kept and
+  deliberately attributed to nothing: it still answers "does this file touch credentials", and it
+  reaches no page. A fact with nowhere to go, rather than a fact in the wrong place. Attribution
+  is part of a reference's identity, so the same name declared both ways stays two claims, and
+  which one survived would otherwise have depended on sort order.
+
+- **A secret store resource is a unit, so the reference it carries reaches a reader.** The
+  workload rule says nothing runs in a secrets manager, and applying it left the reference naming
+  the resource with no page to land on — assemble reaches secrets only through the service that
+  reads them, so a reference attributed to a name with no node was a dead write. It is the same
+  exception a k8s `Secret` document already gets: the resource *is* the named credential, and
+  where the credentials in a configuration live is something a reader looks up. A `data` block
+  reading a secret is not — that credential is declared in another configuration, so the
+  reference stands and the page does not.
 
 - **A colliding page name is now suffixed with a hash of the thing it names rather than a
   position, so `src-2.md` becomes `src-1slg0rn.md`

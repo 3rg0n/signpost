@@ -374,6 +374,79 @@ README in the corpus that names the index page makes the corpus a pointed-at rep
 stops asking for a pointer, and the stage fails on its own documentation. That happened while this
 section was being written, and the guard is what caught it.
 
+## Infrastructure that must not publish what it holds
+
+`infra/` is Terraform, and it is here because it puts both boundaries in the same file. A
+configuration is the most valuable structure in a repository to read — what runs, where state
+lives, which of the repository's own directories the infrastructure is composed from — and it is
+also the file most likely to hold a live credential, sitting one line away from the name that
+credential is known by. `TestCorpusTerraformStatesWhatRunsAndNeverAValue` reads both.
+
+Five values sit in these fixtures, each beside a name that does reach the bundle. None of them
+may appear anywhere in it, and *beside* is the load-bearing word: a reader that dropped the
+whole block would satisfy the negatives and fail the positives, which is what makes the pair a
+test rather than two wishes.
+
+| Value | Where | The name that does arrive |
+|---|---|---|
+| `corpus-state-do-not-publish` | `backend "s3"`'s bucket | `backend.s3` — which backend holds state, not the bucket holding it |
+| `hunter2-do-not-publish` | an `aws_secretsmanager_secret_version`'s `secret_string` | `db` — the version resource's own name |
+| `s3cr3t-material-that-must-not-be-read` | `variable "db_password"`'s `default` | `db_password`, and `TF_VAR_db_password` |
+| `tfvars-value-must-never-be-read` | `staging.tfvars` | `db_password` |
+| `tfvars-token-must-never-be-read` | `staging.tfvars` | `api_token` |
+
+Two of the five are held by this stage and three by a `renderFacts` sweep in
+`internal/manifest`, which is worth stating rather than leaving to be discovered. The bucket and
+the `secret_string` ride on references that reach a page, so the bundle assertion is the only
+thing standing under them. The other three ride on references the reader deliberately attributes
+to nothing, and an unattributed reference reaches no page, so today they cannot arrive by that
+road however the reader mishandles them — the assertion that catches those is one layer up,
+before attribution can hide the answer. They stay in both places because attribution is a
+decision and not a law.
+
+The structural boundary is the other half, and here the negatives outnumber the positives for a
+reason: a real configuration declares IAM attachments and route table associations by the
+hundred, so a reader that admitted every resource would report forty pages where one thing runs
+and bury the pages that mattered among them.
+
+| Block | Page? | Why |
+|---|---|---|
+| `aws_ecs_service.worker` | yes | it runs something, and its `image` is the same claim a compose `image:` makes |
+| `aws_sqs_queue.events`, `aws_lambda_function.consumer` | yes | in the local module, which is where the parser's brace cases live |
+| `aws_secretsmanager_secret.db`, `random_password.session` | yes | a secret store *is* the named credential, so "where the credentials live" is a thing a reader looks up |
+| `backend "s3"` | yes, as `terraform-state` | state is the most sensitive artifact the repository has |
+| `aws_ecs_cluster.corpus` | no | capacity: `_cluster` is a workload suffix and a cluster runs nothing by itself, so this is the row that says the suffix rule is bounded by an exceptions list |
+| four wiring resources | no | a policy attachment, a firewall rule, a bucket policy, a topic subscription — none of them runs anything |
+| `data "aws_lambda_function" "existing"` | no | compute-shaped, and it declares nothing this configuration owns |
+| `module "queue"` (`./modules/queue`) | no | a directory of this repository, and an external dependency page for it would report first-party infrastructure as something pulled in from outside |
+| `module "vpc"` (`terraform-aws-modules/vpc/aws`) | yes | genuinely external, with a registry to publish an advisory against |
+
+The last two rows are one boundary written twice. `terraform-aws-modules/vpc/aws` and
+`./modules/queue` are the same slash-separated shape, so a reader guessing from the shape rather
+than from Terraform's own rule — local only if it starts with `./` or `../` — gets exactly one
+of them wrong whichever way it guesses.
+
+Two things this tree cannot express, both asserted in unit tests instead:
+
+- The composition **edge** that replaces the suppressed `queue` page. It needs a module node at
+  each end, and Terraform is read as a manifest so it contributes none; `infra/` and
+  `infra/modules/queue/` hold nothing but `.tf`, so no edge is drawn and that is correct.
+  `TestLocalDeclarationIsAnEdgeAndNotAReferencePage` in `internal/assemble` pairs both halves
+  against a tree that has the source. Planting Go files in `infra/` to stand the edge up here
+  would be testing the fixture.
+- The attribution of module-level references. `db_password`, `api_token`, and the sensitive
+  output `db_password_arn` are inputs to `infra/main.tf` as a whole — which resource reads them
+  is stated in an expression this reader does not evaluate. Handed to every service in the file,
+  which is what an empty service means to a *compose* file, the ECS task and the S3 backend each
+  claimed to read three credentials neither names. The stage asserts those three pages name none
+  of them and carry no `reads-secrets` tag; `internal/manifest` holds the field-level rule.
+
+`infra/modules/queue/main.tf` also carries the four places a naive brace count goes wrong — a
+brace inside an interpolation inside a string, a brace in a plain string, a heredoc, and both
+comment forms. None of them is a diagnostic: a miscount silently reparents the rest of the file,
+so the resources below stop being top-level and their pages vanish with no error anywhere. The
+two `yes` rows for that file are the observable.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs

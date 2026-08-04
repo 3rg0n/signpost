@@ -629,6 +629,140 @@ func TestCorpusSecretsAreAttributedToTheServiceThatReadsThem(t *testing.T) {
 	}
 }
 
+// TestCorpusTerraformStatesWhatRunsAndNeverAValue is the Terraform stage.
+//
+// A configuration is the file in a repository most likely to hold a live credential and the
+// one whose structure a reader most needs, which puts both boundaries in the same place. It
+// is also mostly wiring: a real configuration declares IAM attachments and route table
+// associations by the hundred, so a reader that admitted every resource would report forty
+// pages where one thing runs, and the pages that mattered would be unfindable among them.
+//
+// The negatives here are the values, and they are asserted over the whole bundle rather than
+// per page: five strings sit in the fixtures beside a name the reader does record — a backend
+// bucket, a `secret_string`, a sensitive variable's default, and two .tfvars assignments — and
+// the bundle is committed and published, so any one of them reaching it is a credential
+// exfiltration path wearing a documentation tool's clothes. A per-page assertion would miss a
+// value that leaked through the index or a page nobody thought to check.
+//
+// Two of the five are load-bearing here and three are defence in depth, which is worth stating
+// rather than leaving to be discovered. The bucket and the `secret_string` sit on references
+// that reach a page, so this stage is what holds them — a reader that carried either was caught
+// here and nowhere else. The variable default and the two .tfvars values sit on references the
+// reader deliberately attributes to nothing, and an unattributed reference reaches no page, so
+// today they cannot arrive by that road whatever the reader does with them; the assertion that
+// holds those is the renderFacts sweep in internal/manifest, which asks the same question one
+// layer up, before attribution can hide the answer. They stay here because attribution is a
+// decision and not a law: if a later change gives those references somewhere to land, this is
+// the assertion that notices the value came with them.
+func TestCorpusTerraformStatesWhatRunsAndNeverAValue(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// Not one value from any Terraform fixture, anywhere. Every string below sits in the
+	// fixture immediately beside a name that *does* reach the bundle, which is the only way to
+	// tell "the reader took the name and stopped" from "the reader did not run".
+	for _, secret := range []string{
+		"corpus-state-do-not-publish",           // the backend bucket, beside `backend "s3"`
+		"hunter2-do-not-publish",                // a secret_string, beside its resource name
+		"s3cr3t-material-that-must-not-be-read", // a sensitive variable's default
+		"tfvars-value-must-never-be-read",       // a .tfvars assignment to db_password
+		"tfvars-token-must-never-be-read",       // and to api_token
+	} {
+		for rel, body := range pages {
+			if strings.Contains(body, secret) {
+				t.Errorf("%s contains %q, a value from a Terraform fixture. The bundle is committed "+
+					"and published, so a value that crosses into it is a credential leaving the "+
+					"repository through the documentation", rel, secret)
+			}
+		}
+	}
+
+	// The names, which are the counterpart: suppressing the values is only correct if the
+	// facts beside them arrived. Without this half, a reader that read no .tf file at all
+	// would satisfy every assertion above.
+	for _, want := range []struct{ page, fact string }{
+		// A workload, and its image — the same claim a compose file's `image:` makes.
+		{"services/aws-ecs-service-worker.md", "docker.io/library/golang:1.26-alpine"},
+		// A secret store is a page for one reason: the resource *is* the named credential, so
+		// "where the credentials in this configuration live" is a thing a reader looks up.
+		{"services/aws-secretsmanager-secret-db.md", "corpus/db-credentials"},
+		// Read from the local module, which is where the parser's brace cases live. A miscount
+		// there is silent — it reparents the rest of the file — so this page vanishing is the
+		// observable.
+		{"services/aws-sqs-queue-events.md", "aws_sqs_queue"},
+		{"services/aws-lambda-function-consumer.md", "aws_lambda_function"},
+		// A registry module is genuinely external and keeps its page.
+		{"references/terraform-vpc.md", "terraform-aws-modules/vpc/aws"},
+		{"references/terraform-aws.md", "hashicorp/aws"},
+	} {
+		body, ok := pages[want.page]
+		if !ok {
+			t.Errorf("no page at %s, so a fact the configuration states reached no reader. Pages:\n  %s",
+				want.page, pageNames(pages))
+			continue
+		}
+		if !strings.Contains(body, want.fact) {
+			t.Errorf("%s does not state %q:\n%s", want.page, want.fact, body)
+		}
+	}
+
+	// And the negative boundary on structure. Each of these is in the fixture on purpose, and
+	// each is a page a reader cannot act on: wiring that runs nothing, capacity that runs
+	// nothing by itself, a `data` block declaring something another configuration owns, and a
+	// directory of this repository dressed as a third-party dependency.
+	for _, unwanted := range []struct{ page, why string }{
+		{"services/aws-iam-role-policy-attachment-worker.md", "wiring: it attaches a policy and runs nothing"},
+		{"services/aws-security-group-rule-worker-egress.md", "wiring: a firewall rule is not a unit"},
+		{"services/aws-s3-bucket-policy-assets.md", "wiring: a bucket policy is not a place state lives"},
+		{"services/aws-sns-topic-subscription-alerts.md", "wiring: a subscription is not a workload"},
+		{"services/aws-ecs-cluster-corpus.md", "capacity, and on the exceptions list: `_cluster` is a workload suffix and a cluster runs nothing by itself"},
+		{"services/aws-lambda-function-existing.md", "a `data` block: compute-shaped, and it declares nothing this configuration owns"},
+		{"services/aws-sqs-queue-policy-events.md", "wiring: `_policy` is not a workload suffix"},
+		{"references/terraform-queue.md", "a directory in this repository, presented as something pulled in from outside"},
+	} {
+		if body, ok := pages[unwanted.page]; ok {
+			t.Errorf("%s exists and should not — %s. A page a reader cannot act on buries the ones "+
+				"they can:\n%s", unwanted.page, unwanted.why, body)
+		}
+	}
+
+	// The other half of that row — a composition edge drawn where the reference page was
+	// suppressed — is asserted in internal/assemble, not here, and the reason is a property of
+	// the design rather than a gap in this fixture. Terraform is read as a manifest, so it
+	// contributes no module nodes of its own, and the edge needs one at each end: the nearest
+	// module above the declaring file and one for the directory named. `infra/` and
+	// `infra/modules/queue/` hold nothing but `.tf`, so neither end exists and correctly no
+	// edge is drawn. Faking it would mean planting source in two directories to stand up an
+	// edge, which tests the fixture. TestLocalDeclarationIsAnEdgeAndNotAReferencePage pairs
+	// both halves against a tree that does have the source.
+
+	// The unattributed-reference boundary, on the bundle. `db_password` and `api_token` are
+	// module-level inputs to infra/main.tf and `db_password_arn` is a sensitive output: which
+	// resource reads them is stated in an expression this reader does not evaluate. Handed to
+	// every service in the file — which is what an empty Service means to a compose file — the
+	// ECS task and the S3 state backend each claimed to read three credentials neither names.
+	for _, page := range []string{
+		"services/aws-ecs-service-worker.md",
+		"services/terraform-state.md",
+		"services/aws-sqs-queue-events.md",
+	} {
+		body, ok := pages[page]
+		if !ok {
+			continue // absence is the other tests' business
+		}
+		for _, unwanted := range []string{"db_password", "api_token", "db_password_arn"} {
+			if strings.Contains(body, unwanted) {
+				t.Errorf("%s names %q, a module-level input to the configuration. Nothing in the "+
+					"file says this unit reads it, and a reader is told a credential is reachable "+
+					"from somewhere it is not:\n%s", page, unwanted, body)
+			}
+		}
+		if strings.Contains(body, "reads-secrets") {
+			t.Errorf("%s carries reads-secrets and names no credential of its own:\n%s", page, body)
+		}
+	}
+}
+
 // TestCorpusWorkspacePackagesAreNotExternalDependencies is the regression for a monorepo's
 // own packages reported as third-party dependencies.
 //

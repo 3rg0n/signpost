@@ -90,6 +90,14 @@ func DefaultRegistry() *Registry {
 	r.Register(Route{Kind: KindHelmChart, Match: basename("Chart.yaml", "Chart.yml"), Read: ExtractHelmChart})
 	r.Register(Route{Kind: KindHelmValues, Match: matchHelmValues, Read: ExtractHelmValues})
 
+	// Terraform, matched by extension because that is the only thing that identifies
+	// HCL — a Terraform file has no conventional name and lives wherever its author put
+	// it. `.tfstate` is deliberately not claimed: it is generated, it is not
+	// configuration, and it contains every attribute of every resource including the
+	// credentials, so it belongs in the unhandled count where its presence in a
+	// repository is visible rather than in a reader that opens it.
+	r.Register(Route{Kind: KindTerraform, Match: matchTerraform, Read: ExtractTerraform})
+
 	// Contracts, before the Kubernetes catch-all: an OpenAPI document under a deploy
 	// directory is still an OpenAPI document, and the reverse route would read it as a
 	// manifest with no kind and report nothing.

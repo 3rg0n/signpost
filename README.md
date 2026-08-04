@@ -79,7 +79,7 @@ fixtures at F1 1.000 for both imports and symbols.
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, and `Cargo.toml` for
 dependencies; Containerfiles, compose files, GitHub Actions workflows,
-Kubernetes manifests, and Helm charts for deployment; protobuf, OpenAPI/Swagger,
+Kubernetes manifests, Helm charts, and Terraform for deployment; protobuf, OpenAPI/Swagger,
 and GraphQL SDL for contracts; SQL migrations, CODEOWNERS, ADRs, and Makefiles
 for the rest. Secrets are recorded as *references* — a name and its key names,
 never a value — because the bundle gets committed.

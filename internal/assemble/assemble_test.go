@@ -948,6 +948,45 @@ func TestDeclaredDepsAreConnectedWithoutImports(t *testing.T) {
 	}
 }
 
+// A declaration whose target is a directory in this repository is not an external
+// dependency, and the composition it states is worth an edge instead.
+//
+// Both halves are asserted together because either alone is satisfiable by a broken
+// reading. Dropping the reference page without drawing the edge loses the only statement
+// anywhere in the repository of which of its own directories the infrastructure is
+// composed from; drawing an edge while still emitting the page claims the repository
+// pulls its own code in from outside. The registry module beside it is the negative
+// boundary: `terraform-aws-modules/vpc/aws` and `./modules/queue` are the same
+// slash-separated shape, so a reader guessing from the shape rather than from the `./`
+// gets exactly one of these two rows wrong whichever way it guesses.
+func TestLocalDeclarationIsAnEdgeAndNotAReferencePage(t *testing.T) {
+	out := build(t, map[string]string{
+		"main.go": "package main\n\nfunc main() {}\n",
+		"infra/main.tf": "" +
+			"module \"queue\" {\n  source = \"./modules/queue\"\n}\n\n" +
+			"module \"vpc\" {\n  source  = \"terraform-aws-modules/vpc/aws\"\n  version = \"5.5.1\"\n}\n",
+		// Source in the target directory, because a module node is what the edge needs
+		// to land on and a directory of `.tf` files alone produces none.
+		"infra/modules/queue/queue.go": "package queue\n\nfunc Send() {}\n",
+	})
+	g := out.Graph
+	if g.Node("/references/terraform-queue") != nil {
+		t.Error("a directory in this repository must not get an external dependency page")
+	}
+	if g.Node("/references/terraform-vpc") == nil {
+		t.Error("a registry module is genuinely external and must keep its page")
+	}
+	// From the nearest module above the declaring file, which for a manifest in a
+	// source-free directory is the same rule every other manifest gets.
+	if !hasEdge(g, "/modules/root", "/modules/queue", graph.EdgeConfigures) {
+		var got []string
+		for _, e := range g.Edges() {
+			got = append(got, e.From+" -"+string(e.Kind)+"-> "+e.To)
+		}
+		t.Errorf("edges = %v, want infra configures queue", got)
+	}
+}
+
 // A manifest at the repository root sits in a directory that often holds no source of
 // its own; the declaration still belongs to the nearest module above it.
 func TestManifestInSourcelessDirectory(t *testing.T) {
