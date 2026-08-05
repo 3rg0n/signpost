@@ -126,11 +126,30 @@ jobs:
         # past that deadlocks this step until the job timeout, reported as a hang in
         # whichever workflow held it rather than as a size limit — so if this step
         # ever stops finishing, measure the blocks before debugging anything else.
+        #
+        # shellcheck is pinned for the same reason actionlint is, and the first run
+        # of this step is why: the findings are shellcheck's, so an unpinned one
+        # means the verdict moves with whatever the runner image ships. That run
+        # reported two SC2015s the current release does not, so the gate disagreed
+        # with a clean local run and the difference was the tool, not the shell.
+        # A gate whose answer depends on an image refresh cannot be reproduced,
+        # and one nobody can reproduce is one that gets switched off.
         run: |
           set -euo pipefail
-          command -v shellcheck >/dev/null || {
-            echo "shellcheck is not on PATH. actionlint would skip every run: block"
-            echo "and exit 0, which is a gate that cannot fail."
+          want=0.11.0
+          curl -fsSL -o /tmp/sc.tar.xz \
+            "https://github.com/koalaman/shellcheck/releases/download/v${want}/shellcheck-v${want}.linux.x86_64.tar.xz"
+          tar -xJf /tmp/sc.tar.xz -C /tmp
+          sudo install -m 0755 "/tmp/shellcheck-v${want}/shellcheck" /usr/local/bin/shellcheck
+          # Asserted rather than assumed: actionlint skips every run: block and still
+          # exits 0 when shellcheck is absent, which is a gate that cannot fail. And
+          # the version is asserted because installing it is not the same as it being
+          # the one on PATH — /usr/local/bin has to win over the preinstalled copy.
+          got=$(shellcheck --version | sed -n 's/^version: //p')
+          [ "$got" = "$want" ] || {
+            echo "shellcheck on PATH is ${got:-absent}, want ${want}. actionlint's findings"
+            echo "are shellcheck's, so an unexpected version silently changes this gate's"
+            echo "verdict in either direction."
             exit 1
           }
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
@@ -735,10 +754,10 @@ jobs:
           # pages and "ok" over every page read the same in a log, so the floor
           # is asserted rather than assumed.
           pages="$(sed -n 's/^  checked \([0-9]*\) page(s).*/\1/p' "$out")"
-          [ -n "$pages" ] && [ "$pages" -ge 10 ] || {
+          if [ -z "$pages" ] || [ "$pages" -lt 10 ]; then
             echo "verify reported ${pages:-no} page(s) checked; a pass over nothing is not a pass"
             exit 1
-          }
+          fi
           echo "verify: ${pages} page(s) checked, exit 0"
 
           # Now make the bundle wrong and require a non-zero exit. A new package
@@ -1647,7 +1666,10 @@ jobs:
           ./signpost build -repo example.com/corpus "$corpus" 2>"${RUNNER_TEMP}/cov2.txt" >/dev/null
           count() { sed -n 's/^analysed \([0-9]*\) files:.*/\1/p' "$1" | head -1; }
           a=$(count "${RUNNER_TEMP}/cov1.txt"); b=$(count "${RUNNER_TEMP}/cov2.txt")
-          [ -n "$a" ] && [ -n "$b" ] || { echo "no coverage report found; this step asserts nothing"; exit 1; }
+          if [ -z "$a" ] || [ -z "$b" ]; then
+            echo "no coverage report found; this step asserts nothing"
+            exit 1
+          fi
           echo "census: ${a} then ${b}"
           [ "$a" = "$b" ] || {
             echo "the file census moved between two builds of an unchanged tree. A run that"

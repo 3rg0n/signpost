@@ -471,6 +471,17 @@ All notable changes to this project are documented here. Format follows
   the collision counter asserts a count and so fails closed, and the alias check runs after a
   step that positively asserts `npm-react.md` on the same bundle.
 
+  **`shellcheck` is pinned too, and the first run of the new step is why.** It failed on two
+  SC2015s that a clean local run did not report, and the difference was the tool rather than the
+  shell: actionlint was pinned and shellcheck was whatever the runner image shipped. Every finding
+  this step produces is shellcheck's, so leaving it unpinned means the gate's verdict moves with an
+  image refresh — unreproducible locally, and a gate nobody can reproduce is one that gets switched
+  off. Pinned to 0.11.0, installed rather than inherited, with the version on `PATH` asserted
+  because installing a copy is not the same as it being the one that runs. The two findings were
+  real as style if not as logic — `[ -n "$x" ] && [ "$x" -ge 10 ] || { exit 1; }` reads as
+  if-then-else and is not one — and both are now explicit `if` blocks, verified equivalent across
+  empty, below-floor, at-floor, and above-floor inputs.
+
 - **Two local scanners could not run, and one of them was failing open.** Neither is a defect in
   this repository's code; both were misreporting the gate.
 
