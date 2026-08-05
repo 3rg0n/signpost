@@ -135,6 +135,8 @@ func DefaultRegistry() *Registry {
 	r.Register(PythonExtractor{})
 	r.Register(TSExtractor{})
 	r.Register(RustExtractor{})
+	r.Register(JavaExtractor{})
+	r.Register(KotlinExtractor{})
 	return r
 }
 

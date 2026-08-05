@@ -17,9 +17,14 @@ import (
 // kind at all, because those are the things the commands report on and a fixture
 // without them would let a silent regression pass.
 //
-// The last two are deliberately different files. `.kt` is a source language signpost
+// The last two are deliberately different files. `.scala` is a source language signpost
 // knows and cannot read; `.astro` is a file it cannot classify, so no reader is ever
 // offered it. One fixture file could not tell the two coverage lines apart.
+//
+// The unreadable language has to be one with no extractor, so it changes as extractors
+// land: this was `.kt` until Kotlin got one. Scala is the deliberate choice — it is the
+// JVM language the Java and Kotlin work explicitly deferred, so a fixture asserting it
+// goes unread is asserting something true rather than something forgotten.
 func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -29,7 +34,7 @@ func fixture(t *testing.T) string {
 		"internal/auth/auth.go":   "package auth\n\nimport (\n\t\"example.com/app/internal/store\"\n\t\"example.com/dep/x\"\n)\n\nfunc Check() bool { return store.Get() && x.Y }\n",
 		"internal/store/store.go": "package store\n\nimport \"example.com/app/internal/auth\"\n\nfunc Get() bool { return auth.Check() }\n",
 		"compose.yaml":            "services:\n  api:\n    build: .\n    ports:\n      - \"8080:8080\"\n",
-		"scratch.kt":              "fun main() { println(\"no extractor for this\") }\n",
+		"scratch.scala":           "object Scratch { def main(args: Array[String]): Unit = println(\"no extractor for this\") }\n",
 		"web/Card.astro":          "---\nconst x = 1\n---\n<div>{x}</div>\n",
 	}
 	for p, content := range files {
@@ -82,11 +87,11 @@ func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	if !strings.Contains(stderr, "analysed") {
 		t.Errorf("no coverage line:\n%s", stderr)
 	}
-	// The Kotlin file has no extractor, and a user whose repository is half Kotlin
+	// The Scala file has no extractor, and a user whose repository is half Scala
 	// must not be left thinking signpost read it. Named by extension, because
 	// signpost has no classifier for a language it does not support and "other (1)"
 	// would not tell anyone what went unread.
-	if !strings.Contains(stderr, "no extractor for") || !strings.Contains(stderr, ".kt") {
+	if !strings.Contains(stderr, "no extractor for") || !strings.Contains(stderr, ".scala") {
 		t.Errorf("unhandled language not reported by extension:\n%s", stderr)
 	}
 	// The .astro file is a different admission and gets a different line. It is not a
@@ -102,7 +107,7 @@ func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	if strings.Contains(coverageLine(stderr, "no extractor for"), ".astro") {
 		t.Errorf("unclassified file folded into the no-extractor line:\n%s", stderr)
 	}
-	if strings.Contains(coverageLine(stderr, "no recognised kind"), ".kt") {
+	if strings.Contains(coverageLine(stderr, "no recognised kind"), ".scala") {
 		t.Errorf("unreadable language folded into the unclassified line:\n%s", stderr)
 	}
 }

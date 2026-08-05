@@ -53,6 +53,9 @@ type resolver struct {
 	// pyRoots are directories holding a Python package manifest, longest first: each is
 	// a path an absolute import resolves against for the files beneath it.
 	pyRoots []string
+	// jvmPkgs maps a declared JVM package name to the directory declaring it, longest
+	// name first so a subpackage wins over the package containing it.
+	jvmPkgs []jvmPackage
 	// deps maps a normalized dependency key to the external node it belongs to.
 	deps map[string]string
 	// ecosystems are the ecosystems any manifest declared, sorted, for the
@@ -68,6 +71,19 @@ type goModule struct {
 type npmPkg struct {
 	dir  string
 	name string
+}
+
+// jvmPackage is one `package` declaration and the directory the file declaring it sits
+// in. Both halves are needed and neither can be derived from the other: the name is
+// what an import writes, and the directory is what a module node is keyed on.
+type jvmPackage struct {
+	dir  string
+	name string
+	// test marks a directory where every file declaring this package is a test. The
+	// standard JVM layout declares each package twice — `src/main/java/com/x` and
+	// `src/test/java/com/x` — so two directories answer to the same name and only one
+	// of them is what another module's import means.
+	test bool
 }
 
 // tsAlias is one `paths` entry, flattened for matching.
@@ -321,6 +337,69 @@ func (r *resolver) addPyRoot(dir string) {
 	})
 }
 
+// addJVMPackage records a `package` declaration against the directory declaring it.
+//
+// This is the JVM's equivalent of addGoModule, and it comes from a different place: a Go
+// module path is declared once in go.mod, while a JVM package is declared in every source
+// file, and no build file signpost reads states the mapping at all. Task #19 does not read
+// pom.xml or build.gradle, so the source files are the only authority available — and they
+// are a sufficient one, because a `package` declaration is exactly the name another file
+// writes in its `import`.
+//
+// Deriving the name from the path instead would be wrong rather than approximate. The same
+// file compiles from `src/main/java`, from `src/`, or from any directory a Gradle source
+// set names, so `src/main/java/com/example/api/A.java` yields `src.main.java.com.example.api`
+// under a path rule and `com.example.api` under this one. Only the second resolves an
+// import anybody wrote.
+//
+// `test` says whether the declaring file is one, and it is what makes the standard layout
+// resolvable at all. Maven and Gradle put `com.example.api` in two directories —
+// `src/main/java/com/example/api` and `src/test/java/com/example/api` — so an import of
+// that package names two candidates and only the first is what another module means by it.
+// A test directory is registered anyway rather than discarded, because a package declared
+// *only* under src/test is still this repository's own and an import of it is internal, not
+// a dependency somebody forgot to declare.
+func (r *resolver) addJVMPackage(file, name string, test bool) {
+	if name == "" {
+		return
+	}
+	dir := dirOf(file)
+	for i, p := range r.jvmPkgs {
+		if p.name != name || p.dir != dir {
+			continue
+		}
+		// A directory holding one production file and one test file is production. The
+		// flag means "every file declaring this package here is a test", so a single
+		// non-test file clears it — the same rule hasProdSource applies to a module.
+		if !test {
+			r.jvmPkgs[i].test = false
+		}
+		return
+	}
+	r.jvmPkgs = append(r.jvmPkgs, jvmPackage{dir: dir, name: name, test: test})
+	// Longest name first, so an import of `com.example.api.internal` matches that package
+	// rather than `com.example.api` with a stray `.internal` read as a class.
+	//
+	// Production before test at equal length, because directory order cannot be trusted to
+	// do it. `src/main` happens to sort before `src/test`, but the source set holding tests
+	// is not always called that: Android's is `src/androidTest` and Gradle's convention for
+	// the extra one is `src/integrationTest`, and both sort ahead of `main`. So a repository
+	// with either resolves every import of a package to the copy under test — an edge into
+	// the tests instead of into the code, drawn with no indication that a choice was made.
+	sort.Slice(r.jvmPkgs, func(i, j int) bool {
+		if len(r.jvmPkgs[i].name) != len(r.jvmPkgs[j].name) {
+			return len(r.jvmPkgs[i].name) > len(r.jvmPkgs[j].name)
+		}
+		if r.jvmPkgs[i].name != r.jvmPkgs[j].name {
+			return r.jvmPkgs[i].name < r.jvmPkgs[j].name
+		}
+		if r.jvmPkgs[i].test != r.jvmPkgs[j].test {
+			return !r.jvmPkgs[i].test
+		}
+		return r.jvmPkgs[i].dir < r.jvmPkgs[j].dir
+	})
+}
+
 // addDep registers a declared dependency under every key an import of it might use.
 //
 // The gap between a distribution name and the name you import is real and routine:
@@ -433,8 +512,49 @@ func (r *resolver) resolveImport(lang discover.Lang, from, raw string) (id strin
 		return r.resolveTS(from, raw)
 	case discover.LangRust:
 		return r.resolveRust(from, raw)
+	case discover.LangJava, discover.LangKotlin:
+		return r.resolveJVM(raw)
 	}
 	return "", false
+}
+
+// resolveJVM resolves an import against the package declarations the repository's own
+// source files make.
+//
+// No `from` is needed, which makes this the simplest resolver here: a JVM import is
+// always the fully-qualified name and never relative to the importing file. What makes
+// it the least complete is the other side — signpost reads no pom.xml or build.gradle
+// (deferred with the rest of the JVM manifest work), so there is no declared-dependency
+// list for a JVM import to match against. An import that names no package in this
+// repository therefore resolves to nothing at all rather than to an external node.
+//
+// That is the honest outcome and not a placeholder to be filled with a guess. Inventing
+// a Maven node from an import string would mean publishing a coordinate the repository
+// never declared, in a bundle whose whole claim about dependencies is that a manifest
+// said so. Until a build file is read, `org.springframework.*` is counted as unresolved
+// — visible in the gap report, which is where a reader can see the limitation.
+// The first match wins outright, and both halves of that are decided by the sort in
+// addJVMPackage rather than here. Longest name first is what makes
+// `com.example.store.internal` beat `com.example.store`, and production before test is what
+// picks between the two directories a standard layout gives one package name. There is no
+// second candidate to fall through to and no need for one: every jvmPkgs entry was recorded
+// from a file that also created a module node for its directory, both keyed on dirOf, so the
+// lookup below cannot come back empty.
+func (r *resolver) resolveJVM(raw string) (string, bool) {
+	for _, p := range r.jvmPkgs {
+		if jvmUnderPackage(raw, p.name) {
+			return r.moduleAt(p.dir), true
+		}
+	}
+	return "", false
+}
+
+// jvmUnderPackage reports whether an import names a package or something inside it.
+//
+// Dot-delimited, so `com.example.apiv2` is not under `com.example.api` — the same care
+// underPath takes with slashes, and for the same reason.
+func jvmUnderPackage(raw, pkg string) bool {
+	return raw == pkg || strings.HasPrefix(raw, pkg+".")
 }
 
 // resolveGo resolves by module path prefix, which is exactly how the Go toolchain

@@ -210,7 +210,7 @@ func TestBuildReportsCoverageByDefault(t *testing.T) {
 	if !strings.Contains(stderr, "analysed") {
 		t.Errorf("no coverage line:\n%s", stderr)
 	}
-	if !strings.Contains(stderr, ".kt") {
+	if !strings.Contains(stderr, ".scala") {
 		t.Errorf("the unread language was not named:\n%s", stderr)
 	}
 }

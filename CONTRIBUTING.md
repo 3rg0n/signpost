@@ -30,7 +30,21 @@ golangci-lint run ./...
 gosec -quiet ./...
 govulncheck ./...
 gitleaks detect --no-git
+actionlint             # the workflows are the largest body of shell here
 ```
+
+`actionlint` needs `shellcheck` on your `PATH`, and it lints every `run:` block
+through it — that is most of what it catches. Without shellcheck it skips the shell
+entirely and still exits 0, so check that you have it rather than trusting a clean
+run.
+
+**On Windows, build actionlint from `main`.** The released v1.7.12 writes a script
+into shellcheck's stdin pipe before starting the process, so any `run:` block over
+4KB deadlocks forever — the largest one here is 8338 bytes. That is upstream issue #650,
+fixed on `main` and not yet tagged; Linux's 64KB pipe buffer hides it, which is why
+CI pins the release. `go install github.com/rhysd/actionlint/cmd/actionlint@main`.
+Do not work around a hang with `-shellcheck=`: that disables the half of the check
+that finds things.
 
 `-count=2` is not superstition. signpost's output is committed to the
 repositories it analyses, so nondeterministic output is commit churn in someone

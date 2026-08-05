@@ -365,6 +365,14 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		{"Python", "py/greeter"},
 		{"TypeScript, bracketed directory", "ts/app/tools/[slug]"},
 		{"TypeScript, parenthesised directory", "ts/app/(marketing)"},
+		{"Java", "jvm/src/main/java/com/example/api"},
+		{"Java, a package under another package", "jvm/src/main/java/com/example/store/internal"},
+		{"Kotlin", "jvm/src/main/kotlin/com/example/app"},
+		// The second source set, and the reason it is asserted by name: it declares
+		// `com.example.api` exactly as src/main does, so this page and the Java one above are
+		// two directories answering to one package name. A layout that collapsed them would
+		// still produce a page for the name — this says both survived as separate modules.
+		{"Java, a second source set declaring a package src/main declares too", "jvm/src/integrationTest/java/com/example/api"},
 	} {
 		if _, ok := byTitle[want.dir]; !ok {
 			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
@@ -1039,15 +1047,32 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 //   - rust `serde_yaml::Value` — a real crate that is not the declared `serde`, in the
 //     underscore spelling the dash/underscore equivalence exists to accept;
 //   - typescript `pathe/utils` — an npm package whose name opens with the four characters
-//     of the Node builtin `path`, which is the boundary for issue #14's subpath rule.
+//     of the Node builtin `path`, which is the boundary for issue #14's subpath rule;
+//   - java `com.example.apiv2` — shares every character of the declared package
+//     `com.example.api`, which a package prefix compared as a string rather than as a
+//     dot-delimited name folds into it;
+//   - java `javax.servlet.http` and kotlin `kotlinx.coroutines` — the two JVM near-misses of
+//     the *runtime* rather than of a declared dependency. `javax` is split between the JDK
+//     and Maven artifacts by a 1999 decision and nothing else, so `javax.crypto` is the
+//     platform and `javax.servlet` is a dependency somebody upgrades; `kotlinx` opens with
+//     the six characters of `kotlin` and is separately versioned. Both are here because the
+//     JVM has no manifest reader yet, so nothing but this list distinguishes a wrongly
+//     classified runtime name from a correctly classified one.
+//
+// The JVM has one more gap that is a limitation rather than a near-miss: `org.junit.jupiter.api`
+// is a real declared dependency, and signpost reads no pom.xml or build.gradle, so there is no
+// declared list for it to match. It lands here rather than being invented as a Maven coordinate
+// the repository never wrote, which is the honest answer and is also why the JVM cannot supply
+// the other half of the standard pattern — an import that resolves to a declared external.
 //
 // Each must land here and nowhere else. Two wrong homes are possible and both are worse than
 // the gap: an edge into this repository, which invents structure; or an external node, which
 // invents a supply-chain entry nobody declared. Which failure a given over-match produces
 // depends on the repository, so neither is asserted alone — the set is.
 //
-// The stdlib imports are the other half. `node:fs`, python `os`, rust `std::fmt`, and the
-// Node builtins addressed by subpath — `fs/promises`, `node:test/reporters` — are the runtime:
+// The stdlib imports are the other half. `node:fs`, python `os`, rust `std::fmt`, java
+// `java.util.List` and `javax.crypto`, kotlin `kotlin.math`, and the Node builtins addressed by
+// subpath — `fs/promises`, `node:test/reporters` — are the runtime:
 // in no manifest, patched by nobody. They must be absent from this set, and absent is also what
 // a resolver that silently dropped them looks like, which is why they sit in files whose other
 // imports are asserted positively above.
@@ -1073,6 +1098,10 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// is what carries the assertion and the names are what make a failure legible.
 	want := []string{
 		"go example.com/corpus/greeterx/format",
+		"java com.example.apiv2",
+		"java javax.servlet.http",
+		"java org.junit.jupiter.api",
+		"kotlin kotlinx.coroutines",
 		"python httpx_extras",
 		"python winreg_helpers",
 		"rust corpus_greeter::Greeting",
@@ -1109,7 +1138,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		t.Fatalf("export did not produce JSON: %v", err)
 	}
 	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers"} {
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -1149,6 +1178,21 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 				t.Errorf("%q is an external dependency page. It is platform-specific standard "+
 					"library, and nobody publishes or patches it — a page for it is a "+
 					"supply-chain entry for the interpreter", n.Title)
+			}
+		}
+	}
+	// The JVM runtime, matched exactly for the same reason: `javax.servlet.http` and
+	// `kotlinx.coroutines` are near-misses asserted above, and a substring check for `javax` or
+	// `kotlin` would be satisfied by the pages that must not exist. These four are the platform
+	// — the JDK and the Kotlin standard library, shipped and patched with the toolchain — and
+	// they sit one segment away from a name that is not, which is the whole reason the JVM
+	// carries two runtime near-misses rather than one.
+	for _, name := range []string{"java.util", "javax.crypto", "kotlin.math", "com.sun"} {
+		for _, n := range g.Nodes {
+			if n.Kind == "External Dependency" && strings.EqualFold(n.Title, name) {
+				t.Errorf("%q is an external dependency page. It is the JVM runtime, versioned "+
+					"with the toolchain rather than declared in a build file, so a page for it "+
+					"is a supply-chain entry for the JDK", n.Title)
 			}
 		}
 	}
@@ -1239,6 +1283,114 @@ func TestCorpusPythonPackageRootsResolve(t *testing.T) {
 				"that does not exist, reported with the confidence of something extracted",
 				c.from, c.to)
 		}
+	}
+}
+
+// TestCorpusResolvesJVMPackagesToTheRightDirectory is the regression for the three defects the
+// JVM fixtures exposed, and all three come from one fact: the JVM is the only language here
+// whose resolution map is built from extracted facts rather than from a manifest.
+//
+// signpost reads no pom.xml or build.gradle, so a JVM import resolves against the `package`
+// declarations found in the source. That works, and it has a consequence the other languages
+// do not have — the standard layout declares each package *twice*, once per source set, so
+// `com.example.api` names both `src/main/java/com/example/api` and
+// `src/integrationTest/java/com/example/api` and only one of them is what another module means
+// by it. Three things went wrong there, each asserted below and each with a negative:
+//
+//   - the wrong source set. Directory order was the tiebreaker, and it cannot be: `src/test`
+//     happens to sort after `src/main`, but the source set holding tests is not always called
+//     that. Gradle's convention for the extra one is `integrationTest` and Android's is
+//     `androidTest`, and both sort *ahead* of `main` — so a repository with either resolved
+//     every import of a package to the copy under test. An edge into the tests instead of into
+//     the code, drawn with no indication a choice was made. The fixture uses `integrationTest`
+//     for exactly this reason: with a source set named `test`, the assertion would pass on the
+//     broken ordering too.
+//   - the parent package instead of the one asked for. `com.example.store.internal` is a
+//     subpackage of `com.example.store`, and a matcher taking the first name that prefixes the
+//     import lands on the parent. The Kotlin file imports the subpackage and deliberately does
+//     *not* import `store` — with both imported, the wrong answer and the right one draw the
+//     same pair of edges and nothing distinguishes them.
+//   - `tested_by` pointing at a collaborator. A JVM test declares the package it tests and
+//     imports nothing from it, because same-package access needs no import. So reading the
+//     imports of `ServiceIT` finds `com.example.store` and misses `com.example.api` — the
+//     graph said the store was tested by a test of the API, which is the confidently-wrong
+//     edge the rule exists to avoid.
+func TestCorpusResolvesJVMPackagesToTheRightDirectory(t *testing.T) {
+	dir := buildCorpus(t)
+
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct{ ID, Kind, Path, Title string }
+		Edges []struct{ From, To, Kind string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	byPath := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	const (
+		mainAPI = "jvm/src/main/java/com/example/api"
+		testAPI = "jvm/src/integrationTest/java/com/example/api"
+		store   = "jvm/src/main/java/com/example/store"
+		nested  = "jvm/src/main/java/com/example/store/internal"
+		app     = "jvm/src/main/kotlin/com/example/app"
+	)
+	edge := func(kind, from, to string) bool {
+		f, tt := byPath[from], byPath[to]
+		if f == "" || tt == "" {
+			t.Fatalf("no module node for %q or %q, so this test asserts nothing", from, to)
+		}
+		for _, e := range g.Edges {
+			if e.From == f && e.To == tt && e.Kind == kind {
+				return true
+			}
+		}
+		return false
+	}
+
+	// The source set. Kotlin's `import com.example.api.Service` must reach the production copy.
+	if !edge("imports", app, mainAPI) {
+		t.Errorf("no imports edge %s -> %s. `com.example.api` is declared in two source sets, "+
+			"so the import names two candidates; production is the one another module means",
+			app, mainAPI)
+	}
+	if edge("imports", app, testAPI) {
+		t.Errorf("imports edge %s -> %s. The import resolved to the copy of the package under "+
+			"the test source set, which is an edge into the tests instead of into the code. "+
+			"Directory order put %q ahead of `main` — which is why the tiebreaker cannot be the "+
+			"directory", app, testAPI, "integrationTest")
+	}
+
+	// The subpackage. `com.example.store.internal` must reach its own directory, not its parent.
+	if !edge("imports", app, nested) {
+		t.Errorf("no imports edge %s -> %s. `com.example.store.internal` is declared here and "+
+			"`com.example.store` is declared one directory up, so a matcher that stops at the "+
+			"first name prefixing the import lands on the parent", app, nested)
+	}
+	if edge("imports", app, store) {
+		t.Errorf("imports edge %s -> %s. Nothing in the Kotlin file imports `com.example.store` "+
+			"— it imports the subpackage — so the edge points at the package *containing* the "+
+			"one that was asked for", app, store)
+	}
+
+	// The subject of the test, from its package declaration rather than from its imports.
+	if !edge("tested_by", mainAPI, testAPI) {
+		t.Errorf("no tested_by edge %s -> %s. ServiceIT declares `com.example.api` and sits in "+
+			"a different directory, so the declaration is the only statement of what it tests: "+
+			"same-package access needs no import, so its subject is the one thing its import "+
+			"list does not name", mainAPI, testAPI)
+	}
+	if edge("tested_by", store, testAPI) {
+		t.Errorf("tested_by edge %s -> %s. `com.example.store` is what ServiceIT imports and "+
+			"`com.example.api` is what it declares — reading the imports reports every "+
+			"collaborator as the thing under test", store, testAPI)
 	}
 }
 

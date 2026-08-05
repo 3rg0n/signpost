@@ -52,6 +52,10 @@ matcher slightly too loose swallows it, and which nothing declares.
 | `serde_yaml::Value` | the declared `serde` | Cargo's dash/underscore equivalence applied too widely |
 | `pathe/utils` | the Node builtin `path` | a builtin matched as a string prefix instead of by first path segment |
 | `winreg_helpers` | the Python stdlib `winreg` | a stdlib name matched as a string prefix — the same looseness as the row above, against a table of 220 names rather than 44 |
+| `com.example.apiv2` | the declared Java package `com.example.api` | a package prefix compared as a string instead of as a dot-delimited name |
+| `javax.servlet.http` | the JDK's `javax.crypto` | `javax` matched on its first segment, which folds Java EE artifacts somebody upgrades into the platform |
+| `kotlinx.coroutines` | the Kotlin stdlib `kotlin` | a runtime prefix matched as a string, which reclassifies three separately versioned artifacts as the toolchain |
+| `org.junit.jupiter.api` | nothing — see below | not a near-miss: a real declared dependency, unresolvable because signpost reads no `pom.xml` or `build.gradle` |
 
 Each must be reported as a gap and land nowhere else. Two wrong homes are possible and both
 are worse than the gap: an edge into this repository invents structure, and an external node
@@ -62,7 +66,21 @@ what makes it fail in both directions — over-claiming lowers it, over-reportin
 count rather than a substring search, because the printed report truncates to the five most
 frequent specifiers and a grep for any single one passes by matching `and 1 more`.
 
-Alongside them sit the stdlib imports — `node:fs`, python `os`, rust `std::fmt` — which are
+The JVM rows differ from every other language's in a way worth stating plainly, because it is a
+current limitation and not a fixture decision. Signpost reads no `pom.xml`, `build.gradle`, or
+`build.gradle.kts`, so **no JVM manifest states this repository's dependencies** and there is no
+declared list for an import to match against. Two consequences follow. `org.junit.jupiter.api` is
+a real dependency of a real test and lands in the unresolved count, which is the honest answer:
+the alternative is inventing a Maven coordinate the repository never wrote. And the JVM cannot
+express the other half of the instruction below — an import that resolves to a declared external
+dependency — so its near-misses shadow the *runtime* instead, which is why there are two of them
+where other languages have one. `javax` is the sharpest case in any ecosystem here: the namespace
+was split between the platform and Java EE in 1999 and the division is historical rather than
+structural, so `javax.crypto` is the JDK and `javax.servlet` is an artifact with its own
+advisories, and only a list of the JDK's own `javax` packages can tell them apart.
+
+Alongside them sit the stdlib imports — `node:fs`, python `os`, rust `std::fmt`, java
+`java.util` and `javax.crypto`, kotlin `kotlin.math` — which are
 the runtime: in no manifest, patched by nobody, so no node and no reported gap. Two of them are
 addressed by subpath, `fs/promises` and `node:test/reporters`, which is
 [issue #14](https://github.com/3rg0n/signpost/issues/14): the whole specifier was looked up in a
@@ -446,6 +464,45 @@ brace inside an interpolation inside a string, a brace in a plain string, a here
 comment forms. None of them is a diagnostic: a miscount silently reparents the rest of the file,
 so the resources below stop being top-level and their pages vanish with no error anywhere. The
 two `yes` rows for that file are the observable.
+
+## One package name, two directories
+
+`jvm/` is Java and Kotlin in the same tree, and it is the only language here whose resolution map
+is built from *extracted facts* rather than from a manifest. With no `pom.xml` or `build.gradle`
+reader, an import resolves against the `package` declarations found in the source — which works,
+and which has a consequence no other ecosystem has: **the standard JVM layout declares each
+package twice.** Maven and Gradle put `com.example.api` in `src/main/java/com/example/api` *and*
+in `src/test/java/com/example/api`, so one import names two candidate directories and only one of
+them is what another module means by the name.
+
+`TestCorpusResolvesJVMPackagesToTheRightDirectory` holds the three defects that fell out of
+building these fixtures. Each row has a negative because each has a wrong answer that draws an
+edge rather than omitting one, and an edge nobody flagged is worse than a gap:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| the source set | Kotlin's `import com.example.api.Service` reaches `src/main/.../api` | an edge into the tests instead of into the code, drawn with no indication that a choice between two directories was made at all |
+| the source set, negative | it does **not** reach `src/integrationTest/.../api` | satisfied by any resolver that draws both edges, which is the same map with the wrong one still in it |
+| the subpackage | `com.example.store.internal` reaches its own directory | a matcher taking the first declared name that prefixes the import lands on `com.example.store`, one directory up |
+| the subpackage, negative | `app` does **not** import `store` | the whole point of the row: with both imported, the wrong answer and the right one draw the same pair of edges and nothing distinguishes them |
+| the test's subject | `tested_by` runs from `src/main/.../api` | reading a JVM test's imports finds every collaborator and misses the one thing under test |
+| the test's subject, negative | it does **not** run from `store` | the shipped behaviour, and it is confidently wrong: the store was reported as tested by a test that never touches it |
+
+The extra source set is called `integrationTest` rather than `test` on purpose, and that name is
+the whole reason the first row can fail. Directory order used to be the tiebreaker, which looks
+sound because `src/main` sorts before `src/test` — but the source set holding tests is not always
+called that. Gradle's convention for the extra one is `integrationTest` and Android's is
+`androidTest`, and **both sort ahead of `main`**. So a repository with either resolved every
+import of a package to the copy under test. With a source set named `test`, every assertion above
+passes on the broken ordering too.
+
+`ServiceIT.java` is also what makes the basename half of test detection load-bearing here: no path
+segment equals `test`, so the directory rule does not fire and the `IT` suffix is the only thing
+marking the file. And it is where the third defect comes from. A JVM test declares the package it
+tests and imports nothing from it — same-package access needs no import — so its subject is
+precisely the one name its import list does not contain. `addTestEdges` reads the declaration
+instead of the imports for these two languages, and instead of rather than alongside them: reading
+both reports `store` as tested by a test of `api`.
 
 ## Running it
 

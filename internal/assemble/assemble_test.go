@@ -999,6 +999,263 @@ func TestManifestInSourcelessDirectory(t *testing.T) {
 	}
 }
 
+// A JVM import resolves against the `package` declarations the repository's own source
+// makes, which is the one resolution map here built from extracted facts rather than from
+// a manifest. Nothing in a JVM tree states the mapping otherwise: signpost reads no
+// pom.xml or build.gradle yet, and the directory does not say it — the same file compiles
+// from src/main/java, from src/, or from any directory a Gradle source set names.
+func TestJVMImportsResolveByDeclaredPackage(t *testing.T) {
+	out := build(t, map[string]string{
+		// Deliberately not a Maven layout, so a path-derived package name would be
+		// `code.api` and would resolve nothing an import writes.
+		"code/api/Service.java": "package com.example.api;\n\n" +
+			"import com.example.store.Repository;\n\n" +
+			"public class Service {\n    public void go() {}\n}\n",
+		"code/store/Repository.java": "package com.example.store;\n\n" +
+			"public class Repository {\n    public void find() {}\n}\n",
+		"code/app/Main.kt": "package com.example.app\n\n" +
+			"import com.example.api.Service\n" +
+			"import com.example.store.internal.Cache\n\n" +
+			"fun main() {\n    Service().go()\n}\n",
+		// A subpackage of one already declared. Its own directory, its own node, and the
+		// longest declared name has to win: matched shortest-first, an import of
+		// `com.example.store.internal` lands on com.example.store with `.internal` read as
+		// a class name, and the edge points at the parent of the package that was asked for.
+		"code/store/internal/Cache.java": "package com.example.store.internal;\n\n" +
+			"public class Cache {\n    public void clear() {}\n}\n",
+	})
+	g := out.Graph
+	if !hasEdge(g, "/modules/api", "/modules/store", graph.EdgeImports) {
+		var got []string
+		for _, e := range g.Edges() {
+			got = append(got, e.From+" -"+string(e.Kind)+"-> "+e.To)
+		}
+		t.Errorf("edges = %v, want api imports store", got)
+	}
+	// Across languages, because the two share the namespace: Kotlin importing a Java
+	// package is the ordinary case in a mixed repository and the resolver must not care
+	// which extractor produced either side.
+	if !hasEdge(g, "/modules/app", "/modules/api", graph.EdgeImports) {
+		t.Error("a Kotlin file importing a Java package must resolve; the JVM namespace is shared")
+	}
+	if !hasEdge(g, "/modules/app", "/modules/internal", graph.EdgeImports) {
+		var got []string
+		for _, e := range g.EdgesFrom("/modules/app") {
+			got = append(got, e.To)
+		}
+		t.Errorf("app imports %v; a subpackage must win over the package containing it", got)
+	}
+	if hasEdge(g, "/modules/app", "/modules/store", graph.EdgeImports) {
+		t.Error("the import named com.example.store.internal and the edge landed on its parent")
+	}
+}
+
+// The negative boundary, and the one that decides whether the test above is measuring
+// anything: a resolver that matched on a prefix would draw all of these too.
+//
+// `com.example.apiv2` shares every character of `com.example.api` and is a different
+// package. An import naming a class inside a package resolves to that package, since the
+// package is what a node exists for. And `org.springframework.*` is a real dependency
+// signpost has no manifest for — it must land in the unresolved count rather than become
+// an invented Maven node, because a bundle's claim about dependencies is that a manifest
+// said so.
+func TestJVMResolutionDoesNotMatchOnPrefixOrInventDependencies(t *testing.T) {
+	out := build(t, map[string]string{
+		"code/api/Service.java": "package com.example.api;\n\n" +
+			"import com.example.apiv2.Legacy;\n" +
+			"import com.example.store.Repository;\n" +
+			"import org.springframework.stereotype.Component;\n" +
+			"import java.util.List;\n" +
+			"import kotlin.collections.CollectionsKt;\n" +
+			// The two prefixes that are half runtime and half not, and neither is
+			// decidable from its first segment. `javax` was split between the platform
+			// and Java EE in 1999 and the split is historical: javax.crypto ships with
+			// the JDK and javax.servlet is a Maven artifact with its own advisories.
+			// `kotlinx` opens with the six characters of `kotlin` and holds coroutines,
+			// serialization and datetime — separately versioned, separately patched.
+			// Matched on a segment prefix, both halves read as the toolchain, which is
+			// the one misclassification that makes a dependency vanish from the coverage
+			// report rather than appear in it.
+			"import javax.crypto.Cipher;\n" +
+			"import javax.servlet.http.HttpServletRequest;\n" +
+			"import kotlinx.coroutines.Job;\n\n" +
+			"public class Service {\n    public void go() {}\n}\n",
+		"code/store/Repository.java": "package com.example.store;\n\n" +
+			"public class Repository {\n    public void find() {}\n}\n",
+		// A manifest in another ecosystem declaring a name a JVM import happens to share.
+		// depOrEmpty falls back across ecosystems when a specifier matches nothing in its
+		// own — deliberately, for the mixed-language case — so a JVM resolver reaching that
+		// lookup at all would draw an edge from Java code to an npm package. There is no
+		// JVM manifest reader yet, which makes not reaching it the whole of the rule.
+		"web/package.json": `{"name":"web","dependencies":{"org.springframework.stereotype":"1.0.0"}}`,
+		"web/index.ts":     "export const x = 1;\n",
+	})
+	g := out.Graph
+	// The one real internal import lands; the near-miss must not.
+	if !hasEdge(g, "/modules/api", "/modules/store", graph.EdgeImports) {
+		t.Error("com.example.store is declared in this repository and must resolve")
+	}
+	for _, e := range g.EdgesFrom("/modules/api") {
+		if strings.HasPrefix(e.To, "/references/") {
+			t.Errorf("an external node %q was invented from an import; no JVM manifest was read", e.To)
+		}
+	}
+	// apiv2 is declared by nobody here, so it is a gap and is counted as one rather than
+	// silently absorbed into com.example.api.
+	unresolved := map[string]bool{}
+	for k := range out.Unresolved {
+		unresolved[k] = true
+	}
+	for _, want := range []string{
+		"java com.example.apiv2",
+		"java org.springframework.stereotype",
+		// Both halves of the two split prefixes, and each is only meaningful beside its
+		// runtime twin below. A gap missing here is a dependency nobody is told to patch.
+		"java javax.servlet.http",
+		"java kotlinx.coroutines",
+	} {
+		if !unresolved[want] {
+			t.Errorf("%q is not in the unresolved count %v; a gap the reader is not told about "+
+				"is the one outcome the count exists to prevent", want, out.Unresolved)
+		}
+	}
+	// And the platform's own packages are neither edges nor gaps: nobody patches the JDK
+	// separately, and counting them would make every honest JVM repository look unread.
+	// `javax.crypto` and `kotlin.collections` are one segment from the two counted above,
+	// so this loop and that one fail in opposite directions on a single prefix match.
+	for _, no := range []string{
+		"java java.util",
+		"java kotlin.collections",
+		"java javax.crypto",
+	} {
+		if unresolved[no] {
+			t.Errorf("%q was counted as a gap; it is the platform", no)
+		}
+	}
+	// The exact count, per the corpus's negative-boundary rule: a resolver that reported
+	// everything as unresolved would satisfy every positive assertion above.
+	if len(out.Unresolved) != 4 {
+		t.Errorf("Unresolved = %v, want exactly the four undeclared packages", out.Unresolved)
+	}
+}
+
+// The standard JVM layout declares each package twice, and the JVM is the only language
+// here where that matters, because it is the only one whose resolution map comes from
+// extracted facts. Maven and Gradle put `com.example.api` in src/main/java/com/example/api
+// *and* src/test/java/com/example/api, so an import of that package names two directories
+// and only the production one is what another module means by it.
+//
+// The source set here is `integrationTest`, which is the whole reason this test can fail.
+// Directory order was the tiebreaker and it looks sound — `src/main` sorts before `src/test`
+// — but the source set holding tests is not always called `test`: Gradle's convention for
+// the extra one is `integrationTest` and Android's is `androidTest`, and both sort *ahead*
+// of `main`. So a repository with either resolved every import of a package to the copy
+// under test: an edge into the tests instead of into the code, drawn with nothing recording
+// that a choice between two candidates was made. Written with a source set named `test`,
+// every assertion below passes on the broken ordering too.
+func TestJVMImportPrefersTheProductionSourceSet(t *testing.T) {
+	out := build(t, map[string]string{
+		// A test beside the code it tests, which is the second half of the rule and is why
+		// the flag means "*every* file declaring this package here is a test" rather than
+		// "some file here is". It sorts ahead of Service.java, so this directory is first
+		// seen as test-only and something has to clear the flag — and if nothing does, the
+		// production directory ties with the integrationTest one and loses on `i` < `m`.
+		// Not hypothetical: a src/main package holding one *Test.java is ordinary, and it
+		// sends every import of that package into another source set entirely.
+		"src/main/java/com/example/api/ApiTest.java": "package com.example.api;\n\n" +
+			"public class ApiTest {\n    public void checks() {}\n}\n",
+		"src/main/java/com/example/api/Service.java": "package com.example.api;\n\n" +
+			"public class Service {\n    public void go() {}\n}\n",
+		// The same package, a second source set. Registered rather than discarded: a
+		// package declared *only* under a test source set is still this repository's own,
+		// so an import of it is internal and unlinked rather than a missing dependency.
+		"src/integrationTest/java/com/example/api/ServiceIT.java": "package com.example.api;\n\n" +
+			"public class ServiceIT {\n    public void returnsRows() {}\n}\n",
+		"src/main/kotlin/com/example/app/Main.kt": "package com.example.app\n\n" +
+			"import com.example.api.Service\n\n" +
+			"fun main() {\n    Service().go()\n}\n",
+	})
+	g := out.Graph
+	// Found by path rather than by ID, because both api directories slug to `api` and the
+	// suffix each gets is derived from its own key (ADR 0015) — asserting on it would be
+	// asserting on the naming scheme rather than on resolution.
+	byPath := map[string]string{}
+	for _, n := range g.Nodes() {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	mainAPI := byPath["src/main/java/com/example/api"]
+	testAPI := byPath["src/integrationTest/java/com/example/api"]
+	appMod := byPath["src/main/kotlin/com/example/app"]
+	if mainAPI == "" || testAPI == "" || appMod == "" {
+		t.Fatalf("missing a module node: main=%q test=%q app=%q — both source sets must "+
+			"become their own module, or this test asserts nothing", mainAPI, testAPI, appMod)
+	}
+	if !hasEdge(g, appMod, mainAPI, graph.EdgeImports) {
+		var got []string
+		for _, e := range g.EdgesFrom(appMod) {
+			got = append(got, e.To)
+		}
+		t.Errorf("app imports %v, want the production copy of com.example.api", got)
+	}
+	if hasEdge(g, appMod, testAPI, graph.EdgeImports) {
+		t.Error("the import resolved to the package under the integrationTest source set. " +
+			"Both directories declare com.example.api and `integrationTest` sorts ahead of " +
+			"`main`, so the tiebreaker cannot be the directory")
+	}
+}
+
+// A JVM test's subject is the one thing its import list does not name, which is why
+// addTestEdges reads the declaration for these two languages instead of the imports.
+//
+// Same-package access needs no import: a test of a class beside it imports every
+// collaborator and never the class itself. Maven and Gradle then put the test in a separate
+// source set, so the directory differs while the `package` declaration says plainly what is
+// under test. Reading imports finds `com.example.store` and reports the store as tested by
+// a test that never touches it — a confidently-wrong edge, which is worse than no edge.
+func TestJVMTestedByComesFromTheDeclaredPackage(t *testing.T) {
+	out := build(t, map[string]string{
+		"src/main/java/com/example/api/Service.java": "package com.example.api;\n\n" +
+			"import com.example.store.Repository;\n\n" +
+			"public class Service {\n    public void go() {}\n}\n",
+		"src/main/java/com/example/store/Repository.java": "package com.example.store;\n\n" +
+			"public class Repository {\n    public void find() {}\n}\n",
+		// Declares the package it tests, imports only a collaborator. Neither existing rule
+		// in addTestEdges reaches it: placement is per-directory and this is a different
+		// directory, and the imports name the store.
+		"src/integrationTest/java/com/example/api/ServiceIT.java": "package com.example.api;\n\n" +
+			"import com.example.store.Repository;\n\n" +
+			"public class ServiceIT {\n    public void returnsRows() {}\n}\n",
+	})
+	g := out.Graph
+	byPath := map[string]string{}
+	for _, n := range g.Nodes() {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	mainAPI := byPath["src/main/java/com/example/api"]
+	testAPI := byPath["src/integrationTest/java/com/example/api"]
+	store := byPath["src/main/java/com/example/store"]
+	if mainAPI == "" || testAPI == "" || store == "" {
+		t.Fatalf("missing a module node: api=%q test=%q store=%q", mainAPI, testAPI, store)
+	}
+	if !hasEdge(g, mainAPI, testAPI, graph.EdgeTestedBy) {
+		var got []string
+		for _, e := range g.Edges() {
+			if e.Kind == graph.EdgeTestedBy {
+				got = append(got, e.From+" -> "+e.To)
+			}
+		}
+		t.Errorf("tested_by = %v, want the package ServiceIT declares", got)
+	}
+	if hasEdge(g, store, testAPI, graph.EdgeTestedBy) {
+		t.Error("tested_by points from com.example.store, which is what ServiceIT imports " +
+			"rather than what it declares — every collaborator reported as under test")
+	}
+}
+
 func TestTestedByEdge(t *testing.T) {
 	out := build(t, map[string]string{
 		"go.mod":                "module example.com/app\n\ngo 1.26\n",

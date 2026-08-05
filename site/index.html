@@ -249,10 +249,18 @@ disconnected components (30)
         <h2 class="row__key">reads</h2>
         <div class="row__body">
           <p class="prose prose--lead">
-            Go, TypeScript, JavaScript, Python, and Rust — imports, public
-            surface, and entrypoints. Each extractor is scored against
-            hand-labeled fixtures rather than asserted, at F1 1.000 for both
-            imports and symbols.
+            Go, TypeScript, JavaScript, Python, Rust, Java, and Kotlin —
+            imports, public surface, and entrypoints. Each extractor is scored
+            against hand-labeled fixtures rather than asserted, at F1 1.000 for
+            both imports and symbols.
+          </p>
+          <p class="prose">
+            Java and Kotlin share one resolution map because the compiler does,
+            and it is built from the <code>package</code> declarations in the
+            source. There is no <code>pom.xml</code> or <code>build.gradle</code>
+            reader yet, so a JVM import naming no package in the repository is
+            reported as a gap rather than turned into a Maven coordinate nobody
+            declared.
           </p>
           <p class="prose">
             Beyond source, signpost reads what a repository states about
@@ -295,7 +303,7 @@ disconnected components (30)
                 <td>done</td>
               </tr>
               <tr class="is-done">
-                <th scope="row">Extractors: Go, TS/JS, Python, Rust</th>
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin</th>
                 <td>done</td>
               </tr>
               <tr class="is-done">

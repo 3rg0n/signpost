@@ -29,27 +29,33 @@ const (
 	LangJS     Lang = "javascript"
 	LangPython Lang = "python"
 	LangRust   Lang = "rust"
+	LangJava   Lang = "java"
+	LangKotlin Lang = "kotlin"
 	LangOther  Lang = "other"
 )
 
-// sourceExts maps an extension to its language. The four first-class languages
-// get real extractors (design §4.1); everything else is LangOther and reaches
-// only the generic extractor.
+// sourceExts maps an extension to its language. A language with a real extractor
+// (design §4.1) gets its own Lang; everything else is LangOther and reaches only
+// the generic extractor.
 var sourceExts = map[string]Lang{
-	".go":    LangGo,
-	".ts":    LangTS,
-	".tsx":   LangTS,
-	".mts":   LangTS,
-	".cts":   LangTS,
-	".js":    LangJS,
-	".jsx":   LangJS,
-	".mjs":   LangJS,
-	".cjs":   LangJS,
-	".py":    LangPython,
-	".pyi":   LangPython,
-	".rs":    LangRust,
-	".java":  LangOther,
-	".kt":    LangOther,
+	".go":   LangGo,
+	".ts":   LangTS,
+	".tsx":  LangTS,
+	".mts":  LangTS,
+	".cts":  LangTS,
+	".js":   LangJS,
+	".jsx":  LangJS,
+	".mjs":  LangJS,
+	".cjs":  LangJS,
+	".py":   LangPython,
+	".pyi":  LangPython,
+	".rs":   LangRust,
+	".java": LangJava,
+	".kt":   LangKotlin,
+	// A .kts script is Kotlin the extractor can read, and the two whose names make
+	// them build files — build.gradle.kts, settings.gradle.kts — never reach here:
+	// manifestNames matches them by basename first.
+	".kts":   LangKotlin,
 	".rb":    LangOther,
 	".c":     LangOther,
 	".h":     LangOther,
@@ -253,8 +259,8 @@ func containsDir(rel, name string) bool {
 	return false
 }
 
-// isTestPath reports whether a path looks like a test, by the conventions of the
-// four first-class languages. Tests are kept — they are the best evidence of how
+// isTestPath reports whether a path looks like a test, by the conventions of each
+// language signpost reads. Tests are kept — they are the best evidence of how
 // an interface is meant to be used, and they source the tested_by edge — but they
 // are marked so they never masquerade as production surface.
 func isTestPath(rel string, lang Lang) bool {
@@ -274,8 +280,41 @@ func isTestPath(rel string, lang Lang) bool {
 		return containsDir(rel, "__tests__") || containsDir(rel, "tests") || containsDir(rel, "test")
 	case LangRust:
 		return containsDir(rel, "tests") || base == "tests.rs"
+	case LangJava, LangKotlin:
+		// src/test/java and src/test/kotlin are where Maven and Gradle put tests, and
+		// both are caught by the "test" segment the fallback already checks. The
+		// basename conventions are what needs stating: a JVM test is routinely a class
+		// in the same source set as the code it exercises, named for it.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			jvmTestBasename(path.Base(rel))
 	}
 	return containsDir(rel, "tests") || containsDir(rel, "test")
+}
+
+// jvmTestBasename reports whether a JVM filename names a test class.
+//
+// Case-sensitive on purpose, against the file's own name rather than the lowercased
+// one the caller holds. A JVM test class is named `FooTest`, and the capital is the
+// whole signal: matched case-insensitively, `Latest.java` and `Manifest.kt` are tests,
+// and marking a production class as one drops it out of the public surface it
+// declares. `Test` as a prefix is JUnit 3's convention and still common.
+func jvmTestBasename(base string) bool {
+	name := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base,
+		".java"), ".kt"), ".kts")
+	if name == "" {
+		return false
+	}
+	for _, suffix := range []string{"Test", "Tests", "TestCase", "Spec", "IT"} {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	// `TestFoo` is a test; `Tester` and `Testament` are not, so the next character has
+	// to begin a new word.
+	if rest, ok := strings.CutPrefix(name, "Test"); ok && rest != "" {
+		return rest[0] >= 'A' && rest[0] <= 'Z'
+	}
+	return false
 }
 
 // isVendored reports whether a path is third-party code checked into the tree.

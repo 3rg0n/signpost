@@ -247,6 +247,15 @@ func (b *builder) index() {
 			if !b.testFiles[f.Path] {
 				b.hasProdSource[dir] = true
 			}
+			// A JVM package is declared in the source, not in a manifest — the only
+			// language here whose resolution map is built from extracted facts. Tests are
+			// registered too, and marked: the standard layout declares each package twice,
+			// once per source set, so an import of `com.example.api` names both
+			// `src/main/java/com/example/api` and `src/test/java/com/example/api` and only
+			// the first is what another module means by it.
+			if f.Lang == discover.LangJava || f.Lang == discover.LangKotlin {
+				b.res.addJVMPackage(f.Path, f.Package, b.testFiles[f.Path])
+			}
 		}
 	}
 	if b.in.Manifests != nil {
@@ -908,6 +917,15 @@ func (b *builder) nearestModule(dir string) string {
 // A test in a directory of its own — a `tests/` tree, `__tests__/`, a Rust
 // integration test — is the case where placement says nothing, and there the imports
 // are the only available statement of what is under test.
+//
+// The JVM is the one language where a *third* statement exists and is stronger than
+// imports. A test class declares the package it tests, and Maven and Gradle put it in a
+// separate source set — `src/test/java/com/example/api` beside
+// `src/main/java/com/example/api` — so the directory differs while the declaration says
+// plainly which code the class is a test of. Imports cannot supply that: same-package
+// access needs no import, so a JVM test of a class beside it imports everything *except*
+// its subject, and reading imports alone draws the edge to every collaborator and misses
+// the one thing under test.
 func (b *builder) addTestEdges() {
 	if b.in.Source == nil {
 		return
@@ -923,6 +941,20 @@ func (b *builder) addTestEdges() {
 		testMod := b.res.moduleAt(dir)
 		if testMod == "" {
 			continue
+		}
+		// The declaration first, and instead of the imports rather than alongside them.
+		// A JVM test's collaborators are ordinary imports and its subject is the package
+		// it declares, so consulting both would report `store` as tested by a test of
+		// `api` — the confidently-wrong edge this function's rule exists to avoid.
+		if f.Lang == discover.LangJava || f.Lang == discover.LangKotlin {
+			if to, internal := b.res.resolveImport(f.Lang, f.Path, f.Package); internal && to != "" {
+				b.g.AddEdge(graph.Edge{
+					From: to, To: testMod,
+					Kind: graph.EdgeTestedBy, Conf: graph.Extracted,
+					Weight: 1, Source: f.Path,
+				})
+				continue
+			}
 		}
 		for _, im := range f.Imports {
 			to, internal := b.res.resolveImport(f.Lang, f.Path, im.Raw)

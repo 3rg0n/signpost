@@ -499,6 +499,61 @@ func TestFixtureIsDistinctFromVendoredAndTest(t *testing.T) {
 	}
 }
 
+// A JVM test is recognised two ways, and the second is what needs asserting: Maven and
+// Gradle put tests under src/test, which the directory rule already catches, but a JVM
+// test is also routinely a class named for the code it exercises sitting anywhere at all.
+//
+// The negative half is the half that matters. Matched case-insensitively — which is what
+// the surrounding rules do — `Latest.java` ends in "test" and `Manifest.kt` ends in
+// "test" too, and a production class marked as a test drops out of the public surface it
+// declares. That is a silent loss of real API, not a noisy false positive, so both
+// directions are pinned here.
+func TestJVMTestPathsAreRecognisedAndOrdinaryClassesAreNot(t *testing.T) {
+	tests := []string{
+		"src/test/java/com/example/ServiceTest.java",
+		"src/test/kotlin/com/example/ServiceTest.kt",
+		"src/main/java/com/example/ServiceTest.java",
+		"src/main/java/com/example/ServiceTests.java",
+		"src/main/java/com/example/ServiceTestCase.java",
+		"src/main/java/com/example/ServiceSpec.kt",
+		"src/main/java/com/example/ServiceIT.java",
+		"src/main/java/com/example/TestService.java",
+		"scripts/BuildSpec.kts",
+		// A class named exactly `Test` is a real test class, and JUnit's own tree has
+		// several. The suffix rule takes no minimum length for that reason.
+		"src/main/java/com/example/Test.java",
+	}
+	for _, rel := range tests {
+		lang := LangJava
+		if !strings.HasSuffix(rel, ".java") {
+			lang = LangKotlin
+		}
+		if !isTestPath(rel, lang) {
+			t.Errorf("isTestPath(%q) = false; this names a test class", rel)
+		}
+	}
+	// Production classes whose names end in the same letters, and the JUnit-3 prefix
+	// applied to a word rather than to a class name.
+	notTests := []string{
+		"src/main/java/com/example/Latest.java",
+		"src/main/java/com/example/Manifest.kt",
+		"src/main/java/com/example/Protest.java",
+		"src/main/java/com/example/Tester.java",
+		"src/main/java/com/example/Testament.kt",
+		"src/main/java/com/example/Service.java",
+		"src/main/kotlin/com/example/Api.kt",
+	}
+	for _, rel := range notTests {
+		lang := LangJava
+		if !strings.HasSuffix(rel, ".java") {
+			lang = LangKotlin
+		}
+		if isTestPath(rel, lang) {
+			t.Errorf("isTestPath(%q) = true; this is production code and its surface is real", rel)
+		}
+	}
+}
+
 // Symlinks are recorded and never followed: a loop must not hang the walk, and a
 // link out of the tree must not escape it.
 func TestWalkDoesNotFollowSymlinks(t *testing.T) {

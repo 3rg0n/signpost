@@ -101,6 +101,41 @@ jobs:
         # it, so it is linted as POSIX sh rather than bash.
         run: shellcheck --shell=sh install.sh
 
+      - name: actionlint
+        # These workflows are the largest body of shell in the repository and were
+        # the only one nothing linted. Most of what runs here is a `run:` block, so
+        # a gate that reads the Go and skips the YAML is checking the smaller half.
+        #
+        # actionlint shells out to shellcheck for every `run:` block, and that is
+        # the reason this step exists rather than a plain YAML schema check: the
+        # findings that were sitting here uncaught were shellcheck's, not
+        # actionlint's own. The runner has shellcheck preinstalled, and actionlint
+        # silently skips the shell linting when it is absent — so the version is
+        # pinned and its presence asserted, because a step that lints nothing and
+        # exits 0 is worse than no step at all.
+        #
+        # v1.7.12 writes the whole script into shellcheck's stdin pipe before
+        # starting the process, so a `run:` block larger than the pipe buffer
+        # deadlocks (upstream issue #650, fixed on main and unreleased). Linux
+        # buffers 64K against Windows' 4K, and the largest of the 63 blocks here is
+        # 8338 bytes, so the released version is safe *here* and hangs locally on
+        # Windows. Anyone reproducing this step on a workstation needs the main
+        # build; the pin moves to the next tag that carries the fix.
+        #
+        # 64K is the whole of the margin, and nothing measures it. A `run:` block
+        # past that deadlocks this step until the job timeout, reported as a hang in
+        # whichever workflow held it rather than as a size limit — so if this step
+        # ever stops finishing, measure the blocks before debugging anything else.
+        run: |
+          set -euo pipefail
+          command -v shellcheck >/dev/null || {
+            echo "shellcheck is not on PATH. actionlint would skip every run: block"
+            echo "and exit 0, which is a gate that cannot fail."
+            exit 1
+          }
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          actionlint
+
       - name: installers are pure ASCII
         # Not style: PowerShell 5.1 decodes a BOM-less script as Windows-1252, so a
         # UTF-8 em dash arrives as three characters ending in U+201D — a right double
@@ -1132,7 +1167,15 @@ jobs:
 
           # An alias prefix is a mapping onto this repository's own directories, never a
           # package. A reference page for one is a supply-chain entry nobody publishes.
-          if ls "${bundle}/references/" | grep -qi 'npm-corpus-\(app\|ui\|entry\)\.md'; then
+          #
+          # `find -iname` rather than `ls | grep`: ls formats for a terminal and its output
+          # is not a filename list, so a name holding a newline or a glob character parses
+          # as something other than what is on disk. The page name is derived from a node
+          # ID here, so that is not a live risk today — but the check is a gate, and a gate
+          # that can be fooled by a filename is the kind that passes when it should not.
+          if find "${bundle}/references/" -maxdepth 1 \
+               \( -iname 'npm-corpus-app.md' -o -iname 'npm-corpus-ui.md' \
+                  -o -iname 'npm-corpus-entry.md' \) -print -quit | grep -q .; then
             echo "a tsconfig path alias was emitted as an external dependency page. The"
             echo "pattern matched and then fell through to the npm lookup, which fabricates a"
             echo "third-party package out of the codebase's own directory mapping."
@@ -1186,9 +1229,23 @@ jobs:
       # `serde`, in the spelling Cargo's dash/underscore equivalence accepts; `winreg_helpers`
       # against the stdlib `winreg`, which is the boundary on the other side of the completed
       # pyStdlib list — a longer table is a wider surface for a prefix match, and a package
-      # silently reclassified as the runtime is exactly the gap this count exists to surface.
-      # Each must be reported as a gap and land nowhere else — an edge inside this repository
-      # invents structure, an external node invents a supply-chain entry nobody declared.
+      # silently reclassified as the runtime is exactly the gap this count exists to surface;
+      # `com.example.apiv2` against the declared Java package `com.example.api`, which a prefix
+      # compared as a string rather than as a dot-delimited name folds into it. The JVM carries
+      # two more, both near-misses of the *runtime* rather than of a declared dependency:
+      # `javax.servlet.http` sits beside `javax.crypto` because the `javax` namespace was split
+      # between the JDK and Java EE in 1999 and the division is historical, not structural, and
+      # `kotlinx.coroutines` opens with the six characters of `kotlin` while being separately
+      # versioned. Each must be reported as a gap and land nowhere else — an edge inside this
+      # repository invents structure, an external node invents a supply-chain entry nobody
+      # declared.
+      #
+      # `org.junit.jupiter.api` is in the count for a different reason, and it is a limitation
+      # rather than a near-miss: signpost reads no pom.xml or build.gradle, so no JVM manifest
+      # states this repository's dependencies and there is no declared list for the name to
+      # match. It is reported as a gap instead of invented as a Maven coordinate the repository
+      # never wrote, which is also why the JVM cannot supply the other half of the pattern — an
+      # import resolving to a declared external.
       #
       # The count carries the assertion because the printed list is truncated to the five most
       # frequent, so a grep for any single specifier passes by matching `and 1 more`. Verified
@@ -1211,7 +1268,7 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
-          want=7
+          want=11
           [ "$got" = "$want" ] || {
             echo "${got} unresolved specifier(s), want ${want}."
             echo
@@ -1222,13 +1279,23 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
+          # Every check below is an absence, and `find` on a directory that is not there reports
+          # an absence too — so the whole block passes on a build that emitted no references at
+          # all. This step rebuilt the bundle, so the earlier assertion that npm-react.md exists
+          # says nothing about this one's output. Assert the directory before reading it.
+          [ -d "${bundle}/references" ] || {
+            echo "no references/ in the rebuilt bundle. Every absence asserted below would hold"
+            echo "vacuously, so this is the one condition that has to be a presence."
+            exit 1
+          }
           # And no page for any of them. Which wrong home an over-match picks depends on the
           # repository, so the count above is the primary assertion and this is the corroborating
           # one: a near-miss folded into a declared dependency shows up here as nothing at all,
           # while one fabricated outright shows up as a file.
           for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe \
-                      promises winreg-helpers winreg_helpers; do
-            if ls "${bundle}/references/" | grep -qi "$frag"; then
+                      promises winreg-helpers winreg_helpers apiv2 junit servlet kotlinx; do
+            if find "${bundle}/references/" -maxdepth 1 -iname "*${frag}*" -print -quit \
+                 | grep -q .; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
               exit 1
             fi
@@ -1244,6 +1311,19 @@ jobs:
               echo "references/pypi-${name}.md is a page for platform-specific standard"
               echo "library. Nobody publishes or patches it, so a reference page for it is a"
               echo "supply-chain entry for the interpreter itself."
+              exit 1
+            fi
+          done
+          # The JVM runtime, matched on the whole title for the same reason `winreg` is: two of
+          # the near-misses above are one segment away from these names, so a fragment check for
+          # `javax` or `kotlin` would be satisfied by the pages that must not exist. Matched on
+          # the frontmatter title rather than the filename because there is no Maven manifest
+          # reader, so a fabricated JVM external has no ecosystem prefix to predict.
+          for name in java.util javax.crypto kotlin.math com.sun; do
+            if grep -rFqx "title: ${name}" "${bundle}/references/"; then
+              echo "a reference page exists for ${name}. It is the JVM runtime, versioned with"
+              echo "the toolchain rather than declared in a build file, so a page for it is a"
+              echo "supply-chain entry for the JDK."
               exit 1
             fi
           done
@@ -1427,7 +1507,7 @@ jobs:
             git -C "$corpus" commit --quiet -m "the bundle"
           # The fixture has to collide, or the edit below proves nothing. Two `src` directories
           # sharing a short name is what makes any of them suffixed in the first place.
-          collisions=$(ls "${corpus}/.signpost/modules/" | grep -c '^src-' || true)
+          collisions=$(find "${corpus}/.signpost/modules/" -maxdepth 1 -name 'src-*' | wc -l)
           [ "$collisions" -ge 2 ] || {
             echo "only ${collisions} suffixed src page(s) in the corpus bundle, want at least 2."
             echo "Without a collision group this step measures nothing, so the corpus has"

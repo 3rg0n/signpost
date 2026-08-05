@@ -262,11 +262,30 @@ ordering gives the sample projects the paths a real repository would have.
 symbols, interface implementations, `main` functions, `init` side effects. Full
 precision, zero dependencies, and it is our primary language.
 
-**TypeScript/JavaScript, Python, Rust** get hand-written line-oriented extractors
-covering imports/requires, top-level declarations, exports, and entrypoints. These
-are not full parsers and are not trying to be. The signpost layer needs the module
+**TypeScript/JavaScript, Python, Rust, Java, Kotlin** get hand-written line-oriented
+extractors covering imports/requires, top-level declarations, exports, and entrypoints.
+These are not full parsers and are not trying to be. The signpost layer needs the module
 graph and the public surface, and a focused extractor gets ~95% of that. Where
 precision matters, SCIP enrichment (§4.3) supplies it.
+
+**The JVM is the one language whose resolution map comes from the source rather than a
+manifest** ([ADR 0017](adr/0017-a-resolution-root-may-come-from-the-source-itself.md)),
+and that is a current limitation stated rather than worked around. No
+`pom.xml` or `build.gradle` reader exists yet, so an import resolves against the
+`package` declarations the repository's own files make — which is sufficient, because a
+`package` declaration is exactly the name another file writes in its `import`, and it is
+better than the alternative: deriving a package from its path yields
+`src.main.java.com.example.api`, which resolves nothing anybody wrote. Two consequences
+follow, both visible in the coverage report rather than papered over. A JVM import naming
+no in-repo package resolves to *nothing* — never to an invented Maven coordinate the
+repository never declared. And because the standard layout declares each package twice,
+once per source set, one package name maps to two directories: production wins, and the
+tiebreaker cannot be directory order, since Gradle's extra source set is conventionally
+`integrationTest` and Android's is `androidTest` and both sort ahead of `main`.
+
+A JVM test is also the one case where a third statement beats imports. Same-package
+access needs no import, so a test's subject is precisely the one name its import list
+does not contain — the `tested_by` edge comes from the package the test *declares*.
 
 If the measured accuracy (§4.2) proves inadequate for a language teams actually
 care about, a tree-sitter Go binding is the fallback for that language
@@ -274,9 +293,12 @@ specifically. That is a direct library dependency we bump ourselves — a differ
 proposition from inheriting a tool's grammar tree — and it stays behind the same
 extractor interface, so it is a swap rather than a redesign.
 
-The languages are chosen for the same reason you chose them: Go, Rust,
+The first four languages are chosen for the same reason you chose them: Go, Rust,
 TypeScript, and Python have the strongest tooling and the strongest model training
-coverage. Everything else falls back to a generic extractor (comment headers,
+coverage. Java and Kotlin follow because they are the largest bodies of code the tool
+could not read at all, and they share one namespace and one resolution map because the
+compiler does — a Kotlin file importing a Java package is ordinary in every JVM
+repository. Everything else falls back to a generic extractor (comment headers,
 filename conventions, sibling context) plus the semantic pass.
 
 **Manifests and infrastructure are the highest-value deterministic signal and the

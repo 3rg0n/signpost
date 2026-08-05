@@ -72,9 +72,13 @@ where humans can correct it in place, so the corrections survive.
 
 ## What it reads
 
-First-class languages are Go, TypeScript/JavaScript, Python, and Rust — imports,
-public surface, and entrypoints, each extractor scored against hand-labeled
-fixtures at F1 1.000 for both imports and symbols.
+First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, and Kotlin —
+imports, public surface, and entrypoints, each extractor scored against hand-labeled
+fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one resolution
+map because the compiler does, and it is built from the `package` declarations in the
+source: no `pom.xml` or `build.gradle` reader exists yet, so a JVM import that names no
+package in the repository is reported as a gap rather than turned into a Maven coordinate
+nobody declared.
 
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, and `Cargo.toml` for
@@ -378,7 +382,7 @@ in a repository without a bundle.
 |---|---|
 | Graph model, metrics, Louvain clustering | done |
 | Discovery: gitignore, classification, bounded reads | done |
-| Language extractors (Go, TS/JS, Python, Rust) | done |
+| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin) | done |
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |

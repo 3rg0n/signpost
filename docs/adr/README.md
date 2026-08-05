@@ -33,6 +33,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0014](0014-adopt-the-otel-sdk-and-write-the-exporter.md) | Adopt the OpenTelemetry SDK and write the exporter | Accepted |
 | [0015](0015-a-colliding-page-name-is-suffixed-from-its-own-key.md) | A colliding page name is suffixed from its own key, not from its position | Accepted |
 | [0016](0016-a-reader-records-what-only-it-can-know.md) | A reader records what only it can know, including that it does not know | Accepted |
+| [0017](0017-a-resolution-root-may-come-from-the-source-itself.md) | A resolution root may come from the source itself, and an undeclared import stays a gap | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that

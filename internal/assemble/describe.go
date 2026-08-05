@@ -146,6 +146,8 @@ func isStdlib(lang discover.Lang, raw string) bool {
 	case discover.LangPython:
 		first, _, _ := strings.Cut(raw, ".")
 		return pyStdlib[first]
+	case discover.LangJava, discover.LangKotlin:
+		return jvmRuntimePackage(raw)
 	case discover.LangTS, discover.LangJS:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
@@ -168,6 +170,69 @@ func isStdlib(lang discover.Lang, raw string) bool {
 		return nodeBuiltin[first]
 	}
 	return false
+}
+
+// jvmRuntimePackage reports whether a JVM import names a package the platform itself
+// ships.
+//
+// Narrower than it first looks, and the narrowness is the point. `java.*` and `kotlin.*`
+// are the JDK and the Kotlin standard library, shipped with the toolchain and patched
+// with it. The three neighbouring prefixes that look like they belong are not:
+//
+//   - `jakarta.*` is Eclipse's EE namespace, and every one of its packages arrives as a
+//     Maven artifact somebody chose and must upgrade. Calling it the runtime would hide
+//     a real supply-chain fact behind the word "standard library".
+//   - `kotlinx.*` is the Kotlin *extensions* namespace — coroutines, serialization,
+//     datetime — and each is a separate versioned artifact.
+//   - `javax.*` is split. `javax.crypto` and `javax.swing` are in the JDK; `javax.servlet`
+//     and `javax.persistence` are the pre-rename EE artifacts. So the second segment is
+//     what decides, and only the JDK's own list is accepted.
+//
+// Everything else — including a real dependency signpost has no manifest for, since #19
+// reads no pom.xml or build.gradle — lands in the unresolved count, which is the report
+// that tells a reader the map has a gap here rather than leaving them to infer it.
+func jvmRuntimePackage(raw string) bool {
+	first, rest, _ := strings.Cut(raw, ".")
+	second, _, _ := strings.Cut(rest, ".")
+	switch first {
+	case "java", "kotlin", "sun", "jdk":
+		return true
+	case "com":
+		// `com` is the most common first segment in any JVM repository; only `com.sun`
+		// is the platform.
+		return second == "sun"
+	case "javax":
+		return jdkJavaxPackages[second]
+	}
+	return false
+}
+
+// jdkJavaxPackages is the second segment of each `javax.*` package a current JDK ships.
+//
+// A list rather than a rule, because `javax` is the one JVM prefix with no rule: the
+// namespace was split between the platform and Java EE in 1999 and the split is
+// historical. Taken from the module exports of a current JDK, which is why two names an
+// older list would hold are absent — `javax.annotation` and `javax.transaction` were both
+// exported by JDK 8 and both moved out to Maven artifacts in JDK 11, so treating them as
+// the runtime today would hide a dependency somebody has to upgrade.
+var jdkJavaxPackages = map[string]bool{
+	"accessibility": true,
+	"crypto":        true,
+	"imageio":       true,
+	"lang":          true, // javax.lang.model, from java.compiler
+	"management":    true,
+	"naming":        true,
+	"net":           true,
+	"print":         true,
+	"rmi":           true,
+	"script":        true,
+	"security":      true,
+	"smartcardio":   true,
+	"sound":         true,
+	"sql":           true,
+	"swing":         true,
+	"tools":         true, // javax.tools, from java.compiler
+	"xml":           true,
 }
 
 // pyStdlib is the Python standard-library top-level names.

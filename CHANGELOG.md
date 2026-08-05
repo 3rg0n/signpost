@@ -8,6 +8,52 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-05
+
+- **Java and Kotlin are read as first-class languages.** Two extractors sharing one namespace and
+  one resolution map, because the compiler shares them: a Kotlin file importing a Java package is
+  ordinary in every JVM repository, and a resolver that cared which extractor produced either side
+  would report a mixed module as two disconnected halves. Imports, `package` declarations,
+  top-level and nested types, visibility, and `main` as an entrypoint.
+
+  **The JVM is the only language here whose resolution map is built from extracted facts rather
+  than from a manifest** ([ADR 0017](docs/adr/0017-a-resolution-root-may-come-from-the-source-itself.md)),
+  and everything below follows from that. No `pom.xml` or `build.gradle`
+  reader exists yet, so an import resolves against the `package` declarations the repository's own
+  files make. That is sufficient — a `package` declaration *is* the name another file writes in
+  its `import` — and it is better than the alternative, since deriving a package from its path
+  gives `src.main.java.com.example.api` and resolves nothing anybody wrote. What it cannot do is
+  match a declared dependency, so a JVM import naming no in-repo package resolves to **nothing at
+  all** and is counted as a gap. `org.junit.jupiter.api` in the corpus is exactly that, on purpose:
+  inventing a Maven coordinate the repository never wrote would put a fabricated supply-chain entry
+  in a bundle whose whole claim about dependencies is that a manifest said so.
+
+  **One package name, two directories.** The standard layout declares each package twice — Maven
+  and Gradle put `com.example.api` in `src/main/java/com/example/api` *and* in
+  `src/test/java/com/example/api` — so an import names two candidates and only the production one
+  is what another module means by it. The tiebreaker cannot be directory order, which looks sound
+  because `src/main` sorts before `src/test`: the source set holding tests is not always called
+  that, Gradle's convention for the extra one is `integrationTest` and Android's is `androidTest`,
+  and **both sort ahead of `main`**. A test source set is registered rather than discarded, since a
+  package declared only there is still this repository's own. And "test" is a property of the
+  directory, not of the first file seen in it — a `src/main` package holding one `*Test.java` is
+  ordinary, and treating it as test-only sends every import of that package into another source set.
+
+  **A JVM test's subject is the one thing its import list does not name.** Same-package access
+  needs no import, so a test of a class beside it imports every collaborator and never the class
+  itself, while the separate source set means placement cannot identify it either. `tested_by` now
+  comes from the package the test *declares*, and instead of its imports rather than alongside
+  them: consulting both reported the store as tested by a test of the API — a confidently-wrong
+  edge, which costs more than a missing one.
+
+  **`javax` is the sharpest classification boundary in any ecosystem the tool reads.** The
+  namespace was split between the platform and Java EE in 1999 and the division is historical
+  rather than structural, so `javax.crypto` ships with the JDK while `javax.servlet` is a Maven
+  artifact with its own advisories — and `javax.annotation` and `javax.transaction` were both in
+  JDK 8 and both moved out in JDK 11. Only a list of the JDK's own `javax` packages tells them
+  apart; matched on the first segment, a dependency somebody has to upgrade disappears from the
+  coverage report instead of appearing in it. `kotlinx` is the same shape against `kotlin`.
+
 #### 2026-08-04
 
 - **`signpost build -suggest-agents-md` prints the pointer an agent needs, and a build says when
@@ -398,6 +444,52 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+#### 2026-08-05
+
+- **The workflows were the largest body of shell in the repository and nothing linted them.**
+  `install.sh` was shellchecked, the Go was linted four ways, and 2100 lines of `run:` blocks were
+  checked by nothing at all — a gate that reads the smaller half. `actionlint` now runs in the
+  `lint` job, which shells out to shellcheck for every `run:` block, and it found three real
+  defects the moment it could run.
+
+  All three were `ls | grep` used to test whether a bundle page exists (SC2010). `ls` formats for
+  a terminal rather than emitting a filename list, so a name holding a newline or a glob character
+  parses as something other than what is on disk. Page names derive from node IDs, so nothing was
+  misreading today — but each of these is a *gate*, and a gate a filename can fool is one that
+  passes when it should not. Replaced with `find -maxdepth 1`, and each rewritten check verified
+  in both directions: it still fires on the page that must not exist, and stays silent on a clean
+  bundle. The step asserts shellcheck is on `PATH` before trusting the result, because actionlint
+  skips shell linting silently when it is missing and exits 0.
+
+  Reviewing those three surfaced a fourth, which the rewrite inherited rather than introduced —
+  `ls | grep` on a missing directory reports an absence too. The gaps step asserts fifteen
+  *absences* in `references/`, and it rebuilds the bundle itself, so an earlier step's assertion
+  that a page exists says nothing about its output: a build emitting no references at all
+  satisfied every check in the block vacuously. It now asserts the directory before reading it,
+  which is the one condition in that step that has to be a presence. The other two are covered —
+  the collision counter asserts a count and so fails closed, and the alias check runs after a
+  step that positively asserts `npm-react.md` on the same bundle.
+
+- **Two local scanners could not run, and one of them was failing open.** Neither is a defect in
+  this repository's code; both were misreporting the gate.
+
+  `semgrep` 1.156.0 crashed on `--config=auto` with a `UnicodeEncodeError` before scanning a single
+  file: `config_resolver.py` wrote a downloaded rule to a temp file with no explicit encoding, so
+  it inherited Windows' cp1252 and died on the first registry rule containing a character outside
+  it. Upstream deleted the temp-file write entirely; upgraded to 1.172.0, which runs clean with no
+  `PYTHONUTF8` workaround.
+
+  `actionlint` v1.7.12 hangs forever on this repository. `process.go` writes the whole script into
+  shellcheck's stdin pipe *before* starting the process, so nothing is draining it and any `run:`
+  block larger than the pipe buffer deadlocks — upstream issue #650, fixed on main and unreleased.
+  The threshold is the buffer size exactly: 4200 bytes passes and 5000 hangs on Windows' 4K, while
+  the largest of the 63 blocks here is 8338 bytes and fits Linux's 64K. That is the payload
+  shellcheck is handed rather than the YAML on disk — a `set -eo pipefail` line prepended, and
+  `${{ }}` rewritten to underscores of equal length. That is why the CI pin stays on the
+  released tag and a Windows workstation needs a build from main. Worth stating plainly because of
+  what the failure looked like: it was read as an environment quirk and worked around with
+  `-shellcheck=`, which silently disabled the check that was finding the three defects above.
 
 #### 2026-08-04
 

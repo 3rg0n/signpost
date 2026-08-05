@@ -37,11 +37,16 @@ type codeLine struct {
 
 // scanConfig describes a language's comment and string syntax.
 type scanConfig struct {
-	lineComment  []string // e.g. "//", "#"
-	blockStart   string   // e.g. "/*"
-	blockEnd     string   // e.g. "*/"
-	blockNests   bool     // Rust's /* */ nest; C-family ones do not
-	tripleQuotes bool     // Python's """ and ''' docstrings
+	lineComment []string // e.g. "//", "#"
+	blockStart  string   // e.g. "/*"
+	blockEnd    string   // e.g. "*/"
+	blockNests  bool     // Rust's and Kotlin's /* */ nest; C-family ones do not
+	// tripleQuotes are the triple-delimiters that open a string which may span
+	// lines. A list rather than a flag because the languages that have them do not
+	// agree on which: Python has """ and ''', while a Java text block and a Kotlin
+	// raw string are """ only. Reading ''' in a JVM file would be a scanner that
+	// blanks code on a line holding three adjacent char literals.
+	tripleQuotes []string
 	// backtick marks a template-literal delimiter that can span lines (JS/TS).
 	backtick bool
 	// rawStringHash enables Rust's r"..." and r#"..."# raw strings.
@@ -90,7 +95,25 @@ var (
 		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/", backtick: true,
 	}
 	scanPython = scanConfig{
-		lineComment: []string{"#"}, tripleQuotes: true,
+		lineComment: []string{"#"}, tripleQuotes: []string{`"""`, `'''`},
+	}
+	// Java: a text block is `"""` and spans lines. A single quote is only ever a
+	// char literal, and it is left as an ordinary delimiter deliberately — the
+	// scanner blanks a delimited body, so `if (c == '{')` contributes no brace to
+	// the depth count the extractor walks with. Reading it as *not* a delimiter
+	// would leave that brace in place and open a block that never closes.
+	scanJava = scanConfig{
+		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
+		tripleQuotes: []string{`"""`},
+	}
+	// Kotlin differs from Java in two ways the scanner has to know about: its block
+	// comments nest, as Rust's do, and a string template `${...}` can hold code. The
+	// template is not modelled — its body is blanked with the rest of the string,
+	// which loses nothing this extractor reads, since a declaration cannot appear
+	// inside one.
+	scanKotlin = scanConfig{
+		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
+		blockNests: true, tripleQuotes: []string{`"""`},
 	}
 	scanRust = scanConfig{
 		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
@@ -193,10 +216,10 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 			b.WriteByte(' ')
 			continue
 		}
-		// Python triple-quoted strings, checked before single quotes so that
-		// """ is not read as an empty string followed by a quote.
-		if cfg.tripleQuotes {
-			if d := matchAny(line[i:], []string{`"""`, `'''`}); d != "" {
+		// Triple-quoted strings, checked before single quotes so that """ is not
+		// read as an empty string followed by a quote.
+		if len(cfg.tripleQuotes) > 0 {
+			if d := matchAny(line[i:], cfg.tripleQuotes); d != "" {
 				if end := findUnescaped(line[i+len(d):], d); end >= 0 {
 					// Opens and closes on this line.
 					blank := len(d)*2 + end
