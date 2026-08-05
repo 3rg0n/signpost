@@ -2,7 +2,7 @@
 type: External Dependency
 title: actions/checkout
 description: github-actions dependency actions/checkout (3d3c42e5aac5ba805825da76410c181273ba90b1)
-resource: git://github.com/3rg0n/signpost@193d14db27f93e0395eefacdf3ef6985b0247458
+resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690
 tags: [direct, external, github-actions]
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:

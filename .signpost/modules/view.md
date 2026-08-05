@@ -2,16 +2,16 @@
 type: Module
 title: internal/view
 description: 3 go files; 24 exported symbols.
-resource: git://github.com/3rg0n/signpost@193d14db27f93e0395eefacdf3ef6985b0247458/internal/view
+resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/internal/view
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
-  - { name: commits, value: "1" }
+  - { name: commits, value: "2" }
   - { name: exported, value: "24" }
   - { name: files, value: "3" }
   - { name: first_commit, value: "2026-08-05" }
   - { name: last_commit, value: "2026-08-05" }
-  - { name: lines_added, value: "1223" }
-  - { name: lines_removed, value: "0" }
+  - { name: lines_added, value: "1250" }
+  - { name: lines_removed, value: "1" }
   - { name: package, value: view }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }

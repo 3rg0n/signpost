@@ -2,7 +2,7 @@
 type: Module
 title: internal/extract
 description: 18 go files; 218 exported symbols.
-resource: git://github.com/3rg0n/signpost@193d14db27f93e0395eefacdf3ef6985b0247458/internal/extract
+resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/internal/extract
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
   - { name: commits, value: "5" }
