@@ -1,0 +1,157 @@
+<!doctype html>
+<!-- The document `signpost view` serves.
+
+     Every `data-*` attribute below is a selector graph.js queries by name, so this
+     markup is a contract with a file in site/ rather than a layout choice. The parity
+     test in view_test.go reads both and fails when one grows a hook the other lacks;
+     without it, a control added to the published viewer would render here as a button
+     that does nothing.
+
+     What differs from site/graph.html is deliberate and is the reason this is a second
+     document rather than the same one: no webfont request, no landing-page navigation,
+     and a heading naming whichever repository was analysed. The stylesheet is shared
+     unchanged — its font stacks already fall through to ui-sans-serif and ui-monospace,
+     so not requesting Archivo and Spline Sans Mono costs a typeface and no layout.
+
+     data-repo-base is absent unless the repository's own name says where its files can
+     be read. graph.js links a file only when it has one; see showDetail. -->
+<html lang="en"{{with .RepoBase}} data-repo-base="{{.}}"{{end}}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{.Title}} — signpost</title>
+
+    <!-- The CSP arrives as a response header too, which is the one that binds. This
+         copy is for anyone who saves the page: the header does not survive that, and
+         the file still interpolates strings that came out of a repository. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0f151d" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="topbar__lead">
+        <span class="topbar__mark">signpost</span>
+      </div>
+      <nav class="topbar__nav" aria-label="what this is">
+        <span class="local">{{.Address}}</span>
+      </nav>
+    </header>
+
+    <main id="main" class="viewer">
+      <div class="viewer__head">
+        <h1 class="viewer__title">{{.Title}}</h1>
+        <p class="viewer__sub">
+          {{.Nodes}} nodes and {{.Edges}} edges, read out of
+          <code>{{.Root}}</code> when this server started.
+          {{if .Commit}}The tree was at <code>{{.Commit}}</code>.{{end}}
+          Nodes are directories; edges are imports and files that change together.
+        </p>
+        {{with .Notes}}
+        <!-- Read at startup and not re-read, so anything below is what was true then.
+             Stated rather than styled as an alert: none of it is an error, and a
+             banner over a working graph reads as one. -->
+        <ul class="notes">
+          {{range .}}<li class="notes__item">{{.}}</li>{{end}}
+        </ul>
+        {{end}}
+      </div>
+
+      <div class="viewer__stage">
+        <div class="viewer__controls" hidden data-controls>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">show</legend>
+            <div class="ctl__set" data-kind-filters></div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">edges</legend>
+            <div class="ctl__set" data-edge-filters></div>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend class="ctl__legend">view</legend>
+            <div class="zoom" data-zoom>
+              <button
+                class="zoom__btn"
+                type="button"
+                aria-label="Zoom out"
+                data-zoom-out
+              >
+                −
+              </button>
+              <span class="zoom__level" aria-live="polite" data-zoom-level>100%</span>
+              <button
+                class="zoom__btn"
+                type="button"
+                aria-label="Zoom in"
+                data-zoom-in
+              >
+                +
+              </button>
+              <button class="zoom__reset" type="button" data-zoom-reset>
+                reset
+              </button>
+            </div>
+          </fieldset>
+
+          <p class="ctl__count" data-count aria-live="polite"></p>
+          <p class="ctl__hint">
+            Scroll to zoom, drag to move. From the keyboard, the buttons above
+            zoom and the arrow keys move.
+          </p>
+        </div>
+
+        <figure class="plot" data-plot>
+          <p class="plot__fallback" data-fallback>
+            Loading <code>graph.json</code>. If nothing appears, the graph can be
+            read without this page: run
+            <code>signpost graph show .</code> for the text findings, or
+            <code>signpost graph export -format graphml .</code> and open it in yEd.
+          </p>
+        </figure>
+
+        <aside class="detail" data-detail hidden>
+          <p class="detail__hint" data-detail-hint>
+            Select a node to see what signpost read about it.
+          </p>
+          <div data-detail-body hidden>
+            <h2 class="detail__title" data-detail-title></h2>
+            <p class="detail__kind" data-detail-kind></p>
+            <p class="detail__desc" data-detail-desc></p>
+            <dl class="detail__attrs" data-detail-attrs></dl>
+            <div data-detail-files hidden>
+              <h3 class="detail__sub">files</h3>
+              <ul class="detail__list" data-detail-filelist></ul>
+            </div>
+            <div data-detail-edges hidden>
+              <h3 class="detail__sub">edges</h3>
+              <ul class="detail__list" data-detail-edgelist></ul>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <p class="viewer__note">
+        <span class="u-key" aria-hidden="true"></span>
+        A dashed edge is inferred rather than read. Nothing is hidden behind a
+        solid one: signpost draws what it extracted and marks what it guessed.
+      </p>
+    </main>
+
+    <footer class="foot">
+      <p class="foot__line foot__line--quiet">
+        Served from this machine only. Stop it with ctrl-c.
+      </p>
+    </footer>
+
+    <script src="graph.js"></script>
+  </body>
+</html>

@@ -7,15 +7,20 @@ agent reads *before* it starts work — so it begins oriented instead of
 re-deriving the same structure every session.
 
 It is a compilation step, not a retrieval system: no vector database, no
-embeddings, no server. One binary, one command, output is markdown committed to
-the repo.
+embeddings, nothing to run in production. One binary, one command, output is
+markdown committed to the repo.
 
 ```bash
 signpost build .                      # write the bundle to .signpost/ — the point of the tool
 signpost verify .                     # is the committed bundle still true? non-zero if not
 signpost graph show .                 # report structure: hubs, cycles, bridges, islands
+signpost view .                       # open the graph in a browser, served from 127.0.0.1
 signpost graph export -format mermaid .   # render the graph for a diagram or another tool
 ```
+
+`view` is the one command that listens on a port, and only while you are looking:
+it serves the graph on 127.0.0.1 until you interrupt it, writes nothing, and there
+is no flag to bind anywhere else.
 
 ## Install
 
@@ -394,6 +399,7 @@ in a repository without a bundle.
 | `signpost hooks` — optional local post-commit reminder | done |
 | `.signpost.yml` — per-repository defaults, no gate keys | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
+| `signpost view` — the same viewer on 127.0.0.1, for any repository | done |
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |
 | Semantic pass: doc-to-code linking, invariants, cluster labels | v0.3 |

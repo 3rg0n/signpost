@@ -1,5 +1,13 @@
 <!doctype html>
-<html lang="en">
+<!-- data-repo-base says where a file named in the detail panel can be read, and this
+     page is published from one known repository at one known commit-ish, so it says so
+     here. graph.js reads it rather than carrying it, because `signpost view` serves the
+     same script for whichever repository it was pointed at — see repoBase there.
+
+     `main` rather than a commit: the deploy publishes the graph of whatever main is, and
+     the two move together. The bundle's own links pin a sha for the reason ADR 0007
+     gives, and they can: a page in the bundle is written at a commit and stays there. -->
+<html lang="en" data-repo-base="https://github.com/3rg0n/signpost/blob/main/">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

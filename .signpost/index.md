@@ -2,7 +2,7 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 52 concepts, 91 relationships."
+description: "Structural map of this repository: 54 concepts, 94 relationships."
 resource: git://github.com/3rg0n/signpost@cc2372605aa61a3e716ef757b10421a6d4ea0056
 generated: { by: signpost/dev, at: "2026-08-05" }
 ---
@@ -19,9 +19,9 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](./modules/signpost.md) — 33 relationships (10 in, 23 out)
+- [cmd/signpost](./modules/signpost.md) — 34 relationships (10 in, 24 out)
 - [internal/discover](./modules/discover.md) — 19 relationships (13 in, 6 out)
-- [AGENTS.md](./references/agents-md.md) — 16 relationships (0 in, 16 out)
+- [AGENTS.md](./references/agents-md.md) — 17 relationships (0 in, 17 out)
 - [internal/manifest](./modules/manifest.md) — 15 relationships (10 in, 5 out)
 - [internal/assemble](./modules/assemble.md) — 13 relationships (5 in, 8 out)
 
@@ -39,10 +39,11 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/okf](./modules/okf.md) — 13 go files; 196 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 17 go files; 109 exported symbols; entrypoint main; package main.
-- [site](./modules/site.md) — 1 javascript file.
+- [cmd/signpost](./modules/signpost.md) — 19 go files; 116 exported symbols; entrypoint main; package main.
+- [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
+- [internal/view](./modules/view.md) — 3 go files; 24 exported symbols.
 
 ### Documents
 
@@ -63,6 +64,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0015: a colliding page name is suffixed from its own key](./references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md) — Architecture decision (Accepted), 25 rules read from 0015-a-colliding-page-name-is-suffixed-from-its-own-key.md.
 - [ADR 0016: a reader records what only it can know](./references/adr-0016-a-reader-records-what-only-it-can-know.md) — Architecture decision (Accepted), 19 rules read from 0016-a-reader-records-what-only-it-can-know.md.
 - [ADR 0017: a resolution root may come from the source itself](./references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md) — Architecture decision (Accepted), 18 rules read from 0017-a-resolution-root-may-come-from-the-source-itself.md.
+- [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md) — Architecture decision (Accepted), 20 rules read from 0018-view-serves-a-repository-over-loopback.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 9 rules read from README.md.
 

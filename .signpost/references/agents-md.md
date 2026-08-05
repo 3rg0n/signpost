@@ -25,6 +25,7 @@ edges:
   - { kind: documents, to: ../modules/site.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/telemetry.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/vcs.md, confidence: extracted, source: AGENTS.md }
+  - { kind: documents, to: ../modules/view.md, confidence: extracted, source: AGENTS.md }
 ---
 # AGENTS.md
 
@@ -38,7 +39,7 @@ Stated constraints, 14 rules read from AGENTS.md.
 1 file:
 - `AGENTS.md`
 
-- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/telemetry](../modules/telemetry.md), [internal/vcs](../modules/vcs.md)
+- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/telemetry](../modules/telemetry.md), [internal/vcs](../modules/vcs.md), [internal/view](../modules/view.md)
 <!-- /signpost:managed:structure -->
 
 ## Notes

@@ -57,6 +57,30 @@
     { id: "co_changes", label: "co-change" },
   ];
 
+  // Where a file in the detail panel can be read, with a trailing slash, or "" for
+  // nowhere. The page states it: graph.html hardcodes this repository, and `signpost
+  // view` sets it from -repo or leaves it off. Read from the document rather than
+  // written here because this file now serves both, and a hardcoded URL sent every
+  // file link in every other repository to a 404 in *this* one.
+  var REPO_BASE = repoBase();
+
+  // A URL out of the document is untrusted like everything else here, so it is checked
+  // against the one shape that is a forge blob root rather than escaped. An href is a
+  // navigation target: `javascript:` in this string would run on click, and the CSP
+  // does not stop that.
+  function repoBase() {
+    var raw = document.documentElement.getAttribute("data-repo-base");
+    if (!raw) {
+      return "";
+    }
+    // Anchored, https only, and no character that could close the authority early or
+    // start a new component: a host, a path of plain segments, and a trailing slash.
+    if (!/^https:\/\/[a-z0-9.-]+\/[A-Za-z0-9._~/-]*\/$/.test(raw)) {
+      return "";
+    }
+    return raw;
+  }
+
   var el = {
     plot: document.querySelector("[data-plot]"),
     fallback: document.querySelector("[data-fallback]"),
@@ -1291,15 +1315,24 @@
     el.detailFiles.hidden = n.files.length === 0;
     n.files.forEach(function (f) {
       var li = document.createElement("li");
-      // A link to the file on the default branch. The href is assembled from a
-      // literal prefix and an encoded path; encodeURI on a repository-supplied
-      // string is what keeps a path from steering the URL somewhere else.
-      var a = document.createElement("a");
-      a.href =
-        "https://github.com/3rg0n/signpost/blob/main/" + encodeURI(f);
-      a.textContent = f;
-      a.rel = "noopener";
-      li.appendChild(a);
+      // A link when the page says where this repository's files can be read, and the
+      // filename as text when it does not. `signpost view` serves an arbitrary
+      // repository and often knows no URL for it, so a link is the special case here
+      // rather than the default — and a filename that reads as a link and 404s is
+      // worse than one that does not offer.
+      //
+      // The href is a prefix the page supplied plus an encoded path. encodeURI on the
+      // repository-supplied path is what keeps a filename from steering the URL; see
+      // repoBase for why the prefix itself is restricted to known hosts.
+      if (REPO_BASE) {
+        var a = document.createElement("a");
+        a.href = REPO_BASE + encodeURI(f);
+        a.textContent = f;
+        a.rel = "noopener";
+        li.appendChild(a);
+      } else {
+        li.appendChild(text(f));
+      }
       el.detailFileList.appendChild(li);
     });
 

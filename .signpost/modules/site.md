@@ -1,17 +1,18 @@
 ---
 type: Module
 title: site
-description: 1 javascript file.
+description: 2 go files; 1 exported symbol.
 resource: git://github.com/3rg0n/signpost@cc2372605aa61a3e716ef757b10421a6d4ea0056/site
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
   - { name: commits, value: "9" }
-  - { name: exported, value: "0" }
-  - { name: files, value: "1" }
+  - { name: exported, value: "1" }
+  - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-05" }
   - { name: lines_added, value: "3119" }
   - { name: lines_removed, value: "76" }
+  - { name: package, value: site }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 67% }
 edges:
@@ -23,13 +24,14 @@ edges:
 # site
 
 <!-- signpost:managed:summary -->
-1 javascript file.
+2 go files; 1 exported symbol.
 <!-- /signpost:managed:summary -->
 
 ## Structure
 
 <!-- signpost:managed:structure -->
-1 file:
+2 files:
+- `site/embed.go`
 - `site/graph.js`
 
 - **Changes with**: [internal/discover](./discover.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×6

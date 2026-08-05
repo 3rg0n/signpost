@@ -6,7 +6,8 @@
 // non-zero when the committed bundle no longer matches the tree. `graph show` and
 // `graph export` run the same pipeline and report or render what it found rather than
 // committing it — useful on their own, and the way to check the pipeline against a real
-// repository without writing to it.
+// repository without writing to it. `view` renders the same graph in a browser, served
+// from this machine for as long as the command runs and written nowhere.
 //
 // Every command shares one analysis path (see pipeline.go), deliberately: a command
 // that analysed the repository differently from `build` would report something
@@ -67,9 +68,15 @@ type command struct {
 // build`, `cargo build`, `docker build`. Grouping them under a noun would cost the
 // tool's primary command a word to buy consistency nobody asked for.
 //
+// `view` is flat for the same reason, and it is the case that tests the rule rather than
+// restating it: it renders the same graph `graph export` does, so it reads like a third
+// sibling under `graph`. It is not one. `graph`'s two subcommands both write a rendering
+// to a stream and exit; `view` binds a port and runs until interrupted, which is a
+// different thing to invoke and a different thing to stop. Grouping on subject matter
+// rather than on operation is what produces `docker container run`.
+//
 // The verbs still to come fit without moving anything: `ask why` and `ask path` are a
-// group because they are siblings, `hooks install` likewise, and `view` is flat
-// because it is one thing.
+// group because they are siblings, and `hooks install` likewise.
 func commands() []command {
 	return []command{
 		{name: "build", summary: "write the knowledge bundle to .signpost/", run: runBuild},
@@ -78,6 +85,7 @@ func commands() []command {
 			{name: "show", summary: "analyse a repository and report its structure", run: runGraphShow},
 			{name: "export", summary: "render the graph as mermaid, dot, graphml, or json", run: runExport},
 		}},
+		{name: "view", summary: "serve the graph on 127.0.0.1 and open a browser", run: runView},
 		{name: "model", summary: "inspect the configured model backend", subs: []command{
 			{name: "check", summary: "send one request to the configured backend and report what came back", run: runModelCheck},
 		}},
