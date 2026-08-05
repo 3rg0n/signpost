@@ -2,24 +2,24 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@cc2372605aa61a3e716ef757b10421a6d4ea0056/site
+resource: git://github.com/3rg0n/signpost@193d14db27f93e0395eefacdf3ef6985b0247458/site
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
-  - { name: commits, value: "9" }
+  - { name: commits, value: "10" }
   - { name: exported, value: "1" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-05" }
-  - { name: lines_added, value: "3119" }
-  - { name: lines_removed, value: "76" }
+  - { name: lines_added, value: "3234" }
+  - { name: lines_removed, value: "86" }
   - { name: package, value: site }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 67% }
+  - { name: top_author_share, value: 70% }
 edges:
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 6 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 7 }
 ---
 # site
 
@@ -34,7 +34,7 @@ edges:
 - `site/embed.go`
 - `site/graph.js`
 
-- **Changes with**: [internal/discover](./discover.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×6
+- **Changes with**: [internal/discover](./discover.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×7
 <!-- /signpost:managed:structure -->
 
 ## Notes
