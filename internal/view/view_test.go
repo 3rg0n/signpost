@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -552,12 +553,37 @@ func TestListenAskedPortCollisionIsAnError(t *testing.T) {
 	}
 }
 
+// syncBuffer is a buffer a test can read while Serve is still writing to it.
+//
+// The only test here that needs one is the cancel test below, and it needs one because
+// Serve runs in another goroutine there: it writes its banner while the test body polls
+// for it, which is a data race on a plain strings.Builder even though the poll only ever
+// reads. It went in without this and passed on two of the three platforms — the race
+// detector, not the behaviour, is what tells the difference, so the failure was a red
+// -race job on Linux and nothing at all elsewhere.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 // TestServeStopsOnContextCancel: the ordering in Serve is what makes the command usable
 // headless — the URL is printed before the browser opens and before anything is served —
 // and ctrl-c has to end it. A regression here is a command that appears to hang.
 func TestServeStopsOnContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var out strings.Builder
+	var out syncBuffer
 	done := make(chan error, 1)
 	go func() { done <- Serve(ctx, testOptions(), &out, false) }()
 

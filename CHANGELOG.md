@@ -48,6 +48,14 @@ All notable changes to this project are documented here. Format follows
   unnamed default still falls back, since a fix that made every collision fatal would have satisfied
   the first half and broken the second.
 
+- **The race detector earns its job.** `view`'s cancellation test runs `Serve` in one goroutine
+  and polls the banner from another, and the first version of it shared a plain
+  `strings.Builder` between them. `go test` passes; `go test -race` does not, so the failure
+  appeared on the one platform where CI runs the detector and nowhere else — green on macOS and
+  Windows, red on Linux. Fixed with a mutex-guarded buffer, and `ci.yml`'s comment no longer
+  claims the pipeline is single-goroutine, which is why nobody expected that job to find
+  anything.
+
 - **Java and Kotlin are read as first-class languages.** Two extractors sharing one namespace and
   one resolution map, because the compiler shares them: a Kotlin file importing a Java package is
   ordinary in every JVM repository, and a resolver that cared which extractor produced either side

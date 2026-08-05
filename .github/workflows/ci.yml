@@ -60,9 +60,13 @@ jobs:
         run: go test -count=2 -timeout 30m ./...
 
       - name: Test with the race detector
-        # Linux only, once. The pipeline is single-goroutine today, so this guards a
-        # future change rather than a per-platform concern, and the detector costs
-        # roughly an order of magnitude in runtime.
+        # Linux only, once: a race is a property of the code rather than of a platform,
+        # and the detector costs roughly an order of magnitude in runtime.
+        #
+        # This is no longer only a guard against a future change. `view` runs a server in
+        # one goroutine while its test reads the banner from another, and the first version
+        # of that test raced on a strings.Builder — caught here and nowhere else, having
+        # passed on macOS and Windows, where the same job does not run.
         if: matrix.os == 'ubuntu-24.04'
         run: go test -race ./...
 
