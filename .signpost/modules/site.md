@@ -2,19 +2,19 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/site
-generated: { by: signpost/dev, at: "2026-08-05" }
+resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0/site
+generated: { by: signpost/dev, at: "2026-08-06" }
 attributes:
   - { name: commits, value: "10" }
   - { name: exported, value: "1" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-05" }
+  - { name: last_commit, value: "2026-08-06" }
   - { name: lines_added, value: "3234" }
   - { name: lines_removed, value: "86" }
   - { name: package, value: site }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 70% }
+  - { name: top_author_share, value: 60% }
 edges:
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }

@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0011: configuration file format and location"
 description: "Architecture decision (Accepted), 27 rules read from 0011-configuration-file-format-and-location.md."
-resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/docs/adr/0011-configuration-file-format-and-location.md
+resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0/docs/adr/0011-configuration-file-format-and-location.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-05" }
+generated: { by: signpost/dev, at: "2026-08-06" }
 attributes:
   - { name: number, value: "0011" }
   - { name: rules, value: "27" }

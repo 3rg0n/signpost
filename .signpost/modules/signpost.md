@@ -2,21 +2,21 @@
 type: Module
 title: cmd/signpost
 description: 19 go files; 116 exported symbols; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/cmd/signpost
+resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0/cmd/signpost
 tags: [entrypoint]
-generated: { by: signpost/dev, at: "2026-08-05" }
+generated: { by: signpost/dev, at: "2026-08-06" }
 attributes:
   - { name: commits, value: "28" }
   - { name: entrypoints, value: main }
   - { name: exported, value: "116" }
   - { name: files, value: "19" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-05" }
+  - { name: last_commit, value: "2026-08-06" }
   - { name: lines_added, value: "8360" }
   - { name: lines_removed, value: "237" }
   - { name: package, value: main }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 86% }
+  - { name: top_author_share, value: 82% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 10 }
   - { kind: imports, to: ./assemble.md, confidence: extracted, weight: 1, source: cmd/signpost/pipeline.go }

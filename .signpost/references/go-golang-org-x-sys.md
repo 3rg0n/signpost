@@ -2,9 +2,9 @@
 type: External Dependency
 title: golang.org/x/sys
 description: go dependency golang.org/x/sys (v0.45.0)
-resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690
+resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0
 tags: [external, go]
-generated: { by: signpost/dev, at: "2026-08-05" }
+generated: { by: signpost/dev, at: "2026-08-06" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: golang.org/x/sys }
