@@ -1,0 +1,23 @@
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_9c6dea20bbbb50 474-484
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_0ffc74836aca57 129-136,139-152
+  s_f6c0b1ac81cb95::t_93aeb1e4df923e 1669-1672
+  s_f6c0b1ac81cb95::t_fa1044459a7363 757,760
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cc2372605aa61a3e716ef757b10421a6d4ea0056",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
