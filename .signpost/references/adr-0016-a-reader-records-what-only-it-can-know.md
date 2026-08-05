@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0016: a reader records what only it can know"
 description: "Architecture decision (Accepted), 19 rules read from 0016-a-reader-records-what-only-it-can-know.md."
-resource: git://github.com/3rg0n/signpost@cc2372605aa61a3e716ef757b10421a6d4ea0056/docs/adr/0016-a-reader-records-what-only-it-can-know.md
+resource: git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690/docs/adr/0016-a-reader-records-what-only-it-can-know.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:

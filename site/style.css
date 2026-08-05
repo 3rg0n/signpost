@@ -542,6 +542,40 @@ code {
   font-size: 0.95rem;
 }
 
+/* The three below are used only by the document `signpost view` serves
+   (internal/view/view.html), and they live here rather than in a second stylesheet
+   because that document loads this one: the viewer is one component, and a local
+   server that shipped its own CSS would be a second place for the palette to drift.
+   The published pages never set these classes. */
+
+/* The address the local server is listening on, in the slot the published page uses
+   for its repository link. Not a link — it is where the reader already is. */
+.local {
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* What was already out of step when the server started: a bundle behind the code,
+   history that could not be read. Amber, because the palette reserves it for what
+   signpost has not verified and that is exactly what these are. Not styled as an
+   alert — nothing here is broken, and a banner over a working graph reads as one. */
+.notes {
+  margin: 1.1rem 0 0;
+  padding: 0;
+  max-width: var(--measure);
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.notes__item {
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--unsure-dim);
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
 /* Controls, plot, detail. The plot takes the free space; the two side columns
    are fixed, because a filter list that reflows as the window moves is harder to
    use than one that does not. */

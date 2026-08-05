@@ -941,6 +941,7 @@ signpost build -semantic           # and summarise modules with the configured b
 signpost verify [path]             # conformance + link + staleness; non-zero on failure
 signpost graph show [path]         # report structure: hubs, cycles, bridges, islands
 signpost graph export -format ...  # mermaid, dot, graphml, or json
+signpost view [path]               # serve the graph on 127.0.0.1 and open a browser
 signpost model check               # prove the configured backend works; non-zero if not
 signpost ask why "<question>"      # traverse the bundle and answer, citing pages
 signpost ask path <A> <B>          # shortest typed path between two concepts
@@ -1194,8 +1195,14 @@ posture is unchanged.
 ### 7.1 `signpost` — the generator
 
 Go binary. Runs locally and in CI. Emits the OKF bundle plus graph exports.
-Markdown and JSON only; no HTML, no JS, no server. This is the repo that gates
-merges, so its dependency list stays short and every entry is justified.
+Markdown and JSON only, and nothing to deploy or keep running. This is the repo
+that gates merges, so its dependency list stays short and every entry is
+justified.
+
+`view` is the one command that opens a socket, and it is a viewer rather than a
+service: it holds a loopback listener for as long as you are looking at the page
+and writes nothing anywhere. There is still nothing to deploy, nothing to
+operate, and no state — see §7.3.
 
 Inline in the bundle: **Mermaid** graphs in `index.md` and each cluster page.
 GitHub renders Mermaid natively, so a tech lead clicks `.signpost/index.md` and
@@ -1225,8 +1232,7 @@ picture is for the human skim; the prose is the load-bearing artifact.
 Hand-written HTML, CSS, and JavaScript, published to **GitHub Pages** by
 `pages.yml`. Two pages sharing one stylesheet and one top bar: the landing page,
 and `graph.html` — a browsable node-link view of this repository's own graph. No
-install, no local server, nothing to run, and a URL a person can paste into a
-review.
+install, nothing to run, and a URL a person can paste into a review.
 
 The seam is `graph.json`, produced by `signpost graph export -format json` in the deploy
 job and **not committed**: it has no value without the page that reads it, and a
@@ -1264,6 +1270,60 @@ The constraints, which are the whole reason this can live here:
 
 The viewer is optional. A team can adopt the generator, read `index.md` and the
 Mermaid graphs in GitHub, open the GraphML in yEd, and never deploy a site.
+
+### 7.3 `signpost view` — the same viewer, on any repository
+
+`graph.html` shows *this* repository, because the deploy job runs the export against
+this tree. Everyone else's repository is the interesting one, and until `view` the
+only way to see it was to install a graph tool and open a GraphML file.
+
+`view` analyses the repository, binds `127.0.0.1`, serves the graph, and opens the
+default browser. It runs until interrupted. The assets are `site/`'s own bytes via
+`go:embed` — one viewer, not a fork of one — and `graph.js` is unchanged except for
+reading the file-link base off a `data-` attribute instead of hardcoding this
+repository's.
+
+Three decisions carry the design, and they are recorded in
+[ADR 0018](adr/0018-view-serves-a-repository-over-loopback.md):
+
+- **No artifact and no state.** Nothing is cached, nothing is written to the
+  repository, and there is no `graph.json` on disk. A `view` that wrote one would
+  create exactly the stale second artifact §7.2 declines to commit, from the one
+  command whose output is transient. It also does not require `build` to have run:
+  the graph comes from this invocation, which is the case where somebody most wants
+  to look at the structure *before* deciding to commit a map of it.
+- **The graph is a snapshot taken before the listener opens.** Nothing re-analyses on
+  a request and nothing watches the tree. A viewer that re-read the repository would
+  change while somebody was reading it, and one that re-analysed per request would
+  spend seconds of CPU on a reload — a full pass over this repository's 185 files takes
+  about five seconds. The page states which commit it describes and what was already out of step
+  when it started, including a note when the committed bundle is behind the tree.
+  Restarting is the refresh.
+- **Loopback, and the `Host` header is checked.** The page lists every module and
+  every file, which is a private repository's structure. `127.0.0.1` is a literal in
+  the code rather than a configurable field, so no flag, config key, or environment
+  variable can widen it. That alone is not sufficient: a page the user is browsing can
+  issue requests to loopback, and the same-origin policy stops it *reading* the
+  responses only because no CORS header is set. DNS rebinding defeats that — an
+  attacker's hostname re-resolves to `127.0.0.1` and the browser treats the response as
+  same-origin with their page — so a request whose `Host` is not a loopback name is
+  refused before any repository content reaches the response.
+
+Three smaller things follow from those. The routing is an explicit map from path to
+bytes with content types written as literals, not a `FileServer` over the embedded FS:
+`FileServer` serves directory listings, and it resolves types through
+`mime.TypeByExtension`, which on Windows reads the registry — so a machine with an odd
+`HKCR\.js` can serve the viewer as something the browser declines to execute. The
+served document's CSP omits the webfont origins `graph.html` allows, because a local
+tool that fetched a font would tell a third party which repositories you open and would
+render in a fallback face on a machine with no route. And the URL is printed *before*
+the browser is opened and before anything is served, which is the difference between a
+command that works over SSH and one that appears to hang.
+
+`-port` distinguishes a port you named from the default you did not: a named port that
+cannot be bound is an error, because you named it most likely because something else is
+configured to reach it, and quietly serving a different one satisfies the command and
+not the intent. The default falls back to whatever is free and says so.
 
 ---
 

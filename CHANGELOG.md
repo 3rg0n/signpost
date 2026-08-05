@@ -10,6 +10,52 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-05
 
+- **`signpost view` serves the graph on `127.0.0.1` and opens a browser.** The published viewer at
+  `3rg0n.github.io/signpost` shows *this* repository, because the deploy job runs the export against
+  this tree; everyone else's repository is the interesting one, and until now the only way to see it
+  was to install a graph tool and open the GraphML. `view` analyses the repository, binds loopback,
+  serves the graph, and runs until interrupted. The page is `site/`'s own bytes via `go:embed` — one
+  viewer, not a fork of one, and `graph.js` is unchanged except for reading the file-link base off a
+  `data-` attribute instead of hardcoding this repository's, which is what a test now enforces in
+  both directions.
+
+  **It writes nothing anywhere, and does not need `build` to have run.** No cached graph, no
+  `graph.json` on disk, nothing in the repository: an artifact left behind by the one command whose
+  output is transient would be exactly the stale second copy
+  [ADR 0008](docs/adr/0008-the-viewer-lives-in-this-repository.md) declined to commit. The graph
+  comes from this invocation, so `view` works in a repository that has never had a bundle — the case
+  where somebody most wants to look at the structure *before* deciding to commit a map of it. Where
+  a bundle does exist and is behind the tree, the page says so, because `view` is the command
+  somebody runs *instead of* opening the bundle, so the staleness a bundle page would have shown
+  them never comes up.
+
+  **Loopback is a literal, and the `Host` header is checked**
+  ([ADR 0018](docs/adr/0018-view-serves-a-repository-over-loopback.md)). The page lists every module
+  and every file, which is a private repository's structure, so `127.0.0.1` is hardcoded rather than
+  configurable and no flag, config key, or environment variable can widen it. That alone is not
+  sufficient: DNS rebinding gets an attacker's page same-origin access to a loopback listener, so a
+  request whose `Host` is not a loopback name is refused before any repository content reaches the
+  response — and before the method check, so a refused request learns nothing about the repository.
+  The document is also fully offline: its CSP omits the webfont origins the published page allows,
+  since a local tool that fetched a font would tell a third party which repositories you open.
+
+  **`-port` distinguishes a port you named from the default you did not.** A named port that cannot
+  be bound is an error — you named it because something else is configured to reach it, and quietly
+  serving a different one satisfies the command and not the intent — while the default falls back to
+  whatever is free and says which port was taken. Set-ness comes from `flag.Visit`, not a comparison
+  against the default, because every port is a legitimate value and `-port 7777` carries the same
+  number as an unpassed flag. Regression-tested from both sides: the collision is an error *and* the
+  unnamed default still falls back, since a fix that made every collision fatal would have satisfied
+  the first half and broken the second.
+
+- **The race detector earns its job.** `view`'s cancellation test runs `Serve` in one goroutine
+  and polls the banner from another, and the first version of it shared a plain
+  `strings.Builder` between them. `go test` passes; `go test -race` does not, so the failure
+  appeared on the one platform where CI runs the detector and nowhere else — green on macOS and
+  Windows, red on Linux. Fixed with a mutex-guarded buffer, and `ci.yml`'s comment no longer
+  claims the pipeline is single-goroutine, which is why nobody expected that job to find
+  anything.
+
 - **Java and Kotlin are read as first-class languages.** Two extractors sharing one namespace and
   one resolution map, because the compiler shares them: a Kotlin file importing a Java package is
   ordinary in every JVM repository, and a resolver that cared which extractor produced either side

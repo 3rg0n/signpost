@@ -1,24 +1,29 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/manifest"
 	"github.com/3rg0n/signpost/internal/okf"
+	"github.com/3rg0n/signpost/internal/view"
 )
 
 // The corpus harness: signpost run end to end against a repository it did not write.
@@ -2841,4 +2846,227 @@ func TestCorpusSaysNothingPointsAtTheBundle(t *testing.T) {
 		t.Errorf("the stub signpost suggested does not satisfy the check that suggested "+
 			"it:\n%s", stderr)
 	}
+}
+
+// TestCorpusViewServesWhatItAnalysed is `view`'s stage, and it is here rather than only in
+// view_test.go for the reason at the top of this file: the unit tests build their own
+// Options and internal/view's tests build their own handler, so neither runs the pipeline
+// that connects them. This runs the binary against a repository signpost's own tree cannot
+// produce and reads what came back over the socket.
+//
+// The bug that earns the stage is the one `view` shipped with: `-port N` on a taken port
+// bound a different one and printed a URL nobody asked for. Both halves are asserted, which
+// is what makes it a boundary — a fix that made every collision fatal would break the
+// default and still pass a one-sided check.
+//
+// Not a count of nodes and edges, for the reason this file gives. What is asserted is that
+// the graph the socket returns is the graph the analysis built, that it carries a module from
+// each first-class language — so a pipeline that lost the extractors is caught — and that
+// nothing was written to the repository, which is `view`'s one standing promise.
+func TestCorpusViewServesWhatItAnalysed(t *testing.T) {
+	dir := corpusRepo(t)
+	before := workingTree(t, dir)
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, port, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"view", "-port", port, "-no-open", "-quiet", "-repo", "example.com/corpus", dir}
+
+	// The negative half first, while the port is still held. Run against a deadline because
+	// the failure mode is not a bad exit code — under the bug it serves forever, and an
+	// inline call would hang the package rather than report anything.
+	type result struct {
+		stderr string
+		code   int
+	}
+	done := make(chan result, 1)
+	go func() {
+		var out, errOut lockedBuffer
+		code := run(args, &out, &errOut)
+		done <- result{errOut.String(), code}
+	}()
+	select {
+	case r := <-done:
+		if r.code == 0 {
+			t.Fatalf("view exited 0 with -port %s taken; a named port that cannot be bound is an error", port)
+		}
+		if !strings.Contains(r.stderr, "127.0.0.1:"+port) {
+			t.Errorf("the error does not name the address it could not bind: %q", r.stderr)
+		}
+	case <-time.After(90 * time.Second):
+		t.Fatalf("view is still running with -port %s taken; it fell back to a free port "+
+			"instead of reporting the collision", port)
+	}
+	if err := ln.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The positive half: the same port, now free, and the command serves the analysis on it.
+	var out, errOut lockedBuffer
+	go func() { _ = run(args, &out, &errOut) }()
+
+	base := "http://127.0.0.1:" + port
+	client := &http.Client{Timeout: 10 * time.Second}
+	body := viewGet(t, client, base+"/graph.json", &out, &errOut)
+
+	var doc struct {
+		Nodes []struct {
+			ID   string `json:"id"`
+			Lang string `json:"lang"`
+		} `json:"nodes"`
+		Edges []json.RawMessage `json:"edges"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("the served graph is not the shape graph.js reads: %v\n%s", err, body)
+	}
+	if len(doc.Nodes) == 0 || len(doc.Edges) == 0 {
+		t.Fatalf("the served graph has %d nodes and %d edges; the corpus has modules that "+
+			"import each other", len(doc.Nodes), len(doc.Edges))
+	}
+	// One module per first-class language, which is what says the pipeline behind the socket
+	// is the whole pipeline rather than a Go-only path through it.
+	want := map[string]bool{"go": false, "typescript": false, "python": false, "rust": false}
+	for _, n := range doc.Nodes {
+		if _, ok := want[n.Lang]; ok {
+			want[n.Lang] = true
+		}
+	}
+	for lang, found := range want {
+		if !found {
+			t.Errorf("no %s module reached the served graph; the analysis behind the socket "+
+				"is missing a language", lang)
+		}
+	}
+
+	// The page itself, which is where a repository's own strings are interpolated. The corpus
+	// exists because it holds paths this repository cannot: a bracketed Next.js route, a
+	// backtick, a `](`. Escaped rather than dropped is the requirement — a reader has to see
+	// the real name — and the page has to name the repository it describes.
+	page := string(viewGet(t, client, base+"/", &out, &errOut))
+	if strings.Contains(page, "<script>alert") || strings.Contains(page, "onerror=") {
+		t.Errorf("the served page carries executable markup from the repository:\n%s", page)
+	}
+	if !strings.Contains(page, "example.com/corpus") {
+		t.Errorf("the page does not name the repository it describes:\n%s", page)
+	}
+
+	// The other side of the same field, and the arm that makes this a boundary rather than a
+	// one-directional check: an *unnamed* port that is taken falls back and serves anyway. A
+	// fix that made every collision fatal would satisfy the negative half above and break
+	// the default, and without this it would pass — the two arms above both pass -port.
+	//
+	// The default port is occupied for the duration, and if something else already holds it
+	// that is the same condition, so either outcome of the bind is usable. Nothing is taken
+	// from a server already running there.
+	if held, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", view.DefaultPort)); err == nil {
+		defer func() { _ = held.Close() }()
+	}
+	var fbOut, fbErr lockedBuffer
+	go func() {
+		_ = run([]string{"view", "-no-open", "-quiet", "-repo", "example.com/corpus", dir}, &fbOut, &fbErr)
+	}()
+	fbURL := viewBanner(t, &fbOut, &fbErr)
+	if fbURL == fmt.Sprintf("http://127.0.0.1:%d/", view.DefaultPort) {
+		t.Fatalf("the default port was not occupied, so this arm did not reach the fallback: %s", fbURL)
+	}
+	// Served, not merely announced. A banner printed before a failed listen would be worse
+	// than no banner.
+	if body := viewGet(t, client, fbURL+"graph.json", &fbOut, &fbErr); len(body) == 0 {
+		t.Errorf("the fallback port served an empty graph")
+	}
+	if banner := fbOut.String(); !strings.Contains(banner, fmt.Sprintf("(port %d was in use)", view.DefaultPort)) {
+		t.Errorf("the fallback did not say why the URL is not the default one:\n%s", banner)
+	}
+
+	// Nothing written: `view`'s one standing promise, and the reason it is not a `build`
+	// variant. A graph.json left in the tree would be the stale second artifact ADR 0008
+	// declined to commit, produced by the one command whose output is transient.
+	after := workingTree(t, dir)
+	for rel, sum := range after {
+		if _, ok := before[rel]; !ok {
+			t.Errorf("view created %s", rel)
+			continue
+		}
+		if before[rel] != sum {
+			t.Errorf("view wrote to %s", rel)
+		}
+	}
+	for rel := range before {
+		if _, ok := after[rel]; !ok {
+			t.Errorf("view removed %s", rel)
+		}
+	}
+}
+
+// viewBanner waits for the URL `view` prints and returns it.
+//
+// Read out of the banner rather than assumed, because the port is the thing under test: an
+// arm that expects a fallback cannot know the number in advance, and one that computed it
+// would be asserting its own arithmetic.
+func viewBanner(t *testing.T, out, errOut *lockedBuffer) string {
+	t.Helper()
+	re := regexp.MustCompile(`http://127\.0\.0\.1:\d+/`)
+	deadline := time.Now().Add(90 * time.Second)
+	for {
+		if m := re.FindString(out.String()); m != "" {
+			return m
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("view printed no URL\nstdout:\n%s\nstderr:\n%s", out.String(), errOut.String())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// viewGet fetches from a server that is still starting, and fails with what the command
+// printed if it never answers. The retry is not flakiness tolerance: `view` analyses the
+// repository before it binds, so there is a real interval where nothing is listening.
+func viewGet(t *testing.T, client *http.Client, url string, out, errOut *lockedBuffer) []byte {
+	t.Helper()
+	deadline := time.Now().Add(90 * time.Second)
+	for {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := client.Do(req)
+		if err == nil {
+			body, rerr := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if rerr != nil {
+				t.Fatal(rerr)
+			}
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("GET %s = %d\n%s", url, resp.StatusCode, body)
+			}
+			return body
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("view never answered on %s: %v\nstdout:\n%s\nstderr:\n%s",
+				url, err, out.String(), errOut.String())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// workingTree is treeSnapshot without .git, which changes on its own — index mtimes,
+// reflogs, an auto-gc that `git commit` starts detached — and none of that is signpost
+// writing to the repository.
+func workingTree(t *testing.T, root string) map[string]string {
+	t.Helper()
+	files := treeSnapshot(t, root)
+	for rel := range files {
+		if rel == ".git" || strings.HasPrefix(rel, ".git/") {
+			delete(files, rel)
+		}
+	}
+	if len(files) == 0 {
+		t.Fatalf("%s has no files outside .git", root)
+	}
+	return files
 }

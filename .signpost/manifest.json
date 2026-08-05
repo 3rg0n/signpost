@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@cc2372605aa61a3e716ef757b10421a6d4ea0056",
+  "resource": "git://github.com/3rg0n/signpost@c804f5236e9a629fa5ef44c05965bfd073fc6690",
   "date": "2026-08-05",
   "counts": {
-    "nodes": 52,
-    "edges": 91,
-    "clusters": 36
+    "nodes": 54,
+    "edges": 94,
+    "clusters": 37
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 91,
+    "extracted": 94,
     "inferred": 0
   },
   "pages": [
@@ -32,6 +32,7 @@
     "modules/site.md",
     "modules/telemetry.md",
     "modules/vcs.md",
+    "modules/view.md",
     "practices.md",
     "references/adr-0001-hand-written-tolerant-yaml-reader.md",
     "references/adr-0002-patchable-dependencies-not-zero-dependencies.md",
@@ -50,6 +51,7 @@
     "references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md",
     "references/adr-0016-a-reader-records-what-only-it-can-know.md",
     "references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md",
+    "references/adr-0018-view-serves-a-repository-over-loopback.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
