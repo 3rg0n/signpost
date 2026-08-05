@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0010: a stale page is deleted only when nobody wrote on it"
 description: "Architecture decision (Accepted), 21 rules read from 0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md."
-resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59/docs/adr/0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+resource: git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852/docs/adr/0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-04" }
+generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
   - { name: number, value: "0010" }
   - { name: rules, value: "21" }

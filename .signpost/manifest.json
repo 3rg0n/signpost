@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59",
-  "date": "2026-08-04",
+  "resource": "git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852",
+  "date": "2026-08-05",
   "counts": {
-    "nodes": 51,
-    "edges": 89,
-    "clusters": 35
+    "nodes": 52,
+    "edges": 91,
+    "clusters": 36
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 89,
+    "extracted": 91,
     "inferred": 0
   },
   "pages": [
@@ -49,6 +49,7 @@
     "references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md",
     "references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md",
     "references/adr-0016-a-reader-records-what-only-it-can-know.md",
+    "references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

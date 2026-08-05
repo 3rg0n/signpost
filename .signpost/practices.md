@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59
-generated: { by: signpost/dev, at: "2026-08-04" }
+resource: git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852
+generated: { by: signpost/dev, at: "2026-08-05" }
 ---
 # How work is done here
 
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, and Cargo aliases.
-- 53 test files in the tree.
+- 55 test files in the tree.
 
 ### What blocks a merge
 
@@ -47,7 +47,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 22 documentation files in the tree, outside the bundle.
+- 23 documentation files in the tree, outside the bundle.
 
 ### Observability
 
@@ -58,8 +58,8 @@ Each line is something this repository states, or something it does not. A missi
 
 - 14 stated rules for agents working in this repository.
   - Stated in `AGENTS.md`.
-- 17 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 11 other files.
+- 18 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 12 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes

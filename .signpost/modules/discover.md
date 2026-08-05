@@ -1,31 +1,32 @@
 ---
 type: Module
 title: internal/discover
-description: 5 go files; 69 exported symbols.
-resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59/internal/discover
-generated: { by: signpost/dev, at: "2026-08-04" }
+description: 5 go files; 72 exported symbols.
+resource: git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852/internal/discover
+generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
-  - { name: commits, value: "6" }
-  - { name: exported, value: "69" }
+  - { name: commits, value: "7" }
+  - { name: exported, value: "72" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-04" }
-  - { name: lines_added, value: "2318" }
-  - { name: lines_removed, value: "22" }
+  - { name: last_commit, value: "2026-08-05" }
+  - { name: lines_added, value: "2431" }
+  - { name: lines_removed, value: "41" }
   - { name: package, value: discover }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
-  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 3 }
 ---
 # internal/discover
 
 <!-- signpost:managed:summary -->
-5 go files; 69 exported symbols.
+5 go files; 72 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -38,7 +39,7 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Changes with**: [internal/extract](./extract.md) ×2, [internal/manifest](./manifest.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×4, [site](./site.md) ×2
+- **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/extract](./extract.md) ×3, [internal/manifest](./manifest.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×5, [site](./site.md) ×3
 <!-- /signpost:managed:structure -->
 
 ## Notes

@@ -2,9 +2,9 @@
 type: External Dependency
 title: golangci/golangci-lint-action
 description: github-actions dependency golangci/golangci-lint-action (ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a)
-resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59
+resource: git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852
 tags: [direct, external, github-actions]
-generated: { by: signpost/dev, at: "2026-08-04" }
+generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
   - { name: ecosystem, value: github-actions }
   - { name: name, value: golangci/golangci-lint-action }

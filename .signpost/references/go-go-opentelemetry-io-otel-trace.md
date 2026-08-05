@@ -2,9 +2,9 @@
 type: External Dependency
 title: go.opentelemetry.io/otel/trace
 description: go dependency go.opentelemetry.io/otel/trace (v1.44.0)
-resource: git://github.com/3rg0n/signpost@7d8443b851fd8771d077beec6e134adc25bc4f59
+resource: git://github.com/3rg0n/signpost@05c19a0d8af556b5518603dc7f516086461ac852
 tags: [direct, external, go]
-generated: { by: signpost/dev, at: "2026-08-04" }
+generated: { by: signpost/dev, at: "2026-08-05" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: go.opentelemetry.io/otel/trace }
