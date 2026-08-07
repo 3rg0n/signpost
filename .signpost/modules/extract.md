@@ -1,34 +1,39 @@
 ---
 type: Module
 title: internal/extract
-description: 18 go files; 218 exported symbols.
-resource: git://github.com/3rg0n/signpost@323acdab3608d65385f549d938831891ac6ca99b/internal/extract
+description: 20 go files; 257 exported symbols.
+resource: git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc/internal/extract
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
-  - { name: commits, value: "5" }
-  - { name: exported, value: "218" }
-  - { name: files, value: "18" }
+  - { name: commits, value: "6" }
+  - { name: exported, value: "257" }
+  - { name: files, value: "20" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-05" }
-  - { name: lines_added, value: "8989" }
+  - { name: last_commit, value: "2026-08-07" }
+  - { name: lines_added, value: "11193" }
   - { name: lines_removed, value: "30" }
   - { name: package, value: extract }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 80% }
+  - { name: top_author_share, value: 67% }
 edges:
-  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 3 }
-  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 16, source: internal/extract/extract.go }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 4 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 18, source: internal/extract/cfamily.go }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
 ---
 # internal/extract
 
 <!-- signpost:managed:summary -->
-18 go files; 218 exported symbols.
+20 go files; 257 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
 
 <!-- signpost:managed:structure -->
-18 files:
+20 files:
+- `internal/extract/cfamily.go`
+- `internal/extract/cfamily_test.go`
 - `internal/extract/extract.go`
 - `internal/extract/extract_test.go`
 - `internal/extract/golang.go`
@@ -48,9 +53,9 @@ edges:
 - `internal/extract/typescript.go`
 - `internal/extract/typescript_test.go`
 
-- **Changes with**: [internal/discover](./discover.md) ×3
+- **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/discover](./discover.md) ×4, [cmd/signpost](./signpost.md) ×2, [site](./site.md) ×2
 
-- **Imports**: [internal/discover](./discover.md) ×16
+- **Imports**: [internal/discover](./discover.md) ×18
 <!-- /signpost:managed:structure -->
 
 ## Notes

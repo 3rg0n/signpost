@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@323acdab3608d65385f549d938831891ac6ca99b",
+  "resource": "git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc",
   "date": "2026-08-07",
   "counts": {
-    "nodes": 57,
-    "edges": 94,
+    "nodes": 58,
+    "edges": 102,
     "clusters": 40
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 94,
+    "extracted": 102,
     "inferred": 0
   },
   "pages": [
@@ -55,6 +55,7 @@
     "references/adr-0019-louvain-over-label-propagation.md",
     "references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md",
     "references/adr-0021-track-the-published-spec-and-never-overload-its-keys.md",
+    "references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

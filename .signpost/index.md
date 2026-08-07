@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 57 concepts, 94 relationships."
-resource: git://github.com/3rg0n/signpost@323acdab3608d65385f549d938831891ac6ca99b
+description: "Structural map of this repository: 58 concepts, 102 relationships."
+resource: git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc
 generated: { by: signpost/dev, at: "2026-08-07" }
 ---
 # Repository map
@@ -19,19 +19,19 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](./modules/signpost.md) — 34 relationships (10 in, 24 out)
+- [cmd/signpost](./modules/signpost.md) — 36 relationships (11 in, 25 out)
 - [internal/discover](./modules/discover.md) — 19 relationships (13 in, 6 out)
+- [internal/assemble](./modules/assemble.md) — 17 relationships (7 in, 10 out)
 - [AGENTS.md](./references/agents-md.md) — 17 relationships (0 in, 17 out)
 - [internal/manifest](./modules/manifest.md) — 15 relationships (10 in, 5 out)
-- [internal/assemble](./modules/assemble.md) — 13 relationships (5 in, 8 out)
 
 ### Modules
 
-- [internal/assemble](./modules/assemble.md) — 6 go files; 64 exported symbols.
+- [internal/assemble](./modules/assemble.md) — 6 go files; 68 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
-- [internal/discover](./modules/discover.md) — 5 go files; 72 exported symbols.
+- [internal/discover](./modules/discover.md) — 5 go files; 77 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
-- [internal/extract](./modules/extract.md) — 18 go files; 218 exported symbols.
+- [internal/extract](./modules/extract.md) — 20 go files; 257 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 27 go files; 256 exported symbols.
@@ -39,7 +39,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/okf](./modules/okf.md) — 13 go files; 198 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 19 go files; 116 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 19 go files; 117 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
@@ -68,8 +68,9 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md) — Architecture decision (Accepted), 20 rules read from 0019-louvain-over-label-propagation.md.
 - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md) — Architecture decision (Accepted), 21 rules read from 0020-git-history-annotates-the-map-and-never-draws-it.md.
 - [ADR 0021: track the published spec and never overload its keys](./references/adr-0021-track-the-published-spec-and-never-overload-its-keys.md) — Architecture decision (Accepted), 14 rules read from 0021-track-the-published-spec-and-never-overload-its-keys.md.
+- [ADR 0022: extractors are hand written and tree sitter has a threshold](./references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) — Architecture decision (Accepted), 17 rules read from 0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
-- [README.md](./references/readme-md.md) — Architecture decision, 8 rules read from README.md.
+- [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 
 ### External dependencies
 
