@@ -1,0 +1,147 @@
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_7dc3596534ffb2 6
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_b4cec523a07b3b 71
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_61f959f31a4fb5 4
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_12a1a3e0f3d567 5
+.signpost/modules/config.md
+  s_c511dec661c68b::t_6966fec4a8cd09 5
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_b890111147769a 5
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_d60134dba72831 5
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_24f12b09f06d37 5
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_98fac6e4055742 5
+.signpost/modules/hook.md
+  s_f6c0b1ac81cb95::t_4f0fa688dbd84d 5
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_347ec788e05086 5
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_eb7a42aed2ce20 5
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_9520aabce08ecd 5,8,12-14,17
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_ae89a22fafe58d 5
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_6efbeab6ffd4b0 5
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_16de796c06d175 5
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_627534519b114b 5
+.signpost/modules/telemetry.md
+  s_f6c0b1ac81cb95::t_8aba1b578a3f24 5
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_dc1b4537c782ec 5
+.signpost/modules/view.md
+  s_f6c0b1ac81cb95::t_0ca21958270722 5
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_7c8ea4c3a0ebc5 5
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_09fc2fc8b8be40 5
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_c6d49f698b8888 5
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_dc0309bdcff4de 5
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_b8f737526828ac 5
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_c4cfa8279e5b05 5
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_e57be806af69ea 5
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_53161eb2cada7b 5
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_c12dd87fc55cb1 5
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_7f07bf0b2d3d76 5
+.signpost/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_8eed43530d1551 5
+.signpost/references/adr-0011-configuration-file-format-and-location.md
+  s_f6c0b1ac81cb95::t_4119fe2b4ee16f 5
+.signpost/references/adr-0012-a-group-name-is-never-an-action.md
+  s_f6c0b1ac81cb95::t_656b897ed28aef 5
+.signpost/references/adr-0013-the-local-hook-reports-and-ci-gates.md
+  s_f6c0b1ac81cb95::t_6f5af77301dcfc 5
+.signpost/references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md
+  s_f6c0b1ac81cb95::t_0727a39b5c8ff2 5
+.signpost/references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md
+  s_f6c0b1ac81cb95::t_03dbce80d40a9b 5
+.signpost/references/adr-0016-a-reader-records-what-only-it-can-know.md
+  s_c511dec661c68b::t_ec2a06ef282ff1 5
+.signpost/references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md
+  s_f6c0b1ac81cb95::t_ee41b9516113c1 5
+.signpost/references/adr-0018-view-serves-a-repository-over-loopback.md
+  s_f6c0b1ac81cb95::t_97c57658dfe2fc 5
+.signpost/references/adr-0019-louvain-over-label-propagation.md
+  s_f6c0b1ac81cb95::t_9866cf59063f8b 5
+.signpost/references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md
+  s_f6c0b1ac81cb95::t_8f940d2a98d479 5
+.signpost/references/adr-0021-track-the-published-spec-and-never-overload-its-keys.md
+  s_c511dec661c68b::t_46c10ff71f20fb 5
+.signpost/references/agents-md.md
+  s_f6c0b1ac81cb95::t_693d81d765a5a7 5
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_1cb662e612821a 5
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_45d037d900bf3c 5
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_f8610faddf7f2c 5
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_41aff4a8db60a0 5
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_94f1d9ad02397a 5
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_011b65557849e2 5
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_58ea988966d65d 5
+.signpost/references/go-github-com-cespare-xxhash-v2.md
+  s_f6c0b1ac81cb95::t_248565d1c33780 5
+.signpost/references/go-github-com-go-logr-logr.md
+  s_f6c0b1ac81cb95::t_df7613096f48b6 5
+.signpost/references/go-github-com-go-logr-stdr.md
+  s_f6c0b1ac81cb95::t_60f4f7ea421ead 5
+.signpost/references/go-github-com-google-uuid.md
+  s_f6c0b1ac81cb95::t_1aeafcba03fdfa 5
+.signpost/references/go-go-opentelemetry-io-auto-sdk.md
+  s_f6c0b1ac81cb95::t_0705e65b97c5c8 5
+.signpost/references/go-go-opentelemetry-io-otel-metric.md
+  s_f6c0b1ac81cb95::t_1b5218eec0d217 5
+.signpost/references/go-go-opentelemetry-io-otel-sdk.md
+  s_f6c0b1ac81cb95::t_90100d7284a18d 5
+.signpost/references/go-go-opentelemetry-io-otel-trace.md
+  s_f6c0b1ac81cb95::t_c4ba07bed594a3 5
+.signpost/references/go-go-opentelemetry-io-otel.md
+  s_f6c0b1ac81cb95::t_05ade752423ece 5
+.signpost/references/go-golang-org-x-sys.md
+  s_f6c0b1ac81cb95::t_7f08054af470dd 5
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_766bf7c3236b10 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9b6161f856cb5dfb078fedecad2a2539d45f226c",
+  "prompts": {},
+  "sessions": {
+    "s_c511dec661c68b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64624c-ba66-4b0b-a52d-b7ab5e0b891f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
