@@ -1,0 +1,219 @@
+internal/manifest/msbuild.go
+  s_f6c0b1ac81cb95::t_f42d276d2609ad 1-265
+testdata/corpus/ruby/Gemfile
+  s_f6c0b1ac81cb95::t_e0c3cba9d6374b 1-10
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_e0cf9578b217be 471-476,478-480
+  s_f6c0b1ac81cb95::t_b738695a3cc35b 505-514
+testdata/corpus/ruby/spec/client_spec.rb
+  s_f6c0b1ac81cb95::t_85d2469bc43398 1-20
+testdata/corpus/php/src/Greeter.php
+  s_f6c0b1ac81cb95::t_8192bfc2f37a89 1-65
+internal/manifest/composer.go
+  s_f6c0b1ac81cb95::t_a25513e1455cb6 1-69,75-187
+  s_f6c0b1ac81cb95::t_c002662c2656e8 70-74
+internal/extract/cfamily.go
+  s_f6c0b1ac81cb95::t_a335eb180fa81a 793-794,796
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_8e866582dc6e67 1077-1081,1083
+  s_f6c0b1ac81cb95::t_9d3b3a42ddb150 1331-1332
+  s_f6c0b1ac81cb95::t_7648b323e03e6e 1070-1075
+  s_f6c0b1ac81cb95::t_9ebfa4a9859c72 1368-1383
+  s_f6c0b1ac81cb95::t_576d3c81fabb67 1301
+  s_f6c0b1ac81cb95::t_943d760c7ca980 1325-1329,1333-1334
+internal/manifest/gem.go
+  s_f6c0b1ac81cb95::t_899f1da6bfd45b 1-87,95-154,156-158,180-181,183-311,354-434
+  s_f6c0b1ac81cb95::t_b7f556112b63ae 155,159-179,182
+  s_f6c0b1ac81cb95::t_af1481bb19d379 312-353
+  s_f6c0b1ac81cb95::t_cc161eae6f9843 88-94
+testdata/corpus/php/composer.json
+  s_f6c0b1ac81cb95::t_7d6867e22d2f2c 1-26
+internal/extract/csharp.go
+  s_f6c0b1ac81cb95::t_445a0d6d709b42 99
+  s_f6c0b1ac81cb95::t_dd3a7257eaa9eb 326-337
+  s_f6c0b1ac81cb95::t_cef0a98f7e70d7 176-179,181-185,187,197-199,202-209
+  s_f6c0b1ac81cb95::t_bb66fc2622ee0a 1-41,48-51,59-80,87-98,100-121,129-175,180,186,188-196,200-201,210-228,233-259,312-325,338-749
+  s_f6c0b1ac81cb95::t_fb889fc43125a8 81-86
+  s_f6c0b1ac81cb95::t_3523870455f284 260-272,274-277,280,284-311
+  s_f6c0b1ac81cb95::t_46870f26994ada 122-128
+  s_f6c0b1ac81cb95::t_24d86e1f244eb7 229-232
+  s_f6c0b1ac81cb95::t_12f441dc913a82 42-47,52-58
+  s_f6c0b1ac81cb95::t_308106537e401e 273,278-279,281-283
+testdata/corpus/dotnet/Corpus.Api/Corpus.Api.csproj
+  s_f6c0b1ac81cb95::t_364288d58aa4b2 1-31
+internal/extract/csharp_test.go
+  s_f6c0b1ac81cb95::t_5d5e7cab604fbc 351-354,357-362
+  s_f6c0b1ac81cb95::t_caccd71ecd4a5b 266-270,273
+  s_f6c0b1ac81cb95::t_24f043b057df0e 4
+  s_f6c0b1ac81cb95::t_c035ffeba0bd8a 1-3,5-265,271-272,274-350,355-356,363-638
+internal/manifest/registry.go
+  s_f6c0b1ac81cb95::t_9070d7b46157e7 78-84
+  s_f6c0b1ac81cb95::t_003421b80cab53 272-314
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_653a1b1b61a67c 141-143
+internal/extract/ruby.go
+  s_f6c0b1ac81cb95::t_e069413567534c 79-82
+  s_f6c0b1ac81cb95::t_3f1cfa619e243f 650
+  s_f6c0b1ac81cb95::t_4d38adf8d006ad 117-120
+  s_f6c0b1ac81cb95::t_6e1753d32fd37a 68-77
+  s_f6c0b1ac81cb95::t_35bf1053ba3d4a 109
+  s_f6c0b1ac81cb95::t_dac59477196f39 259-268,272-275
+  s_f6c0b1ac81cb95::t_e81bddeea1ebfe 385,394,396-397,399-400,403,408-413,416,418
+  s_f6c0b1ac81cb95::t_d209a369a12d33 159-169
+  s_f6c0b1ac81cb95::t_45dd5c1f83b599 294,296-300,303,305-306,309,313-314,318,320-321,325,328,330
+  s_f6c0b1ac81cb95::t_1362368a0c8dea 66
+  s_f6c0b1ac81cb95::t_d61e839990d866 90-91,93-104
+  s_f6c0b1ac81cb95::t_f9dcdb5f0c3ee7 616-617
+  s_f6c0b1ac81cb95::t_f7008454f9adc7 375
+  s_f6c0b1ac81cb95::t_3f3ee48f5cb4bc 1-65,67,78,83-89,105-108,110-116,121-158,170-258,269-271,276-293,295,301-302,304,307-308,310-312,315-317,319,322-324,326-327,329,331-332,355-374,376-384,386-393,395,398,401-402,404-407,414-415,417,419-615,618-649,651-737
+  s_f6c0b1ac81cb95::t_85bda4d2252791 92
+  s_f6c0b1ac81cb95::t_e82cded394fb97 333-354
+docs/design.md
+  s_f6c0b1ac81cb95::t_f9f90e3c36276d 272-273
+  s_f6c0b1ac81cb95::t_6bc232557fa02f 320-348
+  s_f6c0b1ac81cb95::t_3553f5979a0e5c 364-368
+  s_f6c0b1ac81cb95::t_74b0224c46eadd 375
+testdata/corpus/dotnet/Corpus.Api.Tests/GreeterTests.cs
+  s_f6c0b1ac81cb95::t_033da31c5eff9c 1-23
+testdata/corpus/dotnet/Corpus.Domain/Greeting.cs
+  s_f6c0b1ac81cb95::t_31126e123dea66 1-13
+internal/extract/php_test.go
+  s_f6c0b1ac81cb95::t_f8ec0f3a9243fc 1-490
+testdata/corpus/php/src/Format/Renderer.php
+  s_f6c0b1ac81cb95::t_8a26bd9aae5c5e 1-30
+internal/manifest/msbuild_test.go
+  s_f6c0b1ac81cb95::t_2850320f3e9f3a 1-179
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_984d59a9aec9ce 941-946
+  s_f6c0b1ac81cb95::t_7a46479de143fb 250-259
+  s_f6c0b1ac81cb95::t_253a0ceafd951b 967
+  s_f6c0b1ac81cb95::t_6db1f449ff9607 277-289
+  s_f6c0b1ac81cb95::t_2827af23f61815 968
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_419c20f0a99848 520-527
+  s_f6c0b1ac81cb95::t_5469123ff21f2c 603-604,608-613
+  s_f6c0b1ac81cb95::t_656338773434d9 614,1191-1215
+  s_f6c0b1ac81cb95::t_0df2943a3d7cef 512-513,1396-1410
+  s_f6c0b1ac81cb95::t_7a64f93847930e 556-561
+  s_f6c0b1ac81cb95::t_d0dbc4fca4e2ff 394-408
+  s_f6c0b1ac81cb95::t_0e38e8ac1b46a3 420-422,429-431
+  s_f6c0b1ac81cb95::t_e5f23d61607a1b 487-489,498-511
+  s_f6c0b1ac81cb95::t_e950cefd50e9a6 546
+  s_f6c0b1ac81cb95::t_ce563233294ff5 923-932,934-936
+  s_f6c0b1ac81cb95::t_42c2772ed2e1a4 1285-1286,1293-1294,1297-1298
+  s_f6c0b1ac81cb95::t_d2dcf6e8839bce 1333-1338
+testdata/corpus/ruby/lib/corpus/version.rb
+  s_f6c0b1ac81cb95::t_328d45a166d74e 1-7
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_9f71fbc04cb469 154-167
+  s_f6c0b1ac81cb95::t_9c55875a407592 422-528
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_24c1d7e1532ff5 134-140,147
+  s_f6c0b1ac81cb95::t_64d386729957dd 37-39
+  s_f6c0b1ac81cb95::t_a3b421f818cb53 132,464-510
+  s_f6c0b1ac81cb95::t_78204b6a2c4915 89-91
+  s_f6c0b1ac81cb95::t_5c59a788f04ed0 360-376
+  s_f6c0b1ac81cb95::t_c6676833d5ddb4 84-88
+  s_f6c0b1ac81cb95::t_0d70d6024d03ad 141-146,148-152
+  s_f6c0b1ac81cb95::t_9937c2bd049aea 208-214
+  s_f6c0b1ac81cb95::t_b1e07d0c52ab34 92-94
+  s_f6c0b1ac81cb95::t_df11290223043e 169-171
+  s_f6c0b1ac81cb95::t_3f4716f0b0e94f 120-125
+  s_f6c0b1ac81cb95::t_421e88b36a0bc3 117-119
+  s_f6c0b1ac81cb95::t_3adb730f5b6a6d 126-131,133
+README.md
+  s_f6c0b1ac81cb95::t_2cbfd46cc21aae 81-82
+  s_f6c0b1ac81cb95::t_b6a8190bdbcc60 414
+  s_f6c0b1ac81cb95::t_4cc2fc20857de3 96-109,111-112
+testdata/corpus/ruby/lib/api/client.rb
+  s_f6c0b1ac81cb95::t_724f1c080c7748 1-60
+internal/manifest/facts.go
+  s_f6c0b1ac81cb95::t_7d2569c1a53993 102-111
+testdata/corpus/dotnet/Corpus.Api.Tests/Corpus.Api.Tests.csproj
+  s_f6c0b1ac81cb95::t_b34db2056e029a 1-17
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_13cf2229a9151b 217
+  s_f6c0b1ac81cb95::t_f1220457cf7fed 120-134
+  s_f6c0b1ac81cb95::t_ce7829e4baeb87 373-391,397-398,400
+  s_f6c0b1ac81cb95::t_b51ca834d55fee 98-114
+  s_f6c0b1ac81cb95::t_1177098eec9980 95-97
+  s_f6c0b1ac81cb95::t_17b90085333418 522-612
+  s_f6c0b1ac81cb95::t_3b7f8323ce35d3 238-240
+  s_f6c0b1ac81cb95::t_dccdf93a93cabf 392-396,399
+  s_f6c0b1ac81cb95::t_1ada9823e4d8fd 79-82
+  s_f6c0b1ac81cb95::t_eb9ebc2d421239 244-284
+  s_f6c0b1ac81cb95::t_a1e94555170b49 288
+  s_f6c0b1ac81cb95::t_bf2e2137b8916e 195-216,218-229
+  s_f6c0b1ac81cb95::t_e0b01472ea2d90 64-78
+  s_f6c0b1ac81cb95::t_1063c86942e01d 346-347
+  s_f6c0b1ac81cb95::t_7628ffa10b7916 344-345
+internal/manifest/registry_test.go
+  s_f6c0b1ac81cb95::t_7d231731770721 45-52
+  s_f6c0b1ac81cb95::t_1878754ecdb18e 305-306
+testdata/corpus/php/tests/GreeterTest.php
+  s_f6c0b1ac81cb95::t_4929e1ba44ebc1 1-29
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_95e9e231bfdc9e 80-81
+  s_f6c0b1ac81cb95::t_5720a84ca5f1fc 13-79,82-88
+testdata/corpus/dotnet/Corpus.Domain/Corpus.Domain.csproj
+  s_f6c0b1ac81cb95::t_4ee60450370301 1-17
+internal/extract/php.go
+  s_f6c0b1ac81cb95::t_91155ec172acdf 1-22,25-408
+  s_f6c0b1ac81cb95::t_4a67a1ce9055b3 23-24
+internal/manifest/composer_test.go
+  s_f6c0b1ac81cb95::t_76a0cf797370d2 1-193
+testdata/corpus/ruby/lib/corpus/format.rb
+  s_f6c0b1ac81cb95::t_10d96d9e609ed3 1-35
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_ddf951d821bd2e 57-65
+  s_f6c0b1ac81cb95::t_16e5379147e421 83-84,86-92,98-100,104-109
+  s_f6c0b1ac81cb95::t_f91af249bfb73c 110,424,770,861,864,868-900,902,909,913,917-925
+  s_f6c0b1ac81cb95::t_8b173967fd793b 363,365-370
+  s_f6c0b1ac81cb95::t_aef0dfcf5f8369 385,390,398,402,412-422,901
+  s_f6c0b1ac81cb95::t_b6e1ae347aa9e3 423,426-442,444-450,452-486,488
+  s_f6c0b1ac81cb95::t_e4d64bc4e8e031 608-613,618-769
+  s_f6c0b1ac81cb95::t_cfd4cc2ae00fff 111
+  s_f6c0b1ac81cb95::t_3fa021770c7fb7 425
+  s_f6c0b1ac81cb95::t_98a818ef4f6657 771
+  s_f6c0b1ac81cb95::t_dcfff8423ab406 926
+internal/extract/ruby_test.go
+  s_f6c0b1ac81cb95::t_8fea2753165285 83,249,360
+  s_f6c0b1ac81cb95::t_af5d6456f08efa 150-152
+  s_f6c0b1ac81cb95::t_54d3fda7f007bb 1-82,84-149,153-248,250-359,361-520
+internal/manifest/gem_test.go
+  s_f6c0b1ac81cb95::t_3b449b2bee3477 1-254
+testdata/corpus/dotnet/Corpus.Api/Greeter.cs
+  s_f6c0b1ac81cb95::t_5699799f84d245 1-67
+site/index.html
+  s_f6c0b1ac81cb95::t_c4fc10921e0dd9 289-292
+  s_f6c0b1ac81cb95::t_66785fbfcb04df 329
+  s_f6c0b1ac81cb95::t_ba797f8b061482 275-285
+  s_f6c0b1ac81cb95::t_75e5a55e73bf1a 252-255
+  s_9b8d68f5aabdc1::t_d9243e038e2a4e 274
+testdata/corpus/ruby/Gemfile.lock
+  s_f6c0b1ac81cb95::t_1d36db28d86f96 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "845b1b1cd8513365dfc208531c3608996bb231b2",
+  "prompts": {},
+  "sessions": {
+    "s_9b8d68f5aabdc1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7333820e-bccc-4f3b-9eb9-50e606acc9ac",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
