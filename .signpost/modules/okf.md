@@ -2,19 +2,19 @@
 type: Module
 title: internal/okf
 description: 13 go files; 198 exported symbols.
-resource: git://github.com/3rg0n/signpost@dac49c960e06f98d4a0e2e8ad26ee9f8c8fc3a7a/internal/okf
+resource: git://github.com/3rg0n/signpost@e00c5fc3bcee11f52c6e5ac0f9ef29703b8e83cb/internal/okf
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
-  - { name: commits, value: "8" }
+  - { name: commits, value: "9" }
   - { name: exported, value: "198" }
   - { name: files, value: "13" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-02" }
-  - { name: lines_added, value: "7222" }
-  - { name: lines_removed, value: "118" }
+  - { name: last_commit, value: "2026-08-07" }
+  - { name: lines_added, value: "7366" }
+  - { name: lines_removed, value: "173" }
   - { name: package, value: okf }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 75% }
+  - { name: top_author_share, value: 78% }
 edges:
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 7, source: internal/okf/bundle.go }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 4, source: internal/okf/bundle_test.go }
