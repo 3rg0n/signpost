@@ -2,7 +2,7 @@
 type: External Dependency
 title: github.com/google/uuid
 description: go dependency github.com/google/uuid (v1.6.0)
-resource: git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc
+resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355
 tags: [external, go]
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:

@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 58 concepts, 102 relationships."
-resource: git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc
+description: "Structural map of this repository: 58 concepts, 104 relationships."
+resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355
 generated: { by: signpost/dev, at: "2026-08-07" }
 ---
 # Repository map
@@ -22,19 +22,19 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [cmd/signpost](./modules/signpost.md) — 36 relationships (11 in, 25 out)
 - [internal/discover](./modules/discover.md) — 19 relationships (13 in, 6 out)
 - [internal/assemble](./modules/assemble.md) — 17 relationships (7 in, 10 out)
+- [internal/manifest](./modules/manifest.md) — 17 relationships (11 in, 6 out)
 - [AGENTS.md](./references/agents-md.md) — 17 relationships (0 in, 17 out)
-- [internal/manifest](./modules/manifest.md) — 15 relationships (10 in, 5 out)
 
 ### Modules
 
 - [internal/assemble](./modules/assemble.md) — 6 go files; 68 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
-- [internal/discover](./modules/discover.md) — 5 go files; 77 exported symbols.
+- [internal/discover](./modules/discover.md) — 5 go files; 80 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
-- [internal/extract](./modules/extract.md) — 20 go files; 257 exported symbols.
+- [internal/extract](./modules/extract.md) — 26 go files; 304 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
-- [internal/manifest](./modules/manifest.md) — 27 go files; 256 exported symbols.
+- [internal/manifest](./modules/manifest.md) — 33 go files; 285 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 198 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.

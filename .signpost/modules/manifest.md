@@ -1,43 +1,48 @@
 ---
 type: Module
 title: internal/manifest
-description: 27 go files; 256 exported symbols.
-resource: git://github.com/3rg0n/signpost@b688d2bd0693ec00c1f0d3c4119919c84978a5dc/internal/manifest
+description: 33 go files; 285 exported symbols.
+resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/manifest
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
-  - { name: commits, value: "6" }
-  - { name: exported, value: "256" }
-  - { name: files, value: "27" }
+  - { name: commits, value: "7" }
+  - { name: exported, value: "285" }
+  - { name: files, value: "33" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-04" }
-  - { name: lines_added, value: "12587" }
+  - { name: last_commit, value: "2026-08-07" }
+  - { name: lines_added, value: "14169" }
   - { name: lines_removed, value: "48" }
   - { name: package, value: manifest }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 100% }
+  - { name: top_author_share, value: 86% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 3 }
-  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 16, source: internal/manifest/container.go }
-  - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 4 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 19, source: internal/manifest/composer.go }
+  - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 6 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
 ---
 # internal/manifest
 
 <!-- signpost:managed:summary -->
-27 go files; 256 exported symbols.
+33 go files; 285 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
 
 <!-- signpost:managed:structure -->
-27 files:
+33 files:
+- `internal/manifest/composer.go`
+- `internal/manifest/composer_test.go`
 - `internal/manifest/container.go`
 - `internal/manifest/contract.go`
 - `internal/manifest/contract_test.go`
 - `internal/manifest/deps.go`
 - `internal/manifest/deps_test.go`
 - `internal/manifest/facts.go`
+- `internal/manifest/gem.go`
+- `internal/manifest/gem_test.go`
 - `internal/manifest/gomod.go`
 - `internal/manifest/hcl.go`
 - `internal/manifest/hcl_test.go`
@@ -45,6 +50,8 @@ edges:
 - `internal/manifest/json.go`
 - `internal/manifest/json_test.go`
 - `internal/manifest/kubernetes.go`
+- `internal/manifest/msbuild.go`
+- `internal/manifest/msbuild_test.go`
 - `internal/manifest/registry.go`
 - `internal/manifest/registry_test.go`
 - `internal/manifest/repo.go`
@@ -60,9 +67,9 @@ edges:
 - `internal/manifest/yaml.go`
 - `internal/manifest/yaml_test.go`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×3, [internal/discover](./discover.md) ×3, [internal/practice](./practice.md) ×2, [cmd/signpost](./signpost.md) ×5
+- **Changes with**: [internal/assemble](./assemble.md) ×4, [internal/discover](./discover.md) ×4, [internal/practice](./practice.md) ×3, [cmd/signpost](./signpost.md) ×6, [site](./site.md) ×2
 
-- **Imports**: [internal/discover](./discover.md) ×16
+- **Imports**: [internal/discover](./discover.md) ×19
 <!-- /signpost:managed:structure -->
 
 ## Notes
