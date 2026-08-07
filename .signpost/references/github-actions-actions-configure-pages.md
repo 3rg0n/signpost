@@ -2,7 +2,7 @@
 type: External Dependency
 title: actions/configure-pages
 description: github-actions dependency actions/configure-pages (45bfe0192ca1faeb007ade9deae92b16b8254a0d)
-resource: git://github.com/3rg0n/signpost@e00c5fc3bcee11f52c6e5ac0f9ef29703b8e83cb
+resource: git://github.com/3rg0n/signpost@323acdab3608d65385f549d938831891ac6ca99b
 tags: [direct, external, github-actions]
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
