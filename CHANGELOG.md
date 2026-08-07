@@ -77,6 +77,16 @@ All notable changes to this project are documented here. Format follows
   asserted at 22, not merely the presence of each. A resolver that claims everything satisfies
   every positive assertion in the suite; only the count catches it.
 
+  **The same one-sided-assertion problem turned up in the scanner, found by review.** The
+  heredoc test asserted only that a heredoc's body declares nothing, which passes for a scanner
+  treating *every* `<<` as an opener — and that scanner blanks the remainder of the file, taking
+  every declaration below the shift out of the graph silently. Ruby's `<<` is how a line is
+  appended to an array and how a singleton class is opened, so it is ordinary rather than
+  exotic. Both spacings are now in the fixture, because only one of them reaches the rule being
+  tested: `count << shift` is rejected a step earlier by the requirement that an identifier
+  follow the operator immediately, so a test using that form alone passes with the case guard
+  deleted. Deleting the guard now turns the test red.
+
   One assertion had to be narrowed to stay true. The workspace-packages regression scanned
   every page in the bundle for the name `corpus-api`, which was the same
   assertion it meant to make only as long as no *module* was named that — and
