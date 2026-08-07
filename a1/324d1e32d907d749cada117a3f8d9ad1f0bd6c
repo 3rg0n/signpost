@@ -1,0 +1,110 @@
+internal/extract/cfamily.go
+  s_f6c0b1ac81cb95::t_9facd7d9226e8c 739-763
+  s_f6c0b1ac81cb95::t_b766fbfef1056e 456-463
+  s_f6c0b1ac81cb95::t_4a03fddf741dd9 1-74,76-80,93-172,182-183,185-307,317-318,339-340,344-350,352,354-455,464-561,569-658,667-738,764-972
+  s_f6c0b1ac81cb95::t_8e7e0ad118e574 81-92
+  s_f6c0b1ac81cb95::t_d32abc6445c080 173-181,184
+  s_f6c0b1ac81cb95::t_567f52d44a2312 308-316,319-338,341-343,351,353
+  s_f6c0b1ac81cb95::t_7f3a35383584ff 562-568
+  s_f6c0b1ac81cb95::t_c457c10678d505 659-666
+  s_f6c0b1ac81cb95::t_20cce9c5eb3424 75
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_d17efb93a28f8a 1184-1187
+  s_f6c0b1ac81cb95::t_a7c7ae5354fe9e 1486-1582
+  s_f6c0b1ac81cb95::t_d2cf7fc8ac0e08 1119-1135,1141-1145
+  s_f6c0b1ac81cb95::t_45cd66053ad971 1193
+  s_f6c0b1ac81cb95::t_a2c2623e93b009 381-393
+  s_f6c0b1ac81cb95::t_54fcf674dbf869 400-438
+  s_f6c0b1ac81cb95::t_ada14e83bf8f3a 1136-1140
+  s_f6c0b1ac81cb95::t_9080a8afd6c66d 1230
+README.md
+  s_f6c0b1ac81cb95::t_f9a1c8f80a1df6 80-93
+  s_f6c0b1ac81cb95::t_98dc2ee561a2f1 397
+testdata/corpus/cpp/src/session.cc
+  s_f6c0b1ac81cb95::t_3dfc9aea0e866e 1-78
+testdata/corpus/c/src/internal.h
+  s_f6c0b1ac81cb95::t_5f98ab5e015737 1-9
+site/index.html
+  s_f6c0b1ac81cb95::t_865f5d85f584f3 252-255,265-272
+  s_f6c0b1ac81cb95::t_221827b76e8e4d 315
+  s_f6c0b1ac81cb95::t_8aeb3439c45971 273
+testdata/corpus/c/include/corpus/buffer.h
+  s_f6c0b1ac81cb95::t_dfeb03e8bfde29 1-35
+testdata/corpus/objc/Sources/Reader.m
+  s_f6c0b1ac81cb95::t_60d5517222c353 1-67
+internal/extract/cfamily_test.go
+  s_f6c0b1ac81cb95::t_d4eec05e711859 828-831
+  s_f6c0b1ac81cb95::t_56af33f4893720 1-827,832-893
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_bc9a8ee300cfb1 140
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_bbe5515202799a 518-519,524-533,539,549-566,577-595
+  s_f6c0b1ac81cb95::t_1b234cfd4d10cf 9
+  s_f6c0b1ac81cb95::t_461678341b73c8 534-538,540-548,567-576
+  s_c511dec661c68b::t_4c25a5e00e534b 596
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_46e03120f635b9 118-135
+testdata/corpus/c/src/buffer.c
+  s_f6c0b1ac81cb95::t_2e4a1f9e866c79 1-90
+testdata/corpus/c/tests/buffer_test.c
+  s_f6c0b1ac81cb95::t_b740e6e3e1135f 1-23
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_6459386e9950c0 152-153
+  s_f6c0b1ac81cb95::t_0ab58acc166f09 260-311,313-352
+  s_f6c0b1ac81cb95::t_d1b1bea5474dc4 312
+  s_f6c0b1ac81cb95::t_4065f557bb021a 10
+  s_f6c0b1ac81cb95::t_bc6ef4322dfa39 492-507,509-516
+  s_f6c0b1ac81cb95::t_56712d7f59c356 508
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_59e90607b66beb 1342-1348,1355-1356
+  s_f6c0b1ac81cb95::t_8c3000d307b1a2 1259-1341,1349-1354,1357-1402
+  s_f6c0b1ac81cb95::t_70ed16977cf8b2 1403-1462
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_cb797f8510f00c 316
+  s_f6c0b1ac81cb95::t_ac860ad591b9a3 336
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_859aa0ca8dc803 11-56
+testdata/corpus/cpp/include/corpus/session.hpp
+  s_f6c0b1ac81cb95::t_8bde6d58a7ce9a 1-46
+testdata/corpus/objc/Sources/Reader.h
+  s_f6c0b1ac81cb95::t_199699858913b2 1-33
+docs/design.md
+  s_f6c0b1ac81cb95::t_2335a311236454 291-312
+  s_f6c0b1ac81cb95::t_abf0fd7ca93f24 265-267
+  s_f6c0b1ac81cb95::t_34e11480e56cf2 324-328
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_5f5c1de66ddd19 34-36
+  s_f6c0b1ac81cb95::t_202e2f577c93a8 61-82
+  s_f6c0b1ac81cb95::t_4ab8fb2cfc4f54 309
+  s_f6c0b1ac81cb95::t_75b0d5d5169d10 321-322,340-347,350-351,354-357,365-370
+  s_f6c0b1ac81cb95::t_2926dff3b62c55 302-308
+  s_f6c0b1ac81cb95::t_8a0c8b29160300 323-339,348-349,352-353,358-364
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_3be99c0c36f45d 557-578,582,586,595-621,623-639,641-646
+  s_f6c0b1ac81cb95::t_d21cb75ec1b64c 579-581,583-585,587-594
+  s_f6c0b1ac81cb95::t_1d71e1313f81eb 622,640
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a1324d1e32d907d749cada117a3f8d9ad1f0bd6c",
+  "prompts": {},
+  "sessions": {
+    "s_c511dec661c68b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64624c-ba66-4b0b-a52d-b7ab5e0b891f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
