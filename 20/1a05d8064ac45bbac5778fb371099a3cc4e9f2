@@ -1,0 +1,156 @@
+testdata/corpus/c/tests/buffer_test.c
+  s_f6c0b1ac81cb95::t_b740e6e3e1135f 1-23
+testdata/corpus/cpp/src/session.cc
+  s_f6c0b1ac81cb95::t_d1cdbc03a9cb94 74-81
+  s_f6c0b1ac81cb95::t_3dfc9aea0e866e 1-73,82-86
+internal/discover/discover_test.go
+  s_f6c0b1ac81cb95::t_1d71e1313f81eb 622,640
+  s_f6c0b1ac81cb95::t_d21cb75ec1b64c 579-581,583-585,587-594
+  s_f6c0b1ac81cb95::t_3be99c0c36f45d 557-578,582,586,595-621,623-639,641-646
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_9080a8afd6c66d 1230
+  s_f6c0b1ac81cb95::t_ada14e83bf8f3a 1136-1140
+  s_f6c0b1ac81cb95::t_a7c7ae5354fe9e 1486-1582
+  s_f6c0b1ac81cb95::t_a2c2623e93b009 381-393
+  s_f6c0b1ac81cb95::t_d2cf7fc8ac0e08 1119-1135,1141-1145
+  s_f6c0b1ac81cb95::t_45cd66053ad971 1193
+  s_f6c0b1ac81cb95::t_54fcf674dbf869 400-438
+  s_f6c0b1ac81cb95::t_d17efb93a28f8a 1184-1187
+testdata/corpus/c/include/corpus/buffer.h
+  s_f6c0b1ac81cb95::t_dfeb03e8bfde29 1-34,42
+  s_f6c0b1ac81cb95::t_f7afb96f7378f0 35-41
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_bbe5515202799a 518-519,524-533,539,549-566,577-595
+  s_f6c0b1ac81cb95::t_1b234cfd4d10cf 9
+  s_f6c0b1ac81cb95::t_461678341b73c8 534-538,540-548,567-576
+  s_c511dec661c68b::t_4c25a5e00e534b 596
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_ac860ad591b9a3 336
+  s_f6c0b1ac81cb95::t_cb797f8510f00c 316
+testdata/corpus/objc/Sources/Reader.h
+  s_f6c0b1ac81cb95::t_199699858913b2 1-33
+site/index.html
+  s_f6c0b1ac81cb95::t_865f5d85f584f3 252-255,265-272
+  s_f6c0b1ac81cb95::t_221827b76e8e4d 315
+  s_f6c0b1ac81cb95::t_8aeb3439c45971 273
+testdata/corpus/objc/Sources/Reader.m
+  s_f6c0b1ac81cb95::t_60d5517222c353 1-67
+internal/extract/cfamily.go
+  s_f6c0b1ac81cb95::t_567f52d44a2312 310-318,321-340,343-345,353,355
+  s_f6c0b1ac81cb95::t_b766fbfef1056e 542-549
+  s_f6c0b1ac81cb95::t_d32abc6445c080 175-183,186
+  s_f6c0b1ac81cb95::t_90bd6cb9a51071 730-781
+  s_f6c0b1ac81cb95::t_35321bbc04a7a5 425
+  s_f6c0b1ac81cb95::t_9facd7d9226e8c 915-939
+  s_f6c0b1ac81cb95::t_0d34fb778aa922 416,451,457,476-514
+  s_f6c0b1ac81cb95::t_8e7e0ad118e574 81-92
+  s_f6c0b1ac81cb95::t_844bf1c4a6f919 448
+  s_f6c0b1ac81cb95::t_26cde19b304ec2 540
+  s_f6c0b1ac81cb95::t_20cce9c5eb3424 75
+  s_f6c0b1ac81cb95::t_4a03fddf741dd9 1-74,76-80,93-128,132-174,184-185,187-309,319-320,341-342,346-352,354,356-415,424,426-437,453,458-459,515-528,534,537-539,541,559-570,574-575,607-608,610-685,693-729,782-834,843-914,940-1148
+  s_f6c0b1ac81cb95::t_7f3a35383584ff 686-692
+  s_f6c0b1ac81cb95::t_c457c10678d505 835-842
+  s_f6c0b1ac81cb95::t_723806585eea68 529-533,535-536,550-556,558,571-573,576-606,609
+  s_f6c0b1ac81cb95::t_46d5b5987047a3 131
+  s_f6c0b1ac81cb95::t_de50dc6f7da2ea 129-130
+  s_f6c0b1ac81cb95::t_122f5d09570499 557
+  s_f6c0b1ac81cb95::t_a343fb485f9da4 417-423,438-447,449-450,452,454-456,460-475
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_bc9a8ee300cfb1 140
+testdata/corpus/c/src/internal.h
+  s_f6c0b1ac81cb95::t_5f98ab5e015737 1-9
+README.md
+  s_f6c0b1ac81cb95::t_f9a1c8f80a1df6 80-93
+  s_f6c0b1ac81cb95::t_98dc2ee561a2f1 398
+docs/adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md
+  s_f6c0b1ac81cb95::t_e3c2f41b0946f7 30-31
+  s_f6c0b1ac81cb95::t_38bfd29708f8ca 112-121
+  s_f6c0b1ac81cb95::t_892652018c611b 111,122
+  s_f6c0b1ac81cb95::t_831985f7983e85 75-77
+  s_f6c0b1ac81cb95::t_f34c5ea9ce6fb7 26,32-42
+  s_f6c0b1ac81cb95::t_e7bb3dff0fc242 23-25
+  s_f6c0b1ac81cb95::t_c814e307b0701e 27-29
+  s_f6c0b1ac81cb95::t_cd09824a335499 43-45,72-74
+  s_f6c0b1ac81cb95::t_0415de508e1cf1 78-80,108-110
+  s_f6c0b1ac81cb95::t_768922b243b023 123-125
+  s_f6c0b1ac81cb95::t_a947ef5c3f6c72 1-22,46-71,81-107,126-127
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_46e03120f635b9 118-135
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_8c3000d307b1a2 1259-1341,1349-1354,1357-1402
+  s_f6c0b1ac81cb95::t_59e90607b66beb 1342-1348,1355-1356
+  s_f6c0b1ac81cb95::t_70ed16977cf8b2 1403-1462
+testdata/corpus/cpp/include/corpus/session.hpp
+  s_f6c0b1ac81cb95::t_8bde6d58a7ce9a 1-45,63
+  s_f6c0b1ac81cb95::t_5128b155c620ce 46-62
+docs/design.md
+  s_f6c0b1ac81cb95::t_2335a311236454 298-319
+  s_f6c0b1ac81cb95::t_34e11480e56cf2 333-337
+  s_f6c0b1ac81cb95::t_abf0fd7ca93f24 272-274
+  s_f6c0b1ac81cb95::t_9b6d9c2ccedad5 320-322
+  s_f6c0b1ac81cb95::t_b902b45276fe50 87,323-326
+testdata/corpus/c/src/buffer.c
+  s_f6c0b1ac81cb95::t_2e4a1f9e866c79 1-53,62-69,95-123
+  s_f6c0b1ac81cb95::t_6a9530273d4eb2 54-61
+  s_f6c0b1ac81cb95::t_6a0cd85f50e2fb 70-94
+internal/extract/cfamily_test.go
+  s_f6c0b1ac81cb95::t_34cac9948ed92e 239-240,243-244,247
+  s_f6c0b1ac81cb95::t_984be322bcae3b 582-605,611-625
+  s_f6c0b1ac81cb95::t_d4eec05e711859 972-975
+  s_f6c0b1ac81cb95::t_56af33f4893720 1-197,218-238,248-507,626-971,976-1037
+  s_f6c0b1ac81cb95::t_2ed13035b53b50 198-205
+  s_f6c0b1ac81cb95::t_a3f3bbacc9b901 206-217
+  s_f6c0b1ac81cb95::t_1ea49a6174c95b 241-242,245-246
+  s_f6c0b1ac81cb95::t_ac913daa5248b8 606-610
+  s_f6c0b1ac81cb95::t_721d8d92317a4f 508-581
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_6459386e9950c0 152-153
+  s_f6c0b1ac81cb95::t_0ab58acc166f09 260-311,313-352
+  s_f6c0b1ac81cb95::t_4065f557bb021a 10
+  s_f6c0b1ac81cb95::t_56712d7f59c356 508
+  s_f6c0b1ac81cb95::t_bc6ef4322dfa39 492-507,509-516
+  s_f6c0b1ac81cb95::t_d1b1bea5474dc4 312
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_75b0d5d5169d10 321-322,340-347,350-351,354-357,365-370
+  s_f6c0b1ac81cb95::t_8a0c8b29160300 323-339,348-349,352-353,358-364
+  s_f6c0b1ac81cb95::t_202e2f577c93a8 61-82
+  s_f6c0b1ac81cb95::t_2926dff3b62c55 302-308
+  s_f6c0b1ac81cb95::t_4ab8fb2cfc4f54 309
+  s_f6c0b1ac81cb95::t_5f5c1de66ddd19 34-36
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_999b4a6afd9939 92-93,98-100
+  s_f6c0b1ac81cb95::t_859aa0ca8dc803 11-46,73-81
+  s_f6c0b1ac81cb95::t_8d2815d3b1e7f8 47-58,72
+  s_f6c0b1ac81cb95::t_4f1b4451be0c10 97
+  s_f6c0b1ac81cb95::t_e1e1be72a67ed0 59-71
+  s_f6c0b1ac81cb95::t_2607cd55e783a0 82-84,89-91
+  s_f6c0b1ac81cb95::t_237828c86885ad 94-96
+  s_f6c0b1ac81cb95::t_911bfc1030fee4 101-103
+  s_f6c0b1ac81cb95::t_84580a2743a904 85-88,104-106
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_b4bfde116850aa 41,50-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "201a05d8064ac45bbac5778fb371099a3cc4e9f2",
+  "prompts": {},
+  "sessions": {
+    "s_c511dec661c68b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64624c-ba66-4b0b-a52d-b7ab5e0b891f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
