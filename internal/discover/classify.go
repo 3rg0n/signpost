@@ -31,6 +31,9 @@ const (
 	LangRust   Lang = "rust"
 	LangJava   Lang = "java"
 	LangKotlin Lang = "kotlin"
+	LangC      Lang = "c"
+	LangCpp    Lang = "cpp"
+	LangObjC   Lang = "objc"
 	LangOther  Lang = "other"
 )
 
@@ -55,13 +58,29 @@ var sourceExts = map[string]Lang{
 	// A .kts script is Kotlin the extractor can read, and the two whose names make
 	// them build files — build.gradle.kts, settings.gradle.kts — never reach here:
 	// manifestNames matches them by basename first.
-	".kts":   LangKotlin,
+	".kts": LangKotlin,
+	".c":   LangC,
+	// A .h is C, C++, or Objective-C, and no filename can say which: the same
+	// extension serves all three and only the content distinguishes them.
+	// Classification here is name-based by design — the walk stays filename-only so
+	// it is cheap and deterministic — so a header is labelled C, the family's lowest
+	// common denominator, and the extractor reads the whole family's syntax
+	// regardless of which Lang dispatched it. A C++ class in a .h is still recorded;
+	// what the label loses is only the dialect's name, which is the honest limit of
+	// what a filename carries.
+	".h":   LangC,
+	".cc":  LangCpp,
+	".cpp": LangCpp,
+	".cxx": LangCpp,
+	".hpp": LangCpp,
+	".hh":  LangCpp,
+	".hxx": LangCpp,
+	// Objective-C's .m is unambiguous; .mm is Objective-C++ and reads as the same
+	// language here, since every construct .mm adds is one the extractor already
+	// handles for C++.
+	".m":     LangObjC,
+	".mm":    LangObjC,
 	".rb":    LangOther,
-	".c":     LangOther,
-	".h":     LangOther,
-	".cc":    LangOther,
-	".cpp":   LangOther,
-	".hpp":   LangOther,
 	".cs":    LangOther,
 	".swift": LangOther,
 	".scala": LangOther,
@@ -280,6 +299,14 @@ func isTestPath(rel string, lang Lang) bool {
 		return containsDir(rel, "__tests__") || containsDir(rel, "tests") || containsDir(rel, "test")
 	case LangRust:
 		return containsDir(rel, "tests") || base == "tests.rs"
+	case LangC, LangCpp, LangObjC:
+		// C has no test convention the toolchain enforces, so several coexist and all
+		// of them are in wide use: GoogleTest's `_test.cc` and `_unittest.cc`, CTest's
+		// `test_` prefix, and Xcode's `FooTests.m`. The directory fallback catches
+		// `test/` and `tests/` trees, which is where autotools and CMake projects
+		// conventionally put them.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			cTestBasename(path.Base(rel))
 	case LangJava, LangKotlin:
 		// src/test/java and src/test/kotlin are where Maven and Gradle put tests, and
 		// both are caught by the "test" segment the fallback already checks. The
@@ -289,6 +316,56 @@ func isTestPath(rel string, lang Lang) bool {
 			jvmTestBasename(path.Base(rel))
 	}
 	return containsDir(rel, "tests") || containsDir(rel, "test")
+}
+
+// cTestBasename reports whether a C-family filename names a test file.
+//
+// C has no test convention its toolchain enforces, so the ones in use are conventions
+// of separate test frameworks and all of them appear in real trees: GoogleTest's
+// `_test.cc` and `_unittest.cc`, CTest's `test_` prefix, and Xcode's `ReaderTests.m`.
+//
+// Case matters, and in two different ways, which is why the delimited forms are matched
+// against the lowercased name and the undelimited one is not:
+//
+//   - `_test`, `-test` and `test_` carry a delimiter, and the delimiter is what makes
+//     the boundary. Case adds nothing, and `Buffer_Test.c` is a test.
+//   - `Tests` with no delimiter has only its capital. Lowercased, `protests.c` and
+//     `contests.cpp` end in "tests" and would be marked as tests — and marking
+//     production code as a test drops it out of the public surface it declares, which is
+//     a silent loss of real API rather than a noisy false positive. So that form is
+//     matched case-sensitively, which is the same call jvmTestBasename makes and for the
+//     same reason.
+//
+// `latest.c` ends in the letters of `test` and is not one, under either rule.
+func cTestBasename(base string) bool {
+	name := base
+	if i := strings.LastIndexByte(name, '.'); i > 0 {
+		name = name[:i]
+	}
+	if name == "" {
+		return false
+	}
+	lower := strings.ToLower(name)
+	if lower == "test" || lower == "tests" {
+		return true
+	}
+	for _, suffix := range []string{"_test", "_tests", "_unittest", "-test", "-tests"} {
+		if strings.HasSuffix(lower, suffix) && len(lower) > len(suffix) {
+			return true
+		}
+	}
+	for _, prefix := range []string{"test_", "test-"} {
+		if strings.HasPrefix(lower, prefix) && len(lower) > len(prefix) {
+			return true
+		}
+	}
+	// Xcode's convention, capital and all: `ReaderTests.m`, `ReaderTest.mm`.
+	for _, suffix := range []string{"Tests", "Test"} {
+		if strings.HasSuffix(name, suffix) && len(name) > len(suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 // jvmTestBasename reports whether a JVM filename names a test class.

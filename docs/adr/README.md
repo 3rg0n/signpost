@@ -38,6 +38,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0019](0019-louvain-over-label-propagation.md) | Clustering is hand-written Louvain, after label propagation was measured and rejected | Accepted |
 | [0020](0020-git-history-annotates-the-map-and-never-draws-it.md) | Git history annotates the map and never draws it | Accepted |
 | [0021](0021-track-the-published-spec-and-never-overload-its-keys.md) | Track the published spec, and never overload one of its keys | Accepted |
+| [0022](0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) | Extractors are hand-written, and tree-sitter has a written threshold | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
@@ -46,11 +47,9 @@ dependencies, few enough that bumping stays routine — still binds. Its *conseq
 
 ## Decisions still owed one
 
-Recorded here so the gap is visible rather than discovered later:
-
-- **Hand-written extractors, with a tree-sitter binding as the fallback.** This binds every
-  language task rather than the one being worked on, and the threshold at which accuracy would
-  justify the binding has never been written down. Currently one table row in `docs/design.md`.
+Recorded here so the gap is visible rather than discovered later. Nothing is currently owed one:
+the last entry, hand-written extractors versus a tree-sitter fallback, is
+[0022](0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md).
 
 ## Writing one
 

@@ -115,6 +115,24 @@ var (
 		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
 		blockNests: true, tripleQuotes: []string{`"""`},
 	}
+	// C, C++ and Objective-C share one config. Block comments do not nest — the C
+	// standard says the first `*/` closes, so `/* /* */` is a closed comment followed
+	// by code, and treating it as Rust's nesting form would swallow the rest of the
+	// file. The single quote stays an ordinary delimiter for the reason scanJava gives:
+	// the scanner blanks a delimited body, so `if (c == '{')` contributes no brace to
+	// the depth count the extractor walks with.
+	//
+	// C++11 raw strings — R"delim(...)delim" — are not modelled. rawStringHash is
+	// Rust's `r#"..."#` form and does not fit: C++ takes an arbitrary delimiter, not a
+	// run of hashes. An unterminated ordinary string is what the scanner sees instead,
+	// which ends at the line's end (multiLineQuote is off), so a raw string spanning
+	// lines leaves its middle lines readable as code. Declarations do not appear inside
+	// string literals, so what that can produce is a spurious symbol rather than a lost
+	// one — and cDeclSite's depth rule rejects text at any depth a declaration cannot
+	// occupy.
+	scanC = scanConfig{
+		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
+	}
 	scanRust = scanConfig{
 		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
 		blockNests: true, rawStringHash: true, lifetimes: true, noSingleQuote: true,

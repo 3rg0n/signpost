@@ -84,7 +84,7 @@ Which yields:
 | Language | Go. Static binary, cross-compiles to the four platforms we care about. |
 | Dependency policy | Direct deps only, few, each justified in an ADR. Dependabot + Renovate enabled day one. CI fails on a new direct dep without an ADR. |
 | Go parsing | `go/parser` + `go/ast` — full-precision AST, in the stdlib, free. |
-| Other-language parsing | Hand-written extractors (§4.2). A tree-sitter binding is the fallback if accuracy demands it — that is a library decision, not a tool decision, and it is ours to bump. |
+| Other-language parsing | Hand-written extractors (§4.2), nine languages at F1 1.000. A tree-sitter binding is the fallback for one language whose scored fixtures cannot reach target by hand — a library decision, not a tool decision, and ours to bump (ADR [0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)). |
 | Graph algorithms | Hand-written (§4.4). Roughly 600 lines, all textbook — genuinely cheaper than a dependency. |
 | Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4, ADR [0019](adr/0019-louvain-over-label-propagation.md)). |
 | YAML | Hand-written tolerant reader and hand-written emitter, both ours. Helm templates are not YAML and a conforming parser rejects them outright, so a library would not have covered the files that matter (ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). |
@@ -269,8 +269,9 @@ ordering gives the sample projects the paths a real repository would have.
 symbols, interface implementations, `main` functions, `init` side effects. Full
 precision, zero dependencies, and it is our primary language.
 
-**TypeScript/JavaScript, Python, Rust, Java, Kotlin** get hand-written line-oriented
-extractors covering imports/requires, top-level declarations, exports, and entrypoints.
+**TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C** get
+hand-written line-oriented extractors covering imports/requires, top-level declarations,
+exports, and entrypoints.
 These are not full parsers and are not trying to be. The signpost layer needs the module
 graph and the public surface, and a focused extractor gets ~95% of that. Where
 precision matters, SCIP enrichment (§4.3) supplies it.
@@ -294,19 +295,46 @@ A JVM test is also the one case where a third statement beats imports. Same-pack
 access needs no import, so a test's subject is precisely the one name its import list
 does not contain — the `tested_by` edge comes from the package the test *declares*.
 
-If the measured accuracy (§4.2) proves inadequate for a language teams actually
-care about, a tree-sitter Go binding is the fallback for that language
-specifically. That is a direct library dependency we bump ourselves — a different
-proposition from inheriting a tool's grammar tree — and it stays behind the same
-extractor interface, so it is a swap rather than a redesign.
+**The C family has no module system at all, so two things are modelled differently
+there.** An `#include` is a path fragment, and what turns it into a file is the build's
+`-I` flags, which signpost does not read. So resolution walks outward from the including
+file's own directory trying the conventional roots — `include`, `src`, the directory
+itself, `lib`, `source` — and stops at the nearest ancestor that holds the file. Anchoring
+at the repository root would be correct for a single-project repository and wrong for
+every other shape, since a monorepo has an `include/` per project. The delimiter is kept
+on the import (`"util/buffer.h"` versus `<stdio.h>`) because the delimiter *is* the
+resolution rule: quoted means look beside this file first, and a quoted include is never
+the system library. Standard-library recognition then has a shape no other language has —
+a C++ standard header has no extension, so an extensionless angled include is the standard
+library *by construction*, with no list to go stale; C's own headers end in `.h` and are
+indistinguishable by shape from a project's, so those need a list.
+
+The second is `.h`, which is C, C++ or Objective-C and only its content can say which.
+Classification is name-only by design, so a `.h` is labelled C — the family's lowest
+common denominator — and one extractor claims all three languages and reads the whole
+family's syntax regardless of which label dispatched the file. The label is a placeholder
+rather than a finding, and it does not vote on the language of the directory it sits in:
+an Objective-C directory holds a `.h` for every `.m`, and counting the header gives a tie
+that would erase Objective-C from the bundle of a repository written in it.
+
+Extractors stay hand-written, and the threshold at which that changes is written down
+([ADR 0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)): a
+tree-sitter Go binding becomes the answer for *one* language when that language's scored
+fixtures cannot be brought to the §4.2 targets by hand — not when an extractor has a bug in
+it, which is what fixtures are for. It would be a direct library dependency we bump
+ourselves, a different proposition from inheriting a tool's grammar tree, and it stays behind
+the same extractor interface, so it is a swap rather than a redesign.
 
 The first four languages are chosen for the same reason you chose them: Go, Rust,
 TypeScript, and Python have the strongest tooling and the strongest model training
 coverage. Java and Kotlin follow because they are the largest bodies of code the tool
 could not read at all, and they share one namespace and one resolution map because the
 compiler does — a Kotlin file importing a Java package is ordinary in every JVM
-repository. Everything else falls back to a generic extractor (comment headers,
-filename conventions, sibling context) plus the semantic pass.
+repository. C, C++ and Objective-C come next, and for the same reason as one another:
+they are one family sharing one preprocessor and one header convention, so the language
+boundary between them is not a boundary an extractor can see. Everything else falls back
+to a generic extractor (comment headers, filename conventions, sibling context) plus the
+semantic pass.
 
 **Manifests and infrastructure are the highest-value deterministic signal and the
 part comparable tools mostly skip.** All of this is exact, cheap, and structural:

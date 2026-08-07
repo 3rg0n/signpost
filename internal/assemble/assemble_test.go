@@ -1256,6 +1256,210 @@ func TestJVMTestedByComesFromTheDeclaredPackage(t *testing.T) {
 	}
 }
 
+// An #include names a *file*, which makes C the only language here whose resolution is
+// path-based rather than name-based, and the delimiter is the search rule. A quoted
+// include searches the including file's own directory first; an angled one searches the
+// include path, which for a project's own public headers is `include/`.
+func TestCIncludesResolveByPathAndDelimiter(t *testing.T) {
+	out := build(t, map[string]string{
+		"src/app.c": "#include \"buffer.h\"\n" +
+			"#include \"../include/log.h\"\n" +
+			"#include <util/hash.h>\n" +
+			"#include <stdio.h>\n\n" +
+			"int main(void) { return 0; }\n",
+		"src/buffer.h":        "int buffer_grow(int n);\n",
+		"include/log.h":       "void log_error(const char *m);\n",
+		"include/util/hash.h": "unsigned hash(const char *s);\n",
+	})
+	g := out.Graph
+	// Quoted, resolved against the including file's own directory.
+	if !hasEdge(g, "/modules/src", "/modules/src", graph.EdgeImports) &&
+		g.Node("/modules/src") == nil {
+		t.Fatal("no module for src/")
+	}
+	// Quoted with a relative prefix, reaching another directory.
+	if !hasEdge(g, "/modules/src", "/modules/include", graph.EdgeImports) {
+		var got []string
+		for _, e := range g.EdgesFrom("/modules/src") {
+			got = append(got, e.To)
+		}
+		t.Errorf("src imports %v; a quoted relative include must resolve", got)
+	}
+	// Angled, resolved through the `include/` root a C project conventionally declares.
+	if !hasEdge(g, "/modules/src", "/modules/util", graph.EdgeImports) {
+		t.Error("an angled include of a header under include/ is the project's own public " +
+			"header and must resolve")
+	}
+	// And no external node was invented: there is no manifest declaring C dependencies,
+	// so a node for one would publish a dependency the repository never named.
+	for _, e := range g.EdgesFrom("/modules/src") {
+		if strings.HasPrefix(e.To, "/references/") {
+			t.Errorf("an external node %q was invented from an include", e.To)
+		}
+	}
+}
+
+// The negative boundary for C resolution, and the one that decides whether the test above
+// measures anything: a resolver that accepted a directory, or that ignored the delimiter,
+// would draw an edge for every line here.
+func TestCResolutionRespectsTheDelimiterAndRequiresAFile(t *testing.T) {
+	out := build(t, map[string]string{
+		"src/app.c": "#include \"missing.h\"\n" +
+			// A directory named exactly what an angled include names. The C++ standard
+			// library has no extensions, so `<memory>` is stdlib — and a resolver that
+			// accepted a directory target would point it at this repository's own
+			// `memory/` instead, which is an edge to code that has nothing to do with it.
+			"#include <memory>\n" +
+			// A real dependency signpost has no manifest for. It must land in the
+			// unresolved count rather than become an invented node.
+			"#include <gtest/gtest.h>\n" +
+			// The platform, which is neither an edge nor a gap: nobody patches libc
+			// separately, and counting it would make every honest C repository look unread.
+			"#include <stdio.h>\n" +
+			"#include <sys/socket.h>\n\n" +
+			"int main(void) { return 0; }\n",
+		"src/memory/pool.c": "int pool_take(void) { return 0; }\n",
+		"src/memory/pool.h": "int pool_take(void);\n",
+	})
+	g := out.Graph
+	if hasEdge(g, "/modules/src", "/modules/memory", graph.EdgeImports) {
+		t.Error("`#include <memory>` is the C++ standard library and resolved to a " +
+			"directory of the same name; an include names a file")
+	}
+	unresolved := map[string]bool{}
+	for k := range out.Unresolved {
+		unresolved[k] = true
+	}
+	for _, want := range []string{
+		`c "missing.h"`,
+		"c <gtest/gtest.h>",
+	} {
+		if !unresolved[want] {
+			t.Errorf("%q is not in the unresolved count %v; a gap the reader is not told "+
+				"about is the one outcome the count exists to prevent", want, out.Unresolved)
+		}
+	}
+	for _, no := range []string{
+		"c <stdio.h>", "c <sys/socket.h>",
+		// `<memory>` is C++'s standard library by shape — extensionless, angled — so it
+		// is not a gap either, and it must not become one just because this repository
+		// happens to have a directory of the same name.
+		"c <memory>",
+	} {
+		if unresolved[no] {
+			t.Errorf("%q was counted as a gap; it is the platform", no)
+		}
+	}
+	// The exact count, per the corpus's negative-boundary rule: a resolver that reported
+	// everything as unresolved would satisfy every positive assertion above.
+	if len(out.Unresolved) != 2 {
+		t.Errorf("Unresolved = %v, want exactly the two includes naming nothing here",
+			out.Unresolved)
+	}
+}
+
+// The stdlib rule for C has a shape no other language's does, and both halves need
+// pinning. C++'s standard library headers have no extension, so an extensionless angled
+// include *is* the standard library by construction and needs no list that can go stale.
+// C's own headers do end in `.h` and are indistinguishable by shape from a project's, so
+// those need the list — and a quoted include is never the system library, because the
+// quotes say "look here first".
+func TestCSystemHeaderRecognition(t *testing.T) {
+	stdlib := []string{
+		// C++, by shape.
+		"<memory>", "<vector>", "<unordered_map>", "<coroutine>",
+		// C, from the list.
+		"<stdio.h>", "<stdint.h>", "<stdbool.h>", "<threads.h>",
+		// POSIX and Windows, which arrive with the platform.
+		"<sys/socket.h>", "<pthread.h>", "<unistd.h>", "<windows.h>",
+		// Apple's frameworks, which arrive with the SDK.
+		"<Foundation/Foundation.h>", "<UIKit/UIKit.h>",
+	}
+	for _, raw := range stdlib {
+		if !isStdlib(discover.LangC, raw) {
+			t.Errorf("isStdlib(%q) = false; this arrives with the toolchain and nobody "+
+				"patches it separately", raw)
+		}
+	}
+	notStdlib := []string{
+		// A chosen dependency with its own advisories, one segment from a framework.
+		"<gtest/gtest.h>", "<openssl/ssl.h>", "<curl/curl.h>", "<zlib.h>",
+		// The quoted form of a header that is on the list. The quotes are the whole
+		// difference: this names a file in the repository that shadows it.
+		`"stdio.h"`, `"vector"`,
+		// A project's own public header, included with angle brackets because it is on
+		// the include path — which is ordinary, and is why the extension matters.
+		"<mylib/mylib.h>", "<buffer.h>",
+	}
+	for _, raw := range notStdlib {
+		if isStdlib(discover.LangC, raw) {
+			t.Errorf("isStdlib(%q) = true; this is a dependency somebody chose and has "+
+				"to patch, and marking it as the platform is how it vanishes from the "+
+				"coverage report", raw)
+		}
+	}
+}
+
+// A `.h` is labelled C because its name cannot say more, and that placeholder must not
+// decide the directory's language. An Objective-C directory holds a `.h` for every `.m`,
+// so counting the header gives a 1–1 tie that alphabetical order resolves to "c" — and
+// Objective-C then appears nowhere in the bundle, in a repository that is written in it.
+// The same asymmetry hits C++: `session.hpp` is unambiguous, `buffer.h` is not.
+func TestHeaderLabelDoesNotDecideTheModuleLanguage(t *testing.T) {
+	cases := []struct {
+		name  string
+		facts []extract.Facts
+		want  string
+	}{{
+		name: "objc header does not outvote its implementation",
+		facts: []extract.Facts{
+			{Path: "objc/Sources/Reader.h", Lang: discover.LangC},
+			{Path: "objc/Sources/Reader.m", Lang: discover.LangObjC},
+		},
+		want: "objc",
+	}, {
+		// Two headers to one implementation, so the header count wins outright rather
+		// than by a tie. The implementation is still the only file that names a dialect.
+		name: "outnumbered implementation still names the language",
+		facts: []extract.Facts{
+			{Path: "cpp/inc/a.h", Lang: discover.LangC},
+			{Path: "cpp/inc/b.h", Lang: discover.LangC},
+			{Path: "cpp/inc/a.cc", Lang: discover.LangCpp},
+		},
+		want: "cpp",
+	}, {
+		// A header-only directory has nothing else to go on, so the placeholder is the
+		// best available answer and is used. Dropping headers unconditionally would
+		// leave every public-header directory in a C project with no language at all.
+		name: "header-only directory keeps the placeholder",
+		facts: []extract.Facts{
+			{Path: "c/include/corpus/buffer.h", Lang: discover.LangC},
+		},
+		want: "c",
+	}, {
+		// `.hpp` carries its dialect in its name, so it is not a placeholder and votes
+		// like any other file.
+		name: "unambiguous header extension votes normally",
+		facts: []extract.Facts{
+			{Path: "cpp/include/session.hpp", Lang: discover.LangCpp},
+		},
+		want: "cpp",
+	}, {
+		// A real C directory: the .c files answer, and they answer "c".
+		name: "c implementation answers c",
+		facts: []extract.Facts{
+			{Path: "c/src/buffer.h", Lang: discover.LangC},
+			{Path: "c/src/buffer.c", Lang: discover.LangC},
+		},
+		want: "c",
+	}}
+	for _, tc := range cases {
+		if got := moduleLang(tc.facts); got != tc.want {
+			t.Errorf("%s: moduleLang = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 func TestTestedByEdge(t *testing.T) {
 	out := build(t, map[string]string{
 		"go.mod":                "module example.com/app\n\ngo 1.26\n",

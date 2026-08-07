@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/3rg0n/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
 )
@@ -148,6 +149,8 @@ func isStdlib(lang discover.Lang, raw string) bool {
 		return pyStdlib[first]
 	case discover.LangJava, discover.LangKotlin:
 		return jvmRuntimePackage(raw)
+	case discover.LangC, discover.LangCpp, discover.LangObjC:
+		return cSystemHeader(raw)
 	case discover.LangTS, discover.LangJS:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
@@ -254,6 +257,99 @@ var jdkJavaxPackages = map[string]bool{
 // Generated from `sys.stdlib_module_names`, less the private `_`-prefixed names, which are
 // implementation internals nothing imports directly. Kept as a literal rather than derived at
 // runtime because signpost does not require a Python interpreter to read Python.
+// cSystemHeader reports whether an include names a header the toolchain ships.
+//
+// Consulted only after resolution has already failed, so this cannot lose an edge to a
+// repository's own header — what it decides is whether the include is *reported* as a
+// gap. That framing is what makes the shape of this test the right one, and it is not
+// the shape the other languages use.
+//
+// The C++ standard library has no extension: `<vector>`, `<memory>`, `<string>` are
+// files with no dot in the name, and no repository header is spelled that way, since a
+// project's own headers end in `.h` or `.hpp`. So an extensionless angled include is the
+// standard library by construction, and needs no list to go stale. What does need a list
+// is C's own headers, which do end in `.h` and so are indistinguishable by shape from a
+// project's — `<stdio.h>` and `<config.h>` differ only in which one the toolchain ships.
+//
+// A framework include — `<Foundation/Foundation.h>` — is Apple's platform, shipped with
+// the SDK and versioned with the OS rather than chosen in a manifest. Same reason `java.*`
+// counts as the JVM's runtime.
+//
+// A quoted include is never the system library: the quotes say "look here first", and a
+// project that writes `#include "stdio.h"` means a file of its own. Counting it as the
+// toolchain would hide a header signpost failed to find behind the word "standard".
+func cSystemHeader(raw string) bool {
+	inc, quoted := extract.IncludePath(raw)
+	if quoted || inc == "" {
+		return false
+	}
+	if !strings.Contains(path.Base(inc), ".") {
+		return true
+	}
+	if first, _, ok := strings.Cut(inc, "/"); ok {
+		// A subdirectory: either an Apple framework or a library installed under its own
+		// prefix. Only the frameworks are the platform; `<gtest/gtest.h>` is a dependency
+		// somebody chose, and calling it standard would hide a real supply-chain fact.
+		return appleFrameworks[first]
+	}
+	return cRuntimeHeaders[inc]
+}
+
+// cRuntimeHeaders are the headers the C standard and POSIX define, which arrive with
+// the compiler and the libc rather than from a manifest.
+//
+// A list, because these are shaped exactly like a project's own headers and nothing but
+// the name distinguishes them. It covers C89 through C23 plus the POSIX headers that
+// appear in ordinary portable code; a header missing from it degrades to "unresolved",
+// which is a visible, correctable inaccuracy rather than a wrong edge — the same trade
+// pyStdlib and pyImportNames take.
+var cRuntimeHeaders = map[string]bool{
+	// C standard library.
+	"assert.h": true, "complex.h": true, "ctype.h": true, "errno.h": true,
+	"fenv.h": true, "float.h": true, "inttypes.h": true, "iso646.h": true,
+	"limits.h": true, "locale.h": true, "math.h": true, "setjmp.h": true,
+	"signal.h": true, "stdalign.h": true, "stdarg.h": true, "stdatomic.h": true,
+	"stdbit.h": true, "stdbool.h": true, "stdckdint.h": true,
+	"stddef.h": true, "stdint.h": true, "stdio.h": true, "stdlib.h": true,
+	"stdnoreturn.h": true, "string.h": true, "tgmath.h": true, "threads.h": true,
+	"time.h": true, "uchar.h": true, "wchar.h": true, "wctype.h": true,
+	// C++ wrappers for the above, which keep the .h-less form except these.
+	"cassert": true, "cctype": true, "cerrno": true, "cfloat": true, "climits": true,
+	"cmath": true, "csetjmp": true, "csignal": true, "cstdarg": true, "cstddef": true,
+	"cstdint": true, "cstdio": true, "cstdlib": true, "cstring": true, "ctime": true,
+	"cwchar": true, "cwctype": true,
+	// POSIX and Unix.
+	"aio.h": true, "arpa/inet.h": true, "cpio.h": true, "dirent.h": true, "dlfcn.h": true,
+	"fcntl.h": true, "fmtmsg.h": true, "fnmatch.h": true, "ftw.h": true, "glob.h": true,
+	"grp.h": true, "iconv.h": true, "langinfo.h": true, "libgen.h": true, "monetary.h": true,
+	"mqueue.h": true, "ndbm.h": true, "net/if.h": true, "netdb.h": true, "nl_types.h": true,
+	"poll.h": true, "pthread.h": true, "pwd.h": true, "regex.h": true, "sched.h": true,
+	"search.h": true, "semaphore.h": true, "spawn.h": true, "strings.h": true,
+	"stropts.h": true, "syslog.h": true, "tar.h": true, "termios.h": true, "ucontext.h": true,
+	"ulimit.h": true, "unistd.h": true, "utime.h": true, "utmpx.h": true, "wordexp.h": true,
+	// Windows.
+	"windows.h": true, "winsock2.h": true, "ws2tcpip.h": true, "tchar.h": true,
+	"io.h": true, "process.h": true, "direct.h": true,
+}
+
+// appleFrameworks are the umbrella frameworks an Objective-C or Swift target imports
+// from the SDK. Each ships with the OS and is versioned with it, so none is a dependency
+// a repository declares.
+var appleFrameworks = map[string]bool{
+	"Foundation": true, "UIKit": true, "AppKit": true, "CoreData": true,
+	"CoreFoundation": true, "CoreGraphics": true, "CoreLocation": true,
+	"CoreAnimation": true, "CoreText": true, "CoreImage": true, "CoreMedia": true,
+	"CoreAudio": true, "CoreBluetooth": true, "CoreML": true, "CoreVideo": true,
+	"QuartzCore": true, "AVFoundation": true, "WebKit": true, "MapKit": true,
+	"StoreKit": true, "SwiftUI": true, "Combine": true, "Security": true,
+	"SystemConfiguration": true, "UserNotifications": true, "XCTest": true,
+	"Metal": true, "MetalKit": true, "SceneKit": true, "SpriteKit": true,
+	"Photos": true, "PhotosUI": true, "Contacts": true, "EventKit": true,
+	"HealthKit": true, "HomeKit": true, "ARKit": true, "CloudKit": true,
+	"LocalAuthentication": true, "Network": true, "OSLog": true, "os": true,
+	"sys": true, "mach": true, "objc": true, "dispatch": true, "simd": true,
+}
+
 var pyStdlib = map[string]bool{
 	"__future__": true, "abc": true, "annotationlib": true, "antigravity": true,
 	"argparse": true, "array": true, "ast": true, "asyncio": true, "atexit": true,
@@ -393,9 +489,31 @@ func setJoined(attrs map[string]string, key string, vals []string) {
 	}
 }
 
-// dominant returns the most common language, ties broken alphabetically so the choice
-// does not depend on file order.
-func dominant(langs []string) string {
+// moduleLang names the directory's language: the most common one, ties broken
+// alphabetically so the choice does not depend on file order.
+//
+// The one exception is `.h`. Its language cannot be read from its name — it is C, C++ or
+// Objective-C, and only content tells — so discovery labels it C as the family's lowest
+// common denominator (see discover.sourceExts). That is a placeholder, not a finding, and
+// it must not outvote a sibling whose extension is unambiguous. A directory holding
+// `Reader.h` and `Reader.m` is Objective-C; counting the header's placeholder gives a 1–1
+// tie that alphabetical order resolves to "c", and the whole language then appears nowhere
+// in the bundle. So headers are counted only when nothing else in the directory says.
+func moduleLang(facts []extract.Facts) string {
+	var langs, headers []string
+	for _, f := range facts {
+		if f.Lang == "" {
+			continue
+		}
+		if f.Lang == discover.LangC && path.Ext(f.Path) == ".h" {
+			headers = append(headers, string(f.Lang))
+			continue
+		}
+		langs = append(langs, string(f.Lang))
+	}
+	if len(langs) == 0 {
+		langs = headers
+	}
 	if len(langs) == 0 {
 		return ""
 	}

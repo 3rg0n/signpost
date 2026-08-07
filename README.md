@@ -77,13 +77,20 @@ where humans can correct it in place, so the corrections survive.
 
 ## What it reads
 
-First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, and Kotlin —
-imports, public surface, and entrypoints, each extractor scored against hand-labeled
-fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one resolution
-map because the compiler does, and it is built from the `package` declarations in the
-source: no `pom.xml` or `build.gradle` reader exists yet, so a JVM import that names no
-package in the repository is reported as a gap rather than turned into a Maven coordinate
-nobody declared.
+First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++,
+and Objective-C — imports, public surface, and entrypoints, each extractor scored against
+hand-labeled fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one
+resolution map because the compiler does, and it is built from the `package` declarations
+in the source: no `pom.xml` or `build.gradle` reader exists yet, so a JVM import that names
+no package in the repository is reported as a gap rather than turned into a Maven
+coordinate nobody declared.
+
+C, C++ and Objective-C share one extractor for the same reason: they share a preprocessor
+and a header convention, and a `.h` is any of the three with only its contents to say
+which. An `#include` has no manifest behind it, so it resolves by walking outward from the
+including file's directory through the conventional include roots — which is what a
+repository holding more than one C project needs, and the delimiter is kept because quoted
+and angled are different search rules.
 
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, and `Cargo.toml` for
@@ -388,7 +395,7 @@ in a repository without a bundle.
 |---|---|
 | Graph model, metrics, Louvain clustering | done |
 | Discovery: gitignore, classification, bounded reads | done |
-| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin) | done |
+| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C) | done |
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |

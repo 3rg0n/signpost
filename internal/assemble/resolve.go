@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/3rg0n/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/manifest"
 )
 
@@ -514,8 +515,83 @@ func (r *resolver) resolveImport(lang discover.Lang, from, raw string) (id strin
 		return r.resolveRust(from, raw)
 	case discover.LangJava, discover.LangKotlin:
 		return r.resolveJVM(raw)
+	case discover.LangC, discover.LangCpp, discover.LangObjC:
+		return r.resolveC(from, raw)
 	}
 	return "", false
+}
+
+// resolveC resolves an #include against the files in the repository.
+//
+// An include names a file, not a module, and the delimiter names the search rule — which
+// is why the extractor keeps the delimiters in Import.Raw. A quoted include searches the
+// including file's own directory first, so it is normally a header in this repository. An
+// angled include searches only the compiler's path, so it is normally the toolchain or an
+// installed library, and resolving one against repository paths would invent an edge from
+// a coincidence of directory names.
+//
+// Both forms fall back to the include roots a C project conventionally declares —
+// `include/`, `src/`, and the project directory itself — because that is what a build
+// system's `-I` flags say and signpost reads no CMakeLists or Makefile to learn the real
+// list (the same limitation ADR 0017 states for the JVM). An angled include is allowed
+// that fallback too, and only that one: a project's own public headers are routinely
+// included with angle brackets precisely because they are on the include path.
+//
+// The roots are tried relative to every ancestor of the including file rather than to the
+// repository root alone, walking outward. Anchoring at the root only is what a
+// single-project repository looks like, and it is wrong for every other shape: a C library
+// vendored at `third_party/zlib/`, or one project among several in a monorepo, declares
+// `-I` against its *own* directory, so `#include <corpus/buffer.h>` from
+// `c/src/app.c` means `c/include/corpus/buffer.h`. Anchored at the root, every such
+// include lands in the gap report and the project's own internal structure is invisible —
+// which reads as C being unresolvable rather than as the search path being mismodelled.
+//
+// An include naming no file in the repository resolves to nothing rather than to an
+// external node. There is no manifest declaring C dependencies to match against — a
+// system header arrives from the toolchain or a distro package, neither of which the
+// repository names — so inventing a node for `<stdio.h>` would publish a dependency the
+// repository never declared. isStdlib keeps the well-known headers out of the unresolved
+// count; the rest stay visible in the gap report, which is where the limitation belongs.
+func (r *resolver) resolveC(from, raw string) (string, bool) {
+	inc, quoted := extract.IncludePath(raw)
+	if inc == "" {
+		return "", false
+	}
+	if quoted {
+		// Relative to the including file's own directory, which is the compiler's first
+		// search location and the one a repository-local header is written against.
+		if id := r.cTarget(path.Join(dirOf(from), inc)); id != "" {
+			return id, true
+		}
+	}
+	// Nearest ancestor first: a monorepo holding two C projects has an `include/` in each,
+	// and the one nearer the including file is the one its build declares.
+	for dir := dirOf(from); ; dir = dirOf(dir) {
+		for _, root := range []string{"include", "src", "", "lib", "source"} {
+			if id := r.cTarget(path.Join(dir, root, inc)); id != "" {
+				return id, true
+			}
+		}
+		if dir == "" || dir == "." {
+			return "", false
+		}
+	}
+}
+
+// cTarget resolves a slash path to the module holding that file.
+//
+// The file must exist: an include names one, so unlike the Python and TypeScript
+// resolvers there is no directory form to fall back to, and accepting a directory would
+// match `#include <memory>` against any directory named `memory`.
+func (r *resolver) cTarget(p string) string {
+	p = strings.TrimPrefix(path.Clean(p), "./")
+	if p == "" || p == "." || strings.HasPrefix(p, "..") {
+		return ""
+	}
+	if !r.srcFiles[p] {
+		return ""
+	}
+	return r.moduleAt(dirOf(p))
 }
 
 // resolveJVM resolves an import against the package declarations the repository's own
