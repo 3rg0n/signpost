@@ -35,6 +35,8 @@ lost; Consequences states what this costs, not only what it buys.
 | [0016](0016-a-reader-records-what-only-it-can-know.md) | A reader records what only it can know, including that it does not know | Accepted |
 | [0017](0017-a-resolution-root-may-come-from-the-source-itself.md) | A resolution root may come from the source itself, and an undeclared import stays a gap | Accepted |
 | [0018](0018-view-serves-a-repository-over-loopback.md) | `view` serves a repository's structure over loopback, and holds no state | Accepted |
+| [0019](0019-louvain-over-label-propagation.md) | Clustering is hand-written Louvain, after label propagation was measured and rejected | Accepted |
+| [0020](0020-git-history-annotates-the-map-and-never-draws-it.md) | Git history annotates the map and never draws it | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
@@ -45,10 +47,9 @@ dependencies, few enough that bumping stays routine — still binds. Its *conseq
 
 Recorded here so the gap is visible rather than discovered later:
 
-- **Louvain over label propagation.** Alternative tried, measured, and rejected — the
-  textbook ADR shape, currently one line in `docs/design.md` §4.4.
-- **Git history as annotation only.** History never creates a node or decides what is on the
-  map. Non-obvious, easy for a future change to violate, currently a package doc comment.
+- **Hand-written extractors, with a tree-sitter binding as the fallback.** This binds every
+  language task rather than the one being worked on, and the threshold at which accuracy would
+  justify the binding has never been written down. Currently one table row in `docs/design.md`.
 
 ## Writing one
 

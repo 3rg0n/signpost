@@ -269,8 +269,9 @@ func (g *Graph) Components() [][]string {
 // two dense groups joined by one edge it collapses everything into a single
 // community, because synchronous propagation with a lowest-label tie-break
 // behaves like a min-label flood. That is LPA's documented giant-community
-// pathology, and it makes the index headings useless — which is the one job
-// clustering has here. Louvain costs about 150 lines more and gets it right.
+// pathology, and a single community makes every consumer of the partition
+// useless at once: the cluster count, Bridges, and the export subgraphs.
+// Louvain costs about 150 lines more and gets it right. See ADR 0019.
 //
 // Determinism comes from structure, not from a seed: nodes are visited in
 // sorted ID order, candidate communities are evaluated in ascending index

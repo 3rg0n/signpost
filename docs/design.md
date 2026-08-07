@@ -86,7 +86,7 @@ Which yields:
 | Go parsing | `go/parser` + `go/ast` — full-precision AST, in the stdlib, free. |
 | Other-language parsing | Hand-written extractors (§4.2). A tree-sitter binding is the fallback if accuracy demands it — that is a library decision, not a tool decision, and it is ours to bump. |
 | Graph algorithms | Hand-written (§4.4). Roughly 600 lines, all textbook — genuinely cheaper than a dependency. |
-| Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4). |
+| Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4, ADR [0019](adr/0019-louvain-over-label-propagation.md)). |
 | YAML | Hand-written tolerant reader and hand-written emitter, both ours. Helm templates are not YAML and a conforming parser rejects them outright, so a library would not have covered the files that matter (ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). |
 | Model access | Two backends behind one interface (§5). Both first-party over stdlib `net` and `net/http`. |
 | Telemetry | `go.opentelemetry.io/otel`, `otel/trace`, and `otel/sdk` — the only three direct dependencies. `otel/trace` holds the `Tracer` and `Span` interfaces `internal/telemetry` is written against, so an instrumenting package cannot avoid naming it. The OTLP/JSON exporter is hand-written, because upstream's *HTTP* exporter links the whole gRPC stack — 65 gRPC packages for a transport that uses none (ADR [0014](adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md)). |
@@ -357,7 +357,9 @@ distinguishes them — the other half of
 
 **Git signals** via `git log`: co-change pairs, churn per path, author concentration,
 last-touch date, first-commit date. Co-change is the cheapest way to find coupling that
-imports do not show.
+imports do not show. All of it annotates nodes the structural pass already created, and
+none of it creates one:
+[ADR 0020](adr/0020-git-history-annotates-the-map-and-never-draws-it.md).
 
 Git and a forge are the recommended setup, and where they are present they are
 authoritative: what is tracked, what is ignored, and which commit the bundle describes
@@ -547,19 +549,22 @@ Metrics, all hand-written and all deterministic:
 
 **Clustering: Louvain, after measuring that label propagation does not work
 here.** LPA was the first choice — a third the code, and the reasoning was that
-"group related modules so the index has sensible headings" is undemanding enough
-that clustering quality would not show. That was wrong, and the test that proved
-it is in the suite: on two dense groups joined by a single edge, synchronous LPA
-with a lowest-label tie-break collapses everything into one community. It
-degenerates into a min-label flood across any connected graph — the documented
-giant-community pathology. One cluster containing the whole repo makes the index
-headings worthless, which is clustering's only job here.
+"group related modules" is undemanding enough that clustering quality would not
+show. That was wrong, and the test that proved it is in the suite
+(`TestClustersSeparateDenseGroups`): on two dense groups joined by a single edge,
+synchronous LPA with a lowest-label tie-break collapses everything into one
+community. It degenerates into a min-label flood across any connected graph — the
+documented giant-community pathology. One cluster containing the whole repo
+breaks every consumer of the partition at once: `manifest.json`'s cluster count
+reads 1 for every repository, cross-cluster bridges are empty because no edge can
+cross a boundary that does not exist, and the DOT and Mermaid diagrams draw one box.
 
 Louvain costs about 150 more lines of arithmetic and gets it right. It is still
 far cheaper than the dependency it replaces, and it is deterministic by
 construction rather than by seeding: sorted node order, ascending community
 evaluation, ties to the lowest index, final numbering by each cluster's
-lowest-sorting member. No randomised restarts.
+lowest-sorting member. No randomised restarts. Recorded as
+[ADR 0019](adr/0019-louvain-over-label-propagation.md).
 
 Tarjan is iterative rather than recursive, and there is a 20k-node deep-chain
 test for it, because a recursive implementation risks stack exhaustion on a large

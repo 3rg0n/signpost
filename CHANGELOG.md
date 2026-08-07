@@ -331,6 +331,51 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+#### 2026-08-06
+
+- **The last two decisions listed as owed an ADR now have one.** Both were already implemented and
+  already explained — in a package doc comment and a paragraph of `docs/design.md` — which is the
+  form of documentation that rots without saying so, since nothing in either place tells a reader
+  which statements are decisions somebody can overturn and which are descriptions of how the code
+  currently happens to work.
+
+  [ADR 0019](docs/adr/0019-louvain-over-label-propagation.md) records clustering as hand-written
+  Louvain after label propagation was measured and rejected. LPA was written first on the reasoning
+  that "group modules so the index has sensible headings" is undemanding enough that clustering
+  quality would not show; it collapses two triangles joined by one edge into a single community,
+  because the lowest-label tie-break that makes the algorithm deterministic is also what makes the
+  minimum label flood every node the graph connects. Asynchronous updating avoids the flood and
+  gives a different partition per run, which is disqualifying on its own for a committed bundle.
+  The failing case is `TestClustersSeparateDenseGroups`, and the ADR names the four ordering
+  properties determinism actually rests on, any one of which a reasonable-looking edit can drop.
+
+  [ADR 0020](docs/adr/0020-git-history-annotates-the-map-and-never-draws-it.md) records that git
+  history annotates nodes the structural pass already created and never creates one. Churn, dates,
+  and author concentration are attributes; co-change is an edge between modules that already exist,
+  marked `extracted` and naming no source, because its evidence is a set of commits rather than a
+  line somebody can open. The rule is one line of ordering in `Build` and nothing enforces it
+  structurally, so the ADR names the two tests that do: a history for a directory the tree does not
+  have must invent no node, and signals marked unavailable but deliberately populated must produce
+  neither attribute nor edge. Also stated plainly is the thing "annotation only" does *not* mean —
+  co-change edges shape the clustering, since `Clusters` runs over every edge kind, so a grouping
+  can come from the log even though a heading cannot.
+
+  What replaces them on the owed list is the hand-written-extractors-versus-tree-sitter choice,
+  which binds every language task rather than the one being worked on, and whose accuracy threshold
+  has never been written down.
+
+- **Clustering is no longer described as producing the bundle index's headings, because it does
+  not.** Writing ADR 0019 meant naming what actually reads the partition, and `index.md` was not on
+  the list: it groups by node kind — Modules, Documents, External dependencies — and has since the
+  emitter was written. The real consumers are `manifest.json`'s cluster count, `Bridges`, which
+  reports the edges crossing a cluster boundary, and the subgraph boxes in the DOT and Mermaid
+  exports; GraphML and JSON carry the cluster as a per-node attribute and group nothing. The stale
+  claim was in `docs/design.md` §4.4, the `internal/graph/louvain.go`
+  package comment, the `Clusters` doc comment, and a Mermaid comment asserting the export used "the
+  same grouping the bundle index uses for its headings" — four places stating a justification that
+  would have made a reader look for code that is not there, and that overstated what a bad partition
+  costs while understating how many things it breaks at once.
+
 #### 2026-08-04
 
 - **A declared dependency whose target is a directory of this repository is a composition edge, not
@@ -1593,7 +1638,7 @@ no `require` block.
 
   It lives in `site/` with **no `package.json`, no lockfile, and no JavaScript
   dependencies**, which is [ADR 0008](docs/adr/0008-the-viewer-lives-in-this-repository.md)
-  superseding [ADR 0006](docs/adr/0006-the-generator-and-the-viewer-are-separate-repositories.md).
+  superseding [ADR 0006](docs/adr/0006-generator-and-viewer-are-separate-repositories.md).
   0006 split the viewer into its own repository on the premise that anything worth
   using needs a dependency tree the generator cannot afford to govern. The real
   export is 25 nodes and 27 edges across three node kinds; a node-link view over
