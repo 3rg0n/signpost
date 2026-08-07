@@ -378,12 +378,64 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		// two directories answering to one package name. A layout that collapsed them would
 		// still produce a page for the name — this says both survived as separate modules.
 		{"Java, a second source set declaring a package src/main declares too", "jvm/src/integrationTest/java/com/example/api"},
+		{"C", "c/src"},
+		// C's public headers, which live apart from the implementation they declare. This is
+		// the shape the include search path exists for: `c/src/buffer.c` includes
+		// `<corpus/buffer.h>`, and nothing but a search rooted at the nearest ancestor's
+		// `include/` finds it.
+		{"C, the public headers in their own tree", "c/include/corpus"},
+		{"C++", "cpp/src"},
+		{"C++, the public headers in their own tree", "cpp/include/corpus"},
+		// Objective-C, and this row is why the language is asserted by name. The directory
+		// holds one `.m` and one `.h`; the header's language cannot be read from its name, so
+		// it is labelled C, and counting that placeholder as a vote made the directory "c" on
+		// a 1–1 tie. The page existed either way — what vanished was Objective-C itself.
+		{"Objective-C", "objc/Sources"},
 	} {
 		if _, ok := byTitle[want.dir]; !ok {
 			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
 				want.language, want.dir, pageNames(pages))
 		}
 	}
+
+	// The C family shares one extractor across three languages, so the page existing says
+	// nothing about which language the directory was read as. That is asserted separately:
+	// each dialect must name itself on the page of the directory written in it. Without this
+	// the whole family could collapse onto "c" and every row above would still pass.
+	for _, want := range []struct{ dir, lang string }{
+		{"c/src", "c"},
+		{"c/include/corpus", "c"},
+		{"cpp/src", "cpp"},
+		{"cpp/include/corpus", "cpp"},
+		{"objc/Sources", "objc"},
+	} {
+		name, ok := byTitle[want.dir]
+		if !ok {
+			continue // already reported above
+		}
+		if got := frontmatterLang(pages[name]); got != want.lang {
+			t.Errorf("%s: read as %q, want %q. A dialect that never appears in the bundle is "+
+				"a language signpost claims to support and does not name.",
+				want.dir, got, want.lang)
+		}
+	}
+}
+
+// frontmatterLang reads the language out of a module page's one-line description, which is
+// where the language is stated in prose: "2 objc files; 13 exported symbols."
+func frontmatterLang(body string) string {
+	for _, line := range strings.Split(body, "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "description:")
+		if !ok {
+			continue
+		}
+		fields := strings.Fields(rest)
+		if len(fields) < 2 {
+			return ""
+		}
+		return fields[1]
+	}
+	return ""
 }
 
 // frontmatterTitle reads the title line out of a page, which for a module page is its
@@ -1064,6 +1116,33 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 //     JVM has no manifest reader yet, so nothing but this list distinguishes a wrongly
 //     classified runtime name from a correctly classified one.
 //
+// The C family's four near-misses are all boundaries of the include search path, and each
+// probes a different rule, because C resolution has no manifest and no module system — only
+// a search order and the two delimiters:
+//
+//   - c `<corpus/buffers.h>` — one letter from the project's own public header
+//     `<corpus/buffer.h>`, which a search matching a directory rather than a file, or
+//     matching by prefix, resolves into the header next to it;
+//   - c `<stdlib_extras.h>` — opens with the six characters of the runtime header `stdlib.h`,
+//     which is the boundary of the cRuntimeHeaders list; a package reclassified as the
+//     platform is a dependency nobody is told to patch;
+//   - cpp `<gtest_extras/matchers.h>` — a test framework's header, angled because it is on
+//     the include path and not because it is the platform. Its extension is the only thing
+//     separating it from `<memory>` beside it, which is the whole of the C++ stdlib rule;
+//   - objc `<CorpusKit/CorpusKit.h>` — spelled exactly like an Apple framework and shipped by
+//     no SDK. A rule taking any capitalised first segment for a framework calls it the
+//     platform, and a dependency classified as the platform disappears from the report.
+//
+// C has one more gap of the same kind as `org.junit.jupiter.api`: the quoted
+// `c "unity.h"`, a vendored test framework the corpus does not carry. Quoted and therefore
+// searched in the repository first, found nowhere, and reported — rather than guessed at as
+// an external nobody declared, which is what C would need a build-file reader to know.
+//
+// Their positive counterparts are asserted in TestCIncludesResolveByPathAndDelimiter and
+// TestCSystemHeaderRecognition: the quoted form against the including file's own directory,
+// the angled form through the nearest ancestor's `include/`, and the stdlib in both its
+// extensionless C++ shape and its listed C one.
+//
 // The JVM has one more gap that is a limitation rather than a near-miss: `org.junit.jupiter.api`
 // is a real declared dependency, and signpost reads no pom.xml or build.gradle, so there is no
 // declared list for it to match. It lands here rather than being invented as a Maven coordinate
@@ -1102,11 +1181,16 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// check on that line would silently stop covering whichever entry sorts last, so the count
 	// is what carries the assertion and the names are what make a failure legible.
 	want := []string{
+		`c "unity.h"`,
+		"c <corpus/buffers.h>",
+		"c <stdlib_extras.h>",
+		"cpp <gtest_extras/matchers.h>",
 		"go example.com/corpus/greeterx/format",
 		"java com.example.apiv2",
 		"java javax.servlet.http",
 		"java org.junit.jupiter.api",
 		"kotlin kotlinx.coroutines",
+		"objc <CorpusKit/CorpusKit.h>",
 		"python httpx_extras",
 		"python winreg_helpers",
 		"rust corpus_greeter::Greeting",
@@ -1143,7 +1227,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		t.Fatalf("export did not produce JSON: %v", err)
 	}
 	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx"} {
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -1396,6 +1480,103 @@ func TestCorpusResolvesJVMPackagesToTheRightDirectory(t *testing.T) {
 		t.Errorf("tested_by edge %s -> %s. `com.example.store` is what ServiceIT imports and "+
 			"`com.example.api` is what it declares — reading the imports reports every "+
 			"collaborator as the thing under test", store, testAPI)
+	}
+}
+
+// TestCorpusResolvesIncludesThroughTheSearchPath is the C family's structural assertion, and
+// what it covers is the one thing C resolution has instead of a module system: a search order.
+//
+// There is no manifest naming an include root and no declaration in the file saying where its
+// headers live. `#include <corpus/buffer.h>` is a path fragment and nothing more; what turns
+// it into a file is the build's `-I`, which signpost does not read. So resolution walks
+// outward from the including file's own directory trying the conventional roots, and the
+// corpus is laid out to make the walk's boundaries visible:
+//
+//   - `c/src/buffer.c` includes its own public header through `c/include/`, which is an
+//     ancestor's include root and not the repository's. Anchored at the repository root — the
+//     shipped behaviour before this — every project in a monorepo with its own `include/`
+//     resolves nothing, and C reads as a language signpost cannot follow rather than as a
+//     search path mismodelled;
+//   - `c/tests/buffer_test.c` includes the same header from a sibling directory, which is the
+//     same walk one level further out and is what draws the `tested_by` edge;
+//   - `cpp/src/session.cc` does the same through `cpp/include/`, and it must land there rather
+//     than in `c/include/` — two include roots exist in this repository and the nearest
+//     ancestor's is the one the build declares.
+//
+// The negative is the quoted form. `#include "internal.h"` in `c/src/buffer.c` names a file in
+// that same directory, so it resolves inside the module and draws no edge at all — an edge
+// from `c/src` to itself would be a module importing itself, which is not structure.
+func TestCorpusResolvesIncludesThroughTheSearchPath(t *testing.T) {
+	dir := buildCorpus(t)
+
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct{ ID, Kind, Path, Title string }
+		Edges []struct{ From, To, Kind string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	byPath := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	const (
+		cSrc     = "c/src"
+		cInclude = "c/include/corpus"
+		cTests   = "c/tests"
+		cppSrc   = "cpp/src"
+		cppInc   = "cpp/include/corpus"
+	)
+	edge := func(kind, from, to string) bool {
+		f, tt := byPath[from], byPath[to]
+		if f == "" || tt == "" {
+			t.Fatalf("no module node for %q or %q, so this test asserts nothing", from, to)
+		}
+		for _, e := range g.Edges {
+			if e.From == f && e.To == tt && e.Kind == kind {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !edge("imports", cSrc, cInclude) {
+		t.Errorf("no imports edge %s -> %s. `#include <corpus/buffer.h>` resolves through "+
+			"c/include/, which is this file's nearest ancestor holding an include root and not "+
+			"the repository's — a search anchored at the root finds it in no repository laid "+
+			"out as more than one project", cSrc, cInclude)
+	}
+	if !edge("imports", cppSrc, cppInc) {
+		t.Errorf("no imports edge %s -> %s. `#include <corpus/session.hpp>` resolves through "+
+			"cpp/include/", cppSrc, cppInc)
+	}
+	// The two include roots are named identically below their own trees, so a walk that did
+	// not stop at the nearest ancestor would satisfy the positives above from the wrong one.
+	if edge("imports", cppSrc, cInclude) {
+		t.Errorf("imports edge %s -> %s. Both trees hold a `corpus/` under `include/`, so the "+
+			"C++ include resolved against the C project's root — an edge between two projects "+
+			"that name each other nowhere", cppSrc, cInclude)
+	}
+	if edge("imports", cSrc, cppInc) {
+		t.Errorf("imports edge %s -> %s. The C include resolved against the C++ project's "+
+			"include root", cSrc, cppInc)
+	}
+	if !edge("tested_by", cInclude, cTests) {
+		t.Errorf("no tested_by edge %s -> %s. buffer_test.c includes the header it exercises "+
+			"and is marked as a test twice over — by its `tests/` directory and by its "+
+			"`_test.c` suffix", cInclude, cTests)
+	}
+	// The quoted form, which resolves inside the including module and so draws nothing.
+	if edge("imports", cSrc, cSrc) {
+		t.Errorf("imports edge %s -> %s. `#include \"internal.h\"` names a file in this same "+
+			"directory, so it resolves within the module — a self-edge is not structure",
+			cSrc, cSrc)
 	}
 }
 

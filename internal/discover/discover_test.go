@@ -554,6 +554,96 @@ func TestJVMTestPathsAreRecognisedAndOrdinaryClassesAreNot(t *testing.T) {
 	}
 }
 
+// A .h is C, C++ or Objective-C and no filename can say which. The extension maps to
+// LangC deliberately — classification is name-based, so the label is the family's lowest
+// common denominator and the extractor reads the whole family's syntax — and the point of
+// pinning it here is that the mapping is a decision rather than an oversight. The rest of
+// the family's extensions are unambiguous and each must reach the right language, because
+// a file whose Lang has no registered extractor is counted as unhandled and its whole
+// surface goes missing.
+func TestCFamilyExtensionsMapToTheirLanguage(t *testing.T) {
+	want := map[string]Lang{
+		"src/a.c": LangC,
+		// The ambiguous one. Labelled C by design; see sourceExts.
+		"src/a.h":   LangC,
+		"src/a.cc":  LangCpp,
+		"src/a.cpp": LangCpp,
+		"src/a.cxx": LangCpp,
+		"src/a.hpp": LangCpp,
+		"src/a.hh":  LangCpp,
+		"src/a.hxx": LangCpp,
+		"src/a.m":   LangObjC,
+		"src/a.mm":  LangObjC,
+	}
+	for rel, w := range want {
+		class, got := classify(rel)
+		if class != ClassSource {
+			t.Errorf("classify(%q) class = %q, want %q", rel, class, ClassSource)
+		}
+		if got != w {
+			t.Errorf("classify(%q) lang = %q, want %q", rel, got, w)
+		}
+	}
+}
+
+// langOfTest is what classify reports for a path, for the isTestPath cases below —
+// isTestPath takes the language as an argument and the point is that classification and
+// the test rule agree on the same file.
+func langOfTest(rel string) Lang {
+	_, lang := classify(rel)
+	return lang
+}
+
+// A C-family test is recognised by directory or by basename, and the frameworks disagree
+// about which basename. The negative half is again the half that matters: a production
+// file marked as a test drops out of the public surface it declares, which is a silent
+// loss of real API. `latest.c`, `protests.c` and `contest.cpp` all end in the letters of
+// "test".
+func TestCFamilyTestPathsAreRecognisedAndOrdinaryFilesAreNot(t *testing.T) {
+	tests := []string{
+		"test/buffer.c",
+		"tests/buffer.c",
+		"src/buffer_test.c",
+		"src/buffer_test.cc",
+		"src/buffer_tests.cpp",
+		"src/buffer_unittest.cc",
+		"src/test_buffer.c",
+		"src/test-buffer.c",
+		"src/buffer-test.cc",
+		"src/Buffer_Test.c",
+		// Xcode's convention, where the capital is the whole boundary.
+		"Sources/ReaderTests.m",
+		"Sources/ReaderTest.mm",
+		// A file named exactly `test`, which autotools trees have.
+		"src/test.c",
+		"src/tests.cc",
+	}
+	for _, rel := range tests {
+		if !isTestPath(rel, langOfTest(rel)) {
+			t.Errorf("isTestPath(%q) = false; this names a test", rel)
+		}
+	}
+	notTests := []string{
+		"src/latest.c",
+		"src/protests.c",
+		"src/contest.cpp",
+		"src/contests.cc",
+		"src/tester.c",
+		"src/testament.cpp",
+		"src/buffer.c",
+		"src/Reader.m",
+		"include/buffer.h",
+		// `testing.h` is a header a test framework ships, not a test.
+		"include/testing.h",
+	}
+	for _, rel := range notTests {
+		if isTestPath(rel, langOfTest(rel)) {
+			t.Errorf("isTestPath(%q) = true; this is production code and its surface is real",
+				rel)
+		}
+	}
+}
+
 // Symlinks are recorded and never followed: a loop must not hang the walk, and a
 // link out of the tree must not escape it.
 func TestWalkDoesNotFollowSymlinks(t *testing.T) {

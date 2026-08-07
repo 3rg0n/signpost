@@ -313,15 +313,12 @@ func (b *builder) addModules() error {
 			Path:  dir,
 			Attrs: map[string]string{},
 		}
-		var files, entrypoints, langs []string
+		var files, entrypoints []string
 		var incomplete int
 		pkg := ""
 		exported := 0
 		for _, f := range facts {
 			files = append(files, f.Path)
-			if f.Lang != "" {
-				langs = append(langs, string(f.Lang))
-			}
 			if pkg == "" {
 				pkg = f.Package
 			}
@@ -336,7 +333,7 @@ func (b *builder) addModules() error {
 			}
 		}
 		n.Files = sortedUnique(files)
-		n.Lang = dominant(langs)
+		n.Lang = moduleLang(facts)
 		if pkg != "" {
 			n.Attrs["package"] = pkg
 		}

@@ -8,6 +8,102 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-07
+
+- **C, C++ and Objective-C are read as first-class languages, by one extractor.** They share a
+  preprocessor and a header convention, and that sharing is not a detail an extractor can look
+  past: a `.h` is C, C++, or Objective-C, and only its contents say which. Classification is
+  name-only by design, so a `.h` is labelled C — the family's lowest common denominator — and
+  one extractor claims all three languages and reads the whole family's syntax regardless of
+  which label dispatched the file. A C++ class in a `.h` is recorded; what the label loses is
+  the dialect's name, which is the honest limit of what a filename carries. Scored F1 1.000 for
+  both imports and symbols against a hand-labeled corpus.
+
+  **An `#include` has no manifest behind it, so resolution is a search order.** What turns a
+  path fragment into a file is the build's `-I` flags, which signpost does not read. So the
+  search walks outward from the including file's own directory through the conventional roots
+  and stops at the nearest ancestor holding the file. Anchoring at the repository root is what
+  a single-project repository looks like and is wrong for every other shape — a monorepo has an
+  `include/` per project, and anchored at the root each project's own public headers land in the
+  gap report, which reads as C being unresolvable rather than as the search path being
+  mismodelled. The delimiter is kept on the import, because the delimiter *is* the rule: quoted
+  means look beside this file first, and a quoted include is never the system library.
+
+  **Standard-library recognition has a shape no other language here has.** A C++ standard header
+  has no extension, so an extensionless angled include is the standard library *by
+  construction*, with no list to go stale as the standard grows. C's own headers end in `.h` and
+  are indistinguishable by shape from a project's, so those need a list — and the corpus carries
+  `<stdlib_extras.h>` and `<gtest_extras/matchers.h>` as the two boundaries of that split, since
+  a dependency reclassified as the platform is one nobody is told to patch. Objective-C adds a
+  third: an Apple framework arrives with the SDK, and `<CorpusKit/CorpusKit.h>` is spelled
+  exactly like one and shipped by nobody.
+
+  **A `.h`'s language label does not vote on the language of its directory.** The label is a
+  placeholder rather than a finding, and an Objective-C directory holds a `.h` for every `.m` —
+  so counting it gave a 1–1 tie that alphabetical order resolved to "c", and Objective-C
+  appeared nowhere in the bundle of a repository written in it. The pages existed either way,
+  which is why the corpus now asserts the dialect on the page and not just the page's existence.
+
+  **A brace after a type's name does not mean the type is being defined.**
+  `struct Buffer *buffer_make(size_t cap) {` is a function returning a pointer, and its first two
+  tokens and its brace are a definition's exactly — so it was read as one, reporting a `Buffer`
+  defined in a file that only mentions it, opening a scope that claimed every declaration below
+  as a member, and losing `buffer_make` itself. What tells them apart is what sits between the
+  name and the brace: a definition allows only `final` and a `:` clause there, and a declarator
+  puts its own name there. The same line also fixed the opposite failure — the search for a brace
+  on a following line was bounded at five, and a C++ class with six base classes, one per line,
+  yielded no symbol at all and appeared nowhere in the bundle. The bound was never what protected
+  the forward-declaration case; the semicolon that ends one is, so widening it is safe and both
+  directions are now asserted.
+
+  **An attribute is not a parameter list, and an export macro is not a type's name.** Every rule
+  that tells a declaration from a call reads the first parenthesis on the line as the parameter
+  list, so an attribute in front of the return type moves it and takes the declaration with it:
+  `__attribute__((unused)) static int helper(void)` yielded no symbol at all, and
+  `__declspec(dllexport) int exported(void)` likewise — one of which guards half of any portable
+  header and the other of which is how a symbol leaves a DLL. Between the keyword and the name the
+  same construct breaks a type instead, naming it `__attribute__`. Attributes now come off the head
+  before anything reads it, in all three spellings including C++11's keyword-less `[[nodiscard]]`.
+  An export macro fails a third way, having no parenthesis at all: it sits where the name is
+  expected, so `class CORPUS_API Session` was named after the macro. A shouting token is now
+  skipped in favour of a following name and kept when there is none, which is what Win32's
+  `struct POINT` needs.
+
+  Seven other defects, each now a named regression test: quoted includes were invisible because
+  the scanner blanks a string's body and the path was read from the scanned text rather than the
+  raw line; `union Slot;` borrowed the next type's brace and became a phantom type that claimed
+  every following declaration as a member; `static void (*hook)(void);` was reported as a
+  function called `void`; Objective-C selectors collapsed onto their first part, making
+  `setName:` and `setName:age:` one method; an out-of-line C++ member definition claimed to be
+  public and — exportedness being sticky across merged records — overrode the `private:` its
+  class body states; and test-path detection lowercased the basename before matching, which is
+  the one thing separating Xcode's `ReaderTests.m` from `protests.c`.
+
+- **The last owed decision is recorded: extractors are hand-written, and tree-sitter now has a
+  written threshold** ([ADR 0022](docs/adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)).
+  `docs/design.md` had said since the first draft that a tree-sitter binding was the fallback "if
+  accuracy demands it", with no statement of what would demand it — a fallback with no trigger,
+  which let each language's author decide the question again, differently. Nine languages is late
+  to notice that. The threshold is now specific: a grammar becomes the answer for *one* language
+  when that language's scored fixtures cannot be brought to the targets in
+  `internal/extract/score.go` by hand, and it would be a direct dependency needing its own ADR
+  under [0002](docs/adr/0002-patchable-dependencies-not-zero-dependencies.md).
+
+  **The evidence for deciding it this way is the seventeen defects the fixtures found**, because
+  most were not parsing failures. A grammar would have prevented the six token-position ones and
+  been silent on the rest — the visibility of an out-of-line definition, whether a forward
+  declaration is a symbol, whether a category declares a type, whether a `.h` votes on its
+  directory's language. A parse tree holds that information and states no answer, so reaching for
+  one because such a question was answered wrongly moves the code and keeps the defect. The ADR
+  names those six as the standing tax on a line-oriented read rather than passing over them, and
+  puts the threshold at where paying it stops bringing fixtures to target. Ten cgo grammar modules
+  would also cost `CGO_ENABLED=0`, which is what makes the release archives static single binaries.
+
+  The ADR is also where the scanner's two cross-language invariants get named as such, both having
+  now produced a defect in more than one language: it blanks a string's body while keeping the
+  delimiters, so anything reading a quoted path must read the raw line; and depth tracking has to
+  survive char literals, preprocessor braces, and scopes that close without a brace.
+
 #### 2026-08-05
 
 - **`signpost view` serves the graph on `127.0.0.1` and opens a browser.** The published viewer at

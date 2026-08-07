@@ -249,10 +249,10 @@ disconnected components (30)
         <h2 class="row__key">reads</h2>
         <div class="row__body">
           <p class="prose prose--lead">
-            Go, TypeScript, JavaScript, Python, Rust, Java, and Kotlin —
-            imports, public surface, and entrypoints. Each extractor is scored
-            against hand-labeled fixtures rather than asserted, at F1 1.000 for
-            both imports and symbols.
+            Go, TypeScript, JavaScript, Python, Rust, Java, Kotlin, C, C++ and
+            Objective-C — imports, public surface, and entrypoints. Each
+            extractor is scored against hand-labeled fixtures rather than
+            asserted, at F1 1.000 for both imports and symbols.
           </p>
           <p class="prose">
             Java and Kotlin share one resolution map because the compiler does,
@@ -261,6 +261,15 @@ disconnected components (30)
             reader yet, so a JVM import naming no package in the repository is
             reported as a gap rather than turned into a Maven coordinate nobody
             declared.
+          </p>
+          <p class="prose">
+            C, C++ and Objective-C share one extractor, because they share a
+            preprocessor and a header convention: a <code>.h</code> is any of the
+            three and only its contents say which. An <code>#include</code> has
+            no manifest behind it, so it resolves by walking outward from the
+            including file's directory through the conventional include roots —
+            and the delimiter is kept, because quoted and angled are different
+            search rules.
           </p>
           <p class="prose">
             Beyond source, signpost reads what a repository states about
@@ -303,7 +312,7 @@ disconnected components (30)
                 <td>done</td>
               </tr>
               <tr class="is-done">
-                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin</th>
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C</th>
                 <td>done</td>
               </tr>
               <tr class="is-done">
