@@ -2,7 +2,7 @@
 type: Module
 title: internal/export
 description: 6 go files; 22 exported symbols.
-resource: git://github.com/3rg0n/signpost@cbdffe2736afa2b1000ad629ad4ef864868f625c/internal/export
+resource: git://github.com/3rg0n/signpost@dac49c960e06f98d4a0e2e8ad26ee9f8c8fc3a7a/internal/export
 generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
   - { name: commits, value: "2" }
@@ -15,7 +15,7 @@ attributes:
   - { name: owners, value: "@3rg0n" }
   - { name: package, value: export }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 100% }
+  - { name: top_author_share, value: 50% }
 edges:
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 6, source: internal/export/dot.go }
 ---
