@@ -1,0 +1,62 @@
+internal/graph/louvain.go
+  s_f6c0b1ac81cb95::t_e6521c5c4d92cc 18-20
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_b4c99154a62ce9 1641
+  s_f6c0b1ac81cb95::t_d648721f40710a 334-366
+  s_f6c0b1ac81cb95::t_c2a7636b46e16c 367-369,374-378
+  s_f6c0b1ac81cb95::t_6529351dd00f80 370-373
+internal/graph/metrics.go
+  s_f6c0b1ac81cb95::t_7b1ead2b61c2cd 272-274
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 7,9,55-56
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 5,68-69,71
+docs/adr/0020-git-history-annotates-the-map-and-never-draws-it.md
+  s_f6c0b1ac81cb95::t_ceb25ad60c3ccf 1-113
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_2d85a59feb0987 50-52
+  s_f6c0b1ac81cb95::t_3726da02d8936d 38-39
+docs/design.md
+  s_f6c0b1ac81cb95::t_7c915d43302e41 560
+  s_f6c0b1ac81cb95::t_b6efc4d7c5daaa 566-567
+  s_f6c0b1ac81cb95::t_c97ff729469e9c 89
+  s_f6c0b1ac81cb95::t_e73e9ebee2dab8 360-362
+  s_f6c0b1ac81cb95::t_6326050f5cb757 552-559
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 4,9,15
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 62
+docs/adr/0019-louvain-over-label-propagation.md
+  s_f6c0b1ac81cb95::t_324898cd3799ad 53-54
+  s_f6c0b1ac81cb95::t_8a5fe66f1d17aa 9-13,19-20,22,24-32,35-37
+  s_f6c0b1ac81cb95::t_f401e8f10895ca 1-8,18,21,23,33-34,40-52,55-85,89-111
+  s_f6c0b1ac81cb95::t_14264410ca5b33 14-17
+  s_f6c0b1ac81cb95::t_5ec72e68bb59bd 38-39
+  s_f6c0b1ac81cb95::t_d478c95dbfd4d4 86-88
+.signpost/references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md
+  s_f6c0b1ac81cb95::t_cb106fcd7fa94e 5
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 1-4,6-29
+internal/export/mermaid.go
+  s_f6c0b1ac81cb95::t_9be5df5256cbfb 52
+.signpost/references/adr-0019-louvain-over-label-propagation.md
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 1-4,6-29
+  s_f6c0b1ac81cb95::t_cb106fcd7fa94e 5
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_93b7906dc5ba0c 50,61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "cbdffe2736afa2b1000ad629ad4ef864868f625c",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
