@@ -37,6 +37,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0018](0018-view-serves-a-repository-over-loopback.md) | `view` serves a repository's structure over loopback, and holds no state | Accepted |
 | [0019](0019-louvain-over-label-propagation.md) | Clustering is hand-written Louvain, after label propagation was measured and rejected | Accepted |
 | [0020](0020-git-history-annotates-the-map-and-never-draws-it.md) | Git history annotates the map and never draws it | Accepted |
+| [0021](0021-track-the-published-spec-and-never-overload-its-keys.md) | Track the published spec, and never overload one of its keys | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that

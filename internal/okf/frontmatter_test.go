@@ -64,7 +64,7 @@ func TestCarryHumanKeysDropsEveryGeneratedKeyIncludingBlocks(t *testing.T) {
 		"description: d\n" +
 		"resource: git://x@aaa\n" +
 		"tags: [go]\n" +
-		"status: stable\n" +
+		"signpost_status: stale-verification\n" +
 		"okf_version: \"0.2\"\n" +
 		"generated: { by: signpost, at: 2026-07-30 }\n" +
 		"attributes:\n" +
@@ -95,6 +95,41 @@ func TestCarryHumanKeysDropsIndentedContinuations(t *testing.T) {
 	}
 	if !strings.Contains(got, "human:x") {
 		t.Errorf("the verified block was lost: %q", got)
+	}
+}
+
+// OKF's `status:` is a human's, per ADR 0021. §5.4 defines its values, so a reader who set
+// one is stating a lifecycle fact about their own page and signpost has no standing to
+// replace it — the same rule `verified:` gets.
+func TestCarryHumanKeysKeepsASpecStatus(t *testing.T) {
+	for _, in := range []string{"draft", "stable", "deprecated", `"deprecated"`} {
+		prev := "type: Module\nstatus: " + in + "\ntitle: x\n"
+		if got := carryHumanKeys(prev); got != "status: "+in+"\n" {
+			t.Errorf("carryHumanKeys with status %s = %q, want it carried", in, got)
+		}
+	}
+}
+
+// The upgrade path. A bundle built before ADR 0021 carries `status: stale-verification` on
+// the spec's key, and signpost no longer writes or maintains it there. Carrying it would
+// leave the page asserting an out-of-vocabulary lifecycle value forever, since the key is now
+// human territory and nothing would ever clear it. So that one value is dropped.
+func TestCarryHumanKeysDropsALegacyStaleVerificationStatus(t *testing.T) {
+	prev := "type: Module\nstatus: stale-verification\nmine: kept\n"
+	got := carryHumanKeys(prev)
+	if strings.Contains(got, "stale-verification") {
+		t.Errorf("the legacy status was carried: %q", got)
+	}
+	if got != "mine: kept\n" {
+		t.Errorf("carryHumanKeys = %q, want only the human key", got)
+	}
+	// Quoted the same, since the emitter's quoteYAML may have written it either way.
+	if got := carryHumanKeys("status: \"stale-verification\"\nmine: kept\n"); got != "mine: kept\n" {
+		t.Errorf("a quoted legacy status was carried: %q", got)
+	}
+	// The negative boundary: only that exact value. Anything else on the key is a human's.
+	if got := carryHumanKeys("status: stale\nmine: kept\n"); got != "status: stale\nmine: kept\n" {
+		t.Errorf("a human status was dropped as legacy: %q", got)
 	}
 }
 

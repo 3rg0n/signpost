@@ -131,10 +131,11 @@ Two rules govern rewriting, and they are why the bundle is safe to hand-edit:
   delete the notes somebody wrote on it.
 - **A review that no longer applies says so.** If you add a `verified:` block
   recording that you checked a page, and the commit it described has since
-  changed, the block is kept and the page gains `status: stale-verification`. Your
-  name and date are the audit trail; the status is the part that stops the page
-  from claiming a human vouched for code they never saw. Re-review, record the
-  page's current `resource:`, and the next run clears it.
+  changed, the block is kept and the page gains
+  `signpost_status: stale-verification`. Your name and date are the audit trail;
+  the status is the part that stops the page from claiming a human vouched for
+  code they never saw. Re-review, record the page's current `resource:`, and the
+  next run clears it. OKF's own `status:` is yours — signpost never writes it.
 
 Line endings are signpost's to choose, and it chooses LF — that is what makes the same
 commit produce identical bytes on Windows and Linux. Pages are read back through the

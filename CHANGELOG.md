@@ -331,6 +331,35 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+#### 2026-08-07
+
+- **A downgraded verification is now marked `signpost_status: stale-verification`, not
+  `status:`.** Google published the Open Knowledge Format v0.2 specification, and a field-by-field
+  comparison against what signpost emits found one divergence — ours. §5.4 enumerates `status` as
+  `draft | stable | deprecated`, and `stale-verification` is none of them. The habit that produced
+  it is worth naming, because it is how a producer drifts from a spec it means to follow: not by
+  disagreeing with it, but by extending a field in a direction the spec had already closed. §4.1
+  and §11 oblige a consumer to tolerate an unknown *key*, which is what makes `edges` and
+  `attributes` safe; they say nothing about an unrecognised *value* on a key the spec defines, and
+  a reader switching on `status` may reasonably treat anything outside the enum as malformed.
+
+  So the finding moved to a key OKF does not own, and `status:` became a human's — carried across
+  runs like `verified:`, never written by signpost. It sits in the same slot in §3.1's ordering, so
+  a reader scanning for a lifecycle field still finds both together.
+  [ADR 0021](docs/adr/0021-track-the-published-spec-and-never-overload-its-keys.md) records the
+  general rule rather than just this rename: track the published spec, adopt its fields as
+  published, and put anything it has no field for on a key it does not own. It also states what
+  happens when a future spec version defines a key we already use — the spec's meaning wins and
+  ours gets renamed — and declines `stale_after` on its merits, since a bundle goes stale when the
+  tree moves rather than when a calendar passes.
+
+  **Upgrading a bundle built before this clears the old line.** `status: stale-verification`
+  exactly is dropped rather than carried, because the key is now human territory and nothing would
+  ever clear a value signpost no longer maintains; the finding reappears on `signpost_status` in
+  the same run, so the net effect in a diff is a moved line. Anything else on `status:` — including
+  a `deprecated` somebody wrote — is theirs and survives untouched, which is a test in both
+  directions. A CI check grepping for `status: stale-verification` needs updating.
+
 #### 2026-08-06
 
 - **The last two decisions listed as owed an ADR now have one.** Both were already implemented and

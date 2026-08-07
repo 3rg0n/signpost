@@ -668,11 +668,18 @@ func TestWriteReportsADowngradedVerification(t *testing.T) {
 	}
 	// And the page says so itself. The bundle is read by people and agents that never ran
 	// signpost, so a downgrade recorded only in the run's stdout is one nobody acts on.
-	if !strings.Contains(got, "status: "+statusStaleVerification) {
+	if !strings.Contains(got, statusKey+": "+statusStaleVerification) {
 		t.Errorf("the page carries no stale-verification status:\n%s", got)
 	}
+	// And it is signpost's key, not OKF's. §5.4 enumerates `status` as draft|stable|deprecated,
+	// so writing our finding there would put an out-of-vocabulary value on a spec-owned key.
+	// Anchored to a line start, because `signpost_status:` contains `status:` as a substring —
+	// an unanchored check passes on the very output it is meant to reject.
+	if strings.Contains(got, "\nstatus:") {
+		t.Errorf("the finding was written to the spec's status key:\n%s", got)
+	}
 	// Written into the generated half, above the human's block, so the two do not interleave.
-	if strings.Index(got, "status:") > strings.Index(got, "verified:") {
+	if strings.Index(got, statusKey+":") > strings.Index(got, "verified:") {
 		t.Errorf("status was written below the human keys:\n%s", got)
 	}
 	if _, diag := parseFrontmatter(t, ParsePage(got).Frontmatter); diag != "" {
@@ -698,7 +705,7 @@ func TestWriteClearsAStaleVerificationStatusWhenItMatchesAgain(t *testing.T) {
 	if _, err := Write(root, g, demoOptions()); err != nil {
 		t.Fatalf("first rebuild: %v", err)
 	}
-	if got := read(t, root, rel); !strings.Contains(got, "status: "+statusStaleVerification) {
+	if got := read(t, root, rel); !strings.Contains(got, statusKey+": "+statusStaleVerification) {
 		t.Fatalf("test setup: the page was not marked:\n%s", got)
 	}
 
@@ -722,7 +729,7 @@ func TestWriteClearsAStaleVerificationStatusWhenItMatchesAgain(t *testing.T) {
 		t.Errorf("Downgraded = %v, want nothing", res.Downgraded)
 	}
 	got := read(t, root, rel)
-	if strings.Contains(got, "status:") {
+	if strings.Contains(got, statusKey+":") {
 		t.Errorf("the stale-verification status survived a matching review:\n%s", got)
 	}
 	if !strings.Contains(got, "human:ecopelan") {
@@ -754,41 +761,49 @@ func TestWriteIsStableWhileAVerificationIsDowngraded(t *testing.T) {
 	if second := read(t, root, rel); second != first {
 		t.Errorf("a downgraded page is not byte-stable:\n got %q\nwant %q", second, first)
 	}
-	if n := strings.Count(first, "status:"); n != 1 {
+	if n := strings.Count(first, statusKey+":"); n != 1 {
 		t.Errorf("%d status lines, want exactly 1:\n%s", n, first)
 	}
 }
 
 func TestWithStatusPlacesTheKeyInSpecOrder(t *testing.T) {
-	// Between the keys that precede it and those that follow, per §3.1.
+	// After the keys the spec puts before `status`, and before those that follow, per §3.1.
 	got := withStatus("type: Module\ntitle: x\ntags: [go]\ngenerated: { by: a, at: \"b\" }\n", "s")
-	want := "type: Module\ntitle: x\ntags: [go]\nstatus: s\ngenerated: { by: a, at: \"b\" }\n"
+	want := "type: Module\ntitle: x\ntags: [go]\n" + statusKey + ": s\ngenerated: { by: a, at: \"b\" }\n"
 	if got != want {
 		t.Errorf("withStatus =\n%q\nwant\n%q", got, want)
 	}
 	// Nothing follows it: appended rather than dropped.
-	if got := withStatus("type: Module\n", "s"); got != "type: Module\nstatus: s\n" {
+	if got := withStatus("type: Module\n", "s"); got != "type: Module\n"+statusKey+": s\n" {
 		t.Errorf("withStatus with no trailing keys = %q", got)
 	}
 	// A multi-line block belonging to a preceding key keeps its lines with that key rather
 	// than having the status inserted into the middle of it.
 	got = withStatus("tags: [go]\nedges:\n  - { kind: imports, to: /a.md }\n", "s")
-	want = "tags: [go]\nstatus: s\nedges:\n  - { kind: imports, to: /a.md }\n"
+	want = "tags: [go]\n" + statusKey + ": s\nedges:\n  - { kind: imports, to: /a.md }\n"
 	if got != want {
 		t.Errorf("withStatus across a block =\n%q\nwant\n%q", got, want)
 	}
+	// A human's spec `status:` is one of the keys signpost's line goes *after*, so the two sit
+	// adjacent in spec order rather than signpost's landing above a lifecycle value it does
+	// not own. It is also carried, not overwritten — see TestCarryHumanKeysKeepsASpecStatus.
+	got = withStatus("type: Module\nstatus: deprecated\ngenerated: { by: a, at: \"b\" }\n", "s")
+	want = "type: Module\nstatus: deprecated\n" + statusKey + ": s\ngenerated: { by: a, at: \"b\" }\n"
+	if got != want {
+		t.Errorf("withStatus beside a spec status =\n%q\nwant\n%q", got, want)
+	}
 }
 
-// Idempotent. No caller can currently pass frontmatter already carrying a status — the
-// emitter never writes the key — but two `status:` lines in a committed file would leave a
+// Idempotent. No caller can currently pass frontmatter already carrying signpost's status —
+// the emitter never writes the key — but two such lines in a committed file would leave a
 // YAML reader taking the second, so the function must not rely on that.
 func TestWithStatusReplacesAnExistingStatus(t *testing.T) {
-	got := withStatus("type: Module\nstatus: something-else\ngenerated: { by: a, at: \"b\" }\n", "s")
-	want := "type: Module\nstatus: s\ngenerated: { by: a, at: \"b\" }\n"
+	got := withStatus("type: Module\n"+statusKey+": something-else\ngenerated: { by: a, at: \"b\" }\n", "s")
+	want := "type: Module\n" + statusKey + ": s\ngenerated: { by: a, at: \"b\" }\n"
 	if got != want {
 		t.Errorf("withStatus over an existing status =\n%q\nwant\n%q", got, want)
 	}
-	if n := strings.Count(got, "status:"); n != 1 {
+	if n := strings.Count(got, statusKey+":"); n != 1 {
 		t.Errorf("%d status lines, want 1", n)
 	}
 	// And repeated application is a no-op beyond the first.
@@ -797,10 +812,18 @@ func TestWithStatusReplacesAnExistingStatus(t *testing.T) {
 	}
 	// A multi-line status block is dropped whole, not left with orphaned continuation lines
 	// that would attach themselves to the key above.
-	got = withStatus("type: Module\nstatus:\n  - a\n  - b\nedges:\n  - x\n", "s")
-	want = "type: Module\nstatus: s\nedges:\n  - x\n"
+	got = withStatus("type: Module\n"+statusKey+":\n  - a\n  - b\nedges:\n  - x\n", "s")
+	want = "type: Module\n" + statusKey + ": s\nedges:\n  - x\n"
 	if got != want {
 		t.Errorf("withStatus over a block status =\n%q\nwant\n%q", got, want)
+	}
+	// The negative boundary: the spec's own key is a different key and must survive untouched,
+	// including a multi-line value. Replacing it would let signpost overwrite a lifecycle
+	// value a human set, which is the failure ADR 0021 exists to prevent.
+	got = withStatus("type: Module\nstatus: deprecated\nedges:\n  - x\n", "s")
+	want = "type: Module\nstatus: deprecated\n" + statusKey + ": s\nedges:\n  - x\n"
+	if got != want {
+		t.Errorf("withStatus consumed the spec's status =\n%q\nwant\n%q", got, want)
 	}
 }
 

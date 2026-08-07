@@ -304,7 +304,7 @@ func checkConformance(res *VerifyResult, disk *onDisk) {
 			res.warn(FindingConformance, rel, "frontmatter partly unread: %s", diag.Summary())
 		}
 		checkPageType(res, rel, fm)
-		if fm.Get("status").String() == statusStaleVerification {
+		if fm.Get(statusKey).String() == statusStaleVerification {
 			res.warn(FindingStaleVerification, rel,
 				"a human's `verified:` block no longer matches this page's resource; "+
 					"re-review and record the current `resource:` to clear it")
