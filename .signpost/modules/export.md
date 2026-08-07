@@ -2,16 +2,16 @@
 type: Module
 title: internal/export
 description: 6 go files; 22 exported symbols.
-resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0/internal/export
-generated: { by: signpost/dev, at: "2026-08-06" }
+resource: git://github.com/3rg0n/signpost@cbdffe2736afa2b1000ad629ad4ef864868f625c/internal/export
+generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
-  - { name: commits, value: "1" }
+  - { name: commits, value: "2" }
   - { name: exported, value: "22" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-07-30" }
-  - { name: lines_added, value: "1040" }
-  - { name: lines_removed, value: "0" }
+  - { name: last_commit, value: "2026-08-07" }
+  - { name: lines_added, value: "1041" }
+  - { name: lines_removed, value: "1" }
   - { name: owners, value: "@3rg0n" }
   - { name: package, value: export }
   - { name: top_author, value: 3rg0n }

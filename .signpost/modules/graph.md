@@ -2,16 +2,16 @@
 type: Module
 title: internal/graph
 description: 4 go files; 69 exported symbols.
-resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0/internal/graph
-generated: { by: signpost/dev, at: "2026-08-06" }
+resource: git://github.com/3rg0n/signpost@cbdffe2736afa2b1000ad629ad4ef864868f625c/internal/graph
+generated: { by: signpost/dev, at: "2026-08-07" }
 attributes:
-  - { name: commits, value: "1" }
+  - { name: commits, value: "2" }
   - { name: exported, value: "69" }
   - { name: files, value: "4" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-07-29" }
-  - { name: lines_added, value: "1368" }
-  - { name: lines_removed, value: "0" }
+  - { name: last_commit, value: "2026-08-07" }
+  - { name: lines_added, value: "1374" }
+  - { name: lines_removed, value: "4" }
   - { name: package, value: graph }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 100% }
