@@ -194,6 +194,13 @@ Three things to note in that example:
   OKF §11 requires consumers to tolerate unknown keys, so a typed `edges` list
   keeps the bundle conformant while carrying a real graph. We *also* emit prose
   links so a generic OKF reader still traverses the bundle.
+- **An extension is a new key, never a new value on a spec key.** §4.1 and §11
+  protect unknown *keys*, which is what makes `edges` and `attributes` safe. They
+  say nothing about an unrecognised value on a key the spec enumerates, so
+  signpost's own findings go on `signpost_status` and OKF's `status:` is left for
+  a human to write — [ADR 0021](adr/0021-track-the-published-spec-and-never-overload-its-keys.md).
+  Optional spec fields we decline (`stale_after`, `usage_window`) are declined on
+  their merits; not adopting one is conformant, inventing one is not.
 - **The `## Notes` section is outside the managed markers** and is never touched
   by signpost. That is the compounding mechanism (§6.4).
 
@@ -1076,8 +1083,10 @@ The mechanism that makes the bundle compound rather than churn:
   Everything outside them is human territory and is copied through verbatim.
 - A `verified:` block added by a human is preserved across runs.
 - When the underlying `resource` sha changes, `verified` is **downgraded** rather
-  than silently kept — the page is re-marked machine-confirmed and the downgrade
-  is recorded in `log.md`, so a reviewer knows to look again.
+  than silently kept — the page is re-marked machine-confirmed, gains
+  `signpost_status: stale-verification`, and the downgrade is recorded in
+  `log.md`, so a reviewer knows to look again. The mark is on signpost's key, not
+  OKF's `status:`, per [ADR 0021](adr/0021-track-the-published-spec-and-never-overload-its-keys.md).
 - Human-authored `## Notes` sections are never regenerated, never reordered, never
   reflowed.
 - A page whose concept is gone is deleted only when nothing on it came from a person

@@ -11,23 +11,23 @@ import (
 // The two halves of frontmatter behave differently and the distinction is the whole
 // design:
 //
-//   - **Generated keys** — type, title, description, resource, tags, status, generated,
-//     edges, sources — are signpost's. They are replaced wholesale, because they are
-//     derived from the tree and a stale one is a wrong claim about the code.
-//   - **Human keys** — `verified:` above all, and anything signpost does not recognise —
-//     are the reader's. They are carried across, because a review someone performed is a
-//     fact signpost has no standing to discard.
+//   - **Generated keys** — type, title, description, resource, tags, generated, edges,
+//     sources, signpost_status — are signpost's. They are replaced wholesale, because they
+//     are derived from the tree and a stale one is a wrong claim about the code.
+//   - **Human keys** — `verified:` above all, `status:` per ADR 0021, and anything signpost
+//     does not recognise — are the reader's. They are carried across, because a review
+//     someone performed is a fact signpost has no standing to discard.
 //
 // `verified:` is the interesting one, and it is not simply preserved. A human verified a
 // page describing a *specific commit*. When the commit changes, the claim "a human checked
 // this" is no longer supported by anything: the text they approved may have been replaced.
 // So the block is **downgraded**: kept verbatim, with the resource it was made against, and
-// the page gains a generated `status: stale-verification` key saying the claim no longer
-// holds. Neither of the alternatives works — dropping the block loses the audit trail and the
-// reviewer's name, and silently retaining it is the failure mode this whole project exists to
-// avoid, a guess wearing a fact's clothing. Because `status` is generated rather than carried,
-// a re-review recording the current resource clears the mark on the next run, which is what
-// makes the downgrade a recoverable default rather than a scar.
+// the page gains a generated `signpost_status: stale-verification` key saying the claim no
+// longer holds. Neither of the alternatives works — dropping the block loses the audit trail
+// and the reviewer's name, and silently retaining it is the failure mode this whole project
+// exists to avoid, a guess wearing a fact's clothing. Because `signpost_status` is generated
+// rather than carried, a re-review recording the current resource clears the mark on the next
+// run, which is what makes the downgrade a recoverable default rather than a scar.
 //
 // Reading uses internal/manifest's tolerant parser per ADR 0001. Writing uses the emitter
 // in yaml.go. The asymmetry is deliberate and is why the unrecognised-key path works at
@@ -39,18 +39,20 @@ import (
 //
 // A set rather than a switch, because the same list is needed in two directions: to know
 // what to overwrite, and to know what to preserve. Two switches would drift.
+// `status` is deliberately absent, per ADR 0021: it is a spec-owned key whose values OKF
+// §5.4 enumerates, so it is a human's to set and signpost's to leave alone.
 var generatedKeys = map[string]bool{
-	"type":        true,
-	"title":       true,
-	"description": true,
-	"resource":    true,
-	"tags":        true,
-	"status":      true,
-	"generated":   true,
-	"edges":       true,
-	"sources":     true,
-	"okf_version": true,
-	"attributes":  true,
+	"type":            true,
+	"title":           true,
+	"description":     true,
+	"resource":        true,
+	"tags":            true,
+	"generated":       true,
+	"edges":           true,
+	"sources":         true,
+	"okf_version":     true,
+	"attributes":      true,
+	"signpost_status": true,
 }
 
 // mergeFrontmatter returns next's generated keys plus prev's human keys.
@@ -88,7 +90,7 @@ func carryHumanKeys(prev string) string {
 		off = next
 
 		if key, isTop := topLevelKey(line); isTop {
-			keep = !generatedKeys[key]
+			keep = !generatedKeys[key] && !legacyStatusLine(key, line)
 		} else if strings.TrimSpace(line) == "" {
 			// A blank line belongs to whatever block it sits inside. Between blocks it is
 			// dropped, so removing a generated key does not leave a gap behind.
@@ -172,6 +174,16 @@ func readVerified(frontmatter string) []Verification {
 	return out
 }
 
+// statusKey is where signpost records what it has concluded about a page's own state.
+//
+// Not OKF's `status:`, and that is the point of ADR 0021. §5.4 enumerates that key's values
+// as `draft | stable | deprecated`; "stale-verification" is none of them. §11 obliges a
+// consumer to tolerate an unknown *key*, which is what makes `edges` and `attributes` safe,
+// but it says nothing about an unrecognised *value* on a key the spec defines — a reader
+// switching on `status` may reasonably treat anything outside the enum as malformed. So the
+// finding moves to a key OKF does not own, and `status:` becomes a human's to write.
+const statusKey = "signpost_status"
+
 // statusStaleVerification marks a page whose human `verified:` block no longer matches the
 // resource the page describes.
 //
@@ -179,8 +191,26 @@ func readVerified(frontmatter string) []Verification {
 // something else without changing what this one meant.
 const statusStaleVerification = "stale-verification"
 
-// keysBeforeStatus are the generated keys that precede `status:` in §3.1's order. Used to
-// find where a status line belongs in an already-emitted header.
+// legacyStatusLine reports whether a carried line is a `status: stale-verification` written
+// by a signpost older than ADR 0021, which owned the spec's key.
+//
+// Dropped rather than carried, so upgrading clears the old mark instead of leaving the page
+// asserting a lifecycle value the spec does not define and nothing now maintains. Only that
+// exact value: a `status: deprecated` a human wrote is theirs, and this must not eat it.
+func legacyStatusLine(key, line string) bool {
+	if key != "status" {
+		return false
+	}
+	_, value, _ := strings.Cut(strings.TrimRight(line, "\r"), ":")
+	return strings.Trim(strings.TrimSpace(value), `"'`) == statusStaleVerification
+}
+
+// keysBeforeStatus are the generated keys that precede signpost's status in §3.1's order.
+// Used to find where the line belongs in an already-emitted header.
+//
+// The spec puts `status` between `tags` and `generated`, and signpost's key takes the same
+// slot: it is the closest thing to a lifecycle field the page has, and a reader scanning for
+// one should not have to reach the bottom of the block to find it.
 var keysBeforeStatus = map[string]bool{
 	"okf_version": true,
 	"type":        true,
@@ -188,24 +218,25 @@ var keysBeforeStatus = map[string]bool{
 	"description": true,
 	"resource":    true,
 	"tags":        true,
+	"status":      true,
 }
 
-// withStatus inserts a `status:` line into generated frontmatter, in §3.1's order.
+// withStatus inserts signpost's status line into generated frontmatter, in §3.1's order.
 //
 // Written into the page rather than only reported on stdout, and that is the whole point:
 // the bundle is read by people and agents who never ran signpost, and a downgrade that
-// exists only in a terminal someone has closed is a downgrade nobody acts on. `status` is
-// a generated key, so the next run replaces it wholesale — a page whose verification comes
-// to match again loses the mark without anyone editing it.
+// exists only in a terminal someone has closed is a downgrade nobody acts on. The key is
+// generated, so the next run replaces it wholesale — a page whose verification comes to
+// match again loses the mark without anyone editing it.
 //
 // Inserted into the *generated* half, before the human keys are carried across, because a
 // human's block must stay at the bottom in the order they wrote it.
 //
-// Idempotent: an existing `status:` and the lines belonging to it are dropped, so the result
-// carries exactly one. No caller can currently pass frontmatter that has one — the emitter
-// never writes the key, and the only call site passes a freshly generated page — but the
-// function should not depend on that. A second status value is a change this design invites,
-// and the cost of the precondition going unmet is two `status:` lines in a committed file,
+// Idempotent: an existing `signpost_status:` and the lines belonging to it are dropped, so
+// the result carries exactly one. No caller can currently pass frontmatter that has one — the
+// emitter never writes the key, and the only call site passes a freshly generated page — but
+// the function should not depend on that. A second status value is a change this design
+// invites, and the cost of the precondition going unmet is two lines in a committed file,
 // where the second is the one a YAML reader keeps.
 func withStatus(frontmatter, status string) string {
 	var before, after strings.Builder
@@ -215,7 +246,7 @@ func withStatus(frontmatter, status string) string {
 		off = next
 
 		if key, isTop := topLevelKey(line); isTop {
-			dropping = key == "status"
+			dropping = key == statusKey
 			if !keysBeforeStatus[key] {
 				past = true
 			}
@@ -231,7 +262,7 @@ func withStatus(frontmatter, status string) string {
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
-	return before.String() + "status: " + quoteYAML(status, false) + "\n" + after.String()
+	return before.String() + statusKey + ": " + quoteYAML(status, false) + "\n" + after.String()
 }
 
 // readResource returns the page's `resource:` value.
