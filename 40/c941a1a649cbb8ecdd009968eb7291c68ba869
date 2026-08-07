@@ -1,0 +1,22 @@
+internal/extract/ruby_test.go
+  s_f6c0b1ac81cb95::t_10594399675a71 535-538
+  s_f6c0b1ac81cb95::t_da2aa1b02356ed 540-546,555,558-561,563
+  s_f6c0b1ac81cb95::t_41819bd45e0c44 539
+  s_f6c0b1ac81cb95::t_10560bd49ad2c9 521-534,547-554,556-557,562,564-567
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "40c941a1a649cbb8ecdd009968eb7291c68ba869",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
