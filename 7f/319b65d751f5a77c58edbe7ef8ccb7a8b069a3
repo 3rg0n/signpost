@@ -1,0 +1,137 @@
+.signpost/references/go-github-com-go-logr-stdr.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/telemetry.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0003-directory-granularity-for-module-nodes.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0007-the-bundle-names-the-commit-it-describes.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-actions-setup-go.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/semantic.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/modules/signpost.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/manifest.json
+  s_f6c0b1ac81cb95::t_b8932f2cced570 4-5
+.signpost/modules/export.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6,8,12-14
+.signpost/references/github-actions-actions-deploy-pages.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/readme-md.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-actions-upload-pages-artifact.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-go-opentelemetry-io-otel.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0011-configuration-file-format-and-location.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/practices.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0008-the-viewer-lives-in-this-repository.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/model.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0005-commit-the-bundle-to-the-repository.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0019-louvain-over-label-propagation.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0002-patchable-dependencies-not-zero-dependencies.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0004-confidence-is-a-first-class-field.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/hook.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/modules/practice.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0018-view-serves-a-repository-over-loopback.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-github-com-google-uuid.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-go-opentelemetry-io-otel-sdk.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/log.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 66-72
+.signpost/modules/view.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/modules/graph.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6,8,12-14
+.signpost/references/go-go-opentelemetry-io-auto-sdk.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/agents-md.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-go-opentelemetry-io-otel-trace.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-github-com-go-logr-logr.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/discover.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/modules/assemble.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/index.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 6-7
+.signpost/references/adr-0013-the-local-hook-reports-and-ci-gates.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-actions-cache.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/config.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0001-hand-written-tolerant-yaml-reader.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-actions-checkout.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-actions-configure-pages.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/manifest.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/go-go-opentelemetry-io-otel-metric.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/okf.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0016-a-reader-records-what-only-it-can-know.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/vcs.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/adr-0012-a-group-name-is-never-an-action.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/go-github-com-cespare-xxhash-v2.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/site.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+.signpost/references/go-golang-org-x-sys.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/github-actions-golangci-golangci-lint-action.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/references/adr-0006-generator-and-viewer-are-separate-repositories.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5,7
+.signpost/modules/extract.md
+  s_f6c0b1ac81cb95::t_b8932f2cced570 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7f319b65d751f5a77c58edbe7ef8ccb7a8b069a3",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
