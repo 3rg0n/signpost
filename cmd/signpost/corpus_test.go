@@ -391,6 +391,21 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		// it is labelled C, and counting that placeholder as a vote made the directory "c" on
 		// a 1–1 tie. The page existed either way — what vanished was Objective-C itself.
 		{"Objective-C", "objc/Sources"},
+		{"Ruby", "ruby/lib/api"},
+		// Ruby's load-path target, and the reason it is asserted separately: nothing in
+		// `client.rb` says `lib`, so only a root registered from the Gemfile's directory plus
+		// the gem convention makes `require "corpus/version"` mean this directory.
+		{"Ruby, reached through the load path rather than relatively", "ruby/lib/corpus"},
+		{"PHP", "php/src"},
+		// The PSR-4 map's nested target. `Corpus\Format` maps here and not onto `src/` only
+		// because the longest prefix wins, which is what keeps a repository's internal
+		// structure more than one node wide.
+		{"PHP, a namespace under the mapped prefix", "php/src/Format"},
+		{"C#", "dotnet/Corpus.Api"},
+		// Two C# projects rather than one, because the ProjectReference between them is the
+		// only thing in a .NET repository that says they are separate: `using Corpus.Domain`
+		// looks identical whether Corpus.Domain is a project here or a package from nuget.org.
+		{"C#, a second project reached by ProjectReference", "dotnet/Corpus.Domain"},
 	} {
 		if _, ok := byTitle[want.dir]; !ok {
 			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
@@ -402,12 +417,18 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 	// nothing about which language the directory was read as. That is asserted separately:
 	// each dialect must name itself on the page of the directory written in it. Without this
 	// the whole family could collapse onto "c" and every row above would still pass.
+	// The three newest are named here too, for a related reason: each shares its scope
+	// machinery with a language already in the list — Ruby with nothing, PHP and C# with the
+	// JVM — so a page for the directory says only that some extractor ran on it.
 	for _, want := range []struct{ dir, lang string }{
 		{"c/src", "c"},
 		{"c/include/corpus", "c"},
 		{"cpp/src", "cpp"},
 		{"cpp/include/corpus", "cpp"},
 		{"objc/Sources", "objc"},
+		{"ruby/lib/api", "ruby"},
+		{"php/src", "php"},
+		{"dotnet/Corpus.Api", "csharp"},
 	} {
 		name, ok := byTitle[want.dir]
 		if !ok {
@@ -463,6 +484,9 @@ func TestCorpusReadsEveryManifest(t *testing.T) {
 		{"npm (package.json)", "references/npm-next.md"},
 		{"Cargo (Cargo.toml)", "references/crates-io-serde.md"},
 		{"Python (pyproject.toml)", "references/pypi-httpx.md"},
+		{"RubyGems (Gemfile)", "references/rubygems-rack.md"},
+		{"Composer (composer.json)", "references/composer-monolog-monolog.md"},
+		{"NuGet (.csproj)", "references/nuget-microsoft-extensions-logging.md"},
 		{"GitHub Actions (workflow)", "references/github-actions-actions-checkout.md"},
 		{"Compose (compose.yaml)", "services/api.md"},
 	} {
@@ -471,15 +495,36 @@ func TestCorpusReadsEveryManifest(t *testing.T) {
 				want.ecosystem, want.page, pageNames(pages))
 		}
 	}
+
+	// A ProjectReference is a declaration in the same list as a PackageReference and must not
+	// become a reference page: a repository does not pull its own project in from a registry.
+	// Asserted here rather than among the near-misses above because the declaration is real and
+	// correctly read — what is being checked is where it lands, and the edge it becomes instead
+	// is `configures` from Corpus.Api onto Corpus.Domain.
+	for _, name := range []string{
+		"references/nuget-corpus-domain.md",
+		"references/nuget-corpus-api.md",
+	} {
+		if _, bad := pages[name]; bad {
+			t.Errorf("%s exists. It is a ProjectReference — a project in this repository — so a "+
+				"reference page for it claims the repository depends on its own code from "+
+				"outside, and nobody publishes or patches it", name)
+		}
+	}
 }
 
 // TestCorpusPracticesReportsBothKinds checks the practices page states what the corpus
 // declares and what it does not.
 //
 // The corpus is built to have both, and the absences are deliberate fixture decisions rather
-// than omissions: no SECURITY.md, and a Python manifest with no lockfile beside it while the
-// other three ecosystems have one. A page that only ever reported presences would render an
-// absence as silence, which is the failure design §9.1 is written against.
+// than omissions: no SECURITY.md, and three manifests with no lockfile beside them — Python,
+// Composer and NuGet — while four ecosystems have one. A page that only ever reported presences
+// would render an absence as silence, which is the failure design §9.1 is written against.
+//
+// The per-ecosystem split is what the seven dependency lines assert together. One lockfile does
+// not pin another supply chain, and a single "a lockfile exists" line would hide exactly that:
+// this corpus has four pinned ecosystems and three unpinned ones in the same tree, so a finding
+// that collapsed them would have to be wrong about at least three.
 func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 	dir := buildCorpus(t)
 	pages := bundlePages(t, dir)
@@ -498,6 +543,7 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 		"The Go dependencies are pinned by a lockfile",
 		"The npm dependencies are pinned by a lockfile",
 		"The Cargo dependencies are pinned by a lockfile",
+		"The RubyGems dependencies are pinned by a lockfile",
 		"Automated dependency updates are configured",
 		"ownership rules assign paths to reviewers",
 		"The repository states its licence",
@@ -507,6 +553,12 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 		"**Not declared.**",
 		"No security policy was found",
 		"The Python dependencies are declared but not pinned",
+		"The Composer dependencies are declared but not pinned",
+		// NuGet's lockfile is opt-in — it exists only when a project sets
+		// RestorePackagesWithLockFile — so its absence is the normal .NET case and is still
+		// reported. The reading is honest: without it a floating version range does resolve
+		// differently between two restores.
+		"The NuGet dependencies are declared but not pinned",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("%s does not state %q:\n%s", okf.PracticesPage, want, page)
@@ -548,10 +600,17 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 // cannot differ — three false clauses in one sentence, on the page whose entire purpose is that
 // a reader can trust it.
 //
-// The condition cannot be expressed by the corpus as committed: all four of its ecosystems
-// declare dependencies, because every other stage here needs them to. So this stage makes one
+// The condition cannot be expressed by the corpus as committed: every one of its ecosystems
+// declares dependencies, because every other stage here needs them to. So this stage makes one
 // of them empty — the manipulate-then-rebuild shape the CRLF and stale-page stages use — and
 // takes its lockfile away, which is the only arrangement that reaches the branch.
+//
+// One manifest in the corpus does declare nothing — `dotnet/Corpus.Domain.csproj`, which is what
+// a .NET domain project ordinarily looks like — and it is deliberately not this stage's subject.
+// The finding is counted per *ecosystem*, not per file, and Corpus.Api declares two NuGet
+// packages, so NuGet reports as unpinned rather than as empty. That is the count below holding
+// for a reason worth having in the corpus: a per-file reading of this branch would state it for
+// NuGet too and the assertion would fail.
 //
 // All three outcomes are asserted from the one page, and that is the point. Go stays pinned,
 // Python stays declared-and-unpinned, Cargo becomes the empty case. A fix that answers "nothing
@@ -861,7 +920,20 @@ func TestCorpusWorkspacePackagesAreNotExternalDependencies(t *testing.T) {
 
 	// No page for the sibling package as a dependency. Asserted on the bundle rather than the
 	// graph because the page is what a reader audits.
+	//
+	// Scoped to `references/`, which is where an external dependency's page goes, and the claim
+	// this test makes is about that directory: a first-party package must not appear there. The
+	// scan once covered every page in the bundle, which was the same assertion only as long as
+	// no *module* was named `corpus-api` — and the .NET tree named two, `dotnet/Corpus.Api` and
+	// `dotnet/Corpus.Api.Tests`, whose module pages slug to exactly that. A module page for
+	// first-party source is what correct output looks like. Matching on the name inside
+	// `references/` rather than on a predicted `npm-` filename is deliberate and stronger: a
+	// fabricated external is fabricated whatever ecosystem prefix it acquires, and the C#
+	// `ProjectReference` reaches the same defect through a `nuget-` name.
 	for rel := range pages {
+		if !strings.HasPrefix(rel, "references/") {
+			continue
+		}
 		if strings.Contains(rel, "corpus-core") || strings.Contains(rel, "corpus-api") {
 			t.Errorf("%s is a page for a package that lives in this repository, presented as an "+
 				"external dependency. A reader auditing what this repo pulls in from outside is "+
@@ -1116,6 +1188,31 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 //     JVM has no manifest reader yet, so nothing but this list distinguishes a wrongly
 //     classified runtime name from a correctly classified one.
 //
+// Ruby, PHP and C# each carry two, and the pairs are chosen the same way the JVM's are —
+// one against a declared dependency, one against the runtime rule — because those are the
+// two directions a name can be swallowed in:
+//
+//   - ruby `net/ldap` — the `net-ldap` gem, one segment away from the stdlib `net/http`.
+//     Ruby's runtime table is matched on the whole require path with no first-segment rule,
+//     and this pair is why: cutting on the slash and asking about `net` would report a gem
+//     somebody has to install and patch as the standard library;
+//   - ruby `rack_extras` — opens with the four characters of the declared gem `rack`, in the
+//     underscore spelling depKeys' PEP 503 normalization legitimately folds for Python;
+//   - php `CorpusKernel\Boot` — shares the six characters of the PSR-4 prefix `Corpus\` that
+//     composer.json maps onto `src/`. A namespace nests on the backslash, so a prefix test
+//     done on the string routes this into the production tree and draws an edge to a file
+//     that is not there. PHP's isStdlib is `false` always, so it lands here every time;
+//   - php `MonologExtras\Handler` — the same boundary on the dependency side: it opens with
+//     the name of the declared `monolog/monolog`, and the candidate list is what must not
+//     match it by prefix;
+//   - csharp `Corpus.DomainModel` — shares every character of the declared namespace
+//     `Corpus.Domain`, which a dotted prefix compared as a string folds into it, exactly as
+//     `com.example.apiv2` does on the JVM;
+//   - csharp `Microsoft.Extensions.Caching.Memory` — the .NET runtime near-miss, and the
+//     reason `Microsoft.*` is split rather than accepted whole. `Microsoft.Win32` beside it
+//     in the same file is the platform; this is a NuGet package nobody declared, and a rule
+//     taking the first segment for the runtime hides it.
+//
 // The C family's four near-misses are all boundaries of the include search path, and each
 // probes a different rule, because C resolution has no manifest and no module system — only
 // a search order and the two delimiters:
@@ -1185,14 +1282,20 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		"c <corpus/buffers.h>",
 		"c <stdlib_extras.h>",
 		"cpp <gtest_extras/matchers.h>",
+		"csharp Corpus.DomainModel",
+		"csharp Microsoft.Extensions.Caching.Memory",
 		"go example.com/corpus/greeterx/format",
 		"java com.example.apiv2",
 		"java javax.servlet.http",
 		"java org.junit.jupiter.api",
 		"kotlin kotlinx.coroutines",
 		"objc <CorpusKit/CorpusKit.h>",
+		`php CorpusKernel\Boot`,
+		`php MonologExtras\Handler`,
 		"python httpx_extras",
 		"python winreg_helpers",
+		"ruby net/ldap",
+		"ruby rack_extras",
 		"rust corpus_greeter::Greeting",
 		"rust serde_yaml::Value",
 		"typescript @corpus/apples/juice",
@@ -1227,7 +1330,12 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		t.Fatalf("export did not produce JSON: %v", err)
 	}
 	// Every near-miss, by the fragment that distinguishes it from the real name it shadows.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity"} {
+	// Six of these are fragments rather than whole names for a reason the entry beside them
+	// makes: `monologextras` cannot be shortened to `monolog`, and `rack_extras` cannot be
+	// shortened to `rack`, because the declared dependency each one shadows is a page that must
+	// exist. `caching` is what distinguishes the undeclared `Microsoft.Extensions.Caching.Memory`
+	// from the declared `Microsoft.Extensions.Logging` beside it in the same file.
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity", "ldap", "rack-extras", "rack_extras", "corpuskernel", "monologextras", "domainmodel", "caching"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -1282,6 +1390,21 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 				t.Errorf("%q is an external dependency page. It is the JVM runtime, versioned "+
 					"with the toolchain rather than declared in a build file, so a page for it "+
 					"is a supply-chain entry for the JDK", n.Title)
+			}
+		}
+	}
+	// The three newest languages' runtimes, matched exactly for the same reason and each one
+	// segment from a near-miss above. `net/http` and `json` are what make Ruby's whole-path rule
+	// necessary; `System.Text.Json` and `Microsoft.Win32` are what make .NET's `Microsoft` split
+	// necessary. `Throwable` is PHP's whole runtime story: the language has no importable
+	// standard library, so a single-segment `use` naming a built-in class is the one case that
+	// must record no import at all — a page for it is the global namespace sold as a package.
+	for _, name := range []string{"net/http", "json", "System.Text.Json", "Microsoft.Win32", "Throwable"} {
+		for _, n := range g.Nodes {
+			if n.Kind == "External Dependency" && strings.EqualFold(n.Title, name) {
+				t.Errorf("%q is an external dependency page. It is the language runtime — the "+
+					"interpreter or the SDK ships it and nobody publishes or patches it — so a "+
+					"page for it is a supply-chain entry for the toolchain", n.Title)
 			}
 		}
 	}

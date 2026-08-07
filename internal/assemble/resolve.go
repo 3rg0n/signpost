@@ -54,9 +54,15 @@ type resolver struct {
 	// pyRoots are directories holding a Python package manifest, longest first: each is
 	// a path an absolute import resolves against for the files beneath it.
 	pyRoots []string
-	// jvmPkgs maps a declared JVM package name to the directory declaring it, longest
-	// name first so a subpackage wins over the package containing it.
-	jvmPkgs []jvmPackage
+	// declPkgs maps a package name a source file declares to the directory declaring it,
+	// longest name first so a subpackage wins over the package containing it. JVM and C#.
+	declPkgs []declaredPackage
+	// rubyRoots are directories a Ruby load path is anchored at, longest first: each is a
+	// path a plain `require` resolves against for the files beneath it.
+	rubyRoots []string
+	// psr4 are composer's autoload prefixes, longest prefix first so a nested namespace
+	// wins over the one containing it.
+	psr4 []psr4Prefix
 	// deps maps a normalized dependency key to the external node it belongs to.
 	deps map[string]string
 	// ecosystems are the ecosystems any manifest declared, sorted, for the
@@ -74,17 +80,33 @@ type npmPkg struct {
 	name string
 }
 
-// jvmPackage is one `package` declaration and the directory the file declaring it sits
-// in. Both halves are needed and neither can be derived from the other: the name is
+// declaredPackage is one namespace declaration and the directory the file declaring it
+// sits in. Both halves are needed and neither can be derived from the other: the name is
 // what an import writes, and the directory is what a module node is keyed on.
-type jvmPackage struct {
+//
+// Two languages populate it, and the reason is the same in both: the mapping from a
+// namespace to a directory exists nowhere except the source files. A JVM `package`
+// clause and a C# `namespace` declaration are each exactly the name another file writes
+// in its `import` or `using`, and neither is derivable from the path — a Gradle source
+// set or an MSBuild `RootNamespace` can put any namespace in any directory.
+type declaredPackage struct {
 	dir  string
 	name string
 	// test marks a directory where every file declaring this package is a test. The
 	// standard JVM layout declares each package twice — `src/main/java/com/x` and
 	// `src/test/java/com/x` — so two directories answer to the same name and only one
-	// of them is what another module's import means.
+	// of them is what another module's import means. .NET's convention is a sibling
+	// project — `Ordering.Api` and `Ordering.Api.Tests` — which puts the same namespace
+	// prefix in two trees for the same reason.
 	test bool
+}
+
+// psr4Prefix is one composer autoload entry: a namespace prefix and the directory the
+// autoloader resolves it against, already joined with the declaring composer.json's own
+// location.
+type psr4Prefix struct {
+	prefix string
+	dir    string
 }
 
 // tsAlias is one `paths` entry, flattened for matching.
@@ -338,14 +360,14 @@ func (r *resolver) addPyRoot(dir string) {
 	})
 }
 
-// addJVMPackage records a `package` declaration against the directory declaring it.
+// addDeclaredPackage records a namespace declaration against the directory declaring it.
 //
-// This is the JVM's equivalent of addGoModule, and it comes from a different place: a Go
-// module path is declared once in go.mod, while a JVM package is declared in every source
-// file, and no build file signpost reads states the mapping at all. Task #19 does not read
-// pom.xml or build.gradle, so the source files are the only authority available — and they
-// are a sufficient one, because a `package` declaration is exactly the name another file
-// writes in its `import`.
+// This is the equivalent of addGoModule for the languages that declare their namespace in
+// the source, and it comes from a different place: a Go module path is declared once in
+// go.mod, while a JVM package or a C# namespace is declared in every source file, and no
+// build file signpost reads states the mapping at all. So the source files are the only
+// authority available — and they are a sufficient one, because a `package` or `namespace`
+// declaration is exactly the name another file writes in its `import` or `using`.
 //
 // Deriving the name from the path instead would be wrong rather than approximate. The same
 // file compiles from `src/main/java`, from `src/`, or from any directory a Gradle source
@@ -360,12 +382,12 @@ func (r *resolver) addPyRoot(dir string) {
 // A test directory is registered anyway rather than discarded, because a package declared
 // *only* under src/test is still this repository's own and an import of it is internal, not
 // a dependency somebody forgot to declare.
-func (r *resolver) addJVMPackage(file, name string, test bool) {
+func (r *resolver) addDeclaredPackage(file, name string, test bool) {
 	if name == "" {
 		return
 	}
 	dir := dirOf(file)
-	for i, p := range r.jvmPkgs {
+	for i, p := range r.declPkgs {
 		if p.name != name || p.dir != dir {
 			continue
 		}
@@ -373,11 +395,11 @@ func (r *resolver) addJVMPackage(file, name string, test bool) {
 		// flag means "every file declaring this package here is a test", so a single
 		// non-test file clears it — the same rule hasProdSource applies to a module.
 		if !test {
-			r.jvmPkgs[i].test = false
+			r.declPkgs[i].test = false
 		}
 		return
 	}
-	r.jvmPkgs = append(r.jvmPkgs, jvmPackage{dir: dir, name: name, test: test})
+	r.declPkgs = append(r.declPkgs, declaredPackage{dir: dir, name: name, test: test})
 	// Longest name first, so an import of `com.example.api.internal` matches that package
 	// rather than `com.example.api` with a stray `.internal` read as a class.
 	//
@@ -387,17 +409,83 @@ func (r *resolver) addJVMPackage(file, name string, test bool) {
 	// the extra one is `src/integrationTest`, and both sort ahead of `main`. So a repository
 	// with either resolves every import of a package to the copy under test — an edge into
 	// the tests instead of into the code, drawn with no indication that a choice was made.
-	sort.Slice(r.jvmPkgs, func(i, j int) bool {
-		if len(r.jvmPkgs[i].name) != len(r.jvmPkgs[j].name) {
-			return len(r.jvmPkgs[i].name) > len(r.jvmPkgs[j].name)
+	sort.Slice(r.declPkgs, func(i, j int) bool {
+		if len(r.declPkgs[i].name) != len(r.declPkgs[j].name) {
+			return len(r.declPkgs[i].name) > len(r.declPkgs[j].name)
 		}
-		if r.jvmPkgs[i].name != r.jvmPkgs[j].name {
-			return r.jvmPkgs[i].name < r.jvmPkgs[j].name
+		if r.declPkgs[i].name != r.declPkgs[j].name {
+			return r.declPkgs[i].name < r.declPkgs[j].name
 		}
-		if r.jvmPkgs[i].test != r.jvmPkgs[j].test {
-			return !r.jvmPkgs[i].test
+		if r.declPkgs[i].test != r.declPkgs[j].test {
+			return !r.declPkgs[i].test
 		}
-		return r.jvmPkgs[i].dir < r.jvmPkgs[j].dir
+		return r.declPkgs[i].dir < r.declPkgs[j].dir
+	})
+}
+
+// addRubyRoot records a directory a plain `require` resolves against.
+//
+// Ruby's load path is not stated in the repository. A gem's `lib/` is on it because
+// RubyGems puts it there, `$LOAD_PATH.unshift` can add anything at runtime, and a Rails
+// app resolves `require "app/models/user"` against a path its framework assembles. So
+// the roots here are the conventional ones — a gem's `lib`, and the directory holding the
+// Gemfile — and an import naming a file under neither is reported unresolved rather than
+// guessed at.
+//
+// The interesting half is what this makes *unnecessary*: `require_relative` needs no root
+// at all, because it is relative to the requiring file, and it is the form a repository's
+// own code overwhelmingly uses. So the roots cover the plain `require` of first-party code,
+// which is the minority case, and the majority case resolves without them.
+func (r *resolver) addRubyRoot(dir string) {
+	for _, d := range r.rubyRoots {
+		if d == dir {
+			return
+		}
+	}
+	r.rubyRoots = append(r.rubyRoots, dir)
+	// Longest first, for the reason addPyRoot gives: a file inside a gem resolves against
+	// that gem before the repository root.
+	sort.Slice(r.rubyRoots, func(i, j int) bool {
+		if len(r.rubyRoots[i]) != len(r.rubyRoots[j]) {
+			return len(r.rubyRoots[i]) > len(r.rubyRoots[j])
+		}
+		return r.rubyRoots[i] < r.rubyRoots[j]
+	})
+}
+
+// addPSR4 records one composer autoload prefix against the directory it maps onto.
+//
+// This is the PHP case ADR 0017 describes: a resolution root drawn from a manifest the
+// repository ships, where the mapping exists nowhere else. `"App\\": "src/"` in
+// composer.json is what makes `use App\Domain\Order` mean `src/Domain/Order.php`, and no
+// path convention supplies it — the same project could map `App\` onto `lib/` or onto
+// `packages/core/src/` and nothing in the source would change.
+func (r *resolver) addPSR4(prefix, dir string) {
+	prefix = strings.Trim(strings.TrimSpace(prefix), `\`)
+	if prefix == "" {
+		// The empty prefix is composer's fallback: every namespace maps under this
+		// directory. Legal, and deliberately not recorded — it would claim every import
+		// in the repository, including the ones a dependency's namespace names, and turn
+		// a third-party `use` into an internal edge to a directory that has no such file.
+		return
+	}
+	for _, p := range r.psr4 {
+		if p.prefix == prefix && p.dir == dir {
+			return
+		}
+	}
+	r.psr4 = append(r.psr4, psr4Prefix{prefix: prefix, dir: dir})
+	// Longest prefix first, so `App\Domain\` beats `App\` for an import under both. A
+	// composer file routinely declares the pair, and the nested one names the directory
+	// the file is actually in.
+	sort.Slice(r.psr4, func(i, j int) bool {
+		if len(r.psr4[i].prefix) != len(r.psr4[j].prefix) {
+			return len(r.psr4[i].prefix) > len(r.psr4[j].prefix)
+		}
+		if r.psr4[i].prefix != r.psr4[j].prefix {
+			return r.psr4[i].prefix < r.psr4[j].prefix
+		}
+		return r.psr4[i].dir < r.psr4[j].dir
 	})
 }
 
@@ -517,8 +605,168 @@ func (r *resolver) resolveImport(lang discover.Lang, from, raw string) (id strin
 		return r.resolveJVM(raw)
 	case discover.LangC, discover.LangCpp, discover.LangObjC:
 		return r.resolveC(from, raw)
+	case discover.LangRuby:
+		return r.resolveRuby(from, raw)
+	case discover.LangPHP:
+		return r.resolvePHP(from, raw)
+	case discover.LangCSharp:
+		return r.resolveCSharp(raw)
 	}
 	return "", false
+}
+
+// resolveRuby resolves a require against the files in the repository.
+//
+// A require names a file and not a module, which puts Ruby closer to C than to the JVM. Two
+// forms, and the extractor already distinguished them: `require_relative` arrives with a
+// leading `./` and is relative to the requiring file, while a plain `require` arrives bare
+// and resolves against the load path.
+//
+// The `.rb` extension is conventionally omitted and is appended here, which is what makes
+// `require_relative "user"` reach `user.rb`. A require that names the extension explicitly
+// still resolves, because the bare path is tried first.
+//
+// A relative require is internal by construction even when it reaches no node — the same
+// rule resolvePython applies to a dotted import — so it never falls through to the gem
+// lookup. Turning `require_relative "../missing"` into a gem named `..` would be a
+// dependency the repository never declared.
+func (r *resolver) resolveRuby(from, raw string) (string, bool) {
+	if strings.HasPrefix(raw, "./") || strings.HasPrefix(raw, "../") {
+		if id := r.rubyTarget(path.Join(dirOf(from), raw)); id != "" {
+			return id, true
+		}
+		return "", true
+	}
+	// The load path: each root, nearest first, plus each root's `lib` — which is where a
+	// gem's own code lives and what RubyGems puts on the path, so `require "corpus/buffer"`
+	// in a gem means `lib/corpus/buffer.rb`.
+	for _, root := range r.rubyRootsFor(from) {
+		for _, layout := range []string{"", "lib"} {
+			if id := r.rubyTarget(path.Join(root, layout, raw)); id != "" {
+				return id, true
+			}
+		}
+	}
+	// A gem's name is the first segment: `require "active_record"` and `require
+	// "rspec/core"` are both satisfied by a gem named for the part before the slash.
+	first, _, _ := strings.Cut(raw, "/")
+	return r.depOrEmpty("rubygems", []string{raw, first}), false
+}
+
+// rubyRootsFor returns the load-path roots a require in `from` resolves against, nearest
+// first. Same scoping rule as pyRootsFor, and the repository root is always last so a
+// layout with no Gemfile at all still resolves.
+func (r *resolver) rubyRootsFor(from string) []string {
+	out := make([]string, 0, len(r.rubyRoots)+1)
+	for _, root := range r.rubyRoots {
+		if root == "" || from == root || strings.HasPrefix(from, root+"/") {
+			out = append(out, root)
+		}
+	}
+	if len(out) == 0 || out[len(out)-1] != "" {
+		out = append(out, "")
+	}
+	return out
+}
+
+// rubyTarget resolves a require path to the file it names.
+func (r *resolver) rubyTarget(p string) string {
+	p = strings.TrimPrefix(path.Clean(p), "./")
+	if p == "" || p == "." || strings.HasPrefix(p, "..") {
+		return ""
+	}
+	for _, cand := range []string{p, p + ".rb"} {
+		if r.srcFiles[cand] {
+			return r.moduleAt(dirOf(cand))
+		}
+	}
+	return ""
+}
+
+// resolvePHP resolves a use statement or a require against composer's autoload map.
+//
+// Two unrelated forms reach here, and which one it is decides everything. A `require` names
+// a file and arrives with a leading `./` when the extractor saw `__DIR__` — the same signal
+// Ruby's relative require carries. A `use` names a namespace, and a namespace resolves only
+// through the PSR-4 map composer.json declares: `"App\\": "src/"` is what makes `App\Domain`
+// mean `src/Domain`. Without a composer.json there is no mapping and nothing to guess from,
+// which is the honest gap rather than a placeholder.
+//
+// A namespace that matches no PSR-4 prefix falls through to the declared dependencies, where
+// a vendor namespace belongs: `Symfony\Component\HttpFoundation` is a Composer package, and
+// its name — `symfony/http-foundation` — is not derivable from the namespace, so the lookup
+// goes through depKeys' normalization on the segments rather than on the whole.
+func (r *resolver) resolvePHP(from, raw string) (string, bool) {
+	// A require names a file. The `.php` extension is written out in PHP, unlike Ruby's,
+	// so the path is used as given.
+	if strings.HasPrefix(raw, "./") || strings.HasPrefix(raw, "../") || strings.HasSuffix(raw, ".php") {
+		if id := r.phpTarget(path.Join(dirOf(from), raw)); id != "" {
+			return id, true
+		}
+		// A path-shaped require is a claim about a file in this repository even when the
+		// file is not one signpost extracted — vendor/autoload.php is generated and not in
+		// the tree. Internal, and honestly unresolved.
+		return "", true
+	}
+	ns := strings.Trim(raw, `\`)
+	for _, p := range r.psr4 {
+		rest, ok := underNamespace(ns, p.prefix)
+		if !ok {
+			continue
+		}
+		if id := r.moduleAt(path.Join(p.dir, strings.ReplaceAll(rest, `\`, "/"))); id != "" {
+			return id, true
+		}
+		// The prefix matched, so this is first-party code by the repository's own
+		// declaration, whether or not a node exists for the directory.
+		return "", true
+	}
+	// A vendor package is named `vendor/package` and its namespace is conventionally
+	// `Vendor\Package`, which is a convention rather than a rule — so both the two-segment
+	// slash form and the bare segments are offered, and depKeys' lowercasing does the rest.
+	return r.depOrEmpty("composer", phpDepCandidates(ns)), false
+}
+
+// phpTarget resolves a require path to the file it names.
+func (r *resolver) phpTarget(p string) string {
+	p = strings.TrimPrefix(path.Clean(p), "./")
+	if p == "" || p == "." || strings.HasPrefix(p, "..") {
+		return ""
+	}
+	if !r.srcFiles[p] {
+		return ""
+	}
+	return r.moduleAt(dirOf(p))
+}
+
+// underNamespace reports whether a namespace is a prefix itself or lies beneath it,
+// returning the remainder. Backslash-delimited, so `AppKernel` is not under `App`.
+func underNamespace(ns, prefix string) (rest string, ok bool) {
+	if ns == prefix {
+		return "", true
+	}
+	if strings.HasPrefix(ns, prefix+`\`) {
+		return ns[len(prefix)+1:], true
+	}
+	return "", false
+}
+
+// phpDepCandidates returns the package names a namespace might be declared as.
+//
+// Composer names a package `vendor/name` and its root namespace `Vendor\Name`, so the
+// two-segment slash form is the direct translation. The bare first segment is offered too,
+// because a single-vendor package with one namespace segment — `Twig\Environment` from
+// `twig/twig` — has no second segment to translate.
+func phpDepCandidates(ns string) []string {
+	segs := strings.Split(ns, `\`)
+	out := make([]string, 0, 3)
+	if len(segs) >= 2 {
+		out = append(out, segs[0]+"/"+segs[1])
+	}
+	if len(segs) >= 1 && segs[0] != "" {
+		out = append(out, segs[0]+"/"+segs[0], segs[0])
+	}
+	return out
 }
 
 // resolveC resolves an #include against the files in the repository.
@@ -610,27 +858,70 @@ func (r *resolver) cTarget(p string) string {
 // said so. Until a build file is read, `org.springframework.*` is counted as unresolved
 // — visible in the gap report, which is where a reader can see the limitation.
 // The first match wins outright, and both halves of that are decided by the sort in
-// addJVMPackage rather than here. Longest name first is what makes
+// addDeclaredPackage rather than here. Longest name first is what makes
 // `com.example.store.internal` beat `com.example.store`, and production before test is what
 // picks between the two directories a standard layout gives one package name. There is no
-// second candidate to fall through to and no need for one: every jvmPkgs entry was recorded
+// second candidate to fall through to and no need for one: every declPkgs entry was recorded
 // from a file that also created a module node for its directory, both keyed on dirOf, so the
 // lookup below cannot come back empty.
 func (r *resolver) resolveJVM(raw string) (string, bool) {
-	for _, p := range r.jvmPkgs {
-		if jvmUnderPackage(raw, p.name) {
+	if id, ok := r.resolveDeclaredPackage(raw); ok {
+		return id, true
+	}
+	return "", false
+}
+
+// resolveCSharp resolves a `using` against the namespaces the repository declares, then
+// against the packages an MSBuild project declares.
+//
+// The first half is the same shape as the JVM's and for the same reason — a C# namespace is
+// declared in the source and nowhere else. The second half is what the JVM does not yet
+// have: a `.csproj` names its NuGet packages, so an import that matches none of this
+// repository's own namespaces has a declared-dependency list to be checked against.
+//
+// The prefix candidates go longest first because a NuGet package's identity is
+// conventionally its root namespace, and the convention is a prefix rather than an equality:
+// `Microsoft.Extensions.Logging.Abstractions` is a package, and so is
+// `Microsoft.Extensions.Logging`, and a `using Microsoft.Extensions.Logging.Console` written
+// against either must reach the one the project declared rather than the shorter one that
+// happens to sort first.
+func (r *resolver) resolveCSharp(raw string) (string, bool) {
+	if id, ok := r.resolveDeclaredPackage(raw); ok {
+		return id, true
+	}
+	return r.depOrEmpty("nuget", dottedPrefixes(raw)), false
+}
+
+// resolveDeclaredPackage matches an import against the namespace declarations the
+// repository's own source files make.
+//
+// No `from` is needed, which makes this the simplest resolver here: a JVM import and a C#
+// using are both the fully-qualified name and never relative to the importing file.
+func (r *resolver) resolveDeclaredPackage(raw string) (string, bool) {
+	for _, p := range r.declPkgs {
+		if underDotted(raw, p.name) {
 			return r.moduleAt(p.dir), true
 		}
 	}
 	return "", false
 }
 
-// jvmUnderPackage reports whether an import names a package or something inside it.
+// underDotted reports whether an import names a package or something inside it.
 //
 // Dot-delimited, so `com.example.apiv2` is not under `com.example.api` — the same care
 // underPath takes with slashes, and for the same reason.
-func jvmUnderPackage(raw, pkg string) bool {
+func underDotted(raw, pkg string) bool {
 	return raw == pkg || strings.HasPrefix(raw, pkg+".")
+}
+
+// dottedPrefixes returns the dot-delimited prefixes of a name, longest first.
+func dottedPrefixes(raw string) []string {
+	segs := strings.Split(raw, ".")
+	out := make([]string, 0, len(segs))
+	for i := len(segs); i >= 1; i-- {
+		out = append(out, strings.Join(segs[:i], "."))
+	}
+	return out
 }
 
 // resolveGo resolves by module path prefix, which is exactly how the Go toolchain

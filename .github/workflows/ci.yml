@@ -1067,13 +1067,20 @@ jobs:
           core=$(grep -rl 'title: ts/packages/core/src' "${bundle}/modules") || {
             echo "no module page for ts/packages/core/src; this step asserts nothing"; exit 1; }
 
+          # Matched on the name anywhere under references/ rather than on a predicted `npm-`
+          # filename, because the defect does not belong to npm: a fabricated external is
+          # fabricated whatever ecosystem prefix it acquires, and the C# `ProjectReference`
+          # reaches it through a `nuget-` name. Scoped to references/, which is where an
+          # external's page goes — modules/ holding a page named for first-party source is
+          # what correct output looks like, and `dotnet/Corpus.Api` slugs to `corpus-api`.
           for p in corpus-core corpus-api; do
-            if [ -f "${bundle}/references/npm-${p}.md" ]; then
-              echo "references/npm-${p}.md is a page for a package that lives in this"
-              echo "repository, presented as an external dependency. A reader auditing what"
-              echo "this repo pulls in from outside is shown first-party source."
+            for f in "${bundle}/references/"*"${p}"*.md; do
+              [ -e "$f" ] || continue
+              echo "${f} is a page for a package that lives in this repository, presented"
+              echo "as an external dependency. A reader auditing what this repo pulls in"
+              echo "from outside is shown first-party source."
               exit 1
-            fi
+            done
           done
 
           # The counterpart that still fails: dropping the import instead of resolving it
@@ -1291,7 +1298,7 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
-          want=11
+          want=22
           [ "$got" = "$want" ] || {
             echo "${got} unresolved specifier(s), want ${want}."
             echo
@@ -1315,8 +1322,16 @@ jobs:
           # repository, so the count above is the primary assertion and this is the corroborating
           # one: a near-miss folded into a declared dependency shows up here as nothing at all,
           # while one fabricated outright shows up as a file.
+          # Six of the newest are fragments rather than whole names because the declared
+          # dependency each one shadows is a page that must exist: `monologextras` cannot be
+          # shortened to `monolog`, nor `rack_extras` to `rack`, and `caching` is what separates
+          # the undeclared Microsoft.Extensions.Caching.Memory from the declared
+          # Microsoft.Extensions.Logging beside it in the same file.
           for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe \
-                      promises winreg-helpers winreg_helpers apiv2 junit servlet kotlinx; do
+                      promises winreg-helpers winreg_helpers apiv2 junit servlet kotlinx \
+                      buffers stdlib-extras stdlib_extras gtest-extras gtest_extras \
+                      corpuskit unity ldap rack-extras rack_extras corpuskernel \
+                      monologextras domainmodel caching; do
             if find "${bundle}/references/" -maxdepth 1 -iname "*${frag}*" -print -quit \
                  | grep -q .; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
@@ -1347,6 +1362,22 @@ jobs:
               echo "a reference page exists for ${name}. It is the JVM runtime, versioned with"
               echo "the toolchain rather than declared in a build file, so a page for it is a"
               echo "supply-chain entry for the JDK."
+              exit 1
+            fi
+          done
+          # The .NET and Ruby runtimes, matched the same way and for the same reason a fragment
+          # check will not do here: `caching` above is the near-miss beside
+          # Microsoft.Extensions.Logging, which is declared and must have a page, and `ldap` is
+          # the near-miss beside net/http. Both of these arrive with the toolchain — the .NET SDK
+          # ships System.* and the Microsoft.Win32/CSharp/VisualBasic three, and net/http is in
+          # Ruby's own library — so a page for either is a supply-chain entry for the runtime.
+          # `Microsoft.*` is a rule rather than a prefix precisely because Microsoft.Extensions.*
+          # is not part of it.
+          for name in System.Text.Json Microsoft.Win32 net/http json; do
+            if grep -rFqx "title: ${name}" "${bundle}/references/"; then
+              echo "a reference page exists for ${name}, which ships with the runtime rather"
+              echo "than being declared in a manifest. Nobody upgrades it independently, so a"
+              echo "page for it is a supply-chain entry for the toolchain."
               exit 1
             fi
           done

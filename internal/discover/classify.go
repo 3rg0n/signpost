@@ -34,6 +34,9 @@ const (
 	LangC      Lang = "c"
 	LangCpp    Lang = "cpp"
 	LangObjC   Lang = "objc"
+	LangRuby   Lang = "ruby"
+	LangPHP    Lang = "php"
+	LangCSharp Lang = "csharp"
 	LangOther  Lang = "other"
 )
 
@@ -78,10 +81,17 @@ var sourceExts = map[string]Lang{
 	// Objective-C's .m is unambiguous; .mm is Objective-C++ and reads as the same
 	// language here, since every construct .mm adds is one the extractor already
 	// handles for C++.
-	".m":     LangObjC,
-	".mm":    LangObjC,
-	".rb":    LangOther,
-	".cs":    LangOther,
+	".m":  LangObjC,
+	".mm": LangObjC,
+	".rb": LangRuby,
+	// Rakefile and Gemfile are Ruby too, but they are build files: manifestNames
+	// matches them by basename before this map is consulted, which is the same
+	// precedence build.gradle.kts relies on. A `.rake` file stays source: it holds task
+	// definitions written in Ruby, which is code, where a `.gemspec` holds only
+	// assignments and so is matched as a manifest instead.
+	".rake":  LangRuby,
+	".php":   LangPHP,
+	".cs":    LangCSharp,
 	".swift": LangOther,
 	".scala": LangOther,
 	".sh":    LangOther,
@@ -104,12 +114,42 @@ var manifestNames = map[string]bool{
 	"setup.cfg":           true,
 	"Cargo.toml":          true,
 	"Gemfile":             true,
-	"pom.xml":             true,
-	"build.gradle":        true,
-	"build.gradle.kts":    true,
-	"Makefile":            true,
-	"Justfile":            true,
-	"justfile":            true,
+	"Rakefile":            true,
+	"rakefile":            true,
+	"composer.json":       true,
+	// MSBuild's two shared-configuration files. Matched by name and not by the
+	// .props extension, because an arbitrary .props file is build logic while these
+	// two are fixed by the toolchain and Directory.Packages.props is where Central
+	// Package Management declares every version the solution uses.
+	"Directory.Build.props":    true,
+	"Directory.Packages.props": true,
+	"pom.xml":                  true,
+	"build.gradle":             true,
+	"build.gradle.kts":         true,
+	"Makefile":                 true,
+	"Justfile":                 true,
+	"justfile":                 true,
+}
+
+// manifestExts identify a build manifest by extension rather than by basename.
+//
+// This exists for exactly one ecosystem. Every other build manifest has a fixed
+// name the toolchain requires — go.mod, Cargo.toml, pom.xml — so a basename match
+// finds it. MSBuild instead names the project after the project: the file is
+// Ordering.Api.csproj, and no list of names can hold it. The extension is the only
+// stable part.
+// The .gemspec is here for a related reason with a different cause. Its name is chosen by
+// the author — and required to match the gem — so no basename holds it either; what makes
+// it a manifest rather than the Ruby source its extension suggests is that a gemspec's
+// entire content is metadata assignments. It declares the gem's dependencies and nothing
+// callable, so reading it as source would report a file of assignments as a module with no
+// symbols while its dependency list went unread.
+var manifestExts = map[string]bool{
+	".csproj":  true,
+	".fsproj":  true,
+	".vbproj":  true,
+	".sln":     true,
+	".gemspec": true,
 }
 
 // lockNames are manifests we record but never parse for structure: they are
@@ -126,6 +166,9 @@ var lockNames = map[string]bool{
 	"poetry.lock":       true,
 	"Gemfile.lock":      true,
 	"composer.lock":     true,
+	// NuGet's, which is opt-in: it exists only when a project sets
+	// RestorePackagesWithLockFile, which is why a .NET repository usually has none.
+	"packages.lock.json": true,
 }
 
 // ownershipNames carry stated human intent: who owns this, and what the rules
@@ -160,6 +203,13 @@ func classify(rel string) (Class, Lang) {
 		return ClassDoc, ""
 	}
 	if manifestNames[base] {
+		return ClassManifest, ""
+	}
+	// The .NET project and solution files are the only build manifests whose name
+	// is chosen by the author rather than fixed by the toolchain, so they are the
+	// one family that cannot be matched by basename. The extension is the whole
+	// signal: Foo.csproj, Foo.fsproj, Foo.vbproj, Foo.sln.
+	if manifestExts[ext] {
 		return ClassManifest, ""
 	}
 	if c, ok := classifyInfra(rel, base, lower, ext); ok {
@@ -307,6 +357,23 @@ func isTestPath(rel string, lang Lang) bool {
 		// conventionally put them.
 		return containsDir(rel, "test") || containsDir(rel, "tests") ||
 			cTestBasename(path.Base(rel))
+	case LangRuby:
+		// RSpec and minitest are the two conventions in use, and they disagree about
+		// everything except the delimiter: `_spec.rb` under `spec/`, `_test.rb` under
+		// `test/`. Both directory names are caught by the fallback below.
+		return containsDir(rel, "spec") || containsDir(rel, "test") || containsDir(rel, "tests") ||
+			strings.HasSuffix(base, "_spec.rb") || strings.HasSuffix(base, "_test.rb")
+	case LangPHP:
+		// PHPUnit names a test class FooTest and requires the file to match the class,
+		// so the capital is the signal — the same case-sensitivity jvmTestBasename
+		// documents, and for the same reason: `Manifest.php` is not a test.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			phpTestBasename(path.Base(rel))
+	case LangCSharp:
+		// A .NET test project is conventionally a whole directory — Foo.Tests — and
+		// the segment check finds it. The basename forms are xUnit's and NUnit's.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			csharpTestDir(rel) || jvmTestBasename(strings.TrimSuffix(path.Base(rel), ".cs"))
 	case LangJava, LangKotlin:
 		// src/test/java and src/test/kotlin are where Maven and Gradle put tests, and
 		// both are caught by the "test" segment the fallback already checks. The
@@ -390,6 +457,53 @@ func jvmTestBasename(base string) bool {
 	// to begin a new word.
 	if rest, ok := strings.CutPrefix(name, "Test"); ok && rest != "" {
 		return rest[0] >= 'A' && rest[0] <= 'Z'
+	}
+	return false
+}
+
+// phpTestBasename reports whether a PHP filename names a test class.
+//
+// PHPUnit discovers tests by class name — a class extending TestCase, conventionally
+// named FooTest — and PSR-4 requires the file to be named for the class it holds. So
+// the filename carries the convention, capital and all.
+//
+// Case-sensitive, for the reason jvmTestBasename gives: lowercased, `Manifest.php`
+// and `Latest.php` end in the letters of "test", and marking production code as a
+// test silently drops the API it declares out of the public surface.
+func phpTestBasename(base string) bool {
+	name := strings.TrimSuffix(base, ".php")
+	if name == "" {
+		return false
+	}
+	for _, suffix := range []string{"Test", "TestCase", "Spec"} {
+		if strings.HasSuffix(name, suffix) && len(name) > len(suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+// csharpTestDir reports whether any directory segment names a .NET test project.
+//
+// The .NET convention is a sibling project rather than a directory inside the one
+// under test: Ordering.Api and Ordering.Api.Tests. So the signal is a segment
+// *ending* in ".Tests", which containsDir cannot express — it matches a segment
+// equal to a name, and `Ordering.Api.Tests` equals nothing.
+//
+// Matched case-sensitively on the ".Tests" and ".Test" suffixes only. The dot is
+// what makes the boundary safe: a project legitimately named `Contests` is not
+// caught, and neither is one named `LatestApi`.
+func csharpTestDir(rel string) bool {
+	segs := strings.Split(rel, "/")
+	if len(segs) < 2 {
+		return false
+	}
+	for _, d := range segs[:len(segs)-1] {
+		for _, suffix := range []string{".Tests", ".Test", ".UnitTests", ".IntegrationTests"} {
+			if strings.HasSuffix(d, suffix) {
+				return true
+			}
+		}
 	}
 	return false
 }

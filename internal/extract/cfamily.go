@@ -790,9 +790,10 @@ func cSkipParens(s string, i int) int {
 	}
 	d := 0
 	for ; i < len(s); i++ {
-		if s[i] == '(' {
+		switch s[i] {
+		case '(':
 			d++
-		} else if s[i] == ')' {
+		case ')':
 			d--
 			if d == 0 {
 				return i + 1

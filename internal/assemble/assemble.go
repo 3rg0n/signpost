@@ -247,14 +247,16 @@ func (b *builder) index() {
 			if !b.testFiles[f.Path] {
 				b.hasProdSource[dir] = true
 			}
-			// A JVM package is declared in the source, not in a manifest — the only
-			// language here whose resolution map is built from extracted facts. Tests are
-			// registered too, and marked: the standard layout declares each package twice,
-			// once per source set, so an import of `com.example.api` names both
-			// `src/main/java/com/example/api` and `src/test/java/com/example/api` and only
-			// the first is what another module means by it.
-			if f.Lang == discover.LangJava || f.Lang == discover.LangKotlin {
-				b.res.addJVMPackage(f.Path, f.Package, b.testFiles[f.Path])
+			// A JVM package and a C# namespace are declared in the source, not in a
+			// manifest — the languages whose resolution map is built from extracted facts.
+			// Tests are registered too, and marked: the standard JVM layout declares each
+			// package twice, once per source set, so an import of `com.example.api` names
+			// both `src/main/java/com/example/api` and `src/test/java/com/example/api` and
+			// only the first is what another module means by it. .NET's sibling test project
+			// puts the same namespace prefix in two trees for the same reason.
+			switch f.Lang {
+			case discover.LangJava, discover.LangKotlin, discover.LangCSharp:
+				b.res.addDeclaredPackage(f.Path, f.Package, b.testFiles[f.Path])
 			}
 		}
 	}
@@ -272,6 +274,19 @@ func (b *builder) index() {
 				b.res.addPyRoot(dirOf(f.Path))
 			case manifest.KindTSConfig:
 				b.res.addTSConfig(f.Path, f.Resolution)
+			case manifest.KindGemfile:
+				// The directory holding the Gemfile or gemspec is a load-path root, which is
+				// the conventional half of Ruby's resolution; addRubyRoot explains why the
+				// convention is all there is to go on.
+				b.res.addRubyRoot(dirOf(f.Path))
+			case manifest.KindComposer:
+				// composer's autoload block, carried in Resolution.Aliases because a PSR-4
+				// prefix and a tsconfig alias are the same statement in two ecosystems.
+				for _, a := range f.Resolution.Aliases {
+					for _, t := range a.Targets {
+						b.res.addPSR4(a.Pattern, t)
+					}
+				}
 			}
 		}
 		// After the loop, because a tsconfig may extend one that appears later in path
@@ -923,6 +938,12 @@ func (b *builder) nearestModule(dir string) string {
 // access needs no import, so a JVM test of a class beside it imports everything *except*
 // its subject, and reading imports alone draws the edge to every collaborator and misses
 // the one thing under test.
+//
+// C# looks like the JVM here and is deliberately not treated as one. A .NET test project
+// declares `Ordering.Api.Tests`, not `Ordering.Api` — a namespace of its own, which resolves
+// to the test's own directory and yields the self-edge the graph drops, silently replacing
+// the import-derived edge that is correct. A C# test names its subject the ordinary way, with
+// a `using`, because a different namespace is exactly what a `using` is for.
 func (b *builder) addTestEdges() {
 	if b.in.Source == nil {
 		return
@@ -943,7 +964,8 @@ func (b *builder) addTestEdges() {
 		// A JVM test's collaborators are ordinary imports and its subject is the package
 		// it declares, so consulting both would report `store` as tested by a test of
 		// `api` — the confidently-wrong edge this function's rule exists to avoid.
-		if f.Lang == discover.LangJava || f.Lang == discover.LangKotlin {
+		switch f.Lang {
+		case discover.LangJava, discover.LangKotlin:
 			if to, internal := b.res.resolveImport(f.Lang, f.Path, f.Package); internal && to != "" {
 				b.g.AddEdge(graph.Edge{
 					From: to, To: testMod,

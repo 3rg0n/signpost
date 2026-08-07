@@ -269,8 +269,8 @@ ordering gives the sample projects the paths a real repository would have.
 symbols, interface implementations, `main` functions, `init` side effects. Full
 precision, zero dependencies, and it is our primary language.
 
-**TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C** get
-hand-written line-oriented extractors covering imports/requires, top-level declarations,
+**TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#**
+get hand-written line-oriented extractors covering imports/requires, top-level declarations,
 exports, and entrypoints.
 These are not full parsers and are not trying to be. The signpost layer needs the module
 graph and the public surface, and a focused extractor gets ~95% of that. Where
@@ -317,6 +317,35 @@ rather than a finding, and it does not vote on the language of the directory it 
 an Objective-C directory holds a `.h` for every `.m`, and counting the header gives a tie
 that would erase Objective-C from the bundle of a repository written in it.
 
+**Ruby, PHP and C# each get the resolution rule their own ecosystem states, and no two of
+them are the same rule.** Ruby's is a search path: a bare `require "corpus/format"` is found
+by walking the load path, which in a repository means the conventional `lib/` under each
+gem root, and a `require_relative` is internal by construction with no lookup needed at all.
+PHP's is a declared map — the PSR-4 block in `composer.json` is the only place a namespace
+prefix is bound to a directory, and it is delimited by backslash, so a prefix test done on
+the string routes `CorpusKernel\Boot` under `Corpus\` and draws an edge to code that does not
+exist. C# has no manifest naming its own namespaces at all, which puts it in the JVM's
+position: `using Corpus.Domain` is spelled the same whether `Corpus.Domain` is a project in
+this tree or a package on nuget.org, so the map is built from the namespaces the repository's
+own files declare, and the delimiter there is the dot. Where a rule runs out the import is a
+gap in the coverage report, never a coordinate the repository never declared.
+
+The .NET runtime needs a rule rather than a prefix, and that is the interesting half.
+`System.*` arrives with the SDK and is versioned with it, so a reference page for it is a
+supply-chain entry for the toolchain. `Microsoft.*` splits: `Microsoft.Win32`,
+`Microsoft.CSharp` and `Microsoft.VisualBasic` ship with the SDK and
+`Microsoft.Extensions.Logging` is a `PackageReference` somebody upgrades. A check accepting
+`Microsoft.*` as the platform hides the second kind behind the word "runtime", which is the
+one direction that costs a reader something they cannot re-derive from the page.
+
+A `ProjectReference` is the C# case where a declared dependency is *not* an external one. It
+names another `.csproj` in the tree, so it composes rather than imports: the reference page
+is suppressed and the edge lands on the referenced project's own module. And a .NET test
+project is why C# has no `addTestEdges` arm despite looking like the JVM — it declares a
+namespace of its own, `Corpus.Api.Tests`, which resolves to the test directory itself and
+yields a self-edge; a C# test names its subject with a `using`, because a different namespace
+is exactly what a `using` is for.
+
 Extractors stay hand-written, and the threshold at which that changes is written down
 ([ADR 0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)): a
 tree-sitter Go binding becomes the answer for *one* language when that language's scored
@@ -332,16 +361,18 @@ could not read at all, and they share one namespace and one resolution map becau
 compiler does — a Kotlin file importing a Java package is ordinary in every JVM
 repository. C, C++ and Objective-C come next, and for the same reason as one another:
 they are one family sharing one preprocessor and one header convention, so the language
-boundary between them is not a boundary an extractor can see. Everything else falls back
-to a generic extractor (comment headers, filename conventions, sibling context) plus the
-semantic pass.
+boundary between them is not a boundary an extractor can see. Ruby, PHP and C# follow last
+of the twelve, and their reason is the inverse of the C family's: they have nothing in
+common with each other or with what came before, and each is the language a large body of
+existing services is written in. Everything else falls back to a generic extractor (comment
+headers, filename conventions, sibling context) plus the semantic pass.
 
 **Manifests and infrastructure are the highest-value deterministic signal and the
 part comparable tools mostly skip.** All of this is exact, cheap, and structural:
 
 | Source | Yields |
 |---|---|
-| `go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml` | external deps, module identity, scripts, entrypoints |
+| `go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`, `Gemfile`, `*.gemspec`, `composer.json`, `*.csproj` | external deps, module identity, scripts, entrypoints |
 | `Containerfile` / `Dockerfile`, compose files | services, ports, base images, build inputs |
 | `*.tf`, `*.tfvars` | what runs, where state lives, which of the repository's own directories the infrastructure is composed from, secret *references* |
 | `.github/workflows/*` | how it builds, tests, and ships; what gates exist |

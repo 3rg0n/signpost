@@ -78,7 +78,8 @@ where humans can correct it in place, so the corrections survive.
 ## What it reads
 
 First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++,
-and Objective-C — imports, public surface, and entrypoints, each extractor scored against
+Objective-C, Ruby, PHP, and C# — imports, public surface, and entrypoints, each extractor
+scored against
 hand-labeled fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one
 resolution map because the compiler does, and it is built from the `package` declarations
 in the source: no `pom.xml` or `build.gradle` reader exists yet, so a JVM import that names
@@ -92,8 +93,23 @@ including file's directory through the conventional include roots — which is w
 repository holding more than one C project needs, and the delimiter is kept because quoted
 and angled are different search rules.
 
+Ruby, PHP, and C# each resolve by the rule their own ecosystem states, and the three rules
+have nothing in common. A Ruby `require` searches the load path, so a bare `corpus/format`
+is found under the nearest `lib/` and a relative `require_relative` is internal by
+construction. A PHP `use` resolves through the PSR-4 map in `composer.json`, which is the
+only place a namespace prefix is bound to a directory — and it is delimited by backslash,
+so `CorpusKernel\Boot` is not under `Corpus\` however much of the string it shares. C# has
+no manifest naming its own namespaces at all: `using Corpus.Domain` looks identical whether
+it is a project in the tree or a package from nuget.org, so it is matched against the
+namespaces the repository's own files declare, the way the JVM's map is built. Where the
+rule runs out, the import is a gap in the coverage report and never a package name nobody
+declared. The `System.*` and `Microsoft.Win32` runtime arrives with the SDK and is versioned
+with it, so it gets no reference page; `Microsoft.Extensions.*` does not ship with the SDK
+and is somebody's upgrade, so it does.
+
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
-`package.json`, `pyproject.toml`, `requirements.txt`, and `Cargo.toml` for
+`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `Gemfile`,
+`*.gemspec`, `composer.json`, and `*.csproj`/`*.fsproj`/`*.vbproj` for
 dependencies; Containerfiles, compose files, GitHub Actions workflows,
 Kubernetes manifests, Helm charts, and Terraform for deployment; protobuf, OpenAPI/Swagger,
 and GraphQL SDL for contracts; SQL migrations, CODEOWNERS, ADRs, and Makefiles
@@ -395,7 +411,7 @@ in a repository without a bundle.
 |---|---|
 | Graph model, metrics, Louvain clustering | done |
 | Discovery: gitignore, classification, bounded reads | done |
-| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C) | done |
+| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#) | done |
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |

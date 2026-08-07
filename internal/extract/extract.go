@@ -138,6 +138,9 @@ func DefaultRegistry() *Registry {
 	r.Register(JavaExtractor{})
 	r.Register(KotlinExtractor{})
 	r.Register(CExtractor{})
+	r.Register(RubyExtractor{})
+	r.Register(PHPExtractor{})
+	r.Register(CSharpExtractor{})
 	return r
 }
 

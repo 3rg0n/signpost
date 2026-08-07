@@ -468,7 +468,16 @@ func manifestEcosystem(f manifest.Facts) string {
 		return "Python"
 	case manifest.KindCargo:
 		return "Cargo"
+	case manifest.KindGemfile:
+		return "RubyGems"
+	case manifest.KindComposer:
+		return "Composer"
+	case manifest.KindMSBuild:
+		return "NuGet"
 	}
+	// KindSolution is deliberately absent. A .sln declares which projects exist and no
+	// dependencies at all, so pairing it with a lockfile would report a solution as an
+	// unpinned supply chain — see the comment on the constant.
 	return ""
 }
 
@@ -493,6 +502,16 @@ func lockEcosystem(p string) string {
 		return "Python"
 	case "Cargo.lock":
 		return "Cargo"
+	case "Gemfile.lock", "gems.locked":
+		return "RubyGems"
+	case "composer.lock":
+		return "Composer"
+	case "packages.lock.json":
+		// NuGet's lockfile is opt-in — it exists only when a project sets
+		// RestorePackagesWithLockFile — so its absence is the normal case for a .NET
+		// repository and gets reported as such. That is the honest reading: without it,
+		// a floating version range does resolve differently between two restores.
+		return "NuGet"
 	}
 	return ""
 }

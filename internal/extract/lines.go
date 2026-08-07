@@ -61,6 +61,25 @@ type scanConfig struct {
 	// Rust's does. Python's and JavaScript's do not: there, an unterminated quote
 	// is a syntax error, and the safe reading is that the line ends with it.
 	multiLineQuote bool
+	// verbatimAt enables C#'s @"..." verbatim string, where a backslash is an
+	// ordinary character, "" is an escaped quote, and the literal may span lines.
+	verbatimAt bool
+	// heredocPrefix opens a heredoc: "<<" in Ruby, "<<<" in PHP. A heredoc's body
+	// is arbitrary text terminated by an identifier on a line of its own, which no
+	// delimiter-matching rule can find — so it is a separate mechanism rather than
+	// a kind of string.
+	heredocPrefix string
+	// lineBlockStart and lineBlockEnd are whole-line block comment delimiters:
+	// Ruby's =begin and =end, which are only comments when they begin a line.
+	lineBlockStart string
+	lineBlockEnd   string
+	// scriptTags marks a language embedded in text, where code exists only between
+	// its open and close tags: PHP's <?php ... ?>.
+	scriptTags bool
+	// hashBracketAttr exempts `#[` from the `#` line comment, because PHP 8 spells an
+	// attribute that way: `#[Route('/x')] public function show()` is a declaration,
+	// and reading the hash as a comment would delete it.
+	hashBracketAttr bool
 }
 
 // scanState is the cross-line scanner state: an open block comment, or an open
@@ -73,11 +92,46 @@ type scanState struct {
 	// strRaw marks the open string as raw, where a backslash is an ordinary
 	// character and so cannot escape the terminator.
 	strRaw bool
+	// strVerbatim marks an open C# verbatim string, where the terminator is escaped
+	// by doubling it rather than by a backslash: `""` is a quote, not the end.
+	strVerbatim bool
+	// heredocs are the terminators of the heredocs opened and not yet closed, in
+	// the order they must close. A stack rather than one string because a single
+	// line may open several — `query(<<~SQL, <<~PARAMS)` is legal Ruby — and closing
+	// them out of order would leave a body readable as code.
+	heredocs []heredoc
+	// outsideScript is true when the scanner is in the text a script language is
+	// embedded in rather than in its code: a PHP file before its first <?php.
+	outsideScript bool
+}
+
+// heredoc is one open heredoc body.
+type heredoc struct {
+	// term is the identifier that closes it.
+	term string
+	// indented allows the terminator to be preceded by whitespace, which `<<~` and
+	// `<<-` permit and a bare `<<ID` does not.
+	indented bool
 }
 
 // closes returns the index just past the terminator of the open string in line,
 // or -1 when the string continues onto the next line.
 func (st *scanState) closes(line string) int {
+	if st.strVerbatim {
+		// A doubled quote inside a verbatim string is an escaped quote, so the first
+		// quote *not* followed by another is the terminator.
+		for i := 0; i < len(line); i++ {
+			if line[i] != '"' {
+				continue
+			}
+			if i+1 < len(line) && line[i+1] == '"' {
+				i++
+				continue
+			}
+			return i + 1
+		}
+		return -1
+	}
 	if st.strRaw {
 		if i := strings.Index(line, st.strDelim); i >= 0 {
 			return i + len(st.strDelim)
@@ -138,6 +192,41 @@ var (
 		blockNests: true, rawStringHash: true, lifetimes: true, noSingleQuote: true,
 		multiLineQuote: true,
 	}
+	// Ruby. Its block comment is the whole-line =begin/=end pair, which is why it uses
+	// lineBlockStart rather than blockStart: `=begin` is only a comment at column 0,
+	// and `x =begin_at(3)` is code.
+	//
+	// Two things are deliberately not modelled. `%w[a b]` and `%i[a b]` are word-array
+	// literals whose contents are bare words: they survive as code, which can only
+	// contribute a spurious token to a line the extractor's declaration rules then
+	// reject, never blank a real one. And `/regex/` is left alone for the same reason
+	// as Rust's lifetimes — a slash is division far more often than it opens a regex,
+	// and guessing wrong blanks the rest of a line.
+	scanRuby = scanConfig{
+		lineComment: []string{"#"}, lineBlockStart: "=begin", lineBlockEnd: "=end",
+		heredocPrefix: "<<",
+	}
+	// PHP. Code exists only inside <?php ... ?>, so scriptTags starts the scanner in
+	// text and everything outside the tags is not read — a template's HTML is not
+	// source, and a `class="btn"` attribute in it would otherwise read as a class.
+	//
+	// Three comment forms, because PHP inherited both C's and the shell's. The
+	// heredoc prefix is <<< for both heredoc and nowdoc.
+	scanPHP = scanConfig{
+		lineComment: []string{"//", "#"}, blockStart: "/*", blockEnd: "*/",
+		heredocPrefix: "<<<", scriptTags: true, hashBracketAttr: true,
+	}
+	// C#. Block comments do not nest, as in C. A raw string literal is `"""` and spans
+	// lines, and the verbatim `@"..."` form needs its own rule because it escapes a
+	// quote by doubling it rather than with a backslash.
+	//
+	// The single quote stays an ordinary delimiter for the reason scanJava gives: the
+	// scanner blanks a delimited body, so `if (c == '{')` contributes no brace to the
+	// depth count the extractor walks.
+	scanCSharp = scanConfig{
+		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
+		tripleQuotes: []string{`"""`}, verbatimAt: true,
+	}
 )
 
 // scanLines splits source into code lines with comments and string bodies removed.
@@ -146,13 +235,57 @@ func scanLines(src string, cfg scanConfig) []codeLine {
 	out := make([]codeLine, 0, len(raw))
 
 	var st scanState
+	// A script language's file begins in the text it is embedded in, not in code.
+	// Starting inside would read a template's HTML as source.
+	st.outsideScript = cfg.scriptTags
 
 	for i, line := range raw {
 		cl := codeLine{Raw: line, Num: i + 1, Indent: indentWidth(line)}
+		// A heredoc's body is checked before everything else, including an open
+		// string: the heredoc opened later, so it closes first.
+		if len(st.heredocs) > 0 {
+			if heredocCloses(line, st.heredocs[0]) {
+				st.heredocs = st.heredocs[1:]
+			}
+			cl.InBlockString = true
+			out = append(out, cl)
+			continue
+		}
+		if st.outsideScript {
+			// Text outside the script tags. Only the opening tag matters; everything
+			// before it is markup, and a declaration cannot appear in it.
+			if j := strings.Index(line, "<?"); j >= 0 {
+				st.outsideScript = false
+				open := j + 2
+				if strings.HasPrefix(line[open:], "php") {
+					open += 3
+				}
+				cl.Text = strings.Repeat(" ", open) + scanOne(line[open:], cfg, &st)
+				out = append(out, cl)
+				continue
+			}
+			out = append(out, cl)
+			continue
+		}
+		if cfg.lineBlockStart != "" && st.blockDepth == 0 &&
+			strings.HasPrefix(line, cfg.lineBlockStart) {
+			// Ruby's =begin. Only a comment at column 0, which is why it is matched
+			// against the unindented line and not tested inside scanOne.
+			st.blockDepth = 1
+			out = append(out, cl)
+			continue
+		}
+		if cfg.lineBlockEnd != "" && st.blockDepth > 0 {
+			if strings.HasPrefix(line, cfg.lineBlockEnd) {
+				st.blockDepth = 0
+			}
+			out = append(out, cl)
+			continue
+		}
 		if st.strDelim != "" {
 			// Inside a multi-line string: look for its terminator.
 			if end := st.closes(line); end >= 0 {
-				st.strDelim, st.strRaw = "", false
+				st.strDelim, st.strRaw, st.strVerbatim = "", false, false
 				// Everything up to and including the terminator is string body;
 				// the remainder of the line is code again.
 				cl.Text = strings.Repeat(" ", end) + scanOne(line[end:], cfg, &st)
@@ -208,7 +341,10 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 	for i < len(line) {
 		// Line comment: the rest of the line is gone.
 		if c := matchAny(line[i:], cfg.lineComment); c != "" {
-			break
+			attr := cfg.hashBracketAttr && c == "#" && strings.HasPrefix(line[i:], "#[")
+			if !attr {
+				break
+			}
 		}
 		// Block comment.
 		if cfg.blockStart != "" && strings.HasPrefix(line[i:], cfg.blockStart) {
@@ -232,6 +368,34 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 				break // comment continues onto the next line
 			}
 			b.WriteByte(' ')
+			continue
+		}
+		// The close tag of an embedded script language ends the code region.
+		if cfg.scriptTags && strings.HasPrefix(line[i:], "?>") {
+			st.outsideScript = true
+			break
+		}
+		// A heredoc opener. Checked before the string and operator cases because
+		// `<<~SQL` starts with two characters that are otherwise a shift operator, and
+		// the identifier after them is not a string by any delimiter rule.
+		if cfg.heredocPrefix != "" && strings.HasPrefix(line[i:], cfg.heredocPrefix) {
+			if hd, consumed, ok := scanHeredocOpen(line[i:], cfg.heredocPrefix); ok {
+				st.heredocs = append(st.heredocs, hd)
+				b.WriteString(strings.Repeat(" ", consumed))
+				i += consumed
+				continue
+			}
+		}
+		// C#'s verbatim string: @"..." spans lines and treats a backslash literally,
+		// so the ordinary scanner would misjudge both its end and its escapes.
+		if cfg.verbatimAt && line[i] == '@' && i+1 < len(line) && line[i+1] == '"' {
+			consumed, open := scanVerbatim(line[i:])
+			b.WriteString(strings.Repeat(" ", consumed))
+			i += consumed
+			if open {
+				st.strDelim, st.strVerbatim = `"`, true
+				break
+			}
 			continue
 		}
 		// Triple-quoted strings, checked before single quotes so that """ is not
@@ -353,6 +517,97 @@ func scanRustRawString(s string) (consumed int, open string, ok bool) {
 	}
 	// Unterminated on this line: consume the remainder and report what closes it.
 	return len(s), term, true
+}
+
+// scanHeredocOpen measures a heredoc opener at the start of s and reports what
+// closes it.
+//
+// The forms, across both languages that have one:
+//
+//	<<SQL      <<-SQL     <<~SQL          Ruby
+//	<<<SQL     <<<"SQL"   <<<'SQL'        PHP (the quoted form is nowdoc)
+//
+// Two things make this a measurement rather than a match. The identifier is
+// arbitrary, so nothing but the opener says what terminates the body; and `a << b`
+// is a legal shift, so an opener is only an opener when an identifier follows
+// immediately. Reading a shift as a heredoc would blank the rest of the file.
+func scanHeredocOpen(s, prefix string) (heredoc, int, bool) {
+	i := len(prefix)
+	hd := heredoc{}
+	// Ruby's squiggly and dash forms allow the terminator to be indented. PHP's
+	// always does, which the caller expresses by using the <<< prefix.
+	if prefix == "<<<" {
+		hd.indented = true
+	}
+	if i < len(s) && (s[i] == '~' || s[i] == '-') {
+		hd.indented = true
+		i++
+	}
+	// A quoted identifier: Ruby's <<~'SQL' and PHP's nowdoc <<<'SQL'.
+	quote := byte(0)
+	if i < len(s) && (s[i] == '\'' || s[i] == '"') {
+		quote = s[i]
+		i++
+	}
+	start := i
+	for i < len(s) && identChar(s[i]) {
+		i++
+	}
+	if i == start {
+		return heredoc{}, 0, false
+	}
+	// A heredoc identifier is conventionally uppercase, and requiring it is what
+	// separates the opener from a shift by a variable: `count << shift` has a
+	// lowercase identifier after the operator and is not a heredoc. Ruby permits a
+	// lowercase one, so this trades a rare real heredoc for never destroying a line
+	// that holds a shift — the safe direction, since a missed heredoc leaves its body
+	// readable as code where a missed shift blanks real declarations.
+	name := s[start:i]
+	if name != strings.ToUpper(name) {
+		return heredoc{}, 0, false
+	}
+	if quote != 0 {
+		if i >= len(s) || s[i] != quote {
+			return heredoc{}, 0, false
+		}
+		i++
+	}
+	hd.term = name
+	return hd, i, true
+}
+
+// heredocCloses reports whether line is the terminator of an open heredoc.
+func heredocCloses(line string, hd heredoc) bool {
+	t := line
+	if hd.indented {
+		t = strings.TrimLeft(t, " \t")
+	}
+	// Ruby allows a trailing comma or paren after the terminator when the heredoc was
+	// an argument; PHP allows a semicolon.
+	t = strings.TrimRight(t, " \t\r,);")
+	return t == hd.term
+}
+
+// scanVerbatim measures a C# verbatim string starting at s[0]=='@'.
+//
+// Returns the bytes consumed and whether the string is still open at the line's
+// end. A doubled quote is an escaped quote rather than a terminator, which is the
+// one rule that makes this different from an ordinary string: `@"C:\a"" b"` is one
+// literal, and reading the second quote as its end would leave ` b"` as code.
+func scanVerbatim(s string) (consumed int, open bool) {
+	i := 2 // past @"
+	for i < len(s) {
+		if s[i] != '"' {
+			i++
+			continue
+		}
+		if i+1 < len(s) && s[i+1] == '"' {
+			i += 2
+			continue
+		}
+		return i + 1, false
+	}
+	return len(s), true
 }
 
 // findUnescaped returns the index of the first occurrence of delim not preceded

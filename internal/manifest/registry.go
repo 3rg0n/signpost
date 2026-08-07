@@ -75,6 +75,13 @@ func DefaultRegistry() *Registry {
 	r.Register(Route{Kind: KindRequirement, Match: matchRequirements, Read: ExtractRequirements})
 	r.Register(Route{Kind: KindCargo, Match: basename("Cargo.toml"), Read: ExtractCargo})
 	r.Register(Route{Kind: KindMakefile, Match: basename("Makefile", "makefile", "GNUmakefile"), Read: ExtractMakefile})
+	r.Register(Route{Kind: KindGemfile, Match: matchGem, Read: ExtractGem})
+	r.Register(Route{Kind: KindComposer, Match: basename("composer.json"), Read: ExtractComposer})
+	// MSBuild before the solution, though the two cannot both claim a file: the projects
+	// carry the dependencies and the solution carries only membership, and reading them in
+	// that order is what the comment on KindSolution is about.
+	r.Register(Route{Kind: KindMSBuild, Match: matchMSBuild, Read: ExtractMSBuild})
+	r.Register(Route{Kind: KindSolution, Match: ext(".sln"), Read: ExtractSolution})
 
 	// tsconfig, for its resolution mapping alone. Matched by prefix rather than exact
 	// name because the variants are conventional and carry the same mapping:
@@ -260,6 +267,49 @@ func matchTSConfig(f discover.File) bool {
 		return false
 	}
 	return strings.HasPrefix(base, "tsconfig.") || strings.HasPrefix(base, "jsconfig.")
+}
+
+// matchGem claims a Gemfile or a gemspec.
+//
+// The `.lock` is already claimed by matchLock above, which runs first — so `Gemfile.lock`
+// never reaches here even though it begins with the basename this matches. Both file types
+// go to one reader because a gem's dependencies are split across them by convention; see
+// ExtractGem.
+//
+// A Rakefile is deliberately not claimed. discover classifies it as a manifest because it is
+// a build file rather than library source, but what it holds is task definitions in Ruby, and
+// this reader would find no dependency in it — so it lands in the unhandled count, where the
+// gap is visible. #23's shell and build-graph work is where a task runner's targets belong.
+func matchGem(f discover.File) bool {
+	base := path.Base(f.Path)
+	if strings.HasSuffix(base, ".gemspec") {
+		return true
+	}
+	// `gems.rb` is bundler's own alternative name for a Gemfile, and `Gemfile.ci` is the
+	// conventional spelling for a second dependency set — the same shape requirements-dev.txt
+	// has, and a real one: a repository that keeps its CI-only gems there states them nowhere
+	// else.
+	return base == "Gemfile" || base == "gems.rb" || strings.HasPrefix(base, "Gemfile.")
+}
+
+// matchMSBuild claims a .NET project file and MSBuild's two shared property files.
+//
+// The project extensions are what discover's manifestExts holds, for the reason stated
+// there: MSBuild names the project after the project, so the extension is the only stable
+// part. The two `.props` files are matched by exact name instead — an arbitrary `.props`
+// file is build logic, while these two are fixed by the toolchain and
+// Directory.Packages.props is where Central Package Management declares every version a
+// solution uses.
+func matchMSBuild(f discover.File) bool {
+	switch strings.ToLower(path.Ext(f.Path)) {
+	case ".csproj", ".fsproj", ".vbproj":
+		return true
+	}
+	switch path.Base(f.Path) {
+	case "Directory.Build.props", "Directory.Packages.props":
+		return true
+	}
+	return false
 }
 
 // matchRequirements claims pip requirement files under any of their conventional names:

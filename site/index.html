@@ -249,10 +249,10 @@ disconnected components (30)
         <h2 class="row__key">reads</h2>
         <div class="row__body">
           <p class="prose prose--lead">
-            Go, TypeScript, JavaScript, Python, Rust, Java, Kotlin, C, C++ and
-            Objective-C — imports, public surface, and entrypoints. Each
-            extractor is scored against hand-labeled fixtures rather than
-            asserted, at F1 1.000 for both imports and symbols.
+            Go, TypeScript, JavaScript, Python, Rust, Java, Kotlin, C, C++,
+            Objective-C, Ruby, PHP and C# — imports, public surface, and
+            entrypoints. Each extractor is scored against hand-labeled fixtures
+            rather than asserted, at F1 1.000 for both imports and symbols.
           </p>
           <p class="prose">
             Java and Kotlin share one resolution map because the compiler does,
@@ -272,10 +272,24 @@ disconnected components (30)
             search rules.
           </p>
           <p class="prose">
+            Ruby, PHP and C# each resolve by a rule their own ecosystem states
+            rather than by one shared convention. A Ruby
+            <code>require</code> searches the load path; a PHP
+            <code>use</code> resolves through the PSR-4 map in
+            <code>composer.json</code>; a C# <code>using</code> names a
+            namespace no manifest declares, so it is matched against the
+            namespaces the repository's own files declare. Where the rule runs
+            out, the import is reported as a gap and never turned into a package
+            name nobody wrote — <code>Corpus.DomainModel</code> is not under
+            <code>Corpus.Domain</code>, because a namespace nests on the dot.
+          </p>
+          <p class="prose">
             Beyond source, signpost reads what a repository states about
             itself: <code>go.mod</code>, <code>package.json</code>,
-            <code>pyproject.toml</code>, <code>requirements.txt</code> and
-            <code>Cargo.toml</code> for dependencies; Containerfiles, compose
+            <code>pyproject.toml</code>, <code>requirements.txt</code>,
+            <code>Cargo.toml</code>, <code>Gemfile</code>,
+            <code>composer.json</code> and <code>*.csproj</code> for
+            dependencies; Containerfiles, compose
             files, GitHub Actions workflows, Kubernetes manifests and Helm
             charts for deployment; protobuf, OpenAPI and GraphQL SDL for
             contracts; SQL migrations, CODEOWNERS, ADRs and Makefiles for the
@@ -312,7 +326,7 @@ disconnected components (30)
                 <td>done</td>
               </tr>
               <tr class="is-done">
-                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C</th>
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#</th>
                 <td>done</td>
               </tr>
               <tr class="is-done">

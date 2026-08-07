@@ -1,0 +1,10 @@
+# Corpus fixture: not installed, not run.
+source "https://rubygems.org"
+
+# The declared dependency `lib/api/client.rb` requires by name, and the one this stage's
+# reference page is asserted against.
+gem "rack", "~> 3.0"
+
+group :development, :test do
+  gem "rspec", "~> 3.13"
+end
