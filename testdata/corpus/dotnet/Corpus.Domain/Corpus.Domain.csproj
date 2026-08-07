@@ -1,0 +1,17 @@
+<!-- Corpus fixture: not restored, not built. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- The namespace this project's files declare, which is what a `using` in another
+         project names. It matches the file name here, and MSBuild lets them diverge, so
+         the element is written out rather than left to the default. -->
+    <RootNamespace>Corpus.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <!-- No PackageReference, on purpose: a domain project with no dependencies is the
+       ordinary .NET shape, and it is the manifest that proves the per-ecosystem lockfile
+       finding is per ecosystem rather than per file. NuGet is reported once, against the
+       project below that does declare something. -->
+
+</Project>

@@ -1,0 +1,17 @@
+<!-- Corpus fixture: not restored, not built. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Corpus.Api.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.9.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Corpus.Api\Corpus.Api.csproj" />
+  </ItemGroup>
+
+</Project>

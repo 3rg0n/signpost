@@ -42,6 +42,14 @@ func TestRegistryRoutesByName(t *testing.T) {
 		{"Makefile", discover.ClassManifest, KindMakefile},
 		{"go.sum", discover.ClassManifest, KindLock},
 		{"web/pnpm-lock.yaml", discover.ClassManifest, KindLock},
+		{"Gemfile", discover.ClassManifest, KindGemfile},
+		{"gems.rb", discover.ClassManifest, KindGemfile},
+		{"Gemfile.ci", discover.ClassManifest, KindGemfile},
+		{"signpost.gemspec", discover.ClassManifest, KindGemfile},
+		{"composer.json", discover.ClassManifest, KindComposer},
+		{"src/Api/Api.csproj", discover.ClassManifest, KindMSBuild},
+		{"Directory.Packages.props", discover.ClassManifest, KindMSBuild},
+		{"Signpost.sln", discover.ClassManifest, KindSolution},
 
 		{"Containerfile", discover.ClassInfra, KindContainer},
 		{"services/api/Dockerfile.dev", discover.ClassInfra, KindContainer},
@@ -294,6 +302,8 @@ func TestEveryKindIsRoutable(t *testing.T) {
 		KindContainer, KindCompose, KindWorkflow, KindHelmChart, KindHelmValues,
 		KindKubernetes, KindProto, KindOpenAPI, KindGraphQL, KindMigration,
 		KindCodeowners, KindAgentRules, KindADR, KindMakefile, KindLock,
+		KindTSConfig, KindTerraform,
+		KindGemfile, KindComposer, KindMSBuild, KindSolution,
 	} {
 		if !got[k] {
 			t.Errorf("kind %q has no route", k)

@@ -1,0 +1,31 @@
+<!-- Corpus fixture: not restored, not built. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Corpus.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The declared NuGet package, and the one that makes the near-miss in Greeter.cs mean
+         something. `Microsoft.Extensions.Logging` is not the .NET runtime — it is a package
+         somebody chose and has to upgrade — so it must reach a reference page, and the
+         Abstractions sibling nobody declared must not. -->
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <!-- The child-element spelling of Version, which older tooling emits and which a reader
+         that only looked at attributes would record as a package with no version at all. -->
+    <PackageReference Include="Serilog">
+      <Version>4.1.0</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A project in this repository, written with backslashes because MSBuild is a
+         Windows-first tool. This must draw an edge onto the Domain project's own module and
+         must NOT become a reference page: a repository does not pull its own project in from
+         a registry, and a page for it would be a supply-chain entry nobody publishes. -->
+    <ProjectReference Include="..\Corpus.Domain\Corpus.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

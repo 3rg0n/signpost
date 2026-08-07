@@ -151,6 +151,20 @@ func isStdlib(lang discover.Lang, raw string) bool {
 		return jvmRuntimePackage(raw)
 	case discover.LangC, discover.LangCpp, discover.LangObjC:
 		return cSystemHeader(raw)
+	case discover.LangRuby:
+		return rubyStdlib(raw)
+	case discover.LangPHP:
+		// PHP's standard library is functions in the global namespace, not namespaces to
+		// import, so there is no stdlib import to recognise: `strlen` and `json_encode` are
+		// simply callable. What a `use` names is either first-party or a Composer package —
+		// with one exception, which phpUse already handles by recording no import at all:
+		// a single-segment `use Throwable` names a built-in class in the global namespace.
+		//
+		// So an unresolved PHP import is a real gap every time, which is the correct
+		// reading and the reason this arm reports nothing as the runtime.
+		return false
+	case discover.LangCSharp:
+		return dotnetRuntimeNamespace(raw)
 	case discover.LangTS, discover.LangJS:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
@@ -403,6 +417,113 @@ var pyStdlib = map[string]bool{
 	"imp": true, "lib2to3": true, "mailcap": true, "msilib": true, "nis": true,
 	"nntplib": true, "ossaudiodev": true, "pipes": true, "smtpd": true, "sndhdr": true,
 	"spwd": true, "sunau": true, "telnetlib": true, "uu": true, "xdrlib": true,
+}
+
+// rubyStdlib reports whether a require names a library Ruby itself ships.
+//
+// Matched on the whole require path, with no first-segment rule — which is the one
+// decision in this function and the opposite of what the Python, Rust and Node arms do.
+// Those three cut on their separator because a submodule of a standard-library package
+// belongs to the same package. Ruby's slash is not that: it is a *file* path into
+// whichever gem installed a file at that name, so `net/http` is the stdlib and
+// `net/ldap` is the net-ldap gem, `digest/sha2` is the stdlib and `digest/murmurhash`
+// is a gem. Cutting on the slash would silently reclassify both dependencies as the
+// runtime, which is exactly the failure the LangTS arm above documents for `pathe/utils`
+// — so the hierarchical names are listed rather than derived.
+//
+// Consulted only after resolution has failed, so a name missing from this table
+// degrades to "unresolved": visible in the gap count and correctable, never a wrong
+// edge.
+//
+// One genuine grey area, and the lookup order is what settles it. Ruby's *default gems*
+// — json, logger, csv, ostruct and a growing list of others — ship with the interpreter
+// and are also separately versionable gems, so a Gemfile naming one is a real declared
+// dependency with a real version somebody has to upgrade. The manifest lookup runs
+// before isStdlib is consulted, so a declared `gem "json"` resolves to that dependency
+// and never reaches here; this table catches only the case where nothing declared it,
+// where "the interpreter provides it" is the true answer.
+func rubyStdlib(raw string) bool {
+	return rubyStdlibRequires[strings.TrimSuffix(raw, ".rb")]
+}
+
+// rubyStdlibRequires are the require paths Ruby's standard library and default gems
+// answer, in the spelling code writes them.
+var rubyStdlibRequires = map[string]bool{
+	// Built into the interpreter or loaded from the stdlib root.
+	"abbrev": true, "base64": true, "benchmark": true, "bigdecimal": true,
+	"cgi": true, "coverage": true, "csv": true, "date": true, "delegate": true,
+	"digest": true, "drb": true, "English": true, "erb": true, "etc": true,
+	"expect": true, "fcntl": true, "fiddle": true, "fileutils": true, "find": true,
+	"forwardable": true, "getoptlong": true, "ipaddr": true, "json": true,
+	"logger": true, "mkmf": true, "monitor": true, "mutex_m": true, "objspace": true,
+	"observer": true, "open-uri": true, "open3": true, "openssl": true,
+	"optparse": true, "ostruct": true, "pathname": true, "pp": true, "prettyprint": true,
+	"prime": true, "pstore": true, "psych": true, "pty": true, "racc": true,
+	"rbconfig": true, "readline": true, "resolv": true, "resolv-replace": true,
+	"rexml": true, "rinda": true, "ripper": true, "rss": true, "rubygems": true,
+	"securerandom": true, "set": true, "shellwords": true, "singleton": true,
+	"socket": true, "stringio": true, "strscan": true, "syslog": true, "tempfile": true,
+	"time": true, "timeout": true, "tmpdir": true, "tsort": true, "un": true,
+	"uri": true, "weakref": true, "yaml": true, "zlib": true,
+	// Ruby 3 moved these out of the language and into requirable libraries.
+	"debug": true, "did_you_mean": true, "error_highlight": true, "irb": true,
+	"reline": true, "syntax_suggest": true,
+	// Hierarchical names, listed rather than cut on the slash for the reason above.
+	"cgi/cookie": true, "cgi/escape": true, "cgi/session": true, "cgi/util": true,
+	"digest/bubblebabble": true, "digest/md5": true, "digest/rmd160": true,
+	"digest/sha1": true, "digest/sha2": true,
+	"drb/drb": true, "drb/ssl": true, "drb/unix": true,
+	"io/console": true, "io/nonblock": true, "io/wait": true,
+	"json/add/core": true, "json/common": true,
+	"net/ftp": true, "net/http": true, "net/https": true, "net/imap": true,
+	"net/pop": true, "net/protocol": true, "net/smtp": true,
+	"openssl/digest": true, "openssl/ssl": true, "openssl/x509": true,
+	"psych/visitors": true,
+	"rexml/document": true, "rexml/parsers/pullparser": true, "rexml/streamlistener": true,
+	"rubygems/package": true, "rubygems/version": true,
+	"uri/common": true, "uri/generic": true, "uri/http": true,
+	"yaml/store": true,
+	// The three test frameworks the interpreter ships. minitest and test-unit are
+	// default gems, so the note above applies: a Gemfile naming one resolves as a
+	// dependency before this table is reached.
+	"minitest/autorun": true, "minitest/test": true, "test/unit": true,
+}
+
+// dotnetRuntimeNamespace reports whether a C# using names a namespace the .NET runtime
+// itself ships.
+//
+// The first dotted segment decides, with `Microsoft` split the way jvmRuntimePackage
+// splits `javax` and for the same historical reason:
+//
+//   - `System.*` is the runtime outright. Every namespace under it arrives with the SDK
+//     and is versioned with it.
+//   - `Microsoft.*` is mostly *not* the runtime. `Microsoft.Extensions.*`,
+//     `Microsoft.AspNetCore.*` and `Microsoft.EntityFrameworkCore.*` are NuGet packages
+//     somebody chose and must upgrade, and calling them standard would hide the supply
+//     chain behind a word. Only the platform sub-namespaces are accepted:
+//     `Microsoft.Win32` for the registry and native interop, and `Microsoft.CSharp` and
+//     `Microsoft.VisualBasic` for the compiler-support namespaces the SDK ships.
+//
+// One narrower grey area, called out because the answer differs by target framework
+// rather than by name: `System.Text.Json` is in-box on .NET Core and later, and a NuGet
+// package on .NET Framework. This accepts it as the runtime, which is right for the
+// targets anyone starts a project on today; on an old Framework target it understates
+// the dependency by one, and the csproj lookup runs first, so a project that does
+// declare the package resolves to it before reaching here.
+func dotnetRuntimeNamespace(raw string) bool {
+	first, rest, _ := strings.Cut(raw, ".")
+	second, _, _ := strings.Cut(rest, ".")
+	switch first {
+	case "System":
+		return true
+	case "Microsoft":
+		switch second {
+		case "Win32", "CSharp", "VisualBasic":
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 // nodeBuiltin is Node's built-in module names.

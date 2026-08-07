@@ -10,6 +10,82 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-07
 
+- **Ruby, PHP and C# are read as first-class languages, and no two of them resolve the same
+  way.** That is the finding rather than an incidental detail: the C family shared one
+  extractor because they share a preprocessor, and these three share nothing — with each
+  other or with anything already here. Ruby's resolution is a search path, PHP's is a map
+  declared in `composer.json`, and C#'s comes from the source because no manifest states it.
+  Each is scored F1 1.000 for both imports and symbols against a hand-labeled corpus, and
+  each ships its own manifest reader: `Gemfile` and `*.gemspec`, `composer.json`, and
+  `*.csproj`/`*.fsproj`/`*.vbproj`.
+
+  **A Ruby `require` is a load-path search and a `require_relative` is not.** The relative
+  form is internal by construction, with no lookup to get wrong; the bare form walks the
+  conventional `lib/` under each gem root, which is what makes `require "corpus/format"` find
+  a file whose path contains no segment the require names. Standard-library recognition
+  matches the whole require path rather than its first segment, because `net/http` is the
+  stdlib and `net/ldap` is a gem somebody has to patch, and folding them together is how a
+  dependency gets reclassified as the platform.
+
+  **PHP's PSR-4 map is delimited by backslash, and a prefix test on the string is wrong.**
+  `composer.json` is the only place a namespace prefix is bound to a directory, so the map is
+  the resolution rule — but `CorpusKernel\Boot` opens with the six characters of a mapped
+  `Corpus\` prefix and is not under it, because a namespace nests on the separator. Routed by
+  string prefix it draws an edge to code that does not exist and the undeclared name it
+  really is vanishes from the gap report. The same shape appears one level down in the
+  fallback to a Composer package name: `MonologExtras\Handler` folds onto `monolog/monolog`
+  unless the candidates are cut on the separator too. PHP's `isStdlib` is `false` by
+  construction — the language's own library is global functions, not namespaced imports — so
+  an unresolved PHP import is a real gap every time.
+
+  **C# has no manifest naming its own namespaces, which puts it in the JVM's position.**
+  `using Corpus.Domain` is spelled identically whether `Corpus.Domain` is a project in this
+  tree or a package on nuget.org, so the map is built from the namespaces the repository's own
+  files declare — and the delimiter is the dot, giving `Corpus.DomainModel` the same
+  near-miss shape PHP has with backslashes. The .NET runtime then needs a rule rather than a
+  prefix: `System.*` arrives with the SDK, and `Microsoft.*` splits, with `Microsoft.Win32`
+  shipping in the SDK and `Microsoft.Extensions.Logging` being a `PackageReference` somebody
+  upgrades. Accepting `Microsoft.*` as the platform would hide the second kind behind the word
+  "runtime", which is the direction that costs a reader something the page cannot tell them.
+
+  **Two C# structures are not what they look like.** A `ProjectReference` is a declared
+  dependency that is not an external one — it names another `.csproj` in the tree, so the
+  reference page is suppressed and the edge lands on the referenced project's module, as a
+  composition rather than an import. And a .NET test project gets no `addTestEdges` arm
+  despite looking like the JVM's case: it declares `Corpus.Api.Tests`, a namespace resolving
+  to the test directory itself, which would yield a self-edge. A C# test names its subject
+  with a `using`, because a different namespace is exactly what a `using` is for.
+
+  **Both namespace forms are read, because either one alone silently swallows the other.**
+  C# 10's file-scoped `namespace Corpus.Domain;` opens no scope and puts every declaration at
+  brace depth 0; the braced form puts them at depth 1. Read as the same thing, one of the two
+  files loses every type, member and import it declares — and most C# in existence is the
+  braced form while most C# written today is not, so a repository holds both.
+
+  Four extractor defects the fixtures found before any of this shipped, each now a named
+  regression: a `global using` and a `using X = Y;` alias were read as ordinary imports, the
+  braced namespace's depth offset lost its members, and `const` members were not recorded.
+  Ruby needed four of its own, including `end`-scope tracking that has to survive a
+  `=begin`/`=end` block and a heredoc, since neither is a construct the shared scanner
+  previously knew.
+
+  **The corpus now asserts a negative boundary per language rather than only positives.**
+  Six deliberate near-misses were added, one for each way the three new rules can be too
+  permissive — `ruby net/ldap`, `ruby rack_extras`, `php CorpusKernel\Boot`,
+  `php MonologExtras\Handler`, `csharp Corpus.DomainModel`,
+  `csharp Microsoft.Extensions.Caching.Memory` — and the count of unresolved specifiers is
+  asserted at 22, not merely the presence of each. A resolver that claims everything satisfies
+  every positive assertion in the suite; only the count catches it.
+
+  One assertion had to be narrowed to stay true. The workspace-packages regression scanned
+  every page in the bundle for the name `corpus-api`, which was the same
+  assertion it meant to make only as long as no *module* was named that — and
+  `dotnet/Corpus.Api` slugs to exactly it. The claim is about `references/`, which is where an
+  external's page goes; a module page named for first-party source is what correct output looks
+  like. Scoped there, and matched on the name rather than on a predicted `npm-` filename, since
+  a fabricated external is fabricated whatever ecosystem prefix it acquires and the
+  `ProjectReference` reaches the same defect through a `nuget-` name.
+
 - **C, C++ and Objective-C are read as first-class languages, by one extractor.** They share a
   preprocessor and a header convention, and that sharing is not a detail an extractor can look
   past: a `.h` is C, C++, or Objective-C, and only its contents say which. Classification is

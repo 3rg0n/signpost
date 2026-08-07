@@ -1,0 +1,26 @@
+{
+  "name": "corpus/greeter",
+  "description": "Corpus fixture: not installed, not run.",
+  "type": "library",
+  "require": {
+    "php": ">=8.2",
+    "ext-json": "*",
+    "monolog/monolog": "^3.8"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Corpus\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Corpus\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}

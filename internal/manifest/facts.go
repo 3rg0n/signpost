@@ -99,6 +99,16 @@ const (
 	KindTSConfig    Kind = "tsconfig"
 	KindLock        Kind = "lock"
 	KindTerraform   Kind = "terraform"
+	KindGemfile     Kind = "gemfile"
+	KindComposer    Kind = "composer.json"
+	KindMSBuild     Kind = "msbuild"
+	// KindSolution is a Visual Studio solution, and it is a separate kind from
+	// KindMSBuild rather than a variant of it because a .sln declares no dependencies at
+	// all — only which projects exist. Folding the two would report a repository whose
+	// solution file the walk reached before any .csproj as a NuGet manifest declaring
+	// nothing, which reads as "this project has no dependencies" rather than as "this
+	// file never listed any".
+	KindSolution Kind = "solution"
 )
 
 // Resolution is a file's statement about what its own import specifiers mean.
