@@ -49,7 +49,7 @@ func writeMermaid(w io.Writer, g *graph.Graph) error {
 
 	// Clusters become subgraphs when they exist. A diagram of forty flat nodes is
 	// unreadable, and the clusters are already the answer to "what belongs
-	// together" — the same grouping the bundle index uses for its headings.
+	// together".
 	byCluster := map[int][]*graph.Node{}
 	for _, n := range nodes {
 		byCluster[n.Cluster] = append(byCluster[n.Cluster], n)

@@ -4,9 +4,9 @@
   "resource": "git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0",
   "date": "2026-08-06",
   "counts": {
-    "nodes": 54,
+    "nodes": 56,
     "edges": 94,
-    "clusters": 37
+    "clusters": 39
   },
   "confidence": {
     "ambiguous": 0,
@@ -52,6 +52,8 @@
     "references/adr-0016-a-reader-records-what-only-it-can-know.md",
     "references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md",
     "references/adr-0018-view-serves-a-repository-over-loopback.md",
+    "references/adr-0019-louvain-over-label-propagation.md",
+    "references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

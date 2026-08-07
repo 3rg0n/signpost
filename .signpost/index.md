@@ -2,7 +2,7 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 54 concepts, 94 relationships."
+description: "Structural map of this repository: 56 concepts, 94 relationships."
 resource: git://github.com/3rg0n/signpost@a635c18a557c6f35758d76f993e85ef19fb07ea0
 generated: { by: signpost/dev, at: "2026-08-06" }
 ---
@@ -65,8 +65,10 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0016: a reader records what only it can know](./references/adr-0016-a-reader-records-what-only-it-can-know.md) — Architecture decision (Accepted), 19 rules read from 0016-a-reader-records-what-only-it-can-know.md.
 - [ADR 0017: a resolution root may come from the source itself](./references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md) — Architecture decision (Accepted), 18 rules read from 0017-a-resolution-root-may-come-from-the-source-itself.md.
 - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md) — Architecture decision (Accepted), 20 rules read from 0018-view-serves-a-repository-over-loopback.md.
+- [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md) — Architecture decision (Accepted), 20 rules read from 0019-louvain-over-label-propagation.md.
+- [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md) — Architecture decision (Accepted), 21 rules read from 0020-git-history-annotates-the-map-and-never-draws-it.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
-- [README.md](./references/readme-md.md) — Architecture decision, 9 rules read from README.md.
+- [README.md](./references/readme-md.md) — Architecture decision, 8 rules read from README.md.
 
 ### External dependencies
 

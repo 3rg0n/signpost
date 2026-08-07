@@ -15,8 +15,9 @@ import "sort"
 // two dense groups joined by a single edge into one community. Synchronous
 // propagation with a lowest-label tie-break degenerates into a min-label flood
 // across any connected graph. That is the documented giant-community failure
-// mode, and it defeats the only purpose clustering serves here — giving
-// index.md headings that correspond to real subsystems.
+// mode, and it defeats everything the partition is for: a cluster count of one
+// for every repository, an empty Bridges — no edge can cross a boundary that
+// does not exist — and every diagram drawn as a single box.
 //
 // Determinism, which CI depends on because the bundle is committed:
 //   - nodes are processed in sorted-ID order (caller supplies the order)
