@@ -518,3 +518,50 @@ end
 		t.Errorf("symbols = %q", got)
 	}
 }
+
+// The other side of the heredoc rule, and the reason it is a rule about case rather than a
+// match on `<<`. `a << b` is a legal shift and `<<SQL` is a heredoc opener, and the two are
+// the same two characters followed by an identifier — so `scanHeredocOpen` requires the
+// identifier to be uppercase, which is the convention every heredoc in the wild follows.
+//
+// The test above asserts only the direction where a heredoc is honoured. That passes for a
+// scanner that treats *every* `<<` as an opener, and such a scanner blanks the remainder of
+// any file holding a shift, taking every declaration below it out of the graph. Ruby's `<<`
+// is also how a line is appended to an array and how a singleton class is opened, so the
+// construct is ordinary rather than exotic, and the failure is silent: the symbols simply
+// are not there.
+//
+// The trade this documents runs the other way too. Ruby permits a lowercase heredoc
+// identifier, so `<<sql` is a real opener this deliberately does not honour. That direction
+// costs at most a phantom declaration read out of the heredoc's body, where honouring every
+// `<<` costs real symbols — so the rule is set where a miss is additive rather than
+// subtractive, which is the same asymmetry the fixture-skipping rules are chosen on.
+//
+// Both spacings are here because only one of them reaches the case rule. `count << shift`
+// is stopped a step earlier, by the requirement that an identifier follow the operator
+// immediately — a space means it is not an opener whatever case the identifier is. The
+// unspaced `lines<<line` gets past that and the case is the only thing left, which makes it
+// the form that actually holds the guard up. A test written with the spaced form alone passes
+// with the guard deleted.
+func TestRubyAShiftIsNotAHeredoc(t *testing.T) {
+	fa := extractRuby(t, "a.rb", `class Shifted
+  def pack(count, shift)
+    count << shift
+  end
+end
+
+class Appended
+  def collect(lines, line)
+    lines<<line
+  end
+end
+
+class Below
+  MARKER = 1
+end
+`)
+	if got := strings.Join(fa.SymbolNames(), ","); got != "Appended,Appended.collect,Below,Below.MARKER,Shifted,Shifted.pack" {
+		t.Errorf("symbols = %q; a `<<` shift was read as a heredoc opener, which blanks every "+
+			"line below it and takes the declarations there out of the graph", got)
+	}
+}
