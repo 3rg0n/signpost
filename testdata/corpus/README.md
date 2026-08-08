@@ -56,6 +56,13 @@ matcher slightly too loose swallows it, and which nothing declares.
 | `javax.servlet.http` | the JDK's `javax.crypto` | `javax` matched on its first segment, which folds Java EE artifacts somebody upgrades into the platform |
 | `kotlinx.coroutines` | the Kotlin stdlib `kotlin` | a runtime prefix matched as a string, which reclassifies three separately versioned artifacts as the toolchain |
 | `org.junit.jupiter.api` | nothing — see below | not a near-miss: a real declared dependency, unresolvable because signpost reads no `pom.xml` or `build.gradle` |
+| `PesterExtras` | the module `#Requires -Modules Pester` names | a PowerShell candidate list matched by prefix, which reports a module this code does not load |
+| `Microsoft.PowerShell.Crescendo` | the engine module `Microsoft.PowerShell.Utility` | a `Microsoft.PowerShell.*` prefix taken for the runtime, which hides a separately versioned gallery module nobody is told to patch |
+| `Pester` | nothing — see below | not a near-miss: a module a `#Requires` states, unresolvable because signpost reads no `.psd1` manifest |
+
+The table is behind the extractors: C, C++, Objective-C, Ruby, PHP and C# each carry a
+near-miss in the corpus and a row in both test suites without one here. The suites are
+authoritative; this is documentation that lagged.
 
 Each must be reported as a gap and land nowhere else. Two wrong homes are possible and both
 are worse than the gap: an edge into this repository invents structure, and an external node
@@ -78,6 +85,26 @@ where other languages have one. `javax` is the sharpest case in any ecosystem he
 was split between the platform and Java EE in 1999 and the division is historical rather than
 structural, so `javax.crypto` is the JDK and `javax.servlet` is an artifact with its own
 advisories, and only a list of the JDK's own `javax` packages can tell them apart.
+
+**PowerShell is the second ecosystem in that position, and `Pester` is its `org.junit.jupiter.api`
+with one extra turn of the screw:** the module *is* declared, by `#Requires -Modules Pester`, and
+a `#Requires` is a requirement rather than a pin — it names no version and no source. The file
+that would pin it is a `.psd1` module manifest, whose `RequiredModules` key signpost does not read
+(stated in `classify.go`), so there is no declared list for the name to match and it is reported
+as a gap rather than invented as a PowerShell Gallery entry the repository never wrote. So
+PowerShell, like the JVM, cannot supply the other half of the instruction — an import resolving to
+a declared external — and its runtime near-miss shadows *two* runtimes rather than one, because
+PowerShell runs on .NET: the engine modules whose cmdlets are the vocabulary, and the .NET
+namespaces a `using namespace` reaches. `Microsoft.PowerShell.Utility` and `System.Text` are both
+asserted absent, matched on the whole title, because `Microsoft.PowerShell.Crescendo` is one
+segment from the first and a fragment check would be satisfied by the page that must not exist.
+
+**Shell contributes no row to this table at all, and the absence is a fact about the language
+rather than a missing fixture.** There is no shell package registry, so a `source` that reaches no
+file cannot be a dependency somebody forgot to declare; the corpus's deliberate shell near-miss
+is asserted as an unlinked specifier instead — see *An import that lands exactly nowhere* below.
+A shell specifier appearing among the unresolved would mean the resolver had started inventing
+packages for a language that has none.
 
 Alongside them sit the stdlib imports — `node:fs`, python `os`, rust `std::fmt`, java
 `java.util` and `javax.crypto`, kotlin `kotlin.math` — which are
@@ -260,8 +287,8 @@ gap was visible at all, and every extractor still to be written adds one.
 
 | Boundary | Must hold | What the other direction would cost |
 |---|---|---|
-| positive | the two `.astro` files, the `.svg`, and `LICENSE` are counted and named | the shipped bug: a repository's only frontend absent from a report that claims to say what went unread |
-| negative | `web/README.md` is not on the line, nor any classified file — no source, manifest, doc, or binary | a line that fires on every repository, which teaches people to skip the one place coverage gaps are admitted |
+| positive | the two `.astro` files, the `.svg`, `LICENSE`, and `shell/release` are counted and named — a count of **5** | the shipped bug: a repository's only frontend absent from a report that claims to say what went unread |
+| negative | `web/README.md` is not on the line, nor any classified file — no source, manifest, doc, or binary, and not `.sh`, `.ps1` or `.psm1` | a line that fires on every repository, which teaches people to skip the one place coverage gaps are admitted |
 | structural | it stays a *separate* line from `no extractor for` | folding them loses the difference between "cannot read this language" and "cannot tell what this file is" — a missing extractor versus a missing classification |
 
 Two `.astro` files rather than one, because the count is the assertion and one file cannot
@@ -269,6 +296,17 @@ distinguish counting files from counting extensions. `web/README.md` sits beside
 implementation that counted by directory fails, and binaries are excluded on purpose: a `.png`
 was classified correctly and has nothing in it to read, so counting it would bury the extensions
 that are gaps under the ones that never could be.
+
+`shell/release` is the entry with no extension at all, and it is a limitation this line exists to
+state rather than an oddity. It is an executable shell script — shebang, a `source`, a function —
+and classification is filename-only by design (`internal/discover/classify.go`), so a file with
+no extension and no known basename is `ClassOther` and no extractor is ever offered it. That is
+what a script installed on the `PATH` looks like. It sits beside the `.sh` and `.ps1` files that
+*are* read, which is what makes the negative half sharp: the difference between the counted file
+and the read ones is the extension and nothing else, since the same `source` and function shapes
+appear in both. A bundle that silently omitted a script sourcing a library in the same tree would
+read as a repository whose scripts declare nothing — and if shebang-based classification is ever
+added, this row is the one that has to move.
 
 ## An import that lands exactly nowhere
 
@@ -284,19 +322,28 @@ it would report a package nobody publishes — the fabricating failure the resol
 produce. `addImportEdges` counted a specifier only when it was **not** internal, so the internal
 branch was empty, and a module whose every import landed there read as importing nothing.
 
-Two deliberate cases sit here, in different languages because the branch is per-language:
+Three deliberate cases sit here, in different languages because the branch is per-language:
 
 | Specifier | Where it lands | The shape it stands for |
 |---|---|---|
 | `example.com/corpus/greeter/internal/generated` | inside the module `go/go.mod` declares, at a directory holding a README and no Go file | generated code, a build-tagged package, a directory whose files all exceeded the size cap |
 | `@corpus/assets/logo.svg` | a `paths` pattern matched whole, mapping onto `ts/assets/` | an asset alias — the mapping is real and its target is not extracted source |
+| `./lib/logs.sh` | an anchored `source` under `shell/scripts/`, one letter from the `lib/log.sh` the same script reads two lines above | a mistyped path — and every shell gap there is, since shell has no registry to fall back to |
+
+The shell entry is here rather than among the unresolved for a structural reason, and it is why
+shell appears in this section and in no other gap assertion: **there is no shell package
+registry.** `source` names a file, so a path reaching nothing cannot be a dependency somebody
+forgot to declare — there is no gem, npm or NuGet it could be naming instead — and `resolveShell`
+returns internal with an empty ID rather than falling through to a registry lookup. So every shell
+gap in every repository lands here by construction, and one appearing on the unresolved line would
+mean the resolver had begun inventing packages for a language that has none.
 
 `TestCorpusFirstPartyImportsThatReachNoPageAreCounted` reads all three boundaries off one report:
 
 | Boundary | Must hold | What the other direction would cost |
 |---|---|---|
-| positive | both specifiers counted and named, and the **count** is 2 | the shipped bug, and the count is the only assertion in the harness that can notice a *new* missing edge — every other one names the edges it expects |
-| negative | `example.com/corpus/greeter/greeter`, `@corpus/entry` and `@corpus/core` are absent | a branch counting every first-party import fires on every healthy repository, which teaches people to skip the line |
+| positive | all three specifiers counted and named, and the **count** is 3 | the shipped bug, and the count is the only assertion in the harness that can notice a *new* missing edge — every other one names the edges it expects |
+| negative | `example.com/corpus/greeter/greeter`, `@corpus/entry`, `@corpus/core`, `./lib/log.sh` and `./lib/retry.sh` are absent | a branch counting every first-party import fires on every healthy repository, which teaches people to skip the line |
 | structural | neither specifier appears among the unresolved, and no stdlib name appears in either | unresolved says *go and declare this*, which is the wrong instruction for a path the module already owns; one merged map cannot say which a reader is looking at |
 
 `example.com/corpus/greeter/greeter` is the negative that matters. It sits in the same import
@@ -306,6 +353,12 @@ module path, which names `go/` — a directory holding `go.mod` and no source �
 only internal import drew no edge for as long as the corpus has existed. Nothing caught it,
 because no assertion here named a Go internal edge and the coverage report had no line for it.
 Adding the count found it on the first run, along with `use super::*` resolving out of the crate.
+
+`./lib/log.sh` is the shell half of that negative, and it is the tighter pair. It is sourced by
+the same script, on the line above the one that reaches nothing, through the same `$SCRIPT_DIR`
+anchor — so the difference between the counted specifier and this one is a single letter in the
+filename. That is precisely what a resolver too eager to match a sibling erases, turning every
+mistyped source into a satisfied edge.
 
 ## Four directories called `src`
 
@@ -541,6 +594,15 @@ moves if the new language's fixtures import anything inside the repository that 
 which the *first-party* half of the instruction above is otherwise silent about: an import that
 signpost places and cannot link is a different failure from one it cannot place, and the language
 is covered for only one of them until both counts are stated.
+
+A language with **no package registry** is the case the instruction above does not cover, and
+shell is the first of them. There is nothing for its near-miss to shadow, because a `source`
+naming a path that reaches nothing is not an undeclared dependency — there is no gem or package
+it could have meant instead. So its negative boundary is the unlinked count rather than the
+unresolved one, and the pair to write is a path that resolves beside a path one character from it
+that does not. Check which of the two counts the new language's resolver can produce before
+raising either; a language whose gaps all land in one and are asserted in the other passes on a
+resolver that never reports anything at all.
 
 Nothing here is compiled or executed. These are inputs to a parser, so they need to be
 syntactically real and do not need to be correct programs.

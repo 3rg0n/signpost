@@ -406,6 +406,17 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		// only thing in a .NET repository that says they are separate: `using Corpus.Domain`
 		// looks identical whether Corpus.Domain is a project here or a package from nuget.org.
 		{"C#, a second project reached by ProjectReference", "dotnet/Corpus.Domain"},
+		{"Shell", "shell/scripts"},
+		// The sourced-library directory, and the reason it is asserted separately: it is what
+		// `source "$SCRIPT_DIR/lib/log.sh"` reaches, and an anchored source is the form a
+		// correct script writes. A rule that read only bare literal paths would leave this
+		// directory unreferenced by the script beside it.
+		{"Shell, reached through an anchored source", "shell/scripts/lib"},
+		{"PowerShell", "powershell/scripts"},
+		// The module tree, reached from the script by a Windows-separator Import-Module. Both
+		// separators appear in the corpus because both appear in real PowerShell, and a
+		// resolver reading only `/` finds nothing here.
+		{"PowerShell, a module tree reached across separators", "powershell/src/Corpus"},
 	} {
 		if _, ok := byTitle[want.dir]; !ok {
 			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
@@ -420,6 +431,12 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 	// The three newest are named here too, for a related reason: each shares its scope
 	// machinery with a language already in the list — Ruby with nothing, PHP and C# with the
 	// JVM — so a page for the directory says only that some extractor ran on it.
+	// Shell and PowerShell are the sharpest version of that: they are the two languages a
+	// reader would most expect to be one extractor, and they are not. They agree only on `#`
+	// as a comment, and their scope rules are opposites — a function nested inside another is
+	// global in shell and dies with the enclosing scope in PowerShell (ADR 0022). If one
+	// extractor ever claimed both, every row above would still pass and one of the two
+	// languages would silently stop being named anywhere in the bundle.
 	for _, want := range []struct{ dir, lang string }{
 		{"c/src", "c"},
 		{"c/include/corpus", "c"},
@@ -429,6 +446,10 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		{"ruby/lib/api", "ruby"},
 		{"php/src", "php"},
 		{"dotnet/Corpus.Api", "csharp"},
+		{"shell/scripts", "shell"},
+		{"shell/scripts/lib", "shell"},
+		{"powershell/scripts", "powershell"},
+		{"powershell/src/Corpus", "powershell"},
 	} {
 		name, ok := byTitle[want.dir]
 		if !ok {
@@ -1240,6 +1261,31 @@ func TestCorpusTSConfigPathAliasesResolve(t *testing.T) {
 // the angled form through the nearest ancestor's `include/`, and the stdlib in both its
 // extensionless C++ shape and its listed C one.
 //
+// PowerShell carries the same pair as the others and one entry of the JVM's kind, and it is the
+// language where the runtime side is hardest to see:
+//
+//   - powershell `PesterExtras` — opens with every character of `Pester`, which the module the
+//     corpus requires is named. A candidate list matched by prefix swallows it and reports a
+//     module this code does not load;
+//   - powershell `Microsoft.PowerShell.Crescendo` — the runtime near-miss, and the reason the
+//     engine modules are a closed list rather than a `Microsoft.PowerShell.*` prefix. It opens
+//     with the whole name of the engine module `Microsoft.PowerShell.Utility` and is a
+//     separately versioned gallery module somebody installs and patches;
+//   - powershell `Pester` — the limitation, the same shape as `org.junit.jupiter.api`. It *is*
+//     declared, by `#Requires -Modules Pester`, and a `#Requires` is a requirement rather than a
+//     pin: it names no version and no source. The file that would pin it is a `.psd1` module
+//     manifest, which signpost does not read (classify.go), so there is no declared list for
+//     this name to match. Reported as a gap rather than invented as a PowerShell Gallery entry
+//     the repository never wrote — and it is why PowerShell, like the JVM, cannot supply the
+//     other half of the standard pattern.
+//
+// Shell contributes nothing to this list, and its absence is a fact about the language rather
+// than a missing fixture. There is no shell package registry, so a `source` that reaches no file
+// cannot be a dependency somebody forgot to declare — resolveShell returns internal for it, and
+// the corpus's deliberate shell near-miss is asserted in
+// TestCorpusFirstPartyImportsThatReachNoPageAreCounted instead. A shell specifier appearing
+// *here* would mean the resolver had started inventing packages for a language that has none.
+//
 // The JVM has one more gap that is a limitation rather than a near-miss: `org.junit.jupiter.api`
 // is a real declared dependency, and signpost reads no pom.xml or build.gradle, so there is no
 // declared list for it to match. It lands here rather than being invented as a Maven coordinate
@@ -1292,6 +1338,9 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		"objc <CorpusKit/CorpusKit.h>",
 		`php CorpusKernel\Boot`,
 		`php MonologExtras\Handler`,
+		"powershell Microsoft.PowerShell.Crescendo",
+		"powershell Pester",
+		"powershell PesterExtras",
 		"python httpx_extras",
 		"python winreg_helpers",
 		"ruby net/ldap",
@@ -1334,8 +1383,11 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// makes: `monologextras` cannot be shortened to `monolog`, and `rack_extras` cannot be
 	// shortened to `rack`, because the declared dependency each one shadows is a page that must
 	// exist. `caching` is what distinguishes the undeclared `Microsoft.Extensions.Caching.Memory`
-	// from the declared `Microsoft.Extensions.Logging` beside it in the same file.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity", "ldap", "rack-extras", "rack_extras", "corpuskernel", "monologextras", "domainmodel", "caching"} {
+	// from the declared `Microsoft.Extensions.Logging` beside it in the same file. `pesterextras`
+	// and `crescendo` are the same case for PowerShell: `pester` cannot be shortened, because
+	// `Pester` is the name a `#Requires` in the corpus states, and `crescendo` is what separates
+	// the gallery module from the engine module whose whole name it opens with.
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity", "ldap", "rack-extras", "rack_extras", "corpuskernel", "monologextras", "domainmodel", "caching", "pesterextras", "crescendo"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -1405,6 +1457,22 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 				t.Errorf("%q is an external dependency page. It is the language runtime — the "+
 					"interpreter or the SDK ships it and nobody publishes or patches it — so a "+
 					"page for it is a supply-chain entry for the toolchain", n.Title)
+			}
+		}
+	}
+	// PowerShell's runtime, which is two runtimes rather than one: the engine modules whose
+	// cmdlets are the language's vocabulary, and the .NET namespaces a `using namespace` reaches,
+	// because PowerShell runs on .NET. `Microsoft.PowerShell.Utility` sits one segment from the
+	// gallery module asserted above and `System.Text` is what the corpus's own
+	// `using namespace System.Text` names, so both must reach no page while the near-miss beside
+	// each is reported.
+	for _, name := range []string{"Microsoft.PowerShell.Utility", "System.Text"} {
+		for _, n := range g.Nodes {
+			if n.Kind == "External Dependency" && strings.EqualFold(n.Title, name) {
+				t.Errorf("%q is an external dependency page. PowerShell ships it — an engine "+
+					"module or a .NET namespace, versioned with the shell and the runtime "+
+					"beneath it — so a page for it is a supply-chain entry for the interpreter",
+					n.Title)
 			}
 		}
 	}
@@ -1735,8 +1803,15 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 
 	// Two `.astro` and not one, so the count cannot be satisfied by an implementation that
 	// reports an extension once however many files carry it.
-	const wantFiles = 4
-	wantKeys := []string{".astro (2)", ".svg (1)", "license (1)"}
+	//
+	// `release` is the entry with no extension at all, and it is a limitation this line exists to
+	// state rather than an oddity: it is an executable shell script — shebang, a `source`, a
+	// function — and classification is filename-only by design, so nothing reads it and no
+	// extractor is ever offered it. Named here because that is the whole job of this line. A
+	// bundle that silently omitted a script sourcing a library in the same tree would read as a
+	// repository whose scripts declare nothing.
+	const wantFiles = 5
+	wantKeys := []string{".astro (2)", ".svg (1)", "license (1)", "release (1)"}
 
 	got, ok := unclassifiedCount(stderr)
 	if !ok {
@@ -1764,7 +1839,7 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 	// rather than on the classification would report all of them. `web/README.md` sits in the
 	// same directory as the two .astro files precisely so an implementation that counted by
 	// directory fails here.
-	for _, notWanted := range []string{".md", ".go", ".ts", ".py", ".rs", ".toml", ".json", ".yaml", ".png", "codeowners", "makefile"} {
+	for _, notWanted := range []string{".md", ".go", ".ts", ".py", ".rs", ".toml", ".json", ".yaml", ".png", "codeowners", "makefile", ".sh", ".ps1", ".psm1"} {
 		if strings.Contains(line, notWanted) {
 			t.Errorf("%q is named on the unclassified line, but the corpus classifies and reads "+
 				"it: %q", notWanted, line)
@@ -1806,9 +1881,19 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 //   - go `example.com/corpus/greeter/internal/generated` — inside the declared module, at a
 //     directory holding a README and no Go file, which is the generated-code shape;
 //   - typescript `@corpus/assets/logo.svg` — a tsconfig `paths` pattern that matched exactly and
-//     maps onto an asset rather than source.
+//     maps onto an asset rather than source;
+//   - shell `./lib/logs.sh` — one letter from the `lib/log.sh` the same script sources
+//     successfully two lines above it.
 //
-// Both must be counted here and neither may appear among the unresolved, since there is nothing
+// The shell entry is here rather than among the unresolved for a structural reason, and it is
+// the reason shell appears in this test and in no other gap assertion: there is no shell package
+// registry. `source` names a file, so a path reaching nothing cannot be a dependency somebody
+// forgot to declare — there is no gem, npm or NuGet it could be naming instead — and resolveShell
+// returns internal with an empty ID rather than falling through to a registry lookup. So every
+// shell gap in every repository lands here by construction, and one appearing on the unresolved
+// line would mean the resolver had begun inventing packages for a language that has none.
+//
+// All three must be counted here and none may appear among the unresolved, since there is nothing
 // for anyone to go and declare.
 func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	dir := corpusRepo(t)
@@ -1820,6 +1905,7 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 
 	want := []string{
 		"go example.com/corpus/greeter/internal/generated",
+		"shell ./lib/logs.sh",
 		"typescript @corpus/assets/logo.svg",
 	}
 	got, ok := unlinkedCount(stderr)
@@ -1853,12 +1939,20 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	// `example.com/corpus/greeter/greeter` is the one that matters most: it sits in the same
 	// import block as the unlinked specifier, in the same module, and differs only in there
 	// being Go files at the end of it.
+	//
+	// `./lib/log.sh` is the shell half of that, and it is the pair that matters most for the
+	// language: it is sourced by the same script, on the line above the one that reaches nothing,
+	// through the same `$SCRIPT_DIR` anchor. So the difference between the entry above and this
+	// one is a single letter in the filename — which is what a resolver too eager to match a
+	// sibling would erase, turning every mistyped source into a satisfied edge.
 	for _, notWanted := range []string{
 		"example.com/corpus/greeter/greeter",
 		"@corpus/entry",
 		"@corpus/core",
 		"api.client",
 		"./greeter",
+		"./lib/log.sh",
+		"./lib/retry.sh",
 	} {
 		if strings.Contains(line, notWanted) {
 			t.Errorf("%q is reported as reaching no page, but it resolves to a module page in "+

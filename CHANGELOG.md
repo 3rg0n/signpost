@@ -8,6 +8,66 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-08
+
+- **Shell and PowerShell are read as first-class languages, and they get two extractors
+  rather than one.** That is the C-family decision inverted, decided on the same test —
+  whether one set of rules can read both — and they are the pair a reader would most expect
+  to share an extractor. They agree on `#` for a comment and on nothing else load-bearing: a
+  function nested inside another is global in shell and dies with the enclosing scope in
+  PowerShell, so identical nesting means opposite things about the public surface; `source`
+  names a file while `Import-Module` names a file *or* a module; and a heredoc and a
+  here-string are separate scanner states with separate closers. One extractor claiming both
+  would still score well on every fixture and would quietly stop naming one of the two
+  languages anywhere in a bundle. Each is scored F1 1.000 for both imports and symbols
+  against a hand-labeled corpus. Neither adds a manifest reader.
+
+  **Shell is the first language in the tool with no registry behind it, and that decides
+  where its gaps are reported.** `source` and `.` name paths, so a path reaching no file
+  cannot be a dependency somebody forgot to declare — there is no gem, package or module it
+  might have meant instead. Resolution returns internal with no target, and the specifier is
+  counted as a first-party import that reached no page. It can never appear among the
+  unresolved, because that line means "go and declare this" and for shell there is nothing to
+  declare; one appearing there would mean resolution had begun inventing packages for a
+  language that has none. The corpus asserts both halves: `./lib/logs.sh` is counted, and the
+  `./lib/log.sh` it is one letter from — sourced by the same script through the same
+  `$SCRIPT_DIR` anchor on the line above — must not be, since a resolver eager enough to
+  match a sibling turns every mistyped source into a satisfied edge.
+
+  **PowerShell's runtime is two runtimes, because PowerShell runs on .NET.** The engine
+  modules whose cmdlets are the language's vocabulary are kept as a closed list rather than a
+  `Microsoft.PowerShell.*` prefix, for the same reason `Microsoft.Extensions.*` forced a rule
+  on the .NET side: `Microsoft.PowerShell.Crescendo` opens with the whole name of the engine
+  module `Microsoft.PowerShell.Utility` and is a separately versioned gallery module somebody
+  installs and patches, so a prefix folds it into the shell it merely shares a name with. The
+  path/name split is a single character — a specifier containing `/` or `\` resolves against
+  the tree, trying the name, then `+.psm1`, then `+.ps1`, and never falls through to a
+  registry; a bare name is a gallery module. Both separators appear in the corpus because both
+  appear in real PowerShell.
+
+  **A `#Requires -Modules` is a requirement, not a pin, and is reported as a gap.** It names
+  no version and no source, and the `.psd1` module manifest whose `RequiredModules` key would
+  pin it is not read (stated in `classify.go` rather than worked around), so there is no
+  declared list for such a name to match. It is reported in the coverage report rather than
+  invented as a PowerShell Gallery entry the repository never wrote — which puts PowerShell
+  beside the JVM as the second ecosystem that cannot supply the other half of the corpus's
+  standard near-miss pattern, a declared dependency an import resolves to.
+
+  **An extensionless script is counted rather than silently absent, and that is a stated
+  limitation.** Classification is filename-only by design, so a file with no extension and no
+  known basename is `ClassOther` and no extractor is ever offered it — which is exactly what
+  a script installed on the `PATH` looks like. The corpus carries one, sourcing a library and
+  defining a function, and asserts it on the "no recognised kind" line beside the `.sh` and
+  `.ps1` that *are* read: the difference between them is the extension and nothing else. A
+  bundle that omitted such a script would read as a repository whose scripts declare nothing.
+
+  Reading these two closed a gap in signpost's own bundle: `install.sh` and `install.ps1` are
+  the repository root's only source, so the root had no module node at all, and seventeen
+  `configures` edges from `go.mod` and the workflows had nothing to hang on. The
+  self-analysis CI job asserted the unhandled-language line naming `.sh` and `.ps1`, with a
+  comment saying that adding these extractors was the reminder to update it; that assertion
+  now runs in the opposite direction.
+
 #### 2026-08-07
 
 - **Ruby, PHP and C# are read as first-class languages, and no two of them resolve the same

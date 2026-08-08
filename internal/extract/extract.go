@@ -141,6 +141,8 @@ func DefaultRegistry() *Registry {
 	r.Register(RubyExtractor{})
 	r.Register(PHPExtractor{})
 	r.Register(CSharpExtractor{})
+	r.Register(ShellExtractor{})
+	r.Register(PowerShellExtractor{})
 	return r
 }
 

@@ -611,8 +611,110 @@ func (r *resolver) resolveImport(lang discover.Lang, from, raw string) (id strin
 		return r.resolvePHP(from, raw)
 	case discover.LangCSharp:
 		return r.resolveCSharp(raw)
+	case discover.LangShell:
+		return r.resolveShell(from, raw)
+	case discover.LangPowerShell:
+		return r.resolvePowerShell(from, raw)
 	}
 	return "", false
+}
+
+// resolveShell resolves a `source` against the files in the repository.
+//
+// The simplest resolver here, and its shape follows from the shell having no module
+// system at all: a `source` names a file, so there is nothing to look up and no registry
+// to fall back to. Two candidate roots, in order:
+//
+//   - The sourcing script's own directory, which is where an anchored `source
+//     "$(dirname "$0")/util.sh"` points and where a sibling library sits.
+//   - Each ancestor, up to the repository root, which is what a bare `source
+//     lib/util.sh` needs: a bare path resolves against the *invoking* directory, and the
+//     invoking directory is whatever the caller happened to be in. The repository root is
+//     the common case for a script run from a Makefile or a CI job.
+//
+// The important difference from every other resolver: an unresolved source is *not*
+// external. There is no shell package registry — no gem, no npm, no NuGet — so a path
+// that reaches no file in the tree is a gap in the map and not a dependency. Reporting it
+// as external would invent a package that cannot exist, so internal is returned with an
+// empty ID, which is the same thing resolveRuby does for an unreached relative require.
+func (r *resolver) resolveShell(from, raw string) (string, bool) {
+	// The two roots are the same walk: the script's own directory is where it starts, and
+	// each ancestor follows. dirOf returns "" at the top, which is the repository root and
+	// the last candidate rather than a sentinel to skip.
+	for dir := dirOf(from); ; dir = dirOf(dir) {
+		if id := r.shellTarget(path.Join(dir, raw)); id != "" {
+			return id, true
+		}
+		if dir == "" || dir == "." {
+			return "", true
+		}
+	}
+}
+
+// shellTarget resolves a slash path to the module holding that file.
+//
+// The path must name a file that exists, with no extension appended: unlike Ruby's
+// require, a `source` names the file literally — the shell does no extension search — so
+// a `source util` means a file called `util` with no extension, which is exactly what a
+// script on the PATH looks like.
+func (r *resolver) shellTarget(p string) string {
+	p = strings.TrimPrefix(path.Clean(p), "./")
+	if p == "" || p == "." || strings.HasPrefix(p, "..") {
+		return ""
+	}
+	if !r.srcFiles[p] {
+		return ""
+	}
+	return r.moduleAt(dirOf(p))
+}
+
+// resolvePowerShell resolves a using/Import-Module/dot-source specifier.
+//
+// Unlike the shell, PowerShell has both forms of dependency, and the specifier's own shape
+// says which it is:
+//
+//	./lib/Widget.psm1     a path — a file in this repository
+//	Pester                a module name — the PowerShell Gallery or the module path
+//
+// A separator is what distinguishes them, and it is reliable because a module name cannot
+// contain one. So a path is resolved against the tree and never falls through to a
+// registry lookup, and a bare name is only ever a declared dependency.
+//
+// The extension search exists because `Import-Module ./lib/Widget` is written without one
+// and PowerShell finds `Widget.psm1` — the same convenience Ruby's require has, and unlike
+// the shell's `source`, which does not.
+func (r *resolver) resolvePowerShell(from, raw string) (string, bool) {
+	if strings.Contains(raw, "/") {
+		if id := r.psTarget(path.Join(dirOf(from), raw)); id != "" {
+			return id, true
+		}
+		if id := r.psTarget(raw); id != "" {
+			return id, true
+		}
+		// A path that reaches no file is a gap, not a gallery module: a module name has no
+		// separator in it, so this cannot be one.
+		return "", true
+	}
+	// A `using namespace System.Text` names a .NET namespace rather than a PowerShell
+	// module, and the two are told apart the same way — a namespace is dotted and a module
+	// name conventionally is not. Both are looked up as declared dependencies, since a
+	// repository that pins Pester in a psd1 or a namespace's assembly in a csproj has said
+	// so there.
+	return r.depOrEmpty("powershell", []string{raw}), false
+}
+
+// psTarget resolves a PowerShell path to the module holding that file.
+func (r *resolver) psTarget(p string) string {
+	p = strings.TrimPrefix(path.Clean(p), "./")
+	if p == "" || p == "." || strings.HasPrefix(p, "..") {
+		return ""
+	}
+	for _, cand := range []string{p, p + ".psm1", p + ".ps1"} {
+		if r.srcFiles[cand] {
+			return r.moduleAt(dirOf(cand))
+		}
+	}
+	return ""
 }
 
 // resolveRuby resolves a require against the files in the repository.
