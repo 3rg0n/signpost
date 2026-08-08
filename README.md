@@ -78,7 +78,8 @@ where humans can correct it in place, so the corrections survive.
 ## What it reads
 
 First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++,
-Objective-C, Ruby, PHP, and C# — imports, public surface, and entrypoints, each extractor
+Objective-C, Ruby, PHP, C#, shell, and PowerShell — imports, public surface, and
+entrypoints, each extractor
 scored against
 hand-labeled fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one
 resolution map because the compiler does, and it is built from the `package` declarations
@@ -106,6 +107,27 @@ rule runs out, the import is a gap in the coverage report and never a package na
 declared. The `System.*` and `Microsoft.Win32` runtime arrives with the SDK and is versioned
 with it, so it gets no reference page; `Microsoft.Extensions.*` does not ship with the SDK
 and is somebody's upgrade, so it does.
+
+Shell and PowerShell are two extractors rather than one, which is the opposite of the
+C-family decision and rests on the same test: whether one set of rules can read both. They
+agree on `#` for a comment and on nothing else that matters. A function nested inside another
+is global in shell and dies with the enclosing scope in PowerShell, so the same nesting means
+opposite things about the public surface; `source` names a *file* and `Import-Module` may name
+a file or a module; and the string rules differ enough that a heredoc and a here-string are
+separate scanner states.
+
+The consequence for resolution is that shell has no registry behind it. `source` and `.` name
+paths, so one that reaches nothing cannot be a dependency somebody forgot to declare — there
+is no gem or package it might have meant instead — and it is reported as a first-party import
+that reached no page, never as an unresolved external. PowerShell has both halves: a path
+resolves against the tree, trying the name, then `.psm1`, then `.ps1`, while a bare name is a
+gallery module. Its runtime is two runtimes, because PowerShell runs on .NET — the engine
+modules whose cmdlets are the language's vocabulary, kept as a closed list rather than a
+`Microsoft.PowerShell.*` prefix so a separately versioned gallery module is not mistaken for
+something the shell ships, and the .NET namespaces a `using namespace` reaches. A
+`#Requires -Modules` is read as a requirement and not as a pin: it names no version and no
+source, and the `.psd1` manifest that would pin it is not yet read, so such a module is
+reported as a gap rather than invented as a gallery entry the repository never wrote.
 
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `Gemfile`,
@@ -411,7 +433,7 @@ in a repository without a bundle.
 |---|---|
 | Graph model, metrics, Louvain clustering | done |
 | Discovery: gitignore, classification, bounded reads | done |
-| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#) | done |
+| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell) | done |
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |

@@ -165,6 +165,18 @@ func isStdlib(lang discover.Lang, raw string) bool {
 		return false
 	case discover.LangCSharp:
 		return dotnetRuntimeNamespace(raw)
+	case discover.LangShell:
+		// The shell has no standard library to import. Its builtins — `cd`, `test`,
+		// `printf` — are simply callable, and what is on the PATH is the operating
+		// system's rather than the language's. So there is no stdlib import to recognise,
+		// which is the position PHP is in above and for the same structural reason.
+		//
+		// Unlike PHP, though, an unresolved shell import is not automatically a gap either:
+		// resolveShell returns internal for a path it cannot reach, precisely because there
+		// is no registry the path could be naming instead.
+		return false
+	case discover.LangPowerShell:
+		return psRuntimeModule(raw)
 	case discover.LangTS, discover.LangJS:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
@@ -522,6 +534,41 @@ func dotnetRuntimeNamespace(raw string) bool {
 			return true
 		}
 		return false
+	}
+	return false
+}
+
+// psRuntimeModule reports whether a PowerShell specifier names something the shell itself
+// ships.
+//
+// Two unrelated kinds of specifier reach here, and both have a runtime form:
+//
+//   - A .NET namespace from `using namespace System.Text`. PowerShell runs on .NET, so its
+//     runtime namespaces are .NET's, and dotnetRuntimeNamespace already knows them.
+//   - A module name from `Import-Module` or `#Requires -Modules`. The ones shipped with
+//     PowerShell itself are a short closed list: the engine modules whose cmdlets are the
+//     language's own vocabulary.
+//
+// The list is deliberately short, and what it excludes is the point. `Az`, `SqlServer`,
+// `PSReadLine` and `platyPS` all *feel* built in — PSReadLine ships in the box — but every
+// one of them is a separately versioned gallery module that somebody installs and must
+// upgrade, and a CVE against one is a real supply-chain fact. Calling those the runtime
+// would hide exactly what the unresolved count exists to surface.
+//
+// The Windows-only management modules are the same case as `javax` in jvmRuntimePackage:
+// they arrive with an operating-system feature rather than with the shell, so a script
+// requiring ActiveDirectory has a dependency on RSAT and not on PowerShell.
+func psRuntimeModule(raw string) bool {
+	if strings.Contains(raw, ".") && dotnetRuntimeNamespace(raw) {
+		return true
+	}
+	switch strings.ToLower(raw) {
+	case "microsoft.powershell.core", "microsoft.powershell.management",
+		"microsoft.powershell.utility", "microsoft.powershell.security",
+		"microsoft.powershell.host", "microsoft.powershell.diagnostics",
+		"microsoft.powershell.archive", "microsoft.wsman.management",
+		"cimcmdlets", "psdiagnostics":
+		return true
 	}
 	return false
 }

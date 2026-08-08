@@ -582,16 +582,22 @@ jobs:
             cat coverage.txt
             exit 1
           fi
-          # This repository has one .sh and one .ps1, neither of which signpost
-          # has an extractor for. It must say so. If someone adds those
-          # extractors, this line is the reminder to update the assertion.
-          if ! grep -q 'no extractor for' coverage.txt; then
-            echo "expected an unhandled-language line for install.sh/install.ps1"
+          # This repository's one .sh and one .ps1 used to be the unhandled-language
+          # line, and the comment here said that adding those extractors was the
+          # reminder to update the assertion. They were added, so the direction of
+          # the check inverts: the gap is closed, and what has to be asserted now is
+          # that it closed rather than that it exists. Both files are the root
+          # module's only source, so a regression that stopped reading either one
+          # takes the root node with it — which is the shape the check below uses.
+          if sed -n 's/^  no extractor for: //p' coverage.txt | grep -qE '\.sh|\.ps1'; then
+            echo "install.sh or install.ps1 is on the no-extractor line. signpost has read"
+            echo "both since the shell and PowerShell extractors landed, so this says its own"
+            echo "installers stopped being read — and they are the root module's only source."
             cat coverage.txt
             exit 1
           fi
-          # And the other admission, which is a different one. The line above says
-          # signpost knows what PowerShell is and cannot read it; this says it could
+          # The unclassified line, which is a different admission: the one above says
+          # signpost knows what a language is and cannot read it, this says it could
           # not tell what the file was, so no reader was offered it at all. This tree
           # has site/*.html, site/*.css, LICENSE, and CNAME — none of which is a
           # recognised kind — so silence here means the count stopped being taken.
@@ -602,16 +608,18 @@ jobs:
             cat coverage.txt
             exit 1
           fi
-          # Not folded into one line. A single line naming both would satisfy the two
-          # greps above while losing the distinction they exist to draw, so each is
-          # checked for the other's extensions.
-          if sed -n 's/^  no extractor for: //p' coverage.txt | grep -q '\.html'; then
-            echo "an unclassified extension is on the no-extractor line"
-            cat coverage.txt
-            exit 1
-          fi
-          if sed -n 's/^  [0-9]* file(s) of no recognised kind: //p' coverage.txt | grep -q '\.ps1'; then
-            echo "an unhandled language is on the unclassified line"
+          # Not folded into one line, checked in the direction that still has content on
+          # both sides. `.html` has no extractor and no classification either, so it
+          # belongs on the unclassified line alone; the installers are read and belong on
+          # neither. A single merged line, or a classifier that gave up on the shells
+          # again, moves one of these two.
+          unclass=$(sed -n 's/^  [0-9]* file(s) of no recognised kind: //p' coverage.txt)
+          case "$unclass" in
+            *.html*) ;;
+            *) echo "the unclassified line does not name .html: ${unclass}"; cat coverage.txt; exit 1 ;;
+          esac
+          if printf '%s' "$unclass" | grep -qE '\.sh|\.ps1'; then
+            echo "a language signpost reads is on the unclassified line: ${unclass}"
             cat coverage.txt
             exit 1
           fi
@@ -1270,12 +1278,30 @@ jobs:
       # repository invents structure, an external node invents a supply-chain entry nobody
       # declared.
       #
+      # PowerShell carries the same pair and one of the JVM's kind. `PesterExtras` opens with
+      # every character of `Pester`, which the module the corpus requires is named, so a
+      # candidate list matched by prefix swallows it and reports a module this code does not
+      # load. `Microsoft.PowerShell.Crescendo` is the runtime near-miss and the reason the engine
+      # modules are a closed list rather than a `Microsoft.PowerShell.*` prefix: it opens with
+      # the whole name of the engine module `Microsoft.PowerShell.Utility` and is a separately
+      # versioned gallery module somebody installs and patches.
+      #
       # `org.junit.jupiter.api` is in the count for a different reason, and it is a limitation
       # rather than a near-miss: signpost reads no pom.xml or build.gradle, so no JVM manifest
       # states this repository's dependencies and there is no declared list for the name to
       # match. It is reported as a gap instead of invented as a Maven coordinate the repository
       # never wrote, which is also why the JVM cannot supply the other half of the pattern — an
-      # import resolving to a declared external.
+      # import resolving to a declared external. `Pester` is the second of that kind: it *is*
+      # declared, by `#Requires -Modules Pester`, and a `#Requires` is a requirement rather than
+      # a pin — it names no version and no source. The file that would pin it is a `.psd1` module
+      # manifest, which signpost does not read, so there is no declared list here either.
+      #
+      # Shell contributes nothing to this count, and the absence is a fact about the language.
+      # There is no shell package registry, so a `source` reaching no file cannot be a dependency
+      # somebody forgot to declare — resolveShell returns internal for it, and the corpus's
+      # deliberate shell near-miss is asserted on the unlinked line below instead. A shell
+      # specifier appearing here would mean the resolver had started inventing packages for a
+      # language that has none.
       #
       # The count carries the assertion because the printed list is truncated to the five most
       # frequent, so a grep for any single specifier passes by matching `and 1 more`. Verified
@@ -1298,7 +1324,7 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
-          want=22
+          want=25
           [ "$got" = "$want" ] || {
             echo "${got} unresolved specifier(s), want ${want}."
             echo
@@ -1326,12 +1352,15 @@ jobs:
           # dependency each one shadows is a page that must exist: `monologextras` cannot be
           # shortened to `monolog`, nor `rack_extras` to `rack`, and `caching` is what separates
           # the undeclared Microsoft.Extensions.Caching.Memory from the declared
-          # Microsoft.Extensions.Logging beside it in the same file.
+          # Microsoft.Extensions.Logging beside it in the same file. `pesterextras` and
+          # `crescendo` are the same case for PowerShell: `pester` cannot be shortened, because
+          # `Pester` is the name a `#Requires` in the corpus states, and `crescendo` is what
+          # separates the gallery module from the engine module whose whole name it opens with.
           for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe \
                       promises winreg-helpers winreg_helpers apiv2 junit servlet kotlinx \
                       buffers stdlib-extras stdlib_extras gtest-extras gtest_extras \
                       corpuskit unity ldap rack-extras rack_extras corpuskernel \
-                      monologextras domainmodel caching; do
+                      monologextras domainmodel caching pesterextras crescendo; do
             if find "${bundle}/references/" -maxdepth 1 -iname "*${frag}*" -print -quit \
                  | grep -q .; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
@@ -1381,6 +1410,20 @@ jobs:
               exit 1
             fi
           done
+          # PowerShell's runtime, which is two runtimes rather than one: the engine modules whose
+          # cmdlets are the language's vocabulary, and the .NET namespaces a `using namespace`
+          # reaches, because PowerShell runs on .NET. Matched on the whole title for the same
+          # reason the JVM names are: `Microsoft.PowerShell.Utility` sits one segment from the
+          # gallery module asserted above, so a fragment check for `powershell` would be
+          # satisfied by the page that must not exist.
+          for name in Microsoft.PowerShell.Utility System.Text; do
+            if grep -rFqx "title: ${name}" "${bundle}/references/"; then
+              echo "a reference page exists for ${name}. PowerShell ships it — an engine module"
+              echo "or a .NET namespace, versioned with the shell and the runtime beneath it —"
+              echo "so a page for it is a supply-chain entry for the interpreter."
+              exit 1
+            fi
+          done
           echo "gaps: ${got} specifier(s), each a deliberate near-miss, none fabricated"
 
       # The same shape of assertion for the other kind of gap: a file whose *kind* signpost
@@ -1405,14 +1448,22 @@ jobs:
           got=$(sed -n 's/^ *\([0-9]*\) file(s) of no recognised kind:.*/\1/p' "$gaps" | head -1)
           [ -n "$got" ] || {
             echo "no unclassified line in the coverage report. testdata/corpus holds two .astro"
-            echo "files, an .svg, and a LICENSE, none of which is a recognised kind, so silence"
-            echo "here means discovery is claiming to have accounted for files nothing read."
+            echo "files, an .svg, a LICENSE, and an extensionless script, none of which is a"
+            echo "recognised kind, so silence here means discovery is claiming to have accounted"
+            echo "for files nothing read."
             cat "$gaps"
             exit 1
           }
           # Two .astro rather than one, so the count cannot be satisfied by an implementation
           # that reports an extension once however many files carry it.
-          want=4
+          #
+          # `release` is the entry with no extension at all, and it is a limitation this line
+          # exists to state rather than an oddity: it is an executable shell script — shebang, a
+          # `source`, a function — and classification is filename-only by design, so nothing reads
+          # it and no extractor is ever offered it. Named here because that is the whole job of
+          # this line. A bundle that silently omitted a script sourcing a library in the same tree
+          # would read as a repository whose scripts declare nothing.
+          want=5
           [ "$got" = "$want" ] || {
             echo "${got} file(s) of no recognised kind, want ${want}."
             echo
@@ -1424,7 +1475,7 @@ jobs:
             exit 1
           }
           line=$(sed -n 's/^ *[0-9]* file(s) of no recognised kind: //p' "$gaps" | head -1)
-          for frag in '.astro (2)' '.svg (1)' 'license (1)'; do
+          for frag in '.astro (2)' '.svg (1)' 'license (1)' 'release (1)'; do
             case "$line" in
               *"$frag"*) ;;
               *) echo "the unclassified line does not name ${frag}: ${line}"; exit 1 ;;
@@ -1435,7 +1486,13 @@ jobs:
           # counting by directory fails here. And it stays a separate line from the languages
           # with no extractor — folding them loses the difference between "cannot read this
           # language" and "cannot tell what this file is".
-          for frag in .md .go .ts .py .rs .toml .json .yaml .png codeowners; do
+          #
+          # The shell extensions are the pair that matters beside `release (1)` above: the
+          # difference between the counted file and the read ones is the extension and nothing
+          # else, since the same `source` and function shapes appear in both. A rule that gave up
+          # on shell wholesale, or one that started reading extensionless files by shebang without
+          # anyone updating this line, moves one of these two sets.
+          for frag in .md .go .ts .py .rs .toml .json .yaml .png codeowners .sh .ps1 .psm1; do
             case "$line" in
               *"$frag"*) echo "${frag} is on the unclassified line, but the corpus reads it: ${line}"; exit 1 ;;
             esac
@@ -1470,20 +1527,20 @@ jobs:
             's/^ *[0-9]* first-party import(s) reached no page across \([0-9]*\) specifier(s).*/\1/p' \
             "$gaps" | head -1)
           [ -n "$got" ] || {
-            echo "no unlinked line in the coverage report. The corpus imports two first-party"
+            echo "no unlinked line in the coverage report. The corpus imports three first-party"
             echo "specifiers that resolve to a real in-repo location holding no node, so silence"
             echo "here means those edges went missing with nothing recording it."
             cat "$gaps"
             exit 1
           }
-          want=2
+          want=3
           [ "$got" = "$want" ] || {
             echo "${got} unlinked specifier(s), want ${want}."
             echo
             echo "Higher means an import that should reach a page does not, and the new one is a"
             echo "real missing edge — this count is the only assertion that catches that, since"
             echo "every edge check in this job names the edges it expects and cannot notice an"
-            echo "absent one nobody listed. Lower means one of the two below stopped being"
+            echo "absent one nobody listed. Lower means one of the three below stopped being"
             echo "counted, or resolved to something it must not reach."
             cat "$gaps"
             exit 1
@@ -1491,9 +1548,19 @@ jobs:
           line=$(sed -n 's/^ *[0-9]* first-party import(s) reached no page across [0-9]* specifier(s): //p' "$gaps" | head -1)
           # One per shape and deliberately in different languages, because the branch is
           # per-language: a Go package directory inside the declared module holding a README and
-          # no Go file, and a tsconfig `paths` pattern that matched exactly and maps onto an
-          # asset rather than source.
+          # no Go file, a tsconfig `paths` pattern that matched exactly and maps onto an asset
+          # rather than source, and a `source` one letter from the `lib/log.sh` the same script
+          # reads successfully two lines above it.
+          #
+          # The shell entry is here rather than among the unresolved for a structural reason, and
+          # it is why shell appears in this step and in no other gap assertion: there is no shell
+          # package registry. `source` names a file, so a path reaching nothing cannot be a
+          # dependency somebody forgot to declare — there is no gem, npm or NuGet it could be
+          # naming instead — and resolveShell returns internal with an empty ID rather than
+          # falling through to a registry lookup. So every shell gap in every repository lands
+          # here by construction.
           for frag in 'go example.com/corpus/greeter/internal/generated' \
+                      'shell ./lib/logs.sh' \
                       'typescript @corpus/assets/logo.svg'; do
             case "$line" in
               *"$frag"*) ;;
@@ -1505,7 +1572,14 @@ jobs:
           # reaching nothing would name them — and that counter fires on every healthy
           # repository. `example.com/corpus/greeter/greeter` is the one that matters: same import
           # block, same module, differing only in there being Go files at the end of it.
-          for frag in 'example.com/corpus/greeter/greeter' '@corpus/entry' '@corpus/core'; do
+          #
+          # `./lib/log.sh` is the shell half of that, and it is the tighter pair: it is sourced by
+          # the same script, on the line above the one that reaches nothing, through the same
+          # `$SCRIPT_DIR` anchor. The difference between the entry above and this one is a single
+          # letter in the filename — which is what a resolver too eager to match a sibling erases,
+          # turning every mistyped source into a satisfied edge.
+          for frag in 'example.com/corpus/greeter/greeter' '@corpus/entry' '@corpus/core' \
+                      './lib/log.sh' './lib/retry.sh'; do
             case "$line" in
               *"$frag"*) echo "${frag} reaches a module page in this corpus: ${line}"; exit 1 ;;
             esac

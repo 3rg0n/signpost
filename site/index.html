@@ -250,9 +250,10 @@ disconnected components (30)
         <div class="row__body">
           <p class="prose prose--lead">
             Go, TypeScript, JavaScript, Python, Rust, Java, Kotlin, C, C++,
-            Objective-C, Ruby, PHP and C# — imports, public surface, and
-            entrypoints. Each extractor is scored against hand-labeled fixtures
-            rather than asserted, at F1 1.000 for both imports and symbols.
+            Objective-C, Ruby, PHP, C#, shell and PowerShell — imports, public
+            surface, and entrypoints. Each extractor is scored against
+            hand-labeled fixtures rather than asserted, at F1 1.000 for both
+            imports and symbols.
           </p>
           <p class="prose">
             Java and Kotlin share one resolution map because the compiler does,
@@ -282,6 +283,22 @@ disconnected components (30)
             out, the import is reported as a gap and never turned into a package
             name nobody wrote — <code>Corpus.DomainModel</code> is not under
             <code>Corpus.Domain</code>, because a namespace nests on the dot.
+          </p>
+          <p class="prose">
+            Shell and PowerShell get two extractors rather than one — the
+            C-family decision inverted, on the same test of whether one set of
+            rules reads both. They agree on <code>#</code> for a comment and
+            little else: a function nested inside another is global in shell and
+            dies with the enclosing scope in PowerShell, so the same nesting
+            means opposite things about the public surface. Shell has no registry
+            behind it at all, so a <code>source</code> reaching no file is
+            reported as a first-party import that found no page, never as a
+            package somebody forgot to declare. PowerShell has both halves, and
+            its runtime is two runtimes, because it runs on .NET: the engine
+            modules are a closed list rather than a
+            <code>Microsoft.PowerShell.*</code> prefix, so
+            <code>Microsoft.PowerShell.Crescendo</code> stays the separately
+            versioned gallery module it is.
           </p>
           <p class="prose">
             Beyond source, signpost reads what a repository states about
@@ -326,7 +343,7 @@ disconnected components (30)
                 <td>done</td>
               </tr>
               <tr class="is-done">
-                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#</th>
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell</th>
                 <td>done</td>
               </tr>
               <tr class="is-done">

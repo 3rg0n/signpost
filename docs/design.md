@@ -269,7 +269,8 @@ ordering gives the sample projects the paths a real repository would have.
 symbols, interface implementations, `main` functions, `init` side effects. Full
 precision, zero dependencies, and it is our primary language.
 
-**TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#**
+**TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#,
+shell and PowerShell**
 get hand-written line-oriented extractors covering imports/requires, top-level declarations,
 exports, and entrypoints.
 These are not full parsers and are not trying to be. The signpost layer needs the module
@@ -346,6 +347,39 @@ namespace of its own, `Corpus.Api.Tests`, which resolves to the test directory i
 yields a self-edge; a C# test names its subject with a `using`, because a different namespace
 is exactly what a `using` is for.
 
+**Shell and PowerShell are two extractors, which is the C family's decision inverted, and it
+rests on the same test:** whether one set of rules can read both. They are the pair a reader
+would most expect to share an extractor, and they agree on `#` for a comment and on nothing
+else load-bearing. A function nested inside another is global in shell and dies with the
+enclosing scope in PowerShell, so identical nesting means opposite things about the public
+surface. `source` names a file; `Import-Module` names a file *or* a module. And the string
+rules diverge far enough that a heredoc and a here-string are separate scanner states, each
+with its own closer. One extractor claiming both would still score well on every fixture and
+would quietly stop naming one of the two languages anywhere in a bundle.
+
+Shell is the one language in the tool with **no registry behind it at all**, and that shapes
+where its gaps are reported. `source` and `.` name paths, so a path that reaches no file
+cannot be a dependency somebody forgot to declare — there is no gem, package or module it
+might have meant instead. Resolution returns internal-with-no-target, and the specifier lands
+on the *unlinked* line: a first-party import that reached no page. It can never appear among
+the unresolved, because that line means "go and declare this", and for shell there is nothing
+to declare. A shell specifier surfacing there would mean resolution had begun inventing
+packages for a language that has none.
+
+PowerShell has both halves, split on a single character: a specifier containing `/` or `\` is
+a path and resolves against the tree, trying the name, then `+.psm1`, then `+.ps1`, and never
+falling through to a registry; a bare name is a gallery module. Its runtime is two runtimes,
+because PowerShell runs on .NET — the engine modules whose cmdlets are the language's
+vocabulary, and the .NET namespaces a `using namespace` reaches. The engine modules are a
+closed list rather than a `Microsoft.PowerShell.*` prefix, for the same reason
+`Microsoft.Extensions.*` forced a rule on the .NET side: `Microsoft.PowerShell.Crescendo` is a
+separately versioned gallery module somebody installs and patches, and a prefix folds it into
+the shell it merely shares a name with. A `#Requires -Modules` is read as a *requirement* and
+not as a pin — it names no version and no source — and the `.psd1` module manifest whose
+`RequiredModules` key would pin it is not read, so such a module is reported as a gap rather
+than invented as a gallery entry the repository never wrote. That puts PowerShell beside the
+JVM as the second ecosystem with no declared list for an import to match.
+
 Extractors stay hand-written, and the threshold at which that changes is written down
 ([ADR 0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)): a
 tree-sitter Go binding becomes the answer for *one* language when that language's scored
@@ -361,10 +395,14 @@ could not read at all, and they share one namespace and one resolution map becau
 compiler does — a Kotlin file importing a Java package is ordinary in every JVM
 repository. C, C++ and Objective-C come next, and for the same reason as one another:
 they are one family sharing one preprocessor and one header convention, so the language
-boundary between them is not a boundary an extractor can see. Ruby, PHP and C# follow last
-of the twelve, and their reason is the inverse of the C family's: they have nothing in
+boundary between them is not a boundary an extractor can see. Ruby, PHP and C# follow next,
+and their reason is the inverse of the C family's: they have nothing in
 common with each other or with what came before, and each is the language a large body of
-existing services is written in. Everything else falls back to a generic extractor (comment
+existing services is written in. Shell and PowerShell come last of the fourteen for a reason
+neither of the two preceding groups had: they are not what a repository is *written* in, they
+are what it is built, released and operated by. A repository whose scripts declare nothing
+reads as one with no build and no deployment path, which is the one part of a bundle an agent
+is most likely to act on. Everything else falls back to a generic extractor (comment
 headers, filename conventions, sibling context) plus the semantic pass.
 
 **Manifests and infrastructure are the highest-value deterministic signal and the

@@ -80,6 +80,11 @@ type scanConfig struct {
 	// attribute that way: `#[Route('/x')] public function show()` is a declaration,
 	// and reading the hash as a comment would delete it.
 	hashBracketAttr bool
+	// hereStringAt enables PowerShell's here-string: `@"` or `@'` as the last thing on a
+	// line, with `"@` or `'@` on a line of its own closing it. Neither a heredoc nor any
+	// delimiter form — there is no identifier to name the terminator and the terminator is
+	// punctuation — so it gets its own rule and reuses the heredoc stack to hold it.
+	hereStringAt bool
 }
 
 // scanState is the cross-line scanner state: an open block comment, or an open
@@ -112,6 +117,13 @@ type heredoc struct {
 	// indented allows the terminator to be preceded by whitespace, which `<<~` and
 	// `<<-` permit and a bare `<<ID` does not.
 	indented bool
+	// atTerm marks a PowerShell here-string, whose terminator closes on a different
+	// rule from every heredoc's: it must begin the line, and what follows it on that
+	// line is code rather than a syntax error. `@"..."@ -ContentType 'application/json'`
+	// is how a here-string is passed as a parameter value, which is most of why one is
+	// written at all, so requiring the terminator to be the whole line would leave the
+	// string open and blank the rest of the file.
+	atTerm bool
 }
 
 // closes returns the index just past the terminator of the open string in line,
@@ -227,6 +239,36 @@ var (
 		lineComment: []string{"//"}, blockStart: "/*", blockEnd: "*/",
 		tripleQuotes: []string{`"""`}, verbatimAt: true,
 	}
+	// POSIX shell and bash. `#` is the only comment form there is — the shell has no
+	// block comment, and the `: <<'EOF'` idiom sometimes used as one is a heredoc, which
+	// the heredoc mechanism already blanks.
+	//
+	// The heredoc prefix is `<<`, as Ruby's is, and it is the one shared mechanism between
+	// the two languages. Its uppercase rule earns more here than anywhere else: `<<` is
+	// also the shell's append redirection, `echo x >>file`, and a shell script is where
+	// heredocs are most common.
+	//
+	// Two things are deliberately not modelled, both for the reason the Ruby config gives.
+	// `$(...)` and backticks hold a nested command, and their contents survive as code —
+	// which can contribute a spurious token to a line the declaration rules then reject,
+	// never blank a real one. And a `[[ $x == *.sh ]]` glob is left alone: a `*` is not a
+	// delimiter, so nothing needs to know.
+	scanShell = scanConfig{
+		lineComment: []string{"#"}, heredocPrefix: "<<",
+	}
+	// PowerShell. Its block comment is `<# ... #>` rather than C's `/* ... */`, and its
+	// here-string is `@"..."@` on lines of its own, which is neither a heredoc nor any
+	// delimiter form: hereStringAt handles it, because there is no identifier naming the
+	// terminator and the terminator is punctuation rather than a word.
+	//
+	// A single quote is a literal string in PowerShell and a double quote is an
+	// interpolating one, and both are ordinary delimiters here — the scanner blanks a
+	// delimited body either way, and what an interpolation `$($x)` holds is not a
+	// declaration.
+	scanPowerShell = scanConfig{
+		lineComment: []string{"#"}, blockStart: "<#", blockEnd: "#>",
+		hereStringAt: true,
+	}
 )
 
 // scanLines splits source into code lines with comments and string bodies removed.
@@ -244,8 +286,15 @@ func scanLines(src string, cfg scanConfig) []codeLine {
 		// A heredoc's body is checked before everything else, including an open
 		// string: the heredoc opened later, so it closes first.
 		if len(st.heredocs) > 0 {
-			if heredocCloses(line, st.heredocs[0]) {
+			if end, ok := heredocCloses(line, st.heredocs[0]); ok {
 				st.heredocs = st.heredocs[1:]
+				// The remainder of a PowerShell here-string's terminator line is code. For
+				// every other heredoc end is the line's length, so this rescans nothing.
+				if end < len(line) && len(st.heredocs) == 0 {
+					cl.Text = strings.Repeat(" ", end) + scanOne(line[end:], cfg, &st)
+					out = append(out, cl)
+					continue
+				}
 			}
 			cl.InBlockString = true
 			out = append(out, cl)
@@ -383,6 +432,21 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 				st.heredocs = append(st.heredocs, hd)
 				b.WriteString(strings.Repeat(" ", consumed))
 				i += consumed
+				continue
+			}
+		}
+		// PowerShell's here-string. `@"` or `@'` opens one only when it is the last thing
+		// on the line — `@"x"` mid-line is an ordinary string with a splat before it — and
+		// it is closed by `"@` at the start of a line. Both quote forms exist and differ
+		// only in interpolation, which nothing here reads, so the terminator is recorded
+		// rather than assumed.
+		if cfg.hereStringAt && line[i] == '@' && i+1 < len(line) &&
+			(line[i+1] == '"' || line[i+1] == '\'') {
+			if strings.TrimSpace(line[i+2:]) == "" {
+				st.heredocs = append(st.heredocs,
+					heredoc{term: string(line[i+1]) + "@", atTerm: true})
+				b.WriteString(strings.Repeat(" ", len(line)-i))
+				i = len(line)
 				continue
 			}
 		}
@@ -576,8 +640,29 @@ func scanHeredocOpen(s, prefix string) (heredoc, int, bool) {
 	return hd, i, true
 }
 
-// heredocCloses reports whether line is the terminator of an open heredoc.
-func heredocCloses(line string, hd heredoc) bool {
+// heredocCloses reports whether line closes an open heredoc, and the index just past the
+// terminator when it does.
+//
+// The index is only meaningful for a PowerShell here-string, and it is why this returns one
+// at all. A heredoc terminator is the whole line by definition, so there is never anything
+// after it to read; a `"@` closes as soon as it starts the line, and what follows is code:
+//
+//	Invoke-RestMethod -Uri $u -Body @"
+//	{"a":1}
+//	"@ -ContentType 'application/json'
+//
+// That trailing `-ContentType` is not decoration. Passing a here-string as a parameter value
+// is most of the reason one is written, so treating the line as body would leave the string
+// open and blank every declaration below it — the same silent whole-file loss the `>>`
+// boundary in shell guards against.
+func heredocCloses(line string, hd heredoc) (int, bool) {
+	if hd.atTerm {
+		t := strings.TrimLeft(line, " \t")
+		if !strings.HasPrefix(t, hd.term) {
+			return 0, false
+		}
+		return len(line) - len(t) + len(hd.term), true
+	}
 	t := line
 	if hd.indented {
 		t = strings.TrimLeft(t, " \t")
@@ -585,7 +670,10 @@ func heredocCloses(line string, hd heredoc) bool {
 	// Ruby allows a trailing comma or paren after the terminator when the heredoc was
 	// an argument; PHP allows a semicolon.
 	t = strings.TrimRight(t, " \t\r,);")
-	return t == hd.term
+	if t != hd.term {
+		return 0, false
+	}
+	return len(line), true
 }
 
 // scanVerbatim measures a C# verbatim string starting at s[0]=='@'.

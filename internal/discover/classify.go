@@ -37,7 +37,15 @@ const (
 	LangRuby   Lang = "ruby"
 	LangPHP    Lang = "php"
 	LangCSharp Lang = "csharp"
-	LangOther  Lang = "other"
+	LangShell  Lang = "shell"
+	// LangPowerShell is separate from LangShell rather than a dialect of it. The two
+	// share `#` as a comment and nothing else — different function syntax, different
+	// import syntax, different scoping, different resolution — so one extractor bent
+	// two ways would be worse than two. That is the inverse of the C-family case
+	// (ADR 0022), where the dialects share a preprocessor and .h serves all three, so
+	// the boundary is not one a filename or an extractor can see.
+	LangPowerShell Lang = "powershell"
+	LangOther      Lang = "other"
 )
 
 // sourceExts maps an extension to its language. A language with a real extractor
@@ -89,14 +97,31 @@ var sourceExts = map[string]Lang{
 	// precedence build.gradle.kts relies on. A `.rake` file stays source: it holds task
 	// definitions written in Ruby, which is code, where a `.gemspec` holds only
 	// assignments and so is matched as a manifest instead.
-	".rake":  LangRuby,
-	".php":   LangPHP,
-	".cs":    LangCSharp,
+	".rake": LangRuby,
+	".php":  LangPHP,
+	".cs":   LangCSharp,
+	".sh":   LangShell,
+	".bash": LangShell,
+	// A .zsh is read by the shell extractor because everything it reads — `source`,
+	// `function`, `export` — zsh spells the same way as bash. What zsh adds beyond that
+	// is interactive and completion syntax, which declares nothing.
+	".zsh": LangShell,
+	// A .ksh is the same case. Deliberately absent: .fish and .csh, whose function and
+	// source syntax genuinely differ, and .nu. Reading a fish script with bash's rules
+	// would report declarations it does not have.
+	".ksh": LangShell,
+	".ps1": LangPowerShell,
+	// A .psm1 is a PowerShell module and is where Export-ModuleMember appears.
+	//
+	// Deliberately absent: .psd1, a module *manifest* — a hashtable of metadata whose
+	// RequiredModules key declares dependencies. It is not source and reading it as
+	// source would report a file of assignments as a module with no symbols, which is
+	// the case the .gemspec comment below describes. Unlike .gemspec it has no reader
+	// yet, so it stays ClassOther and its dependency list goes unread: an honest gap
+	// rather than a wrong classification.
+	".psm1":  LangPowerShell,
 	".swift": LangOther,
 	".scala": LangOther,
-	".sh":    LangOther,
-	".bash":  LangOther,
-	".ps1":   LangOther,
 	".sql":   LangOther,
 	".tf":    LangOther,
 }
@@ -374,6 +399,29 @@ func isTestPath(rel string, lang Lang) bool {
 		// the segment check finds it. The basename forms are xUnit's and NUnit's.
 		return containsDir(rel, "test") || containsDir(rel, "tests") ||
 			csharpTestDir(rel) || jvmTestBasename(strings.TrimSuffix(path.Base(rel), ".cs"))
+	case LangShell:
+		// Bats is the only test framework with real currency for shell, and it names its
+		// files `.bats` — an extension this does not classify as source at all, so a bats
+		// suite never reaches here. What does reach here is a plain script under `test/`
+		// or named `test_thing.sh`, which is how a repository without bats writes one.
+		//
+		// The `.sh` suffix is required on the delimited forms rather than matching the
+		// bare stem, because a shell script frequently has no extension at all when it is
+		// an executable on the PATH — and `bin/latest` or `scripts/attest` would otherwise
+		// have to be reasoned about. With the extension required, they cannot match.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			strings.HasPrefix(base, "test_") || strings.HasSuffix(base, "_test.sh") ||
+			strings.HasSuffix(base, "_tests.sh") || strings.HasSuffix(base, ".test.sh")
+	case LangPowerShell:
+		// Pester is the framework, and it fixes the convention by loading `*.Tests.ps1`
+		// and nothing else — the one shell-family test convention a toolchain actually
+		// enforces. Matched case-insensitively here, unlike jvmTestBasename's `Tests`
+		// form, and the reason the risk that motivates that rule does not apply: `.Tests`
+		// carries a dot delimiter, so `protests.ps1` cannot match it. Pester itself is
+		// case-insensitive about the name, so requiring the capital would miss a file
+		// Pester runs.
+		return containsDir(rel, "test") || containsDir(rel, "tests") ||
+			strings.HasSuffix(base, ".tests.ps1") || strings.HasSuffix(base, ".test.ps1")
 	case LangJava, LangKotlin:
 		// src/test/java and src/test/kotlin are where Maven and Gradle put tests, and
 		// both are caught by the "test" segment the fallback already checks. The

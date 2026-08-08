@@ -1,0 +1,19 @@
+#!/bin/bash
+# An extensionless executable, which is what a script on the PATH looks like — and the one
+# shape of shell script signpost does not read. Classification is filename-only by design
+# (internal/discover/classify.go), so a file with no extension and no known basename is
+# ClassOther and no extractor is ever offered it. It sits here to be counted on the "no
+# recognised kind" line rather than to be silently absent: it sources a library and defines
+# a function, and neither reaches the graph.
+set -e
+
+. "$(dirname "$0")/scripts/lib/log.sh"
+
+typeset -r BUILD_ID="${CI_RUN_ID:-local}"
+
+tag_release() {
+  git tag -a "v$1" -m "release $1"
+  log_info "tagged v$1"
+}
+
+tag_release "$1"
