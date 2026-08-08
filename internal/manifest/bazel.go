@@ -404,18 +404,18 @@ func (p *starlarkParser) parse() ([]starlarkCall, Diag) {
 	atLineStart := true
 	for !p.eof() {
 		c := p.src[p.i]
-		switch {
-		case c == '\n':
+		switch c {
+		case '\n':
 			p.next()
 			atLineStart = true
 			continue
-		case c == ' ' || c == '\t' || c == '\r':
+		case ' ', '\t', '\r':
 			p.next()
 			continue
-		case c == '#':
+		case '#':
 			p.skipLineComment()
 			continue
-		case c == '"' || c == '\'':
+		case '"', '\'':
 			// A module-level docstring, or a string in an expression this reader is
 			// stepping over. Consumed as a unit so a `(` inside it is not a call.
 			p.stringLit()
