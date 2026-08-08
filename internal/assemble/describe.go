@@ -177,7 +177,14 @@ func isStdlib(lang discover.Lang, raw string) bool {
 		return false
 	case discover.LangPowerShell:
 		return psRuntimeModule(raw)
-	case discover.LangTS, discover.LangJS:
+	case discover.LangTS, discover.LangJS,
+		// A component's script runs under the same runtime, so the same builtins are the
+		// runtime for it. Worth noting what is *not* added here: `vue`, `svelte` and
+		// `astro` themselves are npm dependencies a package.json declares and a lockfile
+		// pins, not a runtime — a component importing `vue` depends on a versioned package
+		// exactly as one importing `lodash` does, and calling the framework the runtime
+		// would hide the single most important dependency in the repository.
+		discover.LangVue, discover.LangSvelte, discover.LangAstro:
 		// Node's builtins are spelled `node:fs` in modern code and `fs` in older
 		// code; both are the runtime, not a dependency.
 		//

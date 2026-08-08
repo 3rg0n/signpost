@@ -1,0 +1,15 @@
+/* Corpus fixture: not compiled, not served.
+ *
+ * A stylesheet, and the pair of them is what keeps the unclassified count honest. That
+ * count used to be carried by the two `.astro` files in this tree; they are read now, so
+ * something else has to be the file that cannot be satisfied by an implementation
+ * reporting an extension once however many files carry it.
+ *
+ * `.css` is the right successor rather than a stand-in. A stylesheet declares nothing
+ * this graph can hold — the single-file-component extractor blanks the `<style>` block
+ * for exactly that reason — so it is unclassified because there is nothing to classify
+ * it as, not because a reader is missing.
+ */
+:root {
+  --card-radius: 8px;
+}

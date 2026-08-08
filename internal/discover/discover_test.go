@@ -908,22 +908,25 @@ func TestIsBinary(t *testing.T) {
 func TestUnclassifiedCountsOnlyFilesOfNoRecognisedKind(t *testing.T) {
 	root := writeTree(t, map[string]string{
 		// Genuinely unrecognised: no class, so no reader is ever offered them.
-		"web/src/App.astro": "---\nimport B from './B.astro'\n---\n<B />\n",
-		"web/src/Card.vue":  "<script setup>import y from './y'</script>\n",
-		"web/src/site.css":  "body { color: red }\n",
-		"deploy/app.conf":   "listen = 8080\n",
-		".helmignore":       "*.md\n",
+		"web/views/page.hbs": "<h1>{{title}}</h1>\n",
+		"web/views/mail.ejs": "<p><%= body %></p>\n",
+		"web/src/site.css":   "body { color: red }\n",
+		"deploy/app.conf":    "listen = 8080\n",
+		".helmignore":        "*.md\n",
 		// Classified, and must not be counted. Each is a different class, because
 		// the failure mode is a method that keys on "did a reader produce facts"
 		// rather than on the classification.
-		"main.go":            "package main\n\nfunc main() {}\n",  // source
-		"go.mod":             "module example.com/m\n\ngo 1.26\n", // manifest
-		"README.md":          "# hi\n",                            // doc
-		"compose.yaml":       "services:\n  api:\n    build: .\n", // infra
-		"config.json":        "{}\n",                              // data
-		"CODEOWNERS":         "* @team\n",                         // ownership
-		"api.proto":          "syntax = \"proto3\";\n",            // contract
-		"migrations/001.sql": "CREATE TABLE t (id int);\n",        // migration
+		"main.go":            "package main\n\nfunc main() {}\n",             // source
+		"web/src/App.astro":  "---\nimport B from './B.vue'\n---\n<B />\n",   // source
+		"web/src/Card.vue":   "<script setup>import y from './y'</script>\n", // source
+		"web/src/Nav.svelte": "<script>export let items = []</script>\n",     // source
+		"go.mod":             "module example.com/m\n\ngo 1.26\n",            // manifest
+		"README.md":          "# hi\n",                                       // doc
+		"compose.yaml":       "services:\n  api:\n    build: .\n",            // infra
+		"config.json":        "{}\n",                                         // data
+		"CODEOWNERS":         "* @team\n",                                    // ownership
+		"api.proto":          "syntax = \"proto3\";\n",                       // contract
+		"migrations/001.sql": "CREATE TABLE t (id int);\n",                   // migration
 	})
 	res, err := Walk(root, Options{})
 	if err != nil {
@@ -932,7 +935,7 @@ func TestUnclassifiedCountsOnlyFilesOfNoRecognisedKind(t *testing.T) {
 
 	got := res.Unclassified()
 	want := map[string]int{
-		".astro": 1, ".vue": 1, ".css": 1, ".conf": 1, ".helmignore": 1,
+		".hbs": 1, ".ejs": 1, ".css": 1, ".conf": 1, ".helmignore": 1,
 	}
 	if len(got) != len(want) {
 		t.Errorf("Unclassified() = %v, want %v", got, want)
@@ -944,7 +947,14 @@ func TestUnclassifiedCountsOnlyFilesOfNoRecognisedKind(t *testing.T) {
 	}
 	// Named individually so a failure says which classified file leaked in, rather
 	// than only that the count moved.
-	for _, k := range []string{".go", ".mod", ".md", ".yaml", ".json", "codeowners", ".proto", ".sql"} {
+	for _, k := range []string{
+		".go", ".mod", ".md", ".yaml", ".json", "codeowners", ".proto", ".sql",
+		// The three single-file-component extensions, named here because they are
+		// the ones that moved: each was unclassified until an extractor read it,
+		// and an .astro in this list is what a repository whose only frontend is
+		// Astro depends on to not report itself as entirely unread.
+		".astro", ".vue", ".svelte",
+	} {
 		if n, ok := got[k]; ok {
 			t.Errorf("classified file counted as unclassified: %q (%d)", k, n)
 		}
@@ -954,10 +964,10 @@ func TestUnclassifiedCountsOnlyFilesOfNoRecognisedKind(t *testing.T) {
 // A binary is classified correctly and holds nothing to read, so it is not a gap in
 // coverage. Counting it would bury the extensions that are gaps under the ones that
 // never could be: a repository with forty PNGs would report forty unread files and
-// hide the one .astro that is genuinely unread.
+// hide the one template that is genuinely unread.
 func TestUnclassifiedExcludesBinaries(t *testing.T) {
 	root := writeTree(t, map[string]string{
-		"web/src/App.astro": "<div />\n",
+		"web/views/page.hbs": "<h1>{{title}}</h1>\n",
 	})
 	if err := os.WriteFile(filepath.Join(root, "logo.png"), []byte("\x89PNG\x00\x00\x00\rIHDR"), 0o644); err != nil {
 		t.Fatal(err)
@@ -974,8 +984,8 @@ func TestUnclassifiedExcludesBinaries(t *testing.T) {
 	if _, ok := got[".png"]; ok {
 		t.Errorf("binary counted as unclassified: %v", got)
 	}
-	if got[".astro"] != 1 {
-		t.Errorf("Unclassified()[.astro] = %d, want 1 (full: %v)", got[".astro"], got)
+	if got[".hbs"] != 1 {
+		t.Errorf("Unclassified()[.hbs] = %d, want 1 (full: %v)", got[".hbs"], got)
 	}
 }
 
@@ -994,5 +1004,46 @@ func TestUnclassifiedNamesExtensionlessFilesByBasename(t *testing.T) {
 	got := res.Unclassified()
 	if got["notice"] != 1 || got["runbook"] != 1 {
 		t.Errorf("Unclassified() = %v, want notice and runbook counted once each", got)
+	}
+}
+
+// A component's test convention is TypeScript's, because the runners are TypeScript's, and
+// a story is marked a test too. The negative half is where this earns its place: a story is
+// only a story for the component formats. `Widget.stories.tsx` is the same idea in a `.tsx`
+// file and is deliberately *not* matched, because changing how existing TypeScript
+// repositories read is a separate decision from adding these three languages — and the
+// implementation shares one switch case across all five, so a rule meant for the components
+// reaching the scripts is the mistake to catch.
+//
+// Both directions cost something real. A component wrongly marked a test drops out of the
+// public surface it declares, which is a silent loss; a story counted as production reports
+// a demo's imports as the component library's own.
+func TestComponentTestAndStoryPaths(t *testing.T) {
+	tests := []string{
+		"web/src/lib/Widget.test.vue",
+		"web/src/lib/Widget.spec.svelte",
+		"web/src/lib/Widget.stories.svelte",
+		"web/src/lib/Widget.story.vue",
+		"web/tests/Page.astro",
+		"web/__tests__/Page.svelte",
+	}
+	for _, rel := range tests {
+		if !isTestPath(rel, langOfTest(rel)) {
+			t.Errorf("isTestPath(%q) = false; this is a component test or a story", rel)
+		}
+	}
+	notTests := []string{
+		"web/src/lib/Widget.vue",
+		"web/src/lib/Widget.svelte",
+		"web/src/pages/index.astro",
+		// The negative that matters: the story rule must not reach TypeScript, where
+		// `.stories.tsx` is just as conventional and has never been treated as a test.
+		"web/src/lib/Widget.stories.tsx",
+		"web/src/lib/Widget.story.ts",
+	}
+	for _, rel := range notTests {
+		if isTestPath(rel, langOfTest(rel)) {
+			t.Errorf("isTestPath(%q) = true; this is production surface", rel)
+		}
 	}
 }

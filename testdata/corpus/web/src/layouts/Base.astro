@@ -1,13 +1,17 @@
 ---
 // Corpus fixture: not compiled, not run.
 //
-// An .astro file is the shape that hid the coverage hole. signpost has no
-// classification for the extension, so this file reaches no extractor and no
-// manifest reader — and before Result.Unclassified nothing counted it either. A
-// directory whose only source is this one produces no module node at all, which is
-// the symptom on a real repository: a workspace reported as a single JavaScript
-// module built from its config file, with the two pages it actually contains
-// unmentioned anywhere in the bundle or the coverage report.
+// An .astro file is the extension that made the unclassified count visible at all.
+// Before it was classified, signpost had no reader for it and nothing downstream
+// recorded that it had existed — so a repository whose entire landing page was two
+// .astro files read as fully covered, and the bundle described that workspace as a
+// single JavaScript module built from its config file with the pages unmentioned
+// anywhere. It is source now, which is why this directory has a module page and why
+// the corpus's unclassified count is two lower than it was.
+//
+// This file has no imports, which is deliberate: a layout is the root of a component
+// tree and imports nothing from inside it. So the page for this directory exists on the
+// strength of the extractor having run, not on the strength of an edge.
 const title = "corpus";
 ---
 <html>

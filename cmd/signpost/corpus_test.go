@@ -417,6 +417,14 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		// separators appear in the corpus because both appear in real PowerShell, and a
 		// resolver reading only `/` finds nothing here.
 		{"PowerShell, a module tree reached across separators", "powershell/src/Corpus"},
+		{"Vue", "web/src/components"},
+		{"Svelte", "web/src/lib"},
+		{"Astro", "web/src/pages"},
+		// The layout, and it is asserted separately because it is the one component directory
+		// here that imports nothing. A layout is the root of a component tree, so its page
+		// exists on the strength of the extractor having run rather than of an edge reaching
+		// it — which is the case a resolver-driven module list would lose entirely.
+		{"Astro, a layout that imports nothing", "web/src/layouts"},
 	} {
 		if _, ok := byTitle[want.dir]; !ok {
 			t.Errorf("%s: no module page for %s. Module pages written:\n  %s",
@@ -450,6 +458,19 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 		{"shell/scripts/lib", "shell"},
 		{"powershell/scripts", "powershell"},
 		{"powershell/src/Corpus", "powershell"},
+		// The three single-file-component formats, and this is the sharpest case in the table
+		// because one extractor reads all three *and delegates to a fourth language's*: the
+		// script inside a component is TypeScript, so SFCExtractor blanks the markup and hands
+		// what is left to TSExtractor. The language on the facts is reset to the component's
+		// own afterwards, and this is what asserts that it was. Without these rows all three
+		// directories would have pages, every row above would pass, and the bundle would call
+		// them TypeScript — reporting the per-language extractor scores in manifest.json
+		// against a language nobody in this tree wrote.
+		{"web/src/components", "vue"},
+		{"web/src/views", "vue"},
+		{"web/src/lib", "svelte"},
+		{"web/src/pages", "astro"},
+		{"web/src/layouts", "astro"},
 	} {
 		name, ok := byTitle[want.dir]
 		if !ok {
@@ -1349,6 +1370,7 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 		"rust serde_yaml::Value",
 		"typescript @corpus/apples/juice",
 		"typescript pathe/utils",
+		"vue vue-router",
 	}
 	got, ok := unresolvedCount(stderr)
 	if !ok {
@@ -1387,7 +1409,10 @@ func TestCorpusResolvesExactlyWhatItShould(t *testing.T) {
 	// and `crescendo` are the same case for PowerShell: `pester` cannot be shortened, because
 	// `Pester` is the name a `#Requires` in the corpus states, and `crescendo` is what separates
 	// the gallery module from the engine module whose whole name it opens with.
-	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity", "ldap", "rack-extras", "rack_extras", "corpuskernel", "monologextras", "domainmodel", "caching", "pesterextras", "crescendo"} {
+	// `router` is the fragment for the newest of them, and it cannot be shortened to `vue`:
+	// `vue-router` opens with every character of the declared `vue`, which is a page that must
+	// exist, so a check for `vue` would be satisfied by the framework's own reference page.
+	for _, frag := range []string{"apples", "greeterx", "httpx-extras", "httpx_extras", "serde-yaml", "serde_yaml", "pathe", "winreg-helpers", "winreg_helpers", "apiv2", "junit", "servlet", "kotlinx", "buffers", "stdlib-extras", "stdlib_extras", "gtest-extras", "gtest_extras", "corpuskit", "unity", "ldap", "rack-extras", "rack_extras", "corpuskernel", "monologextras", "domainmodel", "caching", "pesterextras", "crescendo", "router"} {
 		for _, n := range g.Nodes {
 			if n.Kind != "External Dependency" {
 				continue
@@ -1788,6 +1813,14 @@ func TestCorpusResolvesIncludesThroughTheSearchPath(t *testing.T) {
 // still to be written adds an extension to `sourceExts`, which is why this is fixed before
 // them rather than after: each would otherwise widen the same hole in a new place.
 //
+// Those two `.astro` files are read now, which is what the fix was for, and the extension
+// that carries the count moved to `.css` in the same directory rather than the assertion
+// weakening to one file. That move is the mechanism working: an extension leaves this line by
+// gaining a reader, and something genuinely unread has to be standing on it or the count stops
+// meaning anything. A stylesheet is the honest successor, since it declares nothing this graph
+// can hold — the component extractor blanks `<style>` for that reason — so it is unclassified
+// because there is nothing to classify it as, not because a reader is missing.
+//
 // Asserted on the count and then on the names, for the reason TestCorpusResolvesExactlyWhatIt
 // Should gives: the printed list truncates to the six most frequent, so a substring check
 // would silently stop covering whichever entry sorts last. The count is what fails in both
@@ -1801,7 +1834,7 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 		t.Fatalf("build failed: exit = %d\n%s", code, stderr)
 	}
 
-	// Two `.astro` and not one, so the count cannot be satisfied by an implementation that
+	// Two `.css` and not one, so the count cannot be satisfied by an implementation that
 	// reports an extension once however many files carry it.
 	//
 	// `release` is the entry with no extension at all, and it is a limitation this line exists to
@@ -1811,13 +1844,13 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 	// bundle that silently omitted a script sourcing a library in the same tree would read as a
 	// repository whose scripts declare nothing.
 	const wantFiles = 5
-	wantKeys := []string{".astro (2)", ".svg (1)", "license (1)", "release (1)"}
+	wantKeys := []string{".css (2)", ".svg (1)", "license (1)", "release (1)"}
 
 	got, ok := unclassifiedCount(stderr)
 	if !ok {
-		t.Fatalf("no `no recognised kind` line in the coverage report. The corpus holds an "+
-			"unclassified .astro, .svg and LICENSE, so silence here means discovery is "+
-			"claiming to have accounted for files nothing read:\n%s", stderr)
+		t.Fatalf("no `no recognised kind` line in the coverage report. The corpus holds two "+
+			"unclassified .css files, an .svg and a LICENSE, so silence here means discovery "+
+			"is claiming to have accounted for files nothing read:\n%s", stderr)
 	}
 	if got != wantFiles {
 		t.Errorf("%d file(s) of no recognised kind, want %d.\n\nHigher means a classified file "+
@@ -1837,21 +1870,24 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 	// The negative half, and the half that decides whether the line is worth printing. Each of
 	// these is classified, routed, and read; a method keyed on "did a reader produce facts"
 	// rather than on the classification would report all of them. `web/README.md` sits in the
-	// same directory as the two .astro files precisely so an implementation that counted by
-	// directory fails here.
-	for _, notWanted := range []string{".md", ".go", ".ts", ".py", ".rs", ".toml", ".json", ".yaml", ".png", "codeowners", "makefile", ".sh", ".ps1", ".psm1"} {
+	// same tree as the two .css files precisely so an implementation that counted by directory
+	// fails here, and so do the components: `.vue`, `.svelte` and `.astro` are the extensions
+	// that were on this line until the single-file-component extractor claimed them, so a
+	// regression that unclassified any of them again shows up here rather than as a quietly
+	// smaller graph.
+	for _, notWanted := range []string{".md", ".go", ".ts", ".py", ".rs", ".toml", ".json", ".yaml", ".png", "codeowners", "makefile", ".sh", ".ps1", ".psm1", ".vue", ".svelte", ".astro"} {
 		if strings.Contains(line, notWanted) {
 			t.Errorf("%q is named on the unclassified line, but the corpus classifies and reads "+
 				"it: %q", notWanted, line)
 		}
 	}
 	// And it stays a separate line from the languages that have no extractor. Folding the two
-	// together is how the defect would come back: `.astro` would be counted, printed beside
-	// `.sh`, and the distinction between "cannot read this language" and "cannot tell what
-	// this file is" — which is the difference between a missing extractor and a missing
-	// classification — would be gone.
-	if ext := coverageLine(stderr, "no extractor for"); strings.Contains(ext, ".astro") {
-		t.Errorf("the unclassified .astro is named on the no-extractor line: %q", ext)
+	// together is how the defect would come back: `.css` would be counted, printed beside the
+	// languages signpost knows and cannot read, and the distinction between "cannot read this
+	// language" and "cannot tell what this file is" — which is the difference between a missing
+	// extractor and a missing classification — would be gone.
+	if ext := coverageLine(stderr, "no extractor for"); strings.Contains(ext, ".css") {
+		t.Errorf("the unclassified .css is named on the no-extractor line: %q", ext)
 	}
 }
 
@@ -1883,7 +1919,13 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 //   - typescript `@corpus/assets/logo.svg` — a tsconfig `paths` pattern that matched exactly and
 //     maps onto an asset rather than source;
 //   - shell `./lib/logs.sh` — one letter from the `lib/log.sh` the same script sources
-//     successfully two lines above it.
+//     successfully two lines above it;
+//   - svelte `./Badges.svelte` — the same shape in a component, one letter from the
+//     `./Badge.svelte` imported on the line above it. It lands here rather than among the
+//     unresolved for the reason the shell entry does: a relative specifier names a file, so a
+//     path reaching nothing cannot be an npm package somebody forgot to declare. A component
+//     tree is where this matters most, since every component import in a real frontend is
+//     relative and carries its extension.
 //
 // The shell entry is here rather than among the unresolved for a structural reason, and it is
 // the reason shell appears in this test and in no other gap assertion: there is no shell package
@@ -1893,7 +1935,7 @@ func TestCorpusCountsWhatItCannotClassify(t *testing.T) {
 // shell gap in every repository lands here by construction, and one appearing on the unresolved
 // line would mean the resolver had begun inventing packages for a language that has none.
 //
-// All three must be counted here and none may appear among the unresolved, since there is nothing
+// All four must be counted here and none may appear among the unresolved, since there is nothing
 // for anyone to go and declare.
 func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	dir := corpusRepo(t)
@@ -1906,6 +1948,7 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	want := []string{
 		"go example.com/corpus/greeter/internal/generated",
 		"shell ./lib/logs.sh",
+		"svelte ./Badges.svelte",
 		"typescript @corpus/assets/logo.svg",
 	}
 	got, ok := unlinkedCount(stderr)
@@ -1920,7 +1963,7 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 			"a page does not, and the new one is a real missing edge — the count is the only "+
 			"assertion here that catches that, since every edge assertion in this file names the "+
 			"edges it expects and cannot notice an absent one nobody listed. Lower means one of "+
-			"the two below stopped being counted, or was resolved to something it should not "+
+			"the four below stopped being counted, or was resolved to something it should not "+
 			"reach.\n\nThe %d expected:\n  %s\n\nReport:\n%s",
 			got, len(want), len(want), strings.Join(want, "\n  "), stderr)
 	}
@@ -1945,6 +1988,13 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	// through the same `$SCRIPT_DIR` anchor. So the difference between the entry above and this
 	// one is a single letter in the filename — which is what a resolver too eager to match a
 	// sibling would erase, turning every mistyped source into a satisfied edge.
+	//
+	// `./Badge.svelte` is the same pair a third time, in the language where it is the ordinary
+	// case rather than a mistake worth noticing: it is imported by the same component, on the
+	// line above the one that reaches nothing, and differs by one letter. `../styles/card.css`
+	// is a fourth kind — a stylesheet named by a component's `<style>` block, which is not a
+	// node in this graph at all — so it belongs on neither gap line, and an extractor that read
+	// the style region would put it on this one.
 	for _, notWanted := range []string{
 		"example.com/corpus/greeter/greeter",
 		"@corpus/entry",
@@ -1953,6 +2003,9 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 		"./greeter",
 		"./lib/log.sh",
 		"./lib/retry.sh",
+		"./Badge.svelte",
+		"../components/Avatar.vue",
+		"card.css",
 	} {
 		if strings.Contains(line, notWanted) {
 			t.Errorf("%q is reported as reaching no page, but it resolves to a module page in "+
@@ -1963,7 +2016,7 @@ func TestCorpusFirstPartyImportsThatReachNoPageAreCounted(t *testing.T) {
 	// `internal/generated` is undeclared — it is inside the module — so asking a reader to go
 	// and declare it is the wrong instruction, and a single merged map is what would give it.
 	if u := coverageLine(stderr, "import(s) unresolved"); strings.Contains(u, "internal/generated") ||
-		strings.Contains(u, "logo.svg") {
+		strings.Contains(u, "logo.svg") || strings.Contains(u, "Badges.svelte") {
 		t.Errorf("a first-party import that reached no page is reported as unresolved. The two "+
 			"are different facts with different fixes: unresolved means signpost could not "+
 			"place the name, unlinked means it placed it exactly and found nothing there. "+

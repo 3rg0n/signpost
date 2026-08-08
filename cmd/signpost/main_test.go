@@ -18,13 +18,17 @@ import (
 // without them would let a silent regression pass.
 //
 // The last two are deliberately different files. `.scala` is a source language signpost
-// knows and cannot read; `.astro` is a file it cannot classify, so no reader is ever
+// knows and cannot read; `.hbs` is a file it cannot classify, so no reader is ever
 // offered it. One fixture file could not tell the two coverage lines apart.
 //
-// The unreadable language has to be one with no extractor, so it changes as extractors
-// land: this was `.kt` until Kotlin got one. Scala is the deliberate choice — it is the
-// JVM language the Java and Kotlin work explicitly deferred, so a fixture asserting it
-// goes unread is asserting something true rather than something forgotten.
+// Both change as readers land, and both have already changed once. The unreadable
+// language was `.kt` until Kotlin got an extractor; Scala is the deliberate replacement,
+// because it is the JVM language the Java and Kotlin work explicitly deferred, so a
+// fixture asserting it goes unread asserts something true rather than something
+// forgotten. The unclassifiable file was `.astro` until the single-file-component
+// extractor claimed it, and a Handlebars template is the honest successor: it is a real
+// template language with no classification and no reader, so nothing here pretends a gap
+// that has been closed is still open.
 func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -35,7 +39,7 @@ func fixture(t *testing.T) string {
 		"internal/store/store.go": "package store\n\nimport \"example.com/app/internal/auth\"\n\nfunc Get() bool { return auth.Check() }\n",
 		"compose.yaml":            "services:\n  api:\n    build: .\n    ports:\n      - \"8080:8080\"\n",
 		"scratch.scala":           "object Scratch { def main(args: Array[String]): Unit = println(\"no extractor for this\") }\n",
-		"web/Card.astro":          "---\nconst x = 1\n---\n<div>{x}</div>\n",
+		"web/card.hbs":            "<div class=\"card\">{{title}}</div>\n",
 	}
 	for p, content := range files {
 		full := filepath.Join(root, filepath.FromSlash(p))
@@ -94,17 +98,18 @@ func TestCoverageGapsAreReportedByDefault(t *testing.T) {
 	if !strings.Contains(stderr, "no extractor for") || !strings.Contains(stderr, ".scala") {
 		t.Errorf("unhandled language not reported by extension:\n%s", stderr)
 	}
-	// The .astro file is a different admission and gets a different line. It is not a
+	// The .hbs file is a different admission and gets a different line. It is not a
 	// language with no extractor: it has no classification, so no reader was offered
 	// it and nothing downstream recorded that it existed. Reported separately because
 	// folding it into the line above would let a repository whose only frontend is
-	// .astro read as fully covered — the shape this was found in.
-	if !strings.Contains(stderr, "no recognised kind") || !strings.Contains(stderr, ".astro") {
+	// unclassifiable read as fully covered — the shape this was found in, where the
+	// extension was `.astro` and the frontend was two pages.
+	if !strings.Contains(stderr, "no recognised kind") || !strings.Contains(stderr, ".hbs") {
 		t.Errorf("unclassified file not reported:\n%s", stderr)
 	}
 	// And the two lines stay distinct. A single line naming both extensions would
 	// satisfy the two checks above while losing the distinction they exist to draw.
-	if strings.Contains(coverageLine(stderr, "no extractor for"), ".astro") {
+	if strings.Contains(coverageLine(stderr, "no extractor for"), ".hbs") {
 		t.Errorf("unclassified file folded into the no-extractor line:\n%s", stderr)
 	}
 	if strings.Contains(coverageLine(stderr, "no recognised kind"), ".scala") {

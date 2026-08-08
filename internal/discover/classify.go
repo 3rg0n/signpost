@@ -45,7 +45,22 @@ const (
 	// (ADR 0022), where the dialects share a preprocessor and .h serves all three, so
 	// the boundary is not one a filename or an extractor can see.
 	LangPowerShell Lang = "powershell"
-	LangOther      Lang = "other"
+	// LangVue, LangSvelte and LangAstro are single-file component formats rather than
+	// languages, and they are three Langs rather than one because a Lang is what the
+	// bundle *names*. A module page states the language of the directory it describes and
+	// manifest.json scores each extractor per language, so folding these into one
+	// `component` would tell a reader that a Vue repository and a Svelte one are the same
+	// thing — and would attribute one framework's extraction score to the other.
+	// Resolution is shared rather than split: all three go through resolveTS, since a
+	// component's imports are its script's imports and the script is resolved by the same
+	// tsconfig aliases and the same package.json as any `.ts` file beside it. So is
+	// extraction: one SFCExtractor reads all three, because their script blocks are the
+	// same TypeScript. That is the opposite split from shell and PowerShell above, where
+	// one Lang each and one extractor each was right.
+	LangVue    Lang = "vue"
+	LangSvelte Lang = "svelte"
+	LangAstro  Lang = "astro"
+	LangOther  Lang = "other"
 )
 
 // sourceExts maps an extension to its language. A language with a real extractor
@@ -119,7 +134,14 @@ var sourceExts = map[string]Lang{
 	// the case the .gemspec comment below describes. Unlike .gemspec it has no reader
 	// yet, so it stays ClassOther and its dependency list goes unread: an honest gap
 	// rather than a wrong classification.
-	".psm1":  LangPowerShell,
+	".psm1":   LangPowerShell,
+	".vue":    LangVue,
+	".svelte": LangSvelte,
+	// An .astro was the extension that made the unclassified count visible at all: a
+	// repository whose only frontend source was two .astro files read as covered, because
+	// the extension was in no table and so reached no stage that counts (design §4.2).
+	// It is source now, which is why the corpus's unclassified count drops by two.
+	".astro": LangAstro,
 	".swift": LangOther,
 	".scala": LangOther,
 	".sql":   LangOther,
@@ -365,8 +387,26 @@ func isTestPath(rel string, lang Lang) bool {
 	case LangPython:
 		return strings.HasPrefix(base, "test_") || strings.HasSuffix(base, "_test.py") ||
 			containsDir(rel, "tests") || containsDir(rel, "test")
-	case LangTS, LangJS:
-		for _, s := range []string{".test.", ".spec."} {
+	case LangTS, LangJS, LangVue, LangSvelte, LangAstro:
+		// One case for the scripts and the components, because it is one set of test
+		// runners: Vitest and Jest name a test `Widget.test.ts` whether the subject is a
+		// module or a component, and a component test written *as* a component is
+		// `Widget.test.vue`. The script inside an SFC is TS/JS, so the convention its
+		// tooling enforces is the one that applies to the file holding it.
+		infixes := []string{".test.", ".spec."}
+		switch lang {
+		case LangVue, LangSvelte, LangAstro:
+			// A story is not a test, and it is here for a different reason. Storybook's
+			// `Widget.stories.svelte` is a *demonstration* of a component, so counting it
+			// as production surface would report a demo's imports as the component
+			// library's own. Marked as test rather than excluded, since a story is the best
+			// evidence of how a component is meant to be used — which is what the comment
+			// above says tests are kept for. Only for the component formats: a
+			// `.stories.tsx` is the same idea and adding it here would change how existing
+			// TypeScript repositories read, which is a separate decision from this one.
+			infixes = append(infixes, ".story.", ".stories.")
+		}
+		for _, s := range infixes {
 			if strings.Contains(base, s) {
 				return true
 			}

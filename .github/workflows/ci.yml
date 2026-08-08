@@ -1324,7 +1324,7 @@ jobs:
             cat "${RUNNER_TEMP}/gaps.txt"
             exit 1
           }
-          want=25
+          want=26
           [ "$got" = "$want" ] || {
             echo "${got} unresolved specifier(s), want ${want}."
             echo
@@ -1356,11 +1356,14 @@ jobs:
           # `crescendo` are the same case for PowerShell: `pester` cannot be shortened, because
           # `Pester` is the name a `#Requires` in the corpus states, and `crescendo` is what
           # separates the gallery module from the engine module whose whole name it opens with.
+          # `router` is the newest and cannot be shortened to `vue` for the same reason: the
+          # near-miss `vue-router` opens with every character of the declared `vue`, which is a
+          # page that must exist, so a check for `vue` is satisfied by the framework's own page.
           for frag in apples greeterx httpx-extras httpx_extras serde-yaml serde_yaml pathe \
                       promises winreg-helpers winreg_helpers apiv2 junit servlet kotlinx \
                       buffers stdlib-extras stdlib_extras gtest-extras gtest_extras \
                       corpuskit unity ldap rack-extras rack_extras corpuskernel \
-                      monologextras domainmodel caching pesterextras crescendo; do
+                      monologextras domainmodel caching pesterextras crescendo router; do
             if find "${bundle}/references/" -maxdepth 1 -iname "*${frag}*" -print -quit \
                  | grep -q .; then
               echo "a reference page exists for ${frag}, which no manifest in the corpus declares."
@@ -1447,15 +1450,17 @@ jobs:
           gaps="${RUNNER_TEMP}/gaps.txt"
           got=$(sed -n 's/^ *\([0-9]*\) file(s) of no recognised kind:.*/\1/p' "$gaps" | head -1)
           [ -n "$got" ] || {
-            echo "no unclassified line in the coverage report. testdata/corpus holds two .astro"
+            echo "no unclassified line in the coverage report. testdata/corpus holds two .css"
             echo "files, an .svg, a LICENSE, and an extensionless script, none of which is a"
             echo "recognised kind, so silence here means discovery is claiming to have accounted"
             echo "for files nothing read."
             cat "$gaps"
             exit 1
           }
-          # Two .astro rather than one, so the count cannot be satisfied by an implementation
-          # that reports an extension once however many files carry it.
+          # Two .css rather than one, so the count cannot be satisfied by an implementation
+          # that reports an extension once however many files carry it. The pair used to be the
+          # two .astro files; they are read now, which is the fix working, and something
+          # genuinely unread has to stand on the count or it stops meaning anything.
           #
           # `release` is the entry with no extension at all, and it is a limitation this line
           # exists to state rather than an oddity: it is an executable shell script — shebang, a
@@ -1475,24 +1480,29 @@ jobs:
             exit 1
           }
           line=$(sed -n 's/^ *[0-9]* file(s) of no recognised kind: //p' "$gaps" | head -1)
-          for frag in '.astro (2)' '.svg (1)' 'license (1)' 'release (1)'; do
+          for frag in '.css (2)' '.svg (1)' 'license (1)' 'release (1)'; do
             case "$line" in
               *"$frag"*) ;;
               *) echo "the unclassified line does not name ${frag}: ${line}"; exit 1 ;;
             esac
           done
           # The negative half. Each of these is classified, routed, and read; `web/README.md`
-          # sits in the same directory as the two .astro files precisely so an implementation
-          # counting by directory fails here. And it stays a separate line from the languages
-          # with no extractor — folding them loses the difference between "cannot read this
-          # language" and "cannot tell what this file is".
+          # sits in the same tree as the two .css files precisely so an implementation counting
+          # by directory fails here. And it stays a separate line from the languages with no
+          # extractor — folding them loses the difference between "cannot read this language"
+          # and "cannot tell what this file is".
           #
           # The shell extensions are the pair that matters beside `release (1)` above: the
           # difference between the counted file and the read ones is the extension and nothing
           # else, since the same `source` and function shapes appear in both. A rule that gave up
           # on shell wholesale, or one that started reading extensionless files by shebang without
           # anyone updating this line, moves one of these two sets.
-          for frag in .md .go .ts .py .rs .toml .json .yaml .png codeowners .sh .ps1 .psm1; do
+          #
+          # The three component extensions are here for a third reason: each was on this line
+          # until the single-file-component extractor claimed it, so a regression that
+          # unclassified one again shows up here rather than as a quietly smaller graph.
+          for frag in .md .go .ts .py .rs .toml .json .yaml .png codeowners .sh .ps1 .psm1 \
+                      .vue .svelte .astro; do
             case "$line" in
               *"$frag"*) echo "${frag} is on the unclassified line, but the corpus reads it: ${line}"; exit 1 ;;
             esac
@@ -1527,20 +1537,20 @@ jobs:
             's/^ *[0-9]* first-party import(s) reached no page across \([0-9]*\) specifier(s).*/\1/p' \
             "$gaps" | head -1)
           [ -n "$got" ] || {
-            echo "no unlinked line in the coverage report. The corpus imports three first-party"
+            echo "no unlinked line in the coverage report. The corpus imports four first-party"
             echo "specifiers that resolve to a real in-repo location holding no node, so silence"
             echo "here means those edges went missing with nothing recording it."
             cat "$gaps"
             exit 1
           }
-          want=3
+          want=4
           [ "$got" = "$want" ] || {
             echo "${got} unlinked specifier(s), want ${want}."
             echo
             echo "Higher means an import that should reach a page does not, and the new one is a"
             echo "real missing edge — this count is the only assertion that catches that, since"
             echo "every edge check in this job names the edges it expects and cannot notice an"
-            echo "absent one nobody listed. Lower means one of the three below stopped being"
+            echo "absent one nobody listed. Lower means one of the four below stopped being"
             echo "counted, or resolved to something it must not reach."
             cat "$gaps"
             exit 1
@@ -1559,8 +1569,16 @@ jobs:
           # naming instead — and resolveShell returns internal with an empty ID rather than
           # falling through to a registry lookup. So every shell gap in every repository lands
           # here by construction.
+          #
+          # `svelte ./Badges.svelte` is the same shape a fourth time, in the language where a
+          # relative import is the ordinary case rather than an occasional one: it is one letter
+          # from the `./Badge.svelte` imported on the line above it in the same component. It
+          # lands here rather than among the unresolved for the reason the shell entry does — a
+          # relative specifier names a file, so a path reaching nothing cannot be an npm package
+          # somebody forgot to declare.
           for frag in 'go example.com/corpus/greeter/internal/generated' \
                       'shell ./lib/logs.sh' \
+                      'svelte ./Badges.svelte' \
                       'typescript @corpus/assets/logo.svg'; do
             case "$line" in
               *"$frag"*) ;;
@@ -1578,8 +1596,18 @@ jobs:
           # `$SCRIPT_DIR` anchor. The difference between the entry above and this one is a single
           # letter in the filename — which is what a resolver too eager to match a sibling erases,
           # turning every mistyped source into a satisfied edge.
+          #
+          # `./Badge.svelte` is the third instance of that pair, and it carries something the other
+          # two do not: the specifier names its extension, so it resolves only because the
+          # resolver tries the literal path before appending the extensions it knows. A regression
+          # that appended first would leave `./Badge.svelte.ts` reaching nothing and put this
+          # entry on the line. `../components/Avatar.vue` is the same shape across a directory
+          # rather than within one. `card.css` is the third kind again: a stylesheet an SFC's
+          # `<style>` block imports, which is neither unlinked nor unresolved, because no
+          # stylesheet is a node here and none should be.
           for frag in 'example.com/corpus/greeter/greeter' '@corpus/entry' '@corpus/core' \
-                      './lib/log.sh' './lib/retry.sh'; do
+                      './lib/log.sh' './lib/retry.sh' './Badge.svelte' \
+                      '../components/Avatar.vue' 'card.css'; do
             case "$line" in
               *"$frag"*) echo "${frag} reaches a module page in this corpus: ${line}"; exit 1 ;;
             esac
@@ -1588,7 +1616,7 @@ jobs:
           # about internal/generated is undeclared — it is inside the module — so telling a
           # reader to declare it is the wrong instruction, and one merged map is what gives it.
           unres=$(sed -n 's/^ *[0-9]* import(s) unresolved across [0-9]* specifier(s): //p' "$gaps" | head -1)
-          for frag in internal/generated logo.svg; do
+          for frag in internal/generated logo.svg Badges.svelte; do
             case "$unres" in
               *"$frag"*) echo "${frag} is reported as unresolved, not unlinked: ${unres}"; exit 1 ;;
             esac

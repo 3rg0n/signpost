@@ -10,6 +10,49 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-08
 
+- **Vue, Svelte and Astro single-file components are read, and the reader is not a new one.**
+  A single-file component is a document with program text inside it: the `<script>` block is
+  TypeScript or JavaScript and the rest is template and style. So the file is read by blanking
+  every region that is not script, byte for byte, and handing the result to the existing
+  TypeScript extractor. **Blanking rather than slicing is the whole of the decision** — a slice
+  renumbers every line after the first fence, and a facts stream reporting an import at line 4
+  of a file where it sits at line 12 is worse than no facts at all, because the position looks
+  authoritative. All three languages are scored F1 1.000 for both imports and symbols against
+  hand-labeled fixtures, mutation-verified on four boundaries. No manifest reader is added:
+  these ecosystems already declare through `package.json`.
+
+  **Every script block is read, not the first one found.** Vue's `<script setup>` beside a
+  plain `<script>` is what its own migration path produces, and Svelte's `context="module"`
+  block holds the exports the instance block cannot. An implementation stopping at the first
+  fence reads half of a real component and reports the other half as absent.
+
+  **Two things are deliberately not read, and each is a boundary in the corpus.** A `<style>`
+  block declares nothing this graph can hold, so its `@import` of a stylesheet must appear in
+  *neither* coverage gap — reported as unresolved it tells a reader to declare a dependency
+  that is a file two directories away, and reported as unlinked it claims a missing edge onto
+  a node no stylesheet should ever have. And a component is never an entrypoint: a framework
+  mounts it, so the entrypoint the TypeScript extractor would infer from a top-level call is
+  discarded.
+
+  **Resolution tries the specifier exactly as written before appending any extension**, which
+  matters because these specifiers name their extension: `./Badge.svelte`,
+  `../layouts/Base.astro`. The reverse order looks for `./Badge.svelte.ts`, reaches nothing,
+  and reports an unlinked import for a file sitting next to the one that named it. The corpus
+  asserts that as a negative — those specifiers must not appear on the unlinked line — beside
+  the near-miss `./Badges.svelte`, one letter away, which must.
+
+  The component extensions are not runtimes. `vue`, `svelte` and `astro` are declared
+  dependencies with reference pages of their own, so a component language is grouped with
+  TypeScript for Node-builtin recognition and nowhere else. `vue-router` is the corpus's
+  unresolved near-miss for this reason: it opens with every character of the declared `vue`,
+  so a prefix match folds a separately released router into the framework's page.
+
+  Reading these three moved the corpus's unclassified boundary rather than dropping it. The two
+  `.astro` files carried the "counts files, not extensions" assertion until this extractor
+  claimed the extension; a pair of `.css` files replaces them, and all three component
+  extensions are now asserted *absent* from that line, so a regression that unclassified one
+  again shows up in the count rather than as a quietly smaller graph.
+
 - **Shell and PowerShell are read as first-class languages, and they get two extractors
   rather than one.** That is the C-family decision inverted, decided on the same test —
   whether one set of rules can read both — and they are the pair a reader would most expect

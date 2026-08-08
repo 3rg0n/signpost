@@ -1,0 +1,17 @@
+{
+  "name": "corpus-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "//": "Corpus fixture: never installed, never built. Three frameworks in one manifest because the three component extensions share one extractor and the resolver must still tell their packages apart — a component importing `vue` depends on a versioned package exactly as one importing `lodash` does.",
+  "scripts": {
+    "build": "astro build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@astrojs/rss": "4.0.11",
+    "astro": "5.2.0",
+    "svelte": "5.19.0",
+    "vue": "3.5.13"
+  }
+}
