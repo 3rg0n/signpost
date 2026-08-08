@@ -1,0 +1,24 @@
+# Corpus fixture: not built.
+#
+# A `_binary` is a program and a `_library` is not, which is the distinction an Entrypoint
+# carries. This file holds the binary; the package beside it holds the library and the test, so
+# a rule that read every target as an entrypoint produces three where one is right.
+
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "hello",
+    # A computed value the reader steps over, beside a literal it still reads. Dropping the
+    # whole list because one entry was an expression would lose a real declaration.
+    srcs = glob(["*.go"]),
+    deps = ["//greeter"],
+)
+
+# The stated limit, in the corpus rather than only in a unit test: a target produced inside a
+# loop is not a top-level call and is deliberately not read. `corpus_generated_a` and
+# `corpus_generated_b` must appear in no page of this bundle.
+for variant in ["corpus_generated_a", "corpus_generated_b"]:
+    go_binary(
+        name = variant,
+        srcs = ["main.go"],
+    )

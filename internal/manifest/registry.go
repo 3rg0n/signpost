@@ -83,6 +83,19 @@ func DefaultRegistry() *Registry {
 	r.Register(Route{Kind: KindMSBuild, Match: matchMSBuild, Read: ExtractMSBuild})
 	r.Register(Route{Kind: KindSolution, Match: ext(".sln"), Read: ExtractSolution})
 
+	// Build graphs. These are dependency manifests too — a `find_package` and a `bazel_dep`
+	// are supply-chain declarations exactly as a `require` is — and they are grouped apart
+	// because they state something the manifests above cannot: which targets a project
+	// builds, which of them are programs, and which are tests. For C and C++ that is the
+	// only such statement anywhere in the repository (ADR 0017).
+	//
+	// Both are matched before the Kubernetes and OpenAPI routes below and after the
+	// language manifests above, and neither ordering is load-bearing: no other route claims
+	// `CMakeLists.txt`, a `.cmake`, or any of Bazel's names. They sit here because this is
+	// where a reader looking for "what declares dependencies" will look.
+	r.Register(Route{Kind: KindCMake, Match: matchCMake, Read: ExtractCMake})
+	r.Register(Route{Kind: KindBazel, Match: matchBazel, Read: ExtractBazel})
+
 	// tsconfig, for its resolution mapping alone. Matched by prefix rather than exact
 	// name because the variants are conventional and carry the same mapping:
 	// `tsconfig.build.json`, `tsconfig.node.json`, `jsconfig.json`.

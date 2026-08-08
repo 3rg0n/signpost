@@ -10,6 +10,46 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-08
 
+- **CMake and Bazel build graphs are read, and neither can be settled by the file that states
+  it.** `CMakeLists.txt`, `*.cmake`, `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel` and `*.bzl` yield
+  found and fetched packages, the targets a project builds, declared tests, and the internal edges
+  between them. **For C this is the difference between structure and none:** an `#include` says
+  which header a file reads and nothing about what gets linked into what, and no C manifest states
+  it either, so `target_link_libraries` is the only place in a C repository that fact appears.
+
+  **Both readings are wrong in ways that read as correct on the page, so the relation is resolved
+  in `assemble` where the whole tree is visible** —
+  [ADR 0023](docs/adr/0023-a-build-declaration-is-settled-where-the-tree-is-visible.md). CMake links
+  by bare name and nothing in the command distinguishes a library the repository builds from a
+  third-party one, so `Facts.DeclaredByFile` carries each file's declarations and a name is
+  classified against every file's. Reported the wrong way, a library the repository compiles becomes
+  a reference page claiming a third-party dependency on its own code, and a real dependency drops
+  out of the supply chain — both are in one command in the corpus, so no rule gets one right by
+  accident.
+
+  **A Bazel `//pkg` label is relative to the workspace root, not the repository root**, and that was
+  a live defect found by reading an emitted bundle rather than by a failing test: the corpus
+  workspace is at `go/`, so `deps = ["//cmd/hello"]` named nothing and the declared edge silently
+  vanished. Labels are now recorded workspace-relative and joined against the *nearest* enclosing
+  root, walking outward as C include-root resolution does, because a repository holding two
+  workspaces has a root in each. The silent drop is the visible half; the dangerous half is a
+  repository with a root-level directory of the same name, where the old rule drew a **wrong** edge
+  stamped `confidence: extracted`.
+
+  **A declared build target is a build declaration.** `internal/practice` keys on the reader's
+  authority rather than on a vocabulary: a CMake `add_test(NAME buffer_roundtrip ...)` is a declared
+  test, and the `add_executable` beside it is a declared build. Widening the command-name list
+  instead would report a Makefile target named `buffer_roundtrip` as a test, which nothing in that
+  file states.
+
+  **Both readers stop at what they can see, and the limits are asserted rather than assumed.** A
+  target produced inside a `for` loop is not a top-level call and is not read; an `http_archive`
+  with no `sha256` acquires no version, because a plausible invented pin is worse than a missing one
+  to whoever audits that file. Every corpus boundary is paired with its negative — the `c/tests` →
+  `c/src` edge against `corpus_buffer_core` appearing in no page, the `go/greeter` → `go/cmd/hello`
+  edge against no self-edge from `embed = [":greeter"]` — because an edge assertion is satisfied by
+  a resolver that claims everything, which is exactly how the label defect survived.
+
 - **Vue, Svelte and Astro single-file components are read, and the reader is not a new one.**
   A single-file component is a document with program text inside it: the `<script>` block is
   TypeScript or JavaScript and the rest is template and style. So the file is read by blanking

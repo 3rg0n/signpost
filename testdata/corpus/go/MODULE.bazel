@@ -1,0 +1,32 @@
+# Corpus fixture: not built.
+#
+# bzlmod, which is where a Bazel repository states its own identity and its external
+# dependencies from a registry. Both are here because a `bazel_dep` is a supply-chain
+# declaration exactly as a `require` in the go.mod beside it is.
+
+module(
+    name = "corpus_greeter",
+    version = "1.4.2",
+    compatibility_level = 1,
+)
+
+bazel_dep(name = "rules_go", version = "0.46.0")
+
+# A dev_dependency is not needed to build what this module ships, which is what Dep.Optional
+# means. The pair is the boundary: with only the line above, a reader could not tell whether
+# optional is read or every dependency is reported as required.
+bazel_dep(name = "gazelle", version = "0.35.0", dev_dependency = True)
+
+# An archive with a sha256 and one without, in that order. The negative half is the second: an
+# unpinned archive must not acquire a version, because an invented one reads as a pin and a pin
+# is what somebody auditing this file acts on.
+http_archive(
+    name = "rules_python",
+    sha256 = "9c6e26911a79fbf510a8f06d8eedb40f412023cf7fa6d1461def27116bff022c",
+    urls = ["https://github.com/bazelbuild/rules_python/releases/download/0.31.0/rules_python-0.31.0.tar.gz"],
+)
+
+http_archive(
+    name = "corpus_unpinned_archive",
+    urls = ["https://example.invalid/corpus-unpinned.tar.gz"],
+)

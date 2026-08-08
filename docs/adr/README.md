@@ -39,6 +39,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0020](0020-git-history-annotates-the-map-and-never-draws-it.md) | Git history annotates the map and never draws it | Accepted |
 | [0021](0021-track-the-published-spec-and-never-overload-its-keys.md) | Track the published spec, and never overload one of its keys | Accepted |
 | [0022](0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) | Extractors are hand-written, and tree-sitter has a written threshold | Accepted |
+| [0023](0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) | A build declaration is settled where the tree is visible, not where the file is read | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
@@ -48,8 +49,8 @@ dependencies, few enough that bumping stays routine — still binds. Its *conseq
 ## Decisions still owed one
 
 Recorded here so the gap is visible rather than discovered later. Nothing is currently owed one:
-the last entry, hand-written extractors versus a tree-sitter fallback, is
-[0022](0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md).
+the last entry, where a build declaration gets settled, is
+[0023](0023-a-build-declaration-is-settled-where-the-tree-is-visible.md).
 
 ## Writing one
 

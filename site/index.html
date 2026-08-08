@@ -322,7 +322,10 @@ disconnected components (30)
             <code>pyproject.toml</code>, <code>requirements.txt</code>,
             <code>Cargo.toml</code>, <code>Gemfile</code>,
             <code>composer.json</code> and <code>*.csproj</code> for
-            dependencies; Containerfiles, compose
+            dependencies; <code>CMakeLists.txt</code> and
+            <code>MODULE.bazel</code>/<code>BUILD.bazel</code> for what a
+            project builds and which of its own libraries a target links, which
+            for C is the only place that is stated; Containerfiles, compose
             files, GitHub Actions workflows, Kubernetes manifests and Helm
             charts for deployment; protobuf, OpenAPI and GraphQL SDL for
             contracts; SQL migrations, CODEOWNERS, ADRs and Makefiles for the

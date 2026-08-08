@@ -1,0 +1,29 @@
+# Corpus fixture: not built.
+#
+# A package's build file, carrying the three label forms that are three different facts. Bazel
+# states in the syntax what CMake cannot: `@repo` is another repository, `//pkg` is this one,
+# and a relative `:name` is this package. That is why `Dep.Local` needs no cross-file
+# reconciliation here and needs one in the CMake tree.
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "greeter",
+    srcs = ["greeter.go"],
+    importpath = "example.com/corpus/greeter/greeter",
+    visibility = ["//visibility:public"],
+    deps = [
+        # Another repository: the repository is the dependency, not the target inside it.
+        "@com_github_google_uuid//:uuid",
+        # This repository, so it is local and resolves to the package directory.
+        "//cmd/hello",
+    ],
+)
+
+go_test(
+    name = "greeter_test",
+    srcs = ["greeter_test.go"],
+    # The negative boundary: a relative label names this package, so recording it would draw a
+    # module's edge to itself. Nothing named `greeter` may appear as a dependency of this file.
+    embed = [":greeter"],
+)

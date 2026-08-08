@@ -441,6 +441,7 @@ part comparable tools mostly skip.** All of this is exact, cheap, and structural
 | Source | Yields |
 |---|---|
 | `go.mod`, `package.json`, `pyproject.toml`, `Cargo.toml`, `Gemfile`, `*.gemspec`, `composer.json`, `*.csproj` | external deps, module identity, scripts, entrypoints |
+| `CMakeLists.txt`, `*.cmake`, `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel`, `*.bzl` | what the project builds, which of its own libraries a target links, found and fetched packages, declared tests |
 | `Containerfile` / `Dockerfile`, compose files | services, ports, base images, build inputs |
 | `*.tf`, `*.tfvars` | what runs, where state lives, which of the repository's own directories the infrastructure is composed from, secret *references* |
 | `.github/workflows/*` | how it builds, tests, and ships; what gates exist |
@@ -472,6 +473,22 @@ reaches no page. A fact with nowhere to go, rather than a fact in the wrong plac
 This is one half of
 [ADR 0016](adr/0016-a-reader-records-what-only-it-can-know.md): a reader records what no
 downstream consumer can re-derive, including that it could not attribute something.
+
+**A build file is the only place some structure is stated, and no build file can settle it
+alone.** For C there is no second source: `#include` says which header a file reads and nothing
+about what gets linked into what, and no C manifest states it either. So reading `CMakeLists.txt`
+is not an increment on dependency coverage — it is the difference between a C repository having
+structure in the bundle and having none. But `target_link_libraries(buffer_test PRIVATE
+corpus_buffer_core cmocka)` gives the reader no way to tell the two names apart: one is a library
+declared by an `add_library` in a *different* file, one is third-party, and CMake's own resolution
+consults the whole configured project. Bazel states which is which in the label — `@repo`, `//pkg`,
+`:name` — and moves the question to where `//` points, which is the workspace root and not the
+repository root. Both are settled in `assemble`, where the whole tree is visible, from declarations
+the readers record verbatim:
+[ADR 0023](adr/0023-a-build-declaration-is-settled-where-the-tree-is-visible.md). Reported the
+wrong way, a library the repository builds becomes a supply-chain entry for its own code while a
+real dependency drops out of it; a label read repository-relative loses every internal edge a
+workspace below the top declares, or lands one on an unrelated directory of the same name.
 
 **A configuration is mostly wiring, and only some of it is a unit.** Terraform is read
 for what a reader can act on: resources that run something or hold state become units,

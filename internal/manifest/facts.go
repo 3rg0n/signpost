@@ -41,6 +41,20 @@ type Facts struct {
 	// from tsconfig.json, and the only place a codebase's own aliases are stated.
 	Resolution Resolution
 
+	// Targets are the units a build file declares it builds, under the names other build
+	// files in the same tree use to link against them.
+	//
+	// Written by the CMake reader and read by assemble, for a reason particular to CMake:
+	// `target_link_libraries(app PRIVATE core)` names `core` with nothing in the syntax
+	// saying whether it is a library this repository builds or a package from outside. A
+	// Bazel label states which it is (`//pkg` against `@repo`) and a Terraform `source`
+	// carries a `./`, so both settle it in the reader; CMake settles it only across files,
+	// because the declaration is usually in the CMakeLists.txt of a subdirectory the
+	// linking file merely calls add_subdirectory on. That is the ordinary layout of a C
+	// project rather than an edge, and read one file at a time it turns every sibling
+	// library into an external dependency with a reference page of its own.
+	Targets []string
+
 	// Services are runnable units: a compose service, a Kubernetes workload, a Helm
 	// chart's deployment.
 	Services []Service
@@ -109,6 +123,14 @@ const (
 	// nothing, which reads as "this project has no dependencies" rather than as "this
 	// file never listed any".
 	KindSolution Kind = "solution"
+	// KindCMake and KindBazel are the two build-graph readers, and they are two kinds
+	// rather than one `build-graph` because they answer the same question with different
+	// authority. A CMakeLists.txt is a script whose real target list only CMake computes,
+	// so its facts are a best reading of a subset; a BUILD file is declarative and its
+	// targets are exactly what it says. A reader deciding how far to trust a target list
+	// needs to know which of the two it is looking at, and Kind is where that is stated.
+	KindCMake Kind = "cmake"
+	KindBazel Kind = "bazel"
 )
 
 // Resolution is a file's statement about what its own import specifiers mean.
@@ -508,6 +530,9 @@ func (f *Facts) Normalize() {
 	})
 	f.SecretRefs = dedupeSecretRefs(f.SecretRefs)
 	f.Module.Workspaces = sortedUnique(f.Module.Workspaces)
+	// A target list is a set of names, so it sorts and dedupes: unlike Resolution.Targets
+	// below, nothing walks it in order — assemble only ever asks whether a name is in it.
+	f.Targets = sortedUnique(f.Targets)
 
 	// Aliases sort by pattern, and their Targets deliberately do not. A pattern is an
 	// identity and reordering the `paths` object must not change the bundle; a target list

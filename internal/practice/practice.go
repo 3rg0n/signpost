@@ -185,6 +185,26 @@ var buildCommandNames = map[string]bool{
 	"all": true, "release": true,
 }
 
+// statesItsBuild names the readers whose declared targets are a build declaration on their
+// own, without a target having to be *called* something this file recognises.
+//
+// The reason is the same one statesItsTests gives below, and the two have to agree: a CMake
+// `add_test(NAME buffer_roundtrip ...)` is reported as a declared test command, so
+// `add_executable(app main.c)` in the file beside it is a declared build by exactly that
+// standard. Reporting the first and not the second says a repository declares its tests and
+// not its build, in a tree where both are stated the same way.
+//
+// The declared targets are read from Entrypoints rather than from a name list because these
+// two readers put a program there and nothing else: a CMake `add_executable` and a Bazel
+// `_binary`. That carries the limit worth stating — a file declaring only a library declares
+// no program, so a repository that builds a library and no executable still reports no build
+// command. That is a narrower claim than it sounds: it is one file's silence, and any other
+// build file in the tree declaring a program satisfies the finding for the repository.
+var statesItsBuild = map[manifest.Kind]bool{
+	manifest.KindCMake: true,
+	manifest.KindBazel: true,
+}
+
 func buildFindings(facts []manifest.Facts) []Finding {
 	var srcs []Source
 	var names []string
@@ -194,6 +214,13 @@ func buildFindings(facts []manifest.Facts) []Finding {
 				srcs = append(srcs, Source{Path: f.Path, Line: s.Line})
 				names = append(names, s.Name)
 			}
+		}
+		if !statesItsBuild[f.Kind] {
+			continue
+		}
+		for _, e := range f.Entrypoints {
+			srcs = append(srcs, Source{Path: f.Path, Line: e.Line})
+			names = append(names, e.Name)
 		}
 	}
 	if len(srcs) > 0 {
@@ -208,7 +235,8 @@ func buildFindings(facts []manifest.Facts) []Finding {
 		Topic: TopicBuild,
 		Text: "No build command is declared. An agent asked to build this repository has " +
 			"to infer how, and its first guess is not reviewable.",
-		Looked: []string{"Makefile targets", "package.json scripts", "Cargo aliases"},
+		Looked: []string{"Makefile targets", "package.json scripts", "Cargo aliases",
+			"CMake targets", "Bazel targets"},
 	}}
 }
 
@@ -219,6 +247,22 @@ var testCommandNames = map[string]bool{
 	"unit": true, "integration": true, "coverage": true,
 }
 
+// statesItsTests names the readers whose every script is a test by the build system's own
+// rule rather than by a convention this list has to recognise.
+//
+// The name list above is the right instrument for a Makefile or a package.json, where a target
+// called `test` is a convention and `t` or `spec-ci` is a guess nobody can review. It is the
+// wrong instrument for these two: a CMake `add_test` declares a test outright and a Bazel rule
+// ending `_test` is a test by Bazel's own naming rule, so the *command* carries the fact and
+// the name carries nothing. A C project whose test is `add_test(NAME buffer_roundtrip ...)`
+// declares its tests exactly as clearly as one that happens to call the target `check`, and
+// reporting the first as undeclared says a repository states nothing where it states this
+// precisely.
+var statesItsTests = map[manifest.Kind]bool{
+	manifest.KindCMake: true,
+	manifest.KindBazel: true,
+}
+
 func testFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 	var out []Finding
 
@@ -226,7 +270,7 @@ func testFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 	var names []string
 	for _, f := range facts {
 		for _, s := range f.Scripts {
-			if testCommandNames[strings.ToLower(s.Name)] {
+			if testCommandNames[strings.ToLower(s.Name)] || statesItsTests[f.Kind] {
 				srcs = append(srcs, Source{Path: f.Path, Line: s.Line})
 				names = append(names, s.Name)
 			}
@@ -245,7 +289,8 @@ func testFindings(facts []manifest.Facts, d *discover.Result) []Finding {
 			Text: "No test command is declared. This is the fact an agent most needs " +
 				"before it offers to add a test, because it decides where the test goes " +
 				"and how it is run.",
-			Looked: []string{"Makefile targets", "package.json scripts", "Cargo aliases"},
+			Looked: []string{"Makefile targets", "package.json scripts", "Cargo aliases",
+				"CMake targets", "Bazel targets"},
 		})
 	}
 
