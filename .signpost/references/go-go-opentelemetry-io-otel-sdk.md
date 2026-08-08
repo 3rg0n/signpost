@@ -2,9 +2,9 @@
 type: External Dependency
 title: go.opentelemetry.io/otel/sdk
 description: go dependency go.opentelemetry.io/otel/sdk (v1.44.0)
-resource: git://github.com/3rg0n/signpost@9a47aec509a15a7dc6e15a56901c8fe035e50358
+resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00
 tags: [direct, external, go]
-generated: { by: signpost/dev, at: "2026-08-08" }
+generated: { by: signpost/dev, at: "2026-08-09" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: go.opentelemetry.io/otel/sdk }

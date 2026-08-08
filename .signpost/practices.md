@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@9a47aec509a15a7dc6e15a56901c8fe035e50358
-generated: { by: signpost/dev, at: "2026-08-08" }
+resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00
+generated: { by: signpost/dev, at: "2026-08-09" }
 ---
 # How work is done here
 
@@ -12,13 +12,13 @@ Each line is something this repository states, or something it does not. A missi
 ### Building
 
 - **Not declared.** No build command is declared. An agent asked to build this repository has to infer how, and its first guess is not reviewable.
-  - Looked in Makefile targets, package.json scripts, and Cargo aliases.
+  - Looked in Makefile targets, package.json scripts, Cargo aliases, CMake targets, Bazel targets.
 
 ### Testing
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
-  - Looked in Makefile targets, package.json scripts, and Cargo aliases.
-- 67 test files in the tree.
+  - Looked in Makefile targets, package.json scripts, Cargo aliases, CMake targets, Bazel targets.
+- 69 test files in the tree.
 
 ### What blocks a merge
 
@@ -47,7 +47,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 28 documentation files in the tree, outside the bundle.
+- 29 documentation files in the tree, outside the bundle.
 
 ### Observability
 
@@ -58,8 +58,8 @@ Each line is something this repository states, or something it does not. A missi
 
 - 14 stated rules for agents working in this repository.
   - Stated in `AGENTS.md`.
-- 23 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 17 other files.
+- 24 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 18 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes

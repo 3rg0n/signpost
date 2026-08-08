@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 59 concepts, 148 relationships."
-resource: git://github.com/3rg0n/signpost@9a47aec509a15a7dc6e15a56901c8fe035e50358
-generated: { by: signpost/dev, at: "2026-08-08" }
+description: "Structural map of this repository: 60 concepts, 150 relationships."
+resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00
+generated: { by: signpost/dev, at: "2026-08-09" }
 ---
 # Repository map
 
@@ -21,26 +21,26 @@ The places a wrong assumption propagates furthest, so the places to read first.
 
 - [\(repository root\)](./modules/root.md) — 44 relationships (14 in, 30 out)
 - [cmd/signpost](./modules/signpost.md) — 38 relationships (12 in, 26 out)
+- [internal/assemble](./modules/assemble.md) — 21 relationships (9 in, 12 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
-- [internal/assemble](./modules/assemble.md) — 19 relationships (8 in, 11 out)
 - [internal/manifest](./modules/manifest.md) — 19 relationships (12 in, 7 out)
 
 ### Modules
 
-- [internal/assemble](./modules/assemble.md) — 6 go files; 68 exported symbols.
+- [internal/assemble](./modules/assemble.md) — 6 go files; 73 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
 - [internal/discover](./modules/discover.md) — 5 go files; 86 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
 - [internal/extract](./modules/extract.md) — 32 go files; 356 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
-- [internal/manifest](./modules/manifest.md) — 33 go files; 285 exported symbols.
+- [internal/manifest](./modules/manifest.md) — 37 go files; 312 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 198 exported symbols.
-- [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
+- [internal/practice](./modules/practice.md) — 3 go files; 33 exported symbols.
 - [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 19 go files; 117 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 19 go files; 118 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.
@@ -70,6 +70,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md) — Architecture decision (Accepted), 21 rules read from 0020-git-history-annotates-the-map-and-never-draws-it.md.
 - [ADR 0021: track the published spec and never overload its keys](./references/adr-0021-track-the-published-spec-and-never-overload-its-keys.md) — Architecture decision (Accepted), 14 rules read from 0021-track-the-published-spec-and-never-overload-its-keys.md.
 - [ADR 0022: extractors are hand written and tree sitter has a threshold](./references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) — Architecture decision (Accepted), 17 rules read from 0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md.
+- [ADR 0023: a build declaration is settled where the tree is visible](./references/adr-0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) — Architecture decision (Accepted), 23 rules read from 0023-a-build-declaration-is-settled-where-the-tree-is-visible.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 
