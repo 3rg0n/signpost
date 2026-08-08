@@ -176,6 +176,21 @@ var manifestNames = map[string]bool{
 	"Makefile":                 true,
 	"Justfile":                 true,
 	"justfile":                 true,
+	// CMake's per-directory build file, which is the only place a C or C++ project states
+	// which targets it builds and which of them are programs — the gap ADR 0017 names.
+	// Its `.txt` extension is why the manifest checks below now precede the document one:
+	// see the comment on that ordering in classify.
+	"CMakeLists.txt": true,
+	// Bazel, whose files are fixed by the toolchain and mostly extensionless. `BUILD` is
+	// matched exactly rather than case-insensitively, because Bazel accepts only these
+	// spellings and a lowercase `build` is a directory name, not a build file.
+	"BUILD":            true,
+	"BUILD.bazel":      true,
+	"WORKSPACE":        true,
+	"WORKSPACE.bazel":  true,
+	"WORKSPACE.bzlmod": true,
+	"MODULE.bazel":     true,
+	"REPO.bazel":       true,
 }
 
 // manifestExts identify a build manifest by extension rather than by basename.
@@ -191,12 +206,22 @@ var manifestNames = map[string]bool{
 // entire content is metadata assignments. It declares the gem's dependencies and nothing
 // callable, so reading it as source would report a file of assignments as a module with no
 // symbols while its dependency list went unread.
+// The two build-graph extensions are here for the same cause as .gemspec: the author names
+// the file. A `.cmake` module is `cmake/FindFoo.cmake` or `cmake/CompilerWarnings.cmake`, and
+// a `.bzl` is whatever the rule set is called — no list of basenames holds either. A `.bzl`
+// is Starlark and so arguably source, and it is classified a manifest anyway because of what
+// it holds: rule definitions and `load()` statements, which declare a build rather than a
+// program. Leaving it ClassOther would have been worse than either choice, since
+// Registry.Run reads ClassOther files too — the file would be read by a reader and counted
+// as unclassified in the same run.
 var manifestExts = map[string]bool{
 	".csproj":  true,
 	".fsproj":  true,
 	".vbproj":  true,
 	".sln":     true,
 	".gemspec": true,
+	".cmake":   true,
+	".bzl":     true,
 }
 
 // lockNames are manifests we record but never parse for structure: they are
@@ -245,10 +270,15 @@ func classify(rel string) (Class, Lang) {
 	if ownershipNames[base] {
 		return ClassOwnership, ""
 	}
-	// ADRs and docs directories are documents regardless of depth.
-	if ext == ".md" || ext == ".markdown" || ext == ".rst" || ext == ".adoc" || ext == ".txt" {
-		return ClassDoc, ""
-	}
+	// Manifests before documents, because a build file's extension is not always a build
+	// file's extension. `CMakeLists.txt` and `requirements.txt` are both `.txt`, and with
+	// the document rule first they classified as prose: the readers still ran, since
+	// Registry.Run skips only source, vendored, and binary files, so the dependencies were
+	// read — but the Class was wrong on the page and in practice's count of the tree's
+	// documentation files, which reported a pip requirements file as something a human wrote
+	// to be read. The reverse ordering costs nothing, because no name or extension in either
+	// manifest table is a document extension in any other repository: a file called
+	// CMakeLists.txt is a CMake file wherever it appears.
 	if manifestNames[base] {
 		return ClassManifest, ""
 	}
@@ -258,6 +288,10 @@ func classify(rel string) (Class, Lang) {
 	// signal: Foo.csproj, Foo.fsproj, Foo.vbproj, Foo.sln.
 	if manifestExts[ext] {
 		return ClassManifest, ""
+	}
+	// ADRs and docs directories are documents regardless of depth.
+	if ext == ".md" || ext == ".markdown" || ext == ".rst" || ext == ".adoc" || ext == ".txt" {
+		return ClassDoc, ""
 	}
 	if c, ok := classifyInfra(rel, base, lower, ext); ok {
 		return c, ""

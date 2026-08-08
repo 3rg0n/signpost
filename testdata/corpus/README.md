@@ -577,6 +577,54 @@ precisely the one name its import list does not contain. `addTestEdges` reads th
 instead of the imports for these two languages, and instead of rather than alongside them: reading
 both reports `store` as tested by a test of `api`.
 
+## Structure that only the build file states
+
+`c/CMakeLists.txt`, `c/src/CMakeLists.txt`, `c/tests/CMakeLists.txt`, `go/MODULE.bazel`,
+`go/greeter/BUILD.bazel` and `go/cmd/hello/BUILD.bazel` are the two ecosystems here where the
+build file is not a supplementary source of structure but the *only* one. A C repository states
+which library its test binary links in exactly one place, and it is not the source: `#include`
+says which header a file reads and nothing about what gets linked into what. A Bazel package is
+the same. So reading these files is not an increment on dependency coverage — for C it is the
+difference between the bundle having structure and having none.
+
+Both readings are wrong in ways that read as correct on the page, which is what the fixtures are
+laid out to catch. `TestCorpusReadsBuildGraphsAndDrawsTheirInternalEdges` holds all of it:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| the CMake link, positive | `c/tests` → `c/src` is a `configures` edge, from `target_link_libraries(buffer_test PRIVATE corpus_buffer_core cmocka)` | the one command in the tree saying what the test binary is built against, unread — C structure absent from a bundle that reports C files as extracted |
+| the CMake link, negative | `corpus_buffer_core` appears in **no page**, in no summary, edge or attribute | the project's own library as a reference page, claiming a third-party dependency on code this repository compiles — and `cmocka`, which *is* third-party, dropped from the supply chain in the same breath. Both are in one command, so no rule gets one right by accident |
+| the Bazel label, positive | `go/greeter` → `go/cmd/hello`, from `deps = ["//cmd/hello"]` | how this defect was actually found: `//` is relative to the *workspace* root, which is `go/`, and read as repository-relative the label names nothing and the edge vanishes with no gap recorded anywhere |
+| the Bazel label, negative | no self-edge on `go/greeter`, so `embed = [":greeter"]` draws nothing | a module configuring itself is not structure, and it is the shape a rule resolving every label against the declaring file's own directory produces for *all* of them — including the positive above |
+| the loop | `corpus_generated_a` and `corpus_generated_b` appear in no page | a target built inside a `for` loop is not a top-level call and is deliberately unread; naming it claims a declaration signpost did not read |
+| the pin, positive | `references/bazel-rules-python.md` carries the sha256 `9c6e2691…` | a page saying a dependency exists and nothing about whether two builds fetch the same bytes |
+| the pin, negative | `references/bazel-corpus-unpinned-archive.md` carries no version attribute at all | the sharpest failure here, because it is a *plausible* value rather than a missing one: a version derived from the URL reads as a pin, and a pin is what somebody auditing that file acts on |
+
+The CMake negative works only because it is spread over three files. `corpus_buffer_core` is
+declared by `add_library` in `c/src/CMakeLists.txt`; the file that links it is
+`c/tests/CMakeLists.txt`, which never sees that line; and the file above both only calls
+`add_subdirectory`. Nothing in `target_link_libraries`' syntax distinguishes a name this
+repository builds from one it borrows — which is precisely what Bazel *does* state in the label,
+and why `Dep.Local` needs cross-file reconciliation in one tree and not the other. A reader
+settling each file on its own has no correct answer available.
+
+The Bazel fixture's workspace sits at `go/` rather than at the top on purpose, and the negative
+that binds it is not in this directory: `TestABazelLabelResolvesInsideTheNearestWorkspace` uses
+two *nested* workspaces with two identically named `tool` directories, because sibling workspaces
+cannot tell "nearest root" from "outermost root" and the first version of that test passed on the
+broken rule. What the corpus contributes is the shape that is easy to get wrong in the field — a
+workspace one level down, which is what a Bazel tree inside a polyglot repository looks like.
+
+**Neither build system contributes a row to the *Negative boundaries* table above, and the
+absence is structural rather than a gap in the documentation.** That table is the unresolved
+*specifier* count, and a build dependency is not an import: `find_package(ZLIB)` and
+`bazel_dep(name = "rules_go")` are declarations, so a name signpost cannot place has no
+near-miss to shadow and nothing to be reported as unresolved against. Their negatives are
+absences from the graph instead — a page that must not exist, an edge that must not be drawn —
+which is why every row in the table above is a "must appear nowhere" rather than a count. A
+CMake or Bazel name turning up on the unresolved line would mean a build declaration had been
+routed through import resolution.
+
 ## Running it
 
 The harness copies this tree to a temporary directory, `git init`s it, commits, and runs

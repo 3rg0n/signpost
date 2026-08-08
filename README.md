@@ -144,7 +144,10 @@ appending anything, which is the difference between an edge and a phantom `./Bad
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `Gemfile`,
 `*.gemspec`, `composer.json`, and `*.csproj`/`*.fsproj`/`*.vbproj` for
-dependencies; Containerfiles, compose files, GitHub Actions workflows,
+dependencies; `CMakeLists.txt` and Bazel's `MODULE.bazel`/`BUILD.bazel` for what
+a project builds and which of its own libraries a target links — for C that is
+the only place it is stated, since an `#include` says which header a file reads
+and nothing about what gets linked into what; Containerfiles, compose files, GitHub Actions workflows,
 Kubernetes manifests, Helm charts, and Terraform for deployment; protobuf, OpenAPI/Swagger,
 and GraphQL SDL for contracts; SQL migrations, CODEOWNERS, ADRs, and Makefiles
 for the rest. Secrets are recorded as *references* — a name and its key names,

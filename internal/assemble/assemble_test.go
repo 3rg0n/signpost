@@ -1943,3 +1943,174 @@ func TestSecretValuesNeverReachTheGraph(t *testing.T) {
 		t.Errorf("api tags = %v", api.Tags)
 	}
 }
+
+// A CMake target one build file declares and another links is this repository's own
+// library, and reading one file at a time cannot tell. `target_link_libraries(app PRIVATE
+// twofile_core)` names the target with nothing in the syntax saying where it comes from, and
+// the declaration sits in the subdirectory's own CMakeLists.txt — which is what
+// add_subdirectory is for, and the ordinary layout of a C project rather than an edge case.
+// Before addBuildTargets every sibling library in every multi-directory C project got a
+// reference page of its own, reported as a third-party dependency.
+//
+// Both halves are asserted, because dropping the external is only half the fix: which library
+// an executable links is structure a C project states in no other file, so it has to survive
+// as an edge onto the module holding that library rather than disappearing with the page.
+func TestALinkedSiblingTargetIsNotAnExternalDependency(t *testing.T) {
+	out := build(t, map[string]string{
+		"CMakeLists.txt": "cmake_minimum_required(VERSION 3.20)\n" +
+			"project(twofile VERSION 1.0.0 LANGUAGES C)\n" +
+			"find_package(OpenSSL REQUIRED)\n" +
+			"add_subdirectory(src)\n" +
+			"add_executable(app app.c)\n" +
+			"target_link_libraries(app PRIVATE twofile_core OpenSSL::SSL)\n",
+		"src/CMakeLists.txt": "add_library(twofile_core STATIC core.c)\n",
+		"app.c":              "int main(void) { return 0; }\n",
+		"src/core.c":         "int core(void) { return 1; }\n",
+	})
+
+	for _, n := range out.Graph.Nodes() {
+		if strings.Contains(n.ID, "twofile-core") || strings.Contains(n.ID, "twofile_core") {
+			t.Errorf("node %q: a library this repository builds is not an external dependency", n.ID)
+		}
+	}
+	// The negative half of the drop. A found package genuinely is from outside, and a rule
+	// that dropped every cmake dependency would pass the check above while losing the one
+	// supply-chain fact a C build states.
+	node(t, out.Graph, "/references/cmake-openssl")
+
+}
+
+// The composition the link states, in the one shape where the link is the only thing stating
+// it. Above, the root file both links `twofile_core` and calls add_subdirectory on the
+// directory declaring it, so the edge onto that module is already there from the
+// add_subdirectory alone — which is why that test asserts the dropped page and this one
+// asserts the edge. Here `render` links `geometry` and neither directory includes the other:
+// the root file adds both, and nothing but the link says which of the two is built against
+// the other.
+func TestALinkAcrossSiblingDirectoriesBecomesAnEdge(t *testing.T) {
+	out := build(t, map[string]string{
+		"CMakeLists.txt": "project(fan LANGUAGES CXX)\n" +
+			"add_subdirectory(geometry)\n" +
+			"add_subdirectory(render)\n",
+		"geometry/CMakeLists.txt": "add_library(geometry STATIC point.cc)\n",
+		"geometry/point.cc":       "int point() { return 1; }\n",
+		"render/CMakeLists.txt": "add_library(render STATIC draw.cc)\n" +
+			"target_link_libraries(render PUBLIC geometry)\n",
+		"render/draw.cc": "int draw() { return 2; }\n",
+	})
+	if !hasEdge(out.Graph, "/modules/render", "/modules/geometry", graph.EdgeConfigures) {
+		var got []string
+		for _, e := range out.Graph.EdgesFrom("/modules/render") {
+			got = append(got, string(e.Kind)+" -> "+e.To)
+		}
+		t.Errorf("edges from /modules/render = %v, want a configures edge onto the linked "+
+			"library's module. Nothing else in this tree states that render is built against "+
+			"geometry: neither directory includes the other.", got)
+	}
+}
+
+// TestABazelLabelResolvesAgainstItsWorkspaceRoot covers the one thing a `//pkg` label cannot
+// state: where the `//` is.
+//
+// A Bazel label is relative to the workspace root — the directory holding WORKSPACE or
+// MODULE.bazel — and that is the repository root only in a repository that is one workspace.
+// The corpus is the ordinary other shape: its workspace is under `go/`, so `//cmd/hello`
+// means `go/cmd/hello`, and read as repository-relative it named a directory that does not
+// exist and the declared edge vanished with no gap recorded anywhere.
+//
+// Both trees below declare the identical label from the identical relative position, and the
+// only difference is where the root sits. That is what makes this a test of the root and not
+// of the label: a fix that resolved against the repository root passes neither, and one that
+// resolved against the declaring file's own directory passes neither.
+func TestABazelLabelResolvesAgainstItsWorkspaceRoot(t *testing.T) {
+	const (
+		lib = "load(\"@rules_go//go:def.bzl\", \"go_library\")\n" +
+			"go_library(name = \"greeter\", srcs = [\"greeter.go\"], deps = [\"//cmd/hello\"])\n"
+		bin  = "go_binary(name = \"hello\", srcs = [\"main.go\"])\n"
+		main = "package main\n\nfunc main() {}\n"
+		src  = "package greeter\n\nfunc Greet() string { return \"hi\" }\n"
+	)
+	for _, tc := range []struct{ name, prefix string }{
+		{"workspace at the repository root", ""},
+		{"workspace in a subdirectory", "go/"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out := build(t, map[string]string{
+				tc.prefix + "MODULE.bazel":          "module(name = \"w\", version = \"1\")\n",
+				tc.prefix + "greeter/BUILD.bazel":   lib,
+				tc.prefix + "greeter/greeter.go":    src,
+				tc.prefix + "cmd/hello/BUILD.bazel": bin,
+				tc.prefix + "cmd/hello/main.go":     main,
+			})
+			if !hasEdge(out.Graph, "/modules/greeter", "/modules/hello", graph.EdgeConfigures) {
+				var got []string
+				for _, e := range out.Graph.EdgesFrom("/modules/greeter") {
+					got = append(got, string(e.Kind)+" -> "+e.To)
+				}
+				t.Errorf("edges from /modules/greeter = %v, want a configures edge onto the "+
+					"module the `//cmd/hello` label names. The label is relative to the "+
+					"workspace root, which is %q here.", got, "/"+tc.prefix)
+			}
+		})
+	}
+}
+
+// The negative boundary on the label rule: a nested workspace's labels are its own.
+//
+// Workspaces nest in practice — a subproject brought in with the WORKSPACE file it was
+// published with, or a monorepo whose Bazel tree contains a self-contained one. So a label has two candidate
+// roots and only the nearer one is right, which is the same rule resolveC applies to include
+// roots and for the same reason.
+//
+// Both directories below are named `tool` deliberately. A rule that took the outermost root
+// resolves the label onto the wrong one and still produces an edge, so an assertion that only
+// checked for *an* edge would pass — that is the mutant this exists to fail, and it is why the
+// assertion is on the resolved path and not on the edge's presence.
+func TestABazelLabelResolvesInsideTheNearestWorkspace(t *testing.T) {
+	out := build(t, map[string]string{
+		"MODULE.bazel":         "module(name = \"outer\", version = \"1\")\n",
+		"tool/BUILD.bazel":     "go_library(name = \"tool\", srcs = [\"tool.go\"])\n",
+		"tool/tool.go":         "package tool\n\nfunc Outer() {}\n",
+		"sub/lib/MODULE.bazel": "module(name = \"lib\", version = \"1\")\n",
+		"sub/lib/app/BUILD.bazel": "go_library(name = \"app\", srcs = [\"app.go\"], " +
+			"deps = [\"//tool\"])\n",
+		"sub/lib/app/app.go":       "package app\n\nfunc A() {}\n",
+		"sub/lib/tool/BUILD.bazel": "go_library(name = \"tool\", srcs = [\"tool.go\"])\n",
+		"sub/lib/tool/tool.go":     "package tool\n\nfunc Inner() {}\n",
+	})
+
+	// Which node id the two same-named directories were given depends on how ids were
+	// suffixed, so the resolved path is what this asserts on.
+	var got []string
+	for _, e := range out.Graph.EdgesFrom("/modules/app") {
+		if e.Kind != graph.EdgeConfigures {
+			continue
+		}
+		got = append(got, node(t, out.Graph, e.To).Path)
+	}
+	if !containsStr(got, "sub/lib/tool") {
+		t.Errorf("configures edges from /modules/app reach %v, want sub/lib/tool. "+
+			"`//tool` in the nested workspace names that workspace's own package.", got)
+	}
+	if containsStr(got, "tool") {
+		t.Errorf("configures edges from /modules/app reach %v, which includes the outer "+
+			"workspace's tool/. A label is relative to the nearest workspace root above the "+
+			"file that wrote it, so this is an edge between two projects that name each "+
+			"other nowhere", got)
+	}
+}
+
+// The negative boundary on the rule above: a name no build file in this tree declares is a
+// real external dependency and must keep its page. Without this, dropping every linked name
+// would look correct — the test above cannot tell the fix from a reader that records nothing.
+func TestAnUndeclaredLinkedLibraryStaysExternal(t *testing.T) {
+	out := build(t, map[string]string{
+		"CMakeLists.txt": "project(single LANGUAGES CXX)\n" +
+			"add_executable(app app.cc)\n" +
+			"target_link_libraries(app PRIVATE fmt::fmt absl_strings)\n",
+		"app.cc": "int main() { return 0; }\n",
+	})
+	for _, want := range []string{"/references/cmake-fmt", "/references/cmake-absl-strings"} {
+		node(t, out.Graph, want)
+	}
+}

@@ -399,6 +399,114 @@ func TestWorkflowsThatCannotBlockAMergeAreReported(t *testing.T) {
 	}
 }
 
+// TestABuildSystemThatStatesItsTestsIsNotReportedAsSilent covers the rule keyed on the reader
+// rather than on the target's name, and the boundary is which of the two the rule reads.
+//
+// The bug this holds shipped: a C project declaring `add_test(NAME buffer_roundtrip ...)` was
+// reported as declaring no test command, because the name list is the instrument for a Makefile
+// target and `buffer_roundtrip` is not in it. The fix has to be authority, not vocabulary —
+// a wider name list would report the same target in a Makefile, where nothing said it was a
+// test and the reader would only be guessing from the word "roundtrip". So the negative half
+// below is the load-bearing one: the *same name* under KindMakefile must still read as silence.
+func TestABuildSystemThatStatesItsTestsIsNotReportedAsSilent(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		kind     manifest.Kind
+		path     string
+		declared bool
+	}{
+		{"cmake add_test", manifest.KindCMake, "tests/CMakeLists.txt", true},
+		{"bazel _test rule", manifest.KindBazel, "greeter/BUILD.bazel", true},
+		{"makefile target of the same name", manifest.KindMakefile, "Makefile", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			res := Analyse(Input{
+				Discovered: walk(tc.path),
+				Manifests: facts(manifest.Facts{
+					Path: tc.path, Kind: tc.kind,
+					Scripts: []manifest.Script{{Name: "buffer_roundtrip", Line: 17}},
+				}),
+			})
+
+			declared := findingsMatching(res, TopicTest, "A test command is declared")
+			absent := findingsMatching(res, TopicTest, "No test command is declared")
+			if tc.declared {
+				if len(declared) != 1 {
+					t.Fatalf("%d finding(s) report a declared test command, want 1:\n%s",
+						len(declared), res.Render())
+				}
+				if !strings.Contains(declared[0].Text, "buffer_roundtrip") {
+					t.Errorf("the test finding does not name the declared target: %q", declared[0].Text)
+				}
+				if len(absent) != 0 {
+					t.Errorf("a repository declaring a test was also reported as declaring none:\n%s",
+						res.Render())
+				}
+				return
+			}
+			if len(declared) != 0 {
+				t.Errorf("an unconventionally named Makefile target was read as a declared test "+
+					"command, so the rule is matching the name and not the build system that "+
+					"states it:\n%s", res.Render())
+			}
+			if len(absent) != 1 {
+				t.Errorf("%d finding(s) report the absence, want 1:\n%s", len(absent), res.Render())
+			}
+		})
+	}
+}
+
+// TestABuildSystemThatDeclaresAProgramDeclaresABuild is the same rule on the build topic, and
+// it exists because the two findings have to agree.
+//
+// Reporting `add_test` as a declared test while reporting the `add_executable` beside it as no
+// declared build would say a repository states its tests and not its build, in a tree that
+// states both the same way. The negative half here is the stated limit rather than a
+// name-versus-authority distinction: these readers put a *program* in Entrypoints, so a build
+// file declaring only a library declares no program, and a Makefile with an unconventionally
+// named target is still silence.
+func TestABuildSystemThatDeclaresAProgramDeclaresABuild(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		kind     manifest.Kind
+		entry    string
+		declared bool
+	}{
+		{"cmake add_executable", manifest.KindCMake, "app", true},
+		{"bazel _binary", manifest.KindBazel, "hello", true},
+		{"cmake library only", manifest.KindCMake, "", false},
+		{"makefile entrypoint", manifest.KindMakefile, "app", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := manifest.Facts{Path: "CMakeLists.txt", Kind: tc.kind}
+			if tc.entry != "" {
+				f.Entrypoints = []manifest.Entrypoint{{Name: tc.entry, Line: 10}}
+			}
+			res := Analyse(Input{Discovered: walk(f.Path), Manifests: facts(f)})
+
+			declared := findingsMatching(res, TopicBuild, "A build command is declared")
+			absent := findingsMatching(res, TopicBuild, "No build command is declared")
+			if tc.declared {
+				if len(declared) != 1 {
+					t.Fatalf("%d finding(s) report a declared build command, want 1:\n%s",
+						len(declared), res.Render())
+				}
+				if !strings.Contains(declared[0].Text, tc.entry) {
+					t.Errorf("the build finding does not name the declared target: %q", declared[0].Text)
+				}
+				return
+			}
+			if len(declared) != 0 {
+				t.Errorf("a build command was reported where the build system declares no "+
+					"program:\n%s", res.Render())
+			}
+			if len(absent) != 1 {
+				t.Errorf("%d finding(s) report the absence, want 1:\n%s", len(absent), res.Render())
+			}
+		})
+	}
+}
+
 // TestEveryFindingCarriesItsGrounding is the invariant behind the whole page.
 //
 // A declared finding names where it is stated; an absence names where signpost looked. Without

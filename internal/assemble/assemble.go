@@ -274,6 +274,19 @@ func (b *builder) index() {
 				b.res.addPyRoot(dirOf(f.Path))
 			case manifest.KindTSConfig:
 				b.res.addTSConfig(f.Path, f.Resolution)
+			case manifest.KindCMake:
+				// The targets a build file declares, so that another build file linking one
+				// by bare name is read as this repository's own library rather than a package
+				// from outside. addBuildTargets explains why CMake needs this and Bazel does
+				// not: a Bazel label says which it is, and a CMake link name does not.
+				b.res.addBuildTargets(f.Path, f.Targets)
+			case manifest.KindBazel:
+				// The workspace root, which is what a `//pkg` label in any BUILD file below
+				// it is relative to. addBazelWorkspace says why this cannot be settled in
+				// the reader and why the repository root is the wrong default.
+				if manifest.IsBazelWorkspaceRoot(f.Path) {
+					b.res.addBazelWorkspace(dirOf(f.Path))
+				}
 			case manifest.KindGemfile:
 				// The directory holding the Gemfile or gemspec is a load-path root, which is
 				// the conventional half of Ruby's resolution; addRubyRoot explains why the
@@ -446,6 +459,15 @@ func (b *builder) externals() ([]string, map[string]*ext) {
 		e := byKey[key]
 		if e.eco == "npm" {
 			if _, inRepo := b.res.npmSibling(e.name); inRepo {
+				continue
+			}
+		}
+		// A CMake target another build file in this tree declares, which is the same rule
+		// again: the name was linked by a file that could not see the declaration, so the
+		// reader recorded it as external and only this pass knows better. addBuildTargets
+		// says why CMake is the one ecosystem where the reader cannot settle it alone.
+		if e.eco == "cmake" {
+			if _, inRepo := b.res.buildSibling(e.name); inRepo {
 				continue
 			}
 		}
@@ -867,6 +889,27 @@ func (b *builder) addDeclaredDepEdges() {
 				// source. This is the part of a monorepo's structure that is stated
 				// nowhere else: which packages a package is built against.
 				to, _ = b.res.npmSibling(d.Name)
+			}
+			if to == "" && d.Ecosystem == "cmake" && !d.Local {
+				// A link naming a target a sibling build file declares. Dropped from
+				// externals for the reason given there, so the edge lands on the module
+				// covering that build file's directory instead — which library an executable
+				// is built against is exactly the structure a C project states nowhere else.
+				//
+				// The nearest ancestor holding a module rather than the directory itself, for
+				// the reason the Local branch below gives: a directory of headers and a
+				// CMakeLists.txt has no extracted source and so no node of its own.
+				if dir, inRepo := b.res.buildSibling(d.Name); inRepo {
+					to = b.nearestModule(dir)
+				}
+			}
+			if to == "" && d.Local && d.Ecosystem == "bazel" {
+				// A `//pkg` label, which is relative to the Bazel workspace root and not to
+				// the repository root. bazelPackage resolves it against the nearest root
+				// above the declaring file; without that, a workspace anywhere but the top of
+				// the repository loses every internal edge it declares, and one whose label
+				// happens to name a directory at the repository root gains a wrong edge.
+				to = b.nearestModule(b.res.bazelPackage(f.Path, d.Source))
 			}
 			if to == "" && d.Local {
 				// A declaration that named a directory in this repository, for the same

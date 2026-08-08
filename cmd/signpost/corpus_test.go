@@ -1699,6 +1699,163 @@ func TestCorpusResolvesJVMPackagesToTheRightDirectory(t *testing.T) {
 	}
 }
 
+// TestCorpusReadsBuildGraphsAndDrawsTheirInternalEdges covers the two build systems that state
+// structure no other file in a repository states, and every assertion here is paired with the
+// negative that makes it mean something.
+//
+// A build file is the only place a C project says which library its executable links, and the
+// only place a Bazel package says which packages it is built against. Reading them is
+// therefore not an incremental gain in dependency coverage — it is the difference between a C
+// repository having structure in the bundle and having none. But both directions of the reading
+// are wrong in ways that read as correct on the page, which is why the negatives are here:
+//
+//   - CMake links by bare name, and a name is either this repository's own library or a
+//     package from outside. Reported the wrong way, `corpus_buffer_core` becomes a reference
+//     page claiming the project depends on code it builds itself, and `cmocka` disappears from
+//     the supply chain. Both are linked in the same command of `c/tests/CMakeLists.txt`, so no
+//     rule can get one right by accident.
+//   - Bazel states which it is in the label, so the risk moves to *where* `//` points: it is
+//     the workspace root, and the corpus workspace is `go/`. Read as repository-relative,
+//     `//cmd/hello` names nothing and the edge silently vanishes — which is how this defect was
+//     found, by reading the emitted page rather than by a failing test.
+//   - Both readers stop at what they can see. A target built inside a `for` loop is not a
+//     top-level call, so `corpus_generated_a` and `corpus_generated_b` are deliberately unread,
+//     and an `http_archive` with no `sha256` must not acquire a version — an invented pin is
+//     what somebody auditing that file would act on.
+//
+// The pinned-and-unpinned archive pair is the sharpest of these, because the failure is a
+// *plausible* value rather than a missing one. `rules_python` carries its sha256 as the version
+// and `corpus_unpinned_archive` carries no version attribute at all, and a reader that filled
+// the second one in from the URL would produce a page that looks exactly as trustworthy.
+func TestCorpusReadsBuildGraphsAndDrawsTheirInternalEdges(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// What the two build systems declare that nothing else in the corpus does.
+	for _, want := range []struct{ what, page string }{
+		{"a CMake find_package", "references/cmake-openssl.md"},
+		{"an optional find_package, which is still a dependency", "references/cmake-zlib.md"},
+		{"a link to a library declared in no build file here", "references/cmake-cmocka.md"},
+		{"a bzlmod bazel_dep", "references/bazel-rules-go.md"},
+		{"a dev_dependency, which is a declared dependency too", "references/bazel-gazelle.md"},
+		{"an http_archive", "references/bazel-rules-python.md"},
+		{"a label naming another repository", "references/bazel-com-github-google-uuid.md"},
+	} {
+		if _, ok := pages[want.page]; !ok {
+			t.Errorf("%s: no page at %s. Pages written:\n  %s",
+				want.what, want.page, pageNames(pages))
+		}
+	}
+
+	// The negatives, checked across every page rather than by expected filename: a name that
+	// must appear nowhere can appear in a summary, an edge, or an attribute, and asserting only
+	// that one page is missing would leave the other three routes open.
+	for _, bad := range []struct{ name, why string }{
+		{"corpus_buffer_core", "a library this repository builds, linked by name from " +
+			"c/tests/CMakeLists.txt. It is declared in c/src/CMakeLists.txt, which that file " +
+			"cannot see, so a reader settling this one file at a time reports the project's " +
+			"own library as a third-party dependency"},
+		{"corpus_generated_a", "a target built inside a for loop in go/cmd/hello/BUILD.bazel. " +
+			"Loop bodies are not top-level calls and are deliberately unread, so naming it " +
+			"claims a target signpost did not actually read"},
+		{"corpus_generated_b", "the second target from the same loop"},
+	} {
+		for name, body := range pages {
+			if strings.Contains(body, bad.name) {
+				t.Errorf("%s names %q: %s", name, bad.name, bad.why)
+			}
+		}
+	}
+
+	// The pin and the absence of one, from the same file.
+	pinned, ok := pages["references/bazel-rules-python.md"]
+	if !ok {
+		t.Fatalf("no page for the pinned http_archive, so this asserts nothing")
+	}
+	const sha = "9c6e26911a79fbf510a8f06d8eedb40f412023cf7fa6d1461def27116bff022c"
+	if !strings.Contains(pinned, sha) {
+		t.Errorf("references/bazel-rules-python.md does not carry the sha256 the archive is "+
+			"pinned to. That checksum is the pin — without it the page says a dependency "+
+			"exists and nothing about whether two builds fetch the same bytes:\n%s", pinned)
+	}
+	unpinned, ok := pages["references/bazel-corpus-unpinned-archive.md"]
+	if !ok {
+		t.Fatalf("no page for the unpinned http_archive, so this asserts nothing")
+	}
+	if strings.Contains(unpinned, "name: version") {
+		t.Errorf("references/bazel-corpus-unpinned-archive.md carries a version attribute. The "+
+			"archive declares no sha256 and no version, so any value here was invented — and a "+
+			"version on this page reads as a pin to whoever audits the supply chain:\n%s",
+			unpinned)
+	}
+
+	// The internal edges, which are the whole reason to read a build file. Asserted from the
+	// graph rather than the pages, because an edge's rendering is a relative link and the
+	// question here is what it points at.
+	stdout, stderr, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d\n%s", code, stderr)
+	}
+	var g struct {
+		Nodes []struct{ ID, Kind, Path, Title string }
+		Edges []struct{ From, To, Kind string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+	byPath := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.Path] = n.ID
+		}
+	}
+	for _, want := range []struct{ from, to, why string }{
+		{"c/tests", "c/src", "`target_link_libraries(buffer_test PRIVATE corpus_buffer_core " +
+			"cmocka)` links a library declared in c/src/CMakeLists.txt. Which library a test " +
+			"binary is built against is stated in that command and nowhere else in this tree"},
+		{"go/greeter", "go/cmd/hello", "`deps = [\"//cmd/hello\"]` names a package in this " +
+			"workspace, whose root is go/ and not the repository root. Read as " +
+			"repository-relative the label names nothing and the declared edge disappears " +
+			"with no gap recorded anywhere"},
+	} {
+		from, to := byPath[want.from], byPath[want.to]
+		if from == "" || to == "" {
+			t.Fatalf("no module node for %q or %q, so this asserts nothing", want.from, want.to)
+		}
+		found := false
+		for _, e := range g.Edges {
+			if e.From == from && e.To == to && e.Kind == "configures" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			var got []string
+			for _, e := range g.Edges {
+				if e.From == from {
+					got = append(got, e.Kind+" -> "+e.To)
+				}
+			}
+			t.Errorf("no configures edge %s -> %s. %s.\nEdges from %s: %v",
+				want.from, want.to, want.why, want.from, got)
+		}
+	}
+
+	// The relative label, which is the negative half of the edge assertions above. `embed =
+	// [":greeter"]` in go/greeter/BUILD.bazel names that package itself, so it must draw no
+	// edge: a module configuring itself is not structure, and it is the shape a rule that
+	// resolved every label against the declaring file's own directory would produce for all
+	// of them.
+	if id := byPath["go/greeter"]; id != "" {
+		for _, e := range g.Edges {
+			if e.From == id && e.To == id {
+				t.Errorf("self-edge %s on go/greeter. A relative Bazel label names the package "+
+					"it is written in, and an edge from a module to itself states nothing", e.Kind)
+			}
+		}
+	}
+}
+
 // TestCorpusResolvesIncludesThroughTheSearchPath is the C family's structural assertion, and
 // what it covers is the one thing C resolution has instead of a module system: a search order.
 //

@@ -63,6 +63,12 @@ type resolver struct {
 	// psr4 are composer's autoload prefixes, longest prefix first so a nested namespace
 	// wins over the one containing it.
 	psr4 []psr4Prefix
+	// buildTargets maps a build target's name to the directory whose build file declares
+	// it, for the names one build file uses to link against another's targets.
+	buildTargets map[string]string
+	// bazelRoots are the directories holding a WORKSPACE or MODULE.bazel file, which is
+	// what a `//pkg` label is relative to. See addBazelWorkspace.
+	bazelRoots map[string]bool
 	// deps maps a normalized dependency key to the external node it belongs to.
 	deps map[string]string
 	// ecosystems are the ecosystems any manifest declared, sorted, for the
@@ -160,6 +166,84 @@ func (r *resolver) addGoModule(file, modPath string) {
 		}
 		return r.goMods[i].path < r.goMods[j].path
 	})
+}
+
+// addBuildTargets records the targets one build file declares, against its directory.
+//
+// This is npmSibling's problem in another ecosystem, and CMake has it worse. A monorepo's
+// packages import each other by published name, and a C project's build files link each
+// other's targets by bare name: `target_link_libraries(app PRIVATE core)` says nothing
+// about whether `core` is built in this repository or fetched from outside it. The
+// declaration is almost always in a subdirectory's own CMakeLists.txt — that is what
+// `add_subdirectory` is for and it is the ordinary layout of a C project — so a reader
+// seeing one file at a time cannot tell. Read that way, every sibling library in every
+// multi-directory C project becomes a third-party dependency with a reference page of its
+// own, which is the same defect addNpmPackage was written to fix.
+//
+// A first declaration wins over a later one. Two build files declaring the same target
+// name is a configuration CMake itself rejects, so there is no correct answer to pick
+// between them and the stable one is worth more than the arbitrary one.
+func (r *resolver) addBuildTargets(file string, targets []string) {
+	if r.buildTargets == nil {
+		r.buildTargets = make(map[string]string)
+	}
+	for _, t := range targets {
+		if _, seen := r.buildTargets[t]; !seen {
+			r.buildTargets[t] = dirOf(file)
+		}
+	}
+}
+
+// buildSibling reports whether a linked name is a target this repository builds, and
+// returns the module node covering the source of the build file that declares it.
+//
+// The module rather than the directory outright, for addDeclaredDepEdges's reason: a
+// directory holding only a CMakeLists.txt and headers has no extracted source and so no
+// node, and landing the edge on the nearest ancestor that has one keeps the composition
+// visible instead of dropping it.
+func (r *resolver) buildSibling(name string) (dir string, inRepo bool) {
+	dir, inRepo = r.buildTargets[name]
+	return dir, inRepo
+}
+
+// addBazelWorkspace records a directory as a Bazel workspace root.
+//
+// A `//pkg` label is repository-relative in Bazel's sense of repository, which is the
+// directory holding the WORKSPACE or MODULE.bazel file — not the directory git was
+// initialised in. The two coincide in a repository that is one Bazel workspace and diverge
+// in every other shape: a workspace under `go/`, a monorepo whose Bazel tree is one project
+// among several, a `third_party/` checkout carrying its own WORKSPACE.
+//
+// The reader cannot settle this, for the reason Facts.Targets gives about CMake: reading
+// `go/greeter/BUILD.bazel` on its own says nothing about where the workspace root above it
+// is. So the label is recorded workspace-relative and joined against the nearest enclosing
+// root here. Anchoring at the repository root instead is not a near miss — it drops the edge
+// when no such directory exists, and lands it on an unrelated module when one happens to.
+func (r *resolver) addBazelWorkspace(dir string) {
+	if r.bazelRoots == nil {
+		r.bazelRoots = make(map[string]bool)
+	}
+	r.bazelRoots[cleanDir(dir)] = true
+}
+
+// bazelPackage resolves a workspace-relative Bazel package path against the workspace root
+// enclosing the file that named it.
+//
+// Nearest root first, for resolveC's reason: a repository holding two workspaces has a root
+// in each, and the one nearer the declaring file is the one whose labels it writes. A file
+// under no workspace root at all falls back to the repository root, which is what a
+// repository that is a single workspace looks like and is where a BUILD file with no
+// WORKSPACE beside it — vendored, or in a tree that has not been committed whole — would
+// resolve.
+func (r *resolver) bazelPackage(from, pkg string) string {
+	for dir := dirOf(from); ; dir = dirOf(dir) {
+		if r.bazelRoots[dir] {
+			return path.Join(dir, pkg)
+		}
+		if dir == "" {
+			return pkg
+		}
+	}
 }
 
 // addNpmPackage records a package.json's declared name against its directory.
