@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0002: patchable dependencies not zero dependencies"
 description: "Architecture decision (Accepted), 28 rules read from 0002-patchable-dependencies-not-zero-dependencies.md."
-resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/docs/adr/0002-patchable-dependencies-not-zero-dependencies.md
+resource: git://github.com/3rg0n/signpost@9a47aec509a15a7dc6e15a56901c8fe035e50358/docs/adr/0002-patchable-dependencies-not-zero-dependencies.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:

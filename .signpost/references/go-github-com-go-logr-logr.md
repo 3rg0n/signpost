@@ -2,7 +2,7 @@
 type: External Dependency
 title: github.com/go-logr/logr
 description: go dependency github.com/go-logr/logr (v1.4.3)
-resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034
+resource: git://github.com/3rg0n/signpost@9a47aec509a15a7dc6e15a56901c8fe035e50358
 tags: [external, go]
 generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
