@@ -1,0 +1,163 @@
+internal/extract/shell.go
+  s_f6c0b1ac81cb95::t_215273be229623 135-137
+  s_f6c0b1ac81cb95::t_31ea76f403705e 1-134,138-147,209,211-396,402-467
+  s_f6c0b1ac81cb95::t_b5ca938d4d3ac5 148-208,210
+  s_f6c0b1ac81cb95::t_24b2b76315f763 397-401
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_250eb00acf88f5 325,331-339,345-346
+  s_f6c0b1ac81cb95::t_e671ff16d10bea 598-606
+  s_f6c0b1ac81cb95::t_7778b4942e3075 290-291,300-309
+  s_f6c0b1ac81cb95::t_a147ec2c8c8754 357-362
+  s_f6c0b1ac81cb95::t_01aabd30b2192b 59-65
+  s_f6c0b1ac81cb95::t_91cc926e636494 89-108
+  s_c9bf53d6778a8c::t_cd7bc6262124bc 310
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_19bb0817eb9587 144-145
+testdata/corpus/shell/scripts/lib/log.sh
+  s_f6c0b1ac81cb95::t_fc5446f1c6ef32 1-16
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_e3e2bbdc249697 270
+  s_f6c0b1ac81cb95::t_40d9fc8c78fc2a 438-445,448-452
+  s_f6c0b1ac81cb95::t_9c444804488e6d 242-260,263-269,271
+  s_f6c0b1ac81cb95::t_8074251d8fddee 83-87
+  s_f6c0b1ac81cb95::t_9f1df4b4e1fc45 643-665,673-676
+  s_f6c0b1ac81cb95::t_679feb94f45892 120-126
+  s_f6c0b1ac81cb95::t_8a9aa785de3aa8 261-262
+  s_f6c0b1ac81cb95::t_1dd350a89b423a 289,291-297
+  s_f6c0b1ac81cb95::t_068772021d8d2a 446-447
+testdata/corpus/shell/scripts/lib/retry.sh
+  s_f6c0b1ac81cb95::t_fc5446f1c6ef32 1-17
+site/index.html
+  s_f6c0b1ac81cb95::t_2f622a2a961ee6 253-256
+  s_f6c0b1ac81cb95::t_c819af047f5101 346
+  s_f6c0b1ac81cb95::t_8ee07caee87fbf 288-302
+  s_c511dec661c68b::t_c175f702f1feea 287
+internal/extract/powershell.go
+  s_f6c0b1ac81cb95::t_bff1b9417bd8a9 415-422,425
+  s_f6c0b1ac81cb95::t_af020f512b1029 1-67,70-414,423-424,426-443,445,449,451-694,696,706,712-713,716-717,725-726,729-767,769,777,779-900
+  s_f6c0b1ac81cb95::t_cd2f69ceb3c2f0 695,697-705,707-711,714-715,718-724,727-728
+  s_f6c0b1ac81cb95::t_a60b6a439f250f 768,770-776,778
+  s_f6c0b1ac81cb95::t_af519679a6af43 68-69
+  s_f6c0b1ac81cb95::t_e1fa6815307ff0 444,446-448,450
+testdata/corpus/powershell/src/Corpus/Logging.psm1
+  s_f6c0b1ac81cb95::t_853d2e527ebc5f 1-14
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_467b71613e40fd 11-70
+testdata/corpus/powershell/scripts/Invoke-Build.ps1
+  s_f6c0b1ac81cb95::t_853d2e527ebc5f 1-22
+README.md
+  s_f6c0b1ac81cb95::t_fa8fa3a351d4f3 81-82
+  s_f6c0b1ac81cb95::t_0cae439a8b4566 111-131
+  s_f6c0b1ac81cb95::t_213b763159c869 436
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_2712fcf76ac8f7 434-439,449-452
+  s_f6c0b1ac81cb95::t_66ec6e503d656a 1884-1896
+  s_f6c0b1ac81cb95::t_c497b22aef12d8 1842
+  s_f6c0b1ac81cb95::t_6f7cca1b2d5ddd 1908
+  s_f6c0b1ac81cb95::t_2353a2a07afbfd 1463-1478
+  s_f6c0b1ac81cb95::t_79a067aaad8024 1264-1288
+  s_f6c0b1ac81cb95::t_4329798e9eb379 1341-1343
+  s_f6c0b1ac81cb95::t_5b30dce4a29678 1806-1814
+  s_f6c0b1ac81cb95::t_1d86125fe78a15 1942-1947,1954-1955
+  s_f6c0b1ac81cb95::t_2381875dcc829f 1386-1390
+  s_f6c0b1ac81cb95::t_c6dadb5b46eef3 409-419
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_b9c70ed89a9d25 1459-1466
+  s_f6c0b1ac81cb95::t_9172ad4add0156 1327
+  s_f6c0b1ac81cb95::t_cd7e47fb8d5a36 1413-1426
+  s_f6c0b1ac81cb95::t_3dedbbc643d472 1543
+  s_f6c0b1ac81cb95::t_e46fca2543fb37 1281-1288,1294-1304
+  s_f6c0b1ac81cb95::t_95847c5b6357a9 1451-1453
+  s_f6c0b1ac81cb95::t_9efc8287f1d147 1478
+  s_f6c0b1ac81cb95::t_dbb59e6ced9193 1489-1495
+  s_f6c0b1ac81cb95::t_bcc4bd9738ffc2 1551-1561,1563
+  s_f6c0b1ac81cb95::t_1f96a62a727b29 1575-1582
+  s_f6c0b1ac81cb95::t_36aba1b2b938d2 1355-1358,1363
+  s_f6c0b1ac81cb95::t_77fcc7d53a78a6 585-595,599-600,611-622
+  s_f6c0b1ac81cb95::t_ec0db3a10c6675 1530,1536
+testdata/corpus/powershell/src/Corpus/Widget.psm1
+  s_f6c0b1ac81cb95::t_853d2e527ebc5f 1-41
+docs/design.md
+  s_f6c0b1ac81cb95::t_8aa8c45c115959 350-382
+  s_f6c0b1ac81cb95::t_a8504db7229357 398-399,401-405
+  s_f6c0b1ac81cb95::t_2e42e2212d832f 272-273
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_27e64c16c48fdd 614-617,622-640,644-718
+  s_f6c0b1ac81cb95::t_cb2f57d055be1f 641-643
+  s_3f706e3f4b4643::t_7c7e59eb28ee08 719
+testdata/corpus/shell/scripts/deploy.sh
+  s_f6c0b1ac81cb95::t_fc5446f1c6ef32 1-39
+testdata/corpus/powershell/src/Corpus/Corpus.psm1
+  s_f6c0b1ac81cb95::t_853d2e527ebc5f 1-42
+testdata/corpus/shell/release
+  s_f6c0b1ac81cb95::t_b799f23230f2f3 2-10
+  s_f6c0b1ac81cb95::t_e2ff061980a3a5 1,11-19
+internal/extract/shell_test.go
+  s_f6c0b1ac81cb95::t_6fc41031b7f3ed 446-447
+  s_f6c0b1ac81cb95::t_464f2f3c407892 1-193,206-445,448-538
+  s_f6c0b1ac81cb95::t_e875763863a561 194-205
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_6886c5d05e1470 40-48
+  s_f6c0b1ac81cb95::t_5ed854e4931a6d 103-113,122
+  s_f6c0b1ac81cb95::t_2020589473dd83 402-424
+  s_f6c0b1ac81cb95::t_6f6f7e404dc2f2 114-121
+internal/extract/powershell_test.go
+  s_f6c0b1ac81cb95::t_b8a004d170224c 105
+  s_f6c0b1ac81cb95::t_6f342448e2053c 400-404,412-413,415-418,420-423
+  s_f6c0b1ac81cb95::t_480513fcbeed37 468-470,472-477,482-485,499-534
+  s_f6c0b1ac81cb95::t_310fc37552a6fc 565-567,583-635
+  s_f6c0b1ac81cb95::t_62705d6eaf7606 663-671
+  s_f6c0b1ac81cb95::t_870a064326c8d1 697-705
+  s_f6c0b1ac81cb95::t_888ec36d9641cd 149-152,155
+  s_f6c0b1ac81cb95::t_33578cab41e556 142,147-148,154
+  s_f6c0b1ac81cb95::t_dc751ba0984be2 712-716
+  s_f6c0b1ac81cb95::t_2de7ede6755cb0 4
+  s_f6c0b1ac81cb95::t_6abb667a91bc34 1-3,5-104,106-141,145-146,153,156-227,232-399,405-411,414,419,424-467,471,478-481,486-498,535-555,562-564,568-582,636-662,672-696,706-711,717-770
+  s_f6c0b1ac81cb95::t_7644b2c162b7b5 143-144
+  s_f6c0b1ac81cb95::t_5c3cfa3c0f489d 228-231
+  s_f6c0b1ac81cb95::t_495217c7d55db9 556-561
+internal/assemble/describe.go
+  s_f6c0b1ac81cb95::t_a61d00c80d741a 168-179
+  s_f6c0b1ac81cb95::t_5d7bb02a53c922 570
+  s_f6c0b1ac81cb95::t_40febcf843bbb8 541-569,571-575
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ada2d15d5e1d2b9c4d67af4457ddc2013cbd5216",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_c511dec661c68b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba64624c-ba66-4b0b-a52d-b7ab5e0b891f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_c9bf53d6778a8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "24943c4e-df72-4669-b456-e26dd10944a3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
