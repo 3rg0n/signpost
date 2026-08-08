@@ -1,0 +1,111 @@
+internal/manifest/facts.go
+  s_f6c0b1ac81cb95::t_7e0b920fea967d 126-133
+  s_f6c0b1ac81cb95::t_91b0463767c4aa 533-535
+  s_f6c0b1ac81cb95::t_39ca965f7a5d55 44-57
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_9e66599583d02a 465-473
+  s_f6c0b1ac81cb95::t_a6fe01609a4cd1 893-905
+  s_f6c0b1ac81cb95::t_e47de0bd59c10b 277-282
+  s_f6c0b1ac81cb95::t_4420653eb8e490 283-289
+  s_f6c0b1ac81cb95::t_d5b2b4c12a0c67 906
+  s_f6c0b1ac81cb95::t_5e5d64ba028a5e 907-913
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_eb01a017a17f1b 13-52
+internal/assemble/resolve.go
+  s_f6c0b1ac81cb95::t_b7cc69efebac56 69-71
+  s_f6c0b1ac81cb95::t_e77c4fa2ba8646 171-208
+  s_f6c0b1ac81cb95::t_0264fc32eef93b 209-248
+  s_f6c0b1ac81cb95::t_0374efeb216dd9 66-68
+testdata/corpus/c/CMakeLists.txt
+  s_f6c0b1ac81cb95::t_27439665159568 1-24
+internal/practice/practice_test.go
+  s_f6c0b1ac81cb95::t_750de614821a79 402-509
+testdata/corpus/c/tests/CMakeLists.txt
+  s_f6c0b1ac81cb95::t_6ab0e5d5621f0e 1-17
+internal/manifest/registry.go
+  s_f6c0b1ac81cb95::t_2d259d9fe61b9a 86-98
+testdata/corpus/go/MODULE.bazel
+  s_f6c0b1ac81cb95::t_2fd0bd477c3f31 1-32
+testdata/corpus/c/src/CMakeLists.txt
+  s_f6c0b1ac81cb95::t_9ba85703d6b061 1-11
+docs/design.md
+  s_f6c0b1ac81cb95::t_f8fa6c1b395fdb 444
+  s_f6c0b1ac81cb95::t_aa7d92f8dbef25 477-492
+internal/manifest/cmake.go
+  s_f6c0b1ac81cb95::t_cbf844a61a8795 95-100
+  s_f6c0b1ac81cb95::t_a863d77cbd633b 615-618
+  s_f6c0b1ac81cb95::t_70190f2777551f 1-94,101-614,619-765
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_7982f7509875ec 1702-1858
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_e94d81b0ad2189 42
+  s_f6c0b1ac81cb95::t_c1cc48d5996253 52-53
+site/index.html
+  s_f6c0b1ac81cb95::t_791a68de5e2972 325-328
+internal/manifest/bazel_test.go
+  s_f6c0b1ac81cb95::t_13a1666d746e53 280-283
+  s_f6c0b1ac81cb95::t_5155d8cda2f389 348-375
+  s_f6c0b1ac81cb95::t_6e9022b6a58f1c 1-5,7-78,85-279,284-347,376-396
+  s_f6c0b1ac81cb95::t_1a31023caeb2d9 6
+  s_f6c0b1ac81cb95::t_5a52c2704d0e23 79-84
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_64c138c28152d0 2039-2041
+  s_f6c0b1ac81cb95::t_924fda5946db81 2058-2059,2062-2069,2076,2081-2087,2089,2093-2099
+  s_f6c0b1ac81cb95::t_66b82b90b43b35 2060-2061,2071-2075,2077-2079,2091-2092
+  s_f6c0b1ac81cb95::t_6aa3fbc0e59e64 2012-2038,2042-2057,2070,2080,2088,2090,2100-2102
+  s_f6c0b1ac81cb95::t_9f483a1cfdf50a 1946-1991,2000-2011,2103-2116
+  s_f6c0b1ac81cb95::t_20216f9bd25a5f 1992-1999
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_ab7f9ffe8a938f 580-627
+internal/manifest/bazel.go
+  s_f6c0b1ac81cb95::t_c27731225e21c9 802-821
+  s_f6c0b1ac81cb95::t_a55ea1dc6a0057 472-477,480-483
+  s_f6c0b1ac81cb95::t_6f09bb98f346ea 599,601-606
+  s_f6c0b1ac81cb95::t_63041878f907c8 1-471,478-479,484-598,600,607-801
+internal/discover/classify.go
+  s_f6c0b1ac81cb95::t_4cd2e7e623c8d9 179-193
+  s_f6c0b1ac81cb95::t_c3003f0654e832 273-281,292-294
+  s_f6c0b1ac81cb95::t_b854810b945f79 209-216,223-224
+  s_3f706e3f4b4643::t_eef09b478497e2 295
+docs/adr/0023-a-build-declaration-is-settled-where-the-tree-is-visible.md
+  s_f6c0b1ac81cb95::t_aa16ad597b34fa 1-135
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_ed3d7e54f24ca0 188-207,218-224
+  s_f6c0b1ac81cb95::t_16a79b697b41ad 238-239,292-293
+  s_f6c0b1ac81cb95::t_e8534976437f8b 250-265,273
+testdata/corpus/go/cmd/hello/BUILD.bazel
+  s_f6c0b1ac81cb95::t_993f3e0367d5ab 1-24
+internal/manifest/cmake_test.go
+  s_f6c0b1ac81cb95::t_c5af6337ca6e0f 247
+  s_f6c0b1ac81cb95::t_7caa484fb29996 1-5,7-246,248-271,286-287,314-343
+  s_f6c0b1ac81cb95::t_73ac5f0c42c99d 6
+  s_f6c0b1ac81cb95::t_3a2992702c90a7 272-285,288-313
+testdata/corpus/go/greeter/BUILD.bazel
+  s_f6c0b1ac81cb95::t_3985f2d349f4eb 1-29
+README.md
+  s_f6c0b1ac81cb95::t_eafacfb70a6587 147-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b85d330b30327f8b62ef702fd954a355dcf421d9",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
