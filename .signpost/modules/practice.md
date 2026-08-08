@@ -2,8 +2,8 @@
 type: Module
 title: internal/practice
 description: 3 go files; 31 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/practice
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/practice
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "4" }
   - { name: exported, value: "31" }
@@ -20,6 +20,7 @@ edges:
   - { kind: imports, to: ./discover.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 3 }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 2, source: internal/practice/practice.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 4 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 3 }
 ---
@@ -37,7 +38,7 @@ edges:
 - `internal/practice/practice_test.go`
 - `internal/practice/render.go`
 
-- **Changes with**: [internal/discover](./discover.md) ×3, [internal/manifest](./manifest.md) ×3, [cmd/signpost](./signpost.md) ×4, [site](./site.md) ×3
+- **Changes with**: [internal/discover](./discover.md) ×3, [internal/manifest](./manifest.md) ×3, [\(repository root\)](./root.md) ×4, [cmd/signpost](./signpost.md) ×4, [site](./site.md) ×3
 
 - **Imports**: [internal/discover](./discover.md) ×2, [internal/manifest](./manifest.md) ×2
 <!-- /signpost:managed:structure -->

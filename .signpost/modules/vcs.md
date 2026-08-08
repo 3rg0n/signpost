@@ -2,8 +2,8 @@
 type: Module
 title: internal/vcs
 description: 6 go files; 55 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/vcs
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/vcs
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "4" }
   - { name: exported, value: "55" }
@@ -18,6 +18,7 @@ attributes:
 edges:
   - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./okf.md, confidence: extracted, weight: 1, source: internal/vcs/git_test.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 4 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
 ---
 # internal/vcs
@@ -37,7 +38,7 @@ edges:
 - `internal/vcs/parse_test.go`
 - `internal/vcs/vcs.go`
 
-- **Changes with**: [internal/okf](./okf.md) ×2, [cmd/signpost](./signpost.md) ×4
+- **Changes with**: [internal/okf](./okf.md) ×2, [\(repository root\)](./root.md) ×4, [cmd/signpost](./signpost.md) ×4
 
 - **Imports**: [internal/okf](./okf.md) ×1
 <!-- /signpost:managed:structure -->

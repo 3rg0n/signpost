@@ -2,27 +2,28 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/site
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/site
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
-  - { name: commits, value: "12" }
+  - { name: commits, value: "13" }
   - { name: exported, value: "1" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-07" }
-  - { name: lines_added, value: "3269" }
-  - { name: lines_removed, value: "98" }
+  - { name: last_commit, value: "2026-08-08" }
+  - { name: lines_added, value: "3290" }
+  - { name: lines_removed, value: "102" }
   - { name: package, value: site }
-  - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 50% }
+  - { name: top_author, value: Ergon Copeland }
+  - { name: top_author_share, value: 54% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 5 }
-  - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 6 }
+  - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 4 }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 9 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 12 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 10 }
 ---
 # site
 
@@ -37,7 +38,7 @@ edges:
 - `site/embed.go`
 - `site/graph.js`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×3, [internal/discover](./discover.md) ×5, [internal/extract](./extract.md) ×3, [internal/manifest](./manifest.md) ×2, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×3, [cmd/signpost](./signpost.md) ×9
+- **Changes with**: [internal/assemble](./assemble.md) ×4, [internal/discover](./discover.md) ×6, [internal/extract](./extract.md) ×4, [internal/manifest](./manifest.md) ×2, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×3, [\(repository root\)](./root.md) ×12, [cmd/signpost](./signpost.md) ×10
 <!-- /signpost:managed:structure -->
 
 ## Notes

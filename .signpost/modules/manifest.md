@@ -2,8 +2,8 @@
 type: Module
 title: internal/manifest
 description: 33 go files; 285 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/manifest
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/manifest
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "7" }
   - { name: exported, value: "285" }
@@ -20,6 +20,7 @@ edges:
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 4 }
   - { kind: imports, to: ./discover.md, confidence: extracted, weight: 19, source: internal/manifest/composer.go }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
 ---
@@ -67,7 +68,7 @@ edges:
 - `internal/manifest/yaml.go`
 - `internal/manifest/yaml_test.go`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×4, [internal/discover](./discover.md) ×4, [internal/practice](./practice.md) ×3, [cmd/signpost](./signpost.md) ×6, [site](./site.md) ×2
+- **Changes with**: [internal/assemble](./assemble.md) ×4, [internal/discover](./discover.md) ×4, [internal/practice](./practice.md) ×3, [\(repository root\)](./root.md) ×6, [cmd/signpost](./signpost.md) ×6, [site](./site.md) ×2
 
 - **Imports**: [internal/discover](./discover.md) ×19
 <!-- /signpost:managed:structure -->

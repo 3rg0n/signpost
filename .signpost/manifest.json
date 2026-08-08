@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355",
-  "date": "2026-08-07",
+  "resource": "git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034",
+  "date": "2026-08-08",
   "counts": {
-    "nodes": 58,
-    "edges": 104,
-    "clusters": 40
+    "nodes": 59,
+    "edges": 148,
+    "clusters": 26
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 104,
+    "extracted": 148,
     "inferred": 0
   },
   "pages": [
@@ -27,6 +27,7 @@
     "modules/model.md",
     "modules/okf.md",
     "modules/practice.md",
+    "modules/root.md",
     "modules/semantic.md",
     "modules/signpost.md",
     "modules/site.md",

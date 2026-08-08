@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 58 concepts, 104 relationships."
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355
-generated: { by: signpost/dev, at: "2026-08-07" }
+description: "Structural map of this repository: 59 concepts, 148 relationships."
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034
+generated: { by: signpost/dev, at: "2026-08-08" }
 ---
 # Repository map
 
@@ -19,25 +19,26 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [cmd/signpost](./modules/signpost.md) — 36 relationships (11 in, 25 out)
-- [internal/discover](./modules/discover.md) — 19 relationships (13 in, 6 out)
-- [internal/assemble](./modules/assemble.md) — 17 relationships (7 in, 10 out)
-- [internal/manifest](./modules/manifest.md) — 17 relationships (11 in, 6 out)
-- [AGENTS.md](./references/agents-md.md) — 17 relationships (0 in, 17 out)
+- [\(repository root\)](./modules/root.md) — 44 relationships (14 in, 30 out)
+- [cmd/signpost](./modules/signpost.md) — 38 relationships (12 in, 26 out)
+- [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
+- [internal/assemble](./modules/assemble.md) — 19 relationships (8 in, 11 out)
+- [internal/manifest](./modules/manifest.md) — 19 relationships (12 in, 7 out)
 
 ### Modules
 
 - [internal/assemble](./modules/assemble.md) — 6 go files; 68 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 26 exported symbols.
-- [internal/discover](./modules/discover.md) — 5 go files; 80 exported symbols.
+- [internal/discover](./modules/discover.md) — 5 go files; 82 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 22 exported symbols.
-- [internal/extract](./modules/extract.md) — 26 go files; 304 exported symbols.
+- [internal/extract](./modules/extract.md) — 30 go files; 344 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 33 go files; 285 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 198 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 31 exported symbols.
+- [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
 - [cmd/signpost](./modules/signpost.md) — 19 go files; 117 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.

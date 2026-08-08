@@ -2,8 +2,8 @@
 type: Module
 title: internal/graph
 description: 4 go files; 69 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/graph
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/graph
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "2" }
   - { name: exported, value: "69" }
@@ -15,6 +15,8 @@ attributes:
   - { name: package, value: graph }
   - { name: top_author, value: 3rg0n }
   - { name: top_author_share, value: 50% }
+edges:
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
 ---
 # internal/graph
 
@@ -30,6 +32,8 @@ attributes:
 - `internal/graph/graph_test.go`
 - `internal/graph/louvain.go`
 - `internal/graph/metrics.go`
+
+- **Changes with**: [\(repository root\)](./root.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

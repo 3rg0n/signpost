@@ -2,8 +2,8 @@
 type: Module
 title: internal/semantic
 description: 3 go files; 35 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/semantic
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/semantic
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "3" }
   - { name: exported, value: "35" }
@@ -19,6 +19,7 @@ edges:
   - { kind: imports, to: ./discover.md, confidence: extracted, weight: 2, source: internal/semantic/semantic.go }
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
   - { kind: imports, to: ./model.md, confidence: extracted, weight: 3, source: internal/semantic/prompt.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
 ---
 # internal/semantic
@@ -35,7 +36,7 @@ edges:
 - `internal/semantic/semantic.go`
 - `internal/semantic/semantic_test.go`
 
-- **Changes with**: [cmd/signpost](./signpost.md) ×3
+- **Changes with**: [\(repository root\)](./root.md) ×3, [cmd/signpost](./signpost.md) ×3
 
 - **Imports**: [internal/discover](./discover.md) ×2, [internal/graph](./graph.md) ×3, [internal/model](./model.md) ×3
 <!-- /signpost:managed:structure -->

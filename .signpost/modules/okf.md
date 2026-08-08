@@ -2,8 +2,8 @@
 type: Module
 title: internal/okf
 description: 13 go files; 198 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/okf
-generated: { by: signpost/dev, at: "2026-08-07" }
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/okf
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: commits, value: "9" }
   - { name: exported, value: "198" }
@@ -18,6 +18,7 @@ attributes:
 edges:
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 7, source: internal/okf/bundle.go }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 4, source: internal/okf/bundle_test.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 9 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 7 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./vcs.md, confidence: extracted, weight: 2 }
@@ -46,7 +47,7 @@ edges:
 - `internal/okf/yaml.go`
 - `internal/okf/yaml_test.go`
 
-- **Changes with**: [cmd/signpost](./signpost.md) ×7, [site](./site.md) ×2, [internal/vcs](./vcs.md) ×2
+- **Changes with**: [\(repository root\)](./root.md) ×9, [cmd/signpost](./signpost.md) ×7, [site](./site.md) ×2, [internal/vcs](./vcs.md) ×2
 
 - **Imports**: [internal/graph](./graph.md) ×7, [internal/manifest](./manifest.md) ×4
 <!-- /signpost:managed:structure -->

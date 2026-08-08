@@ -1,37 +1,38 @@
 ---
 type: Module
 title: internal/extract
-description: 26 go files; 304 exported symbols.
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/internal/extract
-generated: { by: signpost/dev, at: "2026-08-07" }
+description: 30 go files; 344 exported symbols.
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/internal/extract
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
-  - { name: commits, value: "7" }
-  - { name: exported, value: "304" }
-  - { name: files, value: "26" }
+  - { name: commits, value: "8" }
+  - { name: exported, value: "344" }
+  - { name: files, value: "30" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-07" }
-  - { name: lines_added, value: "15045" }
-  - { name: lines_removed, value: "34" }
+  - { name: last_commit, value: "2026-08-08" }
+  - { name: lines_added, value: "17814" }
+  - { name: lines_removed, value: "38" }
   - { name: package, value: extract }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 57% }
+  - { name: top_author_share, value: 50% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 5 }
-  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 24, source: internal/extract/cfamily.go }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
-  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 6 }
+  - { kind: imports, to: ./discover.md, confidence: extracted, weight: 28, source: internal/extract/cfamily.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 8 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 4 }
 ---
 # internal/extract
 
 <!-- signpost:managed:summary -->
-26 go files; 304 exported symbols.
+30 go files; 344 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
 
 <!-- signpost:managed:structure -->
-26 files:
+30 files:
 - `internal/extract/cfamily.go`
 - `internal/extract/cfamily_test.go`
 - `internal/extract/csharp.go`
@@ -48,6 +49,8 @@ edges:
 - `internal/extract/lines_test.go`
 - `internal/extract/php.go`
 - `internal/extract/php_test.go`
+- `internal/extract/powershell.go`
+- `internal/extract/powershell_test.go`
 - `internal/extract/python.go`
 - `internal/extract/python_test.go`
 - `internal/extract/ruby.go`
@@ -56,12 +59,14 @@ edges:
 - `internal/extract/rust_test.go`
 - `internal/extract/score.go`
 - `internal/extract/score_test.go`
+- `internal/extract/shell.go`
+- `internal/extract/shell_test.go`
 - `internal/extract/typescript.go`
 - `internal/extract/typescript_test.go`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×3, [internal/discover](./discover.md) ×5, [cmd/signpost](./signpost.md) ×3, [site](./site.md) ×3
+- **Changes with**: [internal/assemble](./assemble.md) ×4, [internal/discover](./discover.md) ×6, [\(repository root\)](./root.md) ×8, [cmd/signpost](./signpost.md) ×4, [site](./site.md) ×4
 
-- **Imports**: [internal/discover](./discover.md) ×24
+- **Imports**: [internal/discover](./discover.md) ×28
 <!-- /signpost:managed:structure -->
 
 ## Notes

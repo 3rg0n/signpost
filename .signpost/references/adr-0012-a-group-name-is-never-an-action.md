@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0012: a group name is never an action"
 description: "Architecture decision (Accepted), 23 rules read from 0012-a-group-name-is-never-an-action.md."
-resource: git://github.com/3rg0n/signpost@fc6e5606c41f30b83f1d2b144a451dd9f2e5a355/docs/adr/0012-a-group-name-is-never-an-action.md
+resource: git://github.com/3rg0n/signpost@e1038ca6ce192ebf827d95295be6c55b349c0034/docs/adr/0012-a-group-name-is-never-an-action.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-07" }
+generated: { by: signpost/dev, at: "2026-08-08" }
 attributes:
   - { name: number, value: "0012" }
   - { name: rules, value: "23" }
