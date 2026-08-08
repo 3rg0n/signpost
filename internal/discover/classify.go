@@ -97,9 +97,9 @@ var sourceExts = map[string]Lang{
 	// precedence build.gradle.kts relies on. A `.rake` file stays source: it holds task
 	// definitions written in Ruby, which is code, where a `.gemspec` holds only
 	// assignments and so is matched as a manifest instead.
-	".rake":  LangRuby,
-	".php":   LangPHP,
-	".cs":    LangCSharp,
+	".rake": LangRuby,
+	".php":  LangPHP,
+	".cs":   LangCSharp,
 	".sh":   LangShell,
 	".bash": LangShell,
 	// A .zsh is read by the shell extractor because everything it reads — `source`,
