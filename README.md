@@ -78,8 +78,8 @@ where humans can correct it in place, so the corrections survive.
 ## What it reads
 
 First-class languages are Go, TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++,
-Objective-C, Ruby, PHP, C#, shell, and PowerShell — imports, public surface, and
-entrypoints, each extractor
+Objective-C, Ruby, PHP, C#, shell, PowerShell, Vue, Svelte, and Astro — imports, public
+surface, and entrypoints, each extractor
 scored against
 hand-labeled fixtures at F1 1.000 for both imports and symbols. Java and Kotlin share one
 resolution map because the compiler does, and it is built from the `package` declarations
@@ -128,6 +128,18 @@ something the shell ships, and the .NET namespaces a `using namespace` reaches. 
 `#Requires -Modules` is read as a requirement and not as a pin: it names no version and no
 source, and the `.psd1` manifest that would pin it is not yet read, so such a module is
 reported as a gap rather than invented as a gallery entry the repository never wrote.
+
+Vue, Svelte and Astro are one reader and it is not a new one. A single-file component is a
+document with program text inside it, so every region that is not a `<script>` block is blanked
+byte for byte and what remains goes to the TypeScript extractor. Blanking rather than slicing is
+the point: a slice renumbers every line after the first fence, and an import reported at the wrong
+line is worse than an import not reported, because the position looks authoritative. Every script
+block is read, not the first — Vue's `<script setup>` beside a plain `<script>` is what its own
+migration path produces, and Svelte's `context="module"` block holds exports the instance block
+cannot. A `<style>` block's `@import` is deliberately not an import: no stylesheet is a node here,
+so it appears in neither coverage gap. And because these specifiers name their extension —
+`./Badge.svelte`, `../layouts/Base.astro` — resolution tries the path exactly as written before
+appending anything, which is the difference between an edge and a phantom `./Badge.svelte.ts`.
 
 Beyond source, signpost reads what a repository states about itself: `go.mod`,
 `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `Gemfile`,
@@ -433,7 +445,7 @@ in a repository without a bundle.
 |---|---|
 | Graph model, metrics, Louvain clustering | done |
 | Discovery: gitignore, classification, bounded reads | done |
-| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell) | done |
+| Language extractors (Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell, Vue, Svelte, Astro) | done |
 | Manifest + infrastructure extraction | done |
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |

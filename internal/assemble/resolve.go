@@ -129,8 +129,12 @@ type tsAlias struct {
 // pyExts, tsExts and rustExts are the file spellings a module path may resolve to,
 // in the order a toolchain would try them.
 var (
-	pyExts   = []string{".py", ".pyi"}
-	tsExts   = []string{".ts", ".tsx", ".d.ts", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
+	pyExts = []string{".py", ".pyi"}
+	// The component extensions are last, after every plain script spelling. An
+	// extensionless `./Widget` in a project holding both `Widget.ts` and `Widget.vue`
+	// means the script — the bundler's own resolve order puts its plugin extensions after
+	// the defaults — and a component import names its extension anyway (see tsTarget).
+	tsExts   = []string{".ts", ".tsx", ".d.ts", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro"}
 	tsIndex  = []string{"index.ts", "index.tsx", "index.mts", "index.cts", "index.js", "index.jsx", "index.mjs", "index.cjs"}
 	rustExts = []string{".rs"}
 )
@@ -597,7 +601,13 @@ func (r *resolver) resolveImport(lang discover.Lang, from, raw string) (id strin
 		return r.resolveGo(raw)
 	case discover.LangPython:
 		return r.resolvePython(from, raw)
-	case discover.LangTS, discover.LangJS:
+	case discover.LangTS, discover.LangJS,
+		// A single-file component's imports are its script's imports, and its script is
+		// TypeScript resolved by a bundler — the same aliases from the same tsconfig, the
+		// same npm dependencies from the same package.json. So the rule is shared rather
+		// than restated: a `.vue` file's `@/lib/api` must reach the same page a `.ts`
+		// file's does, and two resolvers would let those two answers drift.
+		discover.LangVue, discover.LangSvelte, discover.LangAstro:
 		return r.resolveTS(from, raw)
 	case discover.LangRust:
 		return r.resolveRust(from, raw)
@@ -1270,6 +1280,16 @@ func (r *resolver) tsTarget(p string) string {
 		cands = append(cands, strings.TrimSuffix(p, ext))
 	}
 	for _, c := range cands {
+		// The specifier as written, before any extension is appended. This is the form a
+		// single-file component import always takes — `./Widget.vue` and `./Card.svelte`
+		// carry their extension, because the bundler plugin that handles them is selected
+		// by it — where a TS import conventionally omits one. Tried first so an explicit
+		// spelling wins over a same-named file of another extension: a directory holding
+		// both `Widget.vue` and a generated `Widget.ts` is a real shape, and `./Widget.vue`
+		// means the first of them.
+		if r.srcFiles[c] {
+			return r.moduleAt(dirOf(c))
+		}
 		for _, e := range tsExts {
 			if r.srcFiles[c+e] {
 				return r.moduleAt(dirOf(c + e))

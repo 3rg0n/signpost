@@ -1,7 +1,25 @@
 ---
-// Corpus fixture: not compiled, not run. Two files rather than one, so the count
-// asserted in TestCorpusCountsWhatItCannotClassify cannot be satisfied by an
-// implementation that reports the extension once however many files carry it.
+// Corpus fixture: not compiled, not run.
+//
+// Astro's script region is a `---` fence at the top of the file rather than a tag, and
+// this is the file that says so: the `<hr />` below is a `---` in the template, and a
+// fence located by searching the whole file would open a region at it and read the
+// markup beneath as code.
+//
+// The three imports are three different resolutions on purpose. `../layouts/Base.astro`
+// and `../lib/Badge.svelte` are relative specifiers carrying their extension, which is
+// the form every component import takes and the one that only lands because the
+// resolver tries the specifier as written before appending an extension of its own.
+// `@astrojs/rss` is the declared dependency: a component importing a framework package
+// depends on a versioned thing exactly as one importing lodash does.
 import Base from "../layouts/Base.astro";
+import Badge from "../lib/Badge.svelte";
+import rss from "@astrojs/rss";
+
+const feed = rss;
 ---
-<Base />
+
+<Base title="corpus">
+  <hr />
+  <Badge count={3} />
+</Base>

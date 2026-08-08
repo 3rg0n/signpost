@@ -1,0 +1,8 @@
+/* Corpus fixture: not compiled, not served. The second of the pair — see base.css. It is
+ * also named by an `@import` in Avatar.vue's style block, which is the negative half: a
+ * stylesheet a component names is still not a node, so the specifier must appear in
+ * neither the unresolved count nor the unlinked one.
+ */
+.card {
+  border-radius: var(--card-radius);
+}

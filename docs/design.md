@@ -270,7 +270,7 @@ symbols, interface implementations, `main` functions, `init` side effects. Full
 precision, zero dependencies, and it is our primary language.
 
 **TypeScript/JavaScript, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#,
-shell and PowerShell**
+shell, PowerShell, Vue, Svelte and Astro**
 get hand-written line-oriented extractors covering imports/requires, top-level declarations,
 exports, and entrypoints.
 These are not full parsers and are not trying to be. The signpost layer needs the module
@@ -380,6 +380,33 @@ not as a pin — it names no version and no source — and the `.psd1` module ma
 than invented as a gallery entry the repository never wrote. That puts PowerShell beside the
 JVM as the second ecosystem with no declared list for an import to match.
 
+**Vue, Svelte and Astro are one extractor and it is not a new reader — it is a preprocessor in
+front of the TypeScript one.** A single-file component is a document with program text inside it:
+the `<script>` block is TypeScript or JavaScript, the rest is template and style. So the file is
+read by blanking every region that is not script, byte for byte, and handing the result to the
+existing extractor. Blanking rather than slicing is the whole of the decision — a slice
+renumbers every line after the first fence, and a facts stream reporting an import at line 4 of a
+file where it sits at line 12 is worse than no facts, because the position looks authoritative.
+The three languages differ in fence syntax and in nothing an extractor cares about, and each
+allows more than one script block: Vue's `<script setup>` beside a plain `<script>` is what its
+own migration path produces, and Svelte's `context="module"` block holds the exports the instance
+block cannot. So every block is read, not the first one found.
+
+Two things are deliberately *not* read. A `<style>` block declares nothing this graph can hold, so
+its `@import` of a stylesheet must appear in neither gap line — as unresolved it would tell a
+reader to declare a dependency that is a file in the same tree, and as unlinked it would claim a
+missing edge onto a node no stylesheet should ever have. And an SFC is never an entrypoint: it is
+a component a framework mounts, so the entrypoint the TypeScript extractor would infer from a
+top-level call is discarded.
+
+The extension is the resolution detail worth stating. `./Badge.svelte` and `../layouts/Base.astro`
+name their extension, which is the ordinary spelling in all three ecosystems, so resolution tries
+the specifier exactly as written before appending the extensions it knows — the reverse order
+looks for `./Badge.svelte.ts`, reaches nothing, and reports an unlinked import for a file sitting
+next to the one that named it. And the component extensions are not runtimes: `vue`, `svelte` and
+`astro` are declared dependencies with reference pages, so a component language is grouped with
+TypeScript for Node-builtin recognition and nowhere else.
+
 Extractors stay hand-written, and the threshold at which that changes is written down
 ([ADR 0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)): a
 tree-sitter Go binding becomes the answer for *one* language when that language's scored
@@ -398,12 +425,15 @@ they are one family sharing one preprocessor and one header convention, so the l
 boundary between them is not a boundary an extractor can see. Ruby, PHP and C# follow next,
 and their reason is the inverse of the C family's: they have nothing in
 common with each other or with what came before, and each is the language a large body of
-existing services is written in. Shell and PowerShell come last of the fourteen for a reason
+existing services is written in. Shell and PowerShell come next for a reason
 neither of the two preceding groups had: they are not what a repository is *written* in, they
 are what it is built, released and operated by. A repository whose scripts declare nothing
 reads as one with no build and no deployment path, which is the one part of a bundle an agent
-is most likely to act on. Everything else falls back to a generic extractor (comment
-headers, filename conventions, sibling context) plus the semantic pass.
+is most likely to act on. Vue, Svelte and Astro come last of the seventeen because they are the
+cheapest of the set — the reader already existed and what was missing was getting the program
+text out of the document around it — and because they are where the frontend of a repository
+already covered on its server side actually lives. Everything else falls back to a generic
+extractor (comment headers, filename conventions, sibling context) plus the semantic pass.
 
 **Manifests and infrastructure are the highest-value deterministic signal and the
 part comparable tools mostly skip.** All of this is exact, cheap, and structural:
@@ -494,7 +524,7 @@ written in one place and read in none, while the two classes that *can* come bac
 empty-handed each carried an `Unhandled` map the report prints. Which extensions are in
 the source table decided whether the gap was visible at all — `.sh` and `.sql` land
 there as an unhandled *language* and get counted; `.astro` and `.vue` never reached the
-stage that counts — and every extractor added widens that table.
+stage that counts, and both are read now — and every extractor added widens that table.
 
 **Running signpost on signpost is not sufficient, and the gap is structural.** The
 CI dogfood job exercises the paths this repository contains, and this repository is

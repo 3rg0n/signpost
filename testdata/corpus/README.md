@@ -59,6 +59,7 @@ matcher slightly too loose swallows it, and which nothing declares.
 | `PesterExtras` | the module `#Requires -Modules Pester` names | a PowerShell candidate list matched by prefix, which reports a module this code does not load |
 | `Microsoft.PowerShell.Crescendo` | the engine module `Microsoft.PowerShell.Utility` | a `Microsoft.PowerShell.*` prefix taken for the runtime, which hides a separately versioned gallery module nobody is told to patch |
 | `Pester` | nothing — see below | not a near-miss: a module a `#Requires` states, unresolvable because signpost reads no `.psd1` manifest |
+| `vue-router` | the declared `vue` | an npm scope-less package name matched by prefix, which folds a separately released router into the framework's own page |
 
 The table is behind the extractors: C, C++, Objective-C, Ruby, PHP and C# each carry a
 near-miss in the corpus and a row in both test suites without one here. The suites are
@@ -268,8 +269,8 @@ correctly through signpost's own reader and is rejected by every real collector.
 
 ## A language signpost cannot name at all
 
-`web/` holds two `.astro` files and a `README.md`, and none of the three is here to be read.
-They are here to be *counted*.
+`web/src/styles/` holds two `.css` files and neither is here to be read. They are here to be
+*counted*.
 
 `ClassOther` is what discovery assigns to a file whose kind it cannot determine. Every other
 class routes to an extractor or a manifest reader, and the two that can still come back
@@ -283,16 +284,24 @@ said nothing about the pages, while the bundle described that workspace as a one
 module built from `astro.config.mjs`. Which extension is *in* `sourceExts` decided whether the
 gap was visible at all, and every extractor still to be written adds one.
 
+Those two `.astro` files carried this boundary until the single-file-component extractor claimed
+the extension. That is the case this section is about arriving, so the fixtures moved rather than
+the assertion: `.css` is the successor, and it is a better one. A stylesheet declares nothing this
+graph can hold — the SFC extractor blanks `<style>` blocks for exactly that reason — so it is
+unclassified because there is nothing to classify it as, not because a reader is missing. The
+three component extensions are now asserted *absent* from the line, so a regression that
+unclassified one again shows up here rather than as a quietly smaller graph.
+
 `TestCorpusCountsWhatItCannotClassify` reads both halves off one report:
 
 | Boundary | Must hold | What the other direction would cost |
 |---|---|---|
-| positive | the two `.astro` files, the `.svg`, `LICENSE`, and `shell/release` are counted and named — a count of **5** | the shipped bug: a repository's only frontend absent from a report that claims to say what went unread |
-| negative | `web/README.md` is not on the line, nor any classified file — no source, manifest, doc, or binary, and not `.sh`, `.ps1` or `.psm1` | a line that fires on every repository, which teaches people to skip the one place coverage gaps are admitted |
+| positive | the two `.css` files, the `.svg`, `LICENSE`, and `shell/release` are counted and named — a count of **5** | the shipped bug: a repository's only frontend absent from a report that claims to say what went unread |
+| negative | `web/README.md` is not on the line, nor any classified file — no source, manifest, doc, or binary, not `.sh`, `.ps1` or `.psm1`, and not `.vue`, `.svelte` or `.astro` | a line that fires on every repository, which teaches people to skip the one place coverage gaps are admitted |
 | structural | it stays a *separate* line from `no extractor for` | folding them loses the difference between "cannot read this language" and "cannot tell what this file is" — a missing extractor versus a missing classification |
 
-Two `.astro` files rather than one, because the count is the assertion and one file cannot
-distinguish counting files from counting extensions. `web/README.md` sits beside them so an
+Two `.css` files rather than one, because the count is the assertion and one file cannot
+distinguish counting files from counting extensions. `web/README.md` sits in the same tree so an
 implementation that counted by directory fails, and binaries are excluded on purpose: a `.png`
 was classified correctly and has nothing in it to read, so counting it would bury the extensions
 that are gaps under the ones that never could be.
@@ -322,13 +331,14 @@ it would report a package nobody publishes — the fabricating failure the resol
 produce. `addImportEdges` counted a specifier only when it was **not** internal, so the internal
 branch was empty, and a module whose every import landed there read as importing nothing.
 
-Three deliberate cases sit here, in different languages because the branch is per-language:
+Four deliberate cases sit here, in different languages because the branch is per-language:
 
 | Specifier | Where it lands | The shape it stands for |
 |---|---|---|
 | `example.com/corpus/greeter/internal/generated` | inside the module `go/go.mod` declares, at a directory holding a README and no Go file | generated code, a build-tagged package, a directory whose files all exceeded the size cap |
 | `@corpus/assets/logo.svg` | a `paths` pattern matched whole, mapping onto `ts/assets/` | an asset alias — the mapping is real and its target is not extracted source |
 | `./lib/logs.sh` | an anchored `source` under `shell/scripts/`, one letter from the `lib/log.sh` the same script reads two lines above | a mistyped path — and every shell gap there is, since shell has no registry to fall back to |
+| `./Badges.svelte` | a relative path beside `web/src/lib/Counter.svelte`, one letter from the `./Badge.svelte` imported on the line above | a component renamed or not yet written, in the language where a relative import is the ordinary case rather than an occasional one |
 
 The shell entry is here rather than among the unresolved for a structural reason, and it is why
 shell appears in this section and in no other gap assertion: **there is no shell package
@@ -342,8 +352,8 @@ mean the resolver had begun inventing packages for a language that has none.
 
 | Boundary | Must hold | What the other direction would cost |
 |---|---|---|
-| positive | all three specifiers counted and named, and the **count** is 3 | the shipped bug, and the count is the only assertion in the harness that can notice a *new* missing edge — every other one names the edges it expects |
-| negative | `example.com/corpus/greeter/greeter`, `@corpus/entry`, `@corpus/core`, `./lib/log.sh` and `./lib/retry.sh` are absent | a branch counting every first-party import fires on every healthy repository, which teaches people to skip the line |
+| positive | all four specifiers counted and named, and the **count** is 4 | the shipped bug, and the count is the only assertion in the harness that can notice a *new* missing edge — every other one names the edges it expects |
+| negative | `example.com/corpus/greeter/greeter`, `@corpus/entry`, `@corpus/core`, `./lib/log.sh`, `./lib/retry.sh`, `./Badge.svelte`, `../components/Avatar.vue` and `card.css` are absent | a branch counting every first-party import fires on every healthy repository, which teaches people to skip the line |
 | structural | neither specifier appears among the unresolved, and no stdlib name appears in either | unresolved says *go and declare this*, which is the wrong instruction for a path the module already owns; one merged map cannot say which a reader is looking at |
 
 `example.com/corpus/greeter/greeter` is the negative that matters. It sits in the same import
@@ -359,6 +369,16 @@ the same script, on the line above the one that reaches nothing, through the sam
 anchor — so the difference between the counted specifier and this one is a single letter in the
 filename. That is precisely what a resolver too eager to match a sibling erases, turning every
 mistyped source into a satisfied edge.
+
+`./Badge.svelte` is the third instance of that pair and it carries something the other two do
+not: the specifier names its extension. It resolves only because the resolver tries the path as
+written before appending the extensions it knows, so a regression that appended first would look
+for `./Badge.svelte.ts`, reach nothing, and put this specifier on the line.
+`../components/Avatar.vue` is the same shape across a directory rather than within one. And
+`card.css` is a third kind again — a stylesheet an SFC's `<style>` block imports, which belongs in
+*neither* count: reported as unresolved it would tell a reader to declare a dependency that is a
+file two directories away, and reported as unlinked it would claim a missing edge onto a node no
+stylesheet should ever have.
 
 ## Four directories called `src`
 
@@ -586,10 +606,12 @@ the manifest from one that says yes to everything.
 
 Three counts are asserted here and a new language moves at least one, deliberately — a count is
 the only assertion that fails in *both* directions, so each is a place a change has to be
-declared rather than absorbed. Adding an extractor for `.astro` lowers the unclassified count by
-two and raises the extracted one; expect `TestCorpusCountsWhatItCannotClassify` and the
-`Unclassified files are counted, not swallowed` step in `ci.yml` to fail, and move the two
-`web/` files out of the table above into the language sections when they do. The unlinked count
+declared rather than absorbed. An extractor claiming an extension the unclassified line names
+lowers that count and raises the extracted one; expect `TestCorpusCountsWhatItCannotClassify` and
+the `Unclassified files are counted, not swallowed` step in `ci.yml` to fail. That already
+happened once: the two `.astro` files carried the count until the single-file-component extractor
+read them, and the fix was to replace them with a pair of `.css` files and add all three component
+extensions to the negative half, so the same regression cannot pass twice. The unlinked count
 moves if the new language's fixtures import anything inside the repository that holds no node,
 which the *first-party* half of the instruction above is otherwise silent about: an import that
 signpost places and cannot link is a different failure from one it cannot place, and the language

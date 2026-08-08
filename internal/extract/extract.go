@@ -143,6 +143,7 @@ func DefaultRegistry() *Registry {
 	r.Register(CSharpExtractor{})
 	r.Register(ShellExtractor{})
 	r.Register(PowerShellExtractor{})
+	r.Register(SFCExtractor{})
 	return r
 }
 

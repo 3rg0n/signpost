@@ -250,7 +250,8 @@ disconnected components (30)
         <div class="row__body">
           <p class="prose prose--lead">
             Go, TypeScript, JavaScript, Python, Rust, Java, Kotlin, C, C++,
-            Objective-C, Ruby, PHP, C#, shell and PowerShell — imports, public
+            Objective-C, Ruby, PHP, C#, shell, PowerShell, Vue, Svelte and
+            Astro — imports, public
             surface, and entrypoints. Each extractor is scored against
             hand-labeled fixtures rather than asserted, at F1 1.000 for both
             imports and symbols.
@@ -301,6 +302,21 @@ disconnected components (30)
             versioned gallery module it is.
           </p>
           <p class="prose">
+            Vue, Svelte and Astro are one reader, and it is not a new one. A
+            single-file component is a document with program text inside it, so
+            every region that is not a <code>&lt;script&gt;</code> block is
+            blanked byte for byte and what remains goes to the TypeScript
+            extractor. Blanking rather than slicing is the point: a slice
+            renumbers every line after the first fence, and an import reported
+            at the wrong line is worse than one not reported, because the
+            position looks authoritative. Every script block is read, not the
+            first — Vue's <code>&lt;script setup&gt;</code> beside a plain
+            <code>&lt;script&gt;</code> is what its own migration path produces.
+            A <code>&lt;style&gt;</code> block's <code>@import</code> is not an
+            import: no stylesheet is a node here, so it appears in neither
+            coverage gap.
+          </p>
+          <p class="prose">
             Beyond source, signpost reads what a repository states about
             itself: <code>go.mod</code>, <code>package.json</code>,
             <code>pyproject.toml</code>, <code>requirements.txt</code>,
@@ -343,7 +359,7 @@ disconnected components (30)
                 <td>done</td>
               </tr>
               <tr class="is-done">
-                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell</th>
+                <th scope="row">Extractors: Go, TS/JS, Python, Rust, Java, Kotlin, C, C++, Objective-C, Ruby, PHP, C#, shell, PowerShell, Vue, Svelte, Astro</th>
                 <td>done</td>
               </tr>
               <tr class="is-done">
