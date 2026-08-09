@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -485,7 +486,7 @@ func TestCorpusFindsEveryLanguage(t *testing.T) {
 }
 
 // frontmatterLang reads the language out of a module page's one-line description, which is
-// where the language is stated in prose: "2 objc files; 13 exported symbols."
+// where the language is stated in prose: "2 objc files; 9 exported symbols."
 func frontmatterLang(body string) string {
 	for _, line := range strings.Split(body, "\n") {
 		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "description:")
@@ -1854,6 +1855,217 @@ func TestCorpusReadsBuildGraphsAndDrawsTheirInternalEdges(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestCorpusNamesThePublicSurfaceAndNothingElse covers what a module page says a module
+// *offers*, which every other assertion in this file leaves alone: the rest of the bundle is
+// about what a directory depends on, and this is the one line about what it exposes.
+//
+// The positives are cheap and the negatives are the test. "Exported" is a different rule in
+// every language here, and each rule has a plausible wrong reading that produces a page an
+// agent would act on — a name it writes a call against and the compiler then rejects, or worse,
+// a private helper it treats as a supported entry point:
+//
+//   - Go and Rust and TypeScript state visibility on the declaration, so the failure is a
+//     reader that ignores the marker: `unexported`, `builds`, and Rust's non-`pub` items are
+//     each beside an exported sibling in the same file, so no rule gets one right by accident.
+//   - Python has no keyword at all, only the leading-underscore convention, so `_internal`
+//     sits next to `render` in one file. A reader with no convention emits both.
+//   - PHP's `private function log` is the inverse case: PHP's *default* is public, so a
+//     reader that treats an absent modifier as private loses real surface, and one that
+//     ignores modifiers entirely gains a private one.
+//   - Ruby's `private` is a sticky section marker rather than a per-method modifier, and it
+//     applies to methods only. `Format.normalise` sits under it and `SEPARATOR` above it, so
+//     both halves of that rule are checked by one file.
+//   - C is the sharpest, because it has no visibility keyword and the rule is inverted:
+//     external is the default and `static` is what removes a symbol from the link surface.
+//     `corpus_buffer_shrink` is static and must not appear; `corpus_internal_note` is
+//     declared in a *private header* and must, because a header's location is a convention
+//     and linkage is the fact. Reading the second as private would be a reader substituting
+//     its own taste for what the language says.
+//
+// The count is asserted against the list on the same page, which is the assertion that cannot
+// be satisfied by half a fix: the number and the names come out of one pass in assemble, so a
+// page claiming five above a list of four is a reader counting something it is not naming.
+func TestCorpusNamesThePublicSurfaceAndNothingElse(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// One module per visibility rule, keyed by the page its directory produces. The name is
+	// listed exactly as a caller would write it, receiver-qualified for a method, because a
+	// bare `String` does not say which type has it.
+	for _, want := range []struct {
+		page, why string
+		names     []string
+	}{
+		{"modules/greeter-1i6wvb3.md", "Go states visibility in the capital letter, and a " +
+			"method is only reachable through its receiver",
+			[]string{"`Greeting`", "`Greeting.String`", "`New`"}},
+		{"modules/src-14hy2yg.md", "Rust states it in `pub`, on the item and on the field",
+			[]string{"`Greeting`", "`greet`"}},
+		{"modules/format.md", "PHP's default is public, so a method with no modifier is surface",
+			[]string{"`Renderer`", "`Renderer.render`"}},
+		{"modules/corpus-7wiw6h.md", "Ruby's `private` marker applies to methods only, so a " +
+			"constant above it and a constant below it are both still reachable",
+			[]string{"`Corpus.VERSION`", "`Format.SEPARATOR`", "`Format.greet`"}},
+		{"modules/src-1hvu130.md", "C has no visibility keyword: external is the default, so " +
+			"a function declared in a private header is still link surface",
+			[]string{"`corpus_buffer_make`", "`corpus_internal_note`"}},
+	} {
+		body, ok := pages[want.page]
+		if !ok {
+			t.Errorf("no page at %s, so its surface asserts nothing. Pages written:\n  %s",
+				want.page, pageNames(pages))
+			continue
+		}
+		for _, name := range want.names {
+			if !strings.Contains(body, name) {
+				t.Errorf("%s does not name %s among its exports. %s:\n%s",
+					want.page, name, want.why, body)
+			}
+		}
+	}
+
+	// The negatives, checked across every page rather than on the one that should have
+	// excluded them. A name that must appear nowhere can reach a page through a summary, an
+	// attribute or an edge as easily as through the exports line, and asserting only that one
+	// page omits it would leave the other routes open.
+	//
+	// Each of these is a declaration the language says callers cannot reach, sitting in a file
+	// whose exported siblings are asserted above — so a reader that emitted the whole symbol
+	// table would pass every positive here and fail only this loop.
+	//
+	// Matched as a whole rendered name rather than as a substring, because these are short
+	// identifiers and the corpus deliberately contains longer ones that contain them:
+	// `corpus_internal_note` has external linkage and belongs on its page, and a substring
+	// search for `_internal` fails on it — which is a test asserting the opposite of the rule
+	// it is written to defend.
+	for _, bad := range []struct{ name, why string }{
+		{"unexported", "a lowercase Go func in go/greeter/greeter.go, and separately a " +
+			"non-`export` function in ts/src/greeter.ts. Both sit beside an exported " +
+			"declaration in the same file, so naming it is a reader that read the " +
+			"declaration and skipped the marker"},
+		{"_internal", "a leading-underscore Python function in py/greeter/formatter.py. " +
+			"Python states nothing, so the convention is the only rule there is — and a " +
+			"reader with no convention publishes every helper in the language"},
+		{"corpus_buffer_shrink", "a `static` C function in c/src/buffer.c. `static` is the " +
+			"one thing that removes a symbol from the link surface, so naming this claims a " +
+			"caller in another translation unit can reach a symbol the linker will not give " +
+			"them"},
+		{"normalise", "a method under Ruby's `private` section marker in " +
+			"ruby/lib/corpus/format.rb. The marker is sticky rather than per-method, so a " +
+			"reader that only understands `private def` sees nothing and exports it"},
+	} {
+		for name, body := range pages {
+			if namesWholeIdentifier(body, bad.name) {
+				t.Errorf("%s names %q: %s", name, bad.name, bad.why)
+			}
+		}
+	}
+
+	// The count against the list, on every module page that has one. This is the assertion a
+	// partial fix cannot satisfy: the two numbers come from one pass, and a page that says
+	// "5 exported symbols" above four names is describing a surface that does not exist.
+	checked := 0
+	for name, body := range pages {
+		if !strings.HasPrefix(name, "modules/") {
+			continue
+		}
+		claimed, names, ok := exportsClaim(body)
+		if !ok {
+			continue
+		}
+		checked++
+		if claimed != len(names) {
+			t.Errorf("%s claims %d export(s) and names %d: %v.\n%s",
+				name, claimed, len(names), names, body)
+		}
+		// The description states the same number in prose, and it is the line a reader sees
+		// first — in the index, before opening the page at all.
+		if !strings.Contains(body, "description: ") {
+			continue
+		}
+		want := strconv.Itoa(claimed) + " exported symbol"
+		if claimed != 1 {
+			want += "s"
+		}
+		if !strings.Contains(body, want) {
+			t.Errorf("%s does not say %q in its description, so the prose and the list "+
+				"disagree about the size of the surface:\n%s", name, want, body)
+		}
+	}
+	// Without this the loop above is satisfied by a bundle that lists no exports anywhere,
+	// which is exactly the state this feature replaced.
+	if checked < 20 {
+		t.Errorf("only %d module page(s) carry an exports line; the corpus spans 18 languages "+
+			"and every one of them declares a public surface, so a number this low means the "+
+			"line stopped being emitted rather than that the assertions passed", checked)
+	}
+}
+
+// namesWholeIdentifier reports whether body mentions name as a complete identifier rather
+// than as part of a longer one.
+//
+// The boundary is the identifier character set, not a word boundary: `\bnormalise\b` matches
+// inside `Format.normalise`, which is the same name and should match, but a word boundary also
+// fires inside `corpus_internal_note` for `_internal` because `_` is a word character in some
+// engines and not others. Deciding it here, on the one rule that matters — a neighbouring
+// letter, digit or underscore means this is a different identifier — leaves nothing to a
+// regexp dialect. A leading `.` is not a boundary character, so a receiver-qualified method
+// still matches its own name.
+func namesWholeIdentifier(body, name string) bool {
+	ident := func(r byte) bool {
+		return r == '_' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
+	}
+	for i := 0; ; {
+		j := strings.Index(body[i:], name)
+		if j < 0 {
+			return false
+		}
+		at := i + j
+		end := at + len(name)
+		before := at == 0 || !ident(body[at-1])
+		after := end == len(body) || !ident(body[end])
+		if before && after {
+			return true
+		}
+		i = at + 1
+	}
+}
+
+// exportsClaim reads a module page's exports line, returning the count it states and the names
+// it lists. Parsed out of the rendered page rather than read from the graph on purpose: the
+// claim being checked is what a reader sees, and a count that agrees with the graph while
+// disagreeing with the list beside it is the failure this catches.
+func exportsClaim(body string) (int, []string, bool) {
+	for _, line := range strings.Split(body, "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "- **Exports** (")
+		if !ok {
+			continue
+		}
+		count, list, ok := strings.Cut(rest, "): ")
+		if !ok {
+			return 0, nil, false
+		}
+		n, err := strconv.Atoi(count)
+		if err != nil {
+			return 0, nil, false
+		}
+		var names []string
+		for _, f := range strings.Split(list, ", ") {
+			f = strings.TrimSpace(f)
+			// The stated bound. A truncated list is honest about being one, and counting
+			// "and 12 more" as a name would turn that into an off-by-one failure.
+			if strings.HasSuffix(f, " more") {
+				return n, nil, false
+			}
+			if f != "" {
+				names = append(names, f)
+			}
+		}
+		return n, names, true
+	}
+	return 0, nil, false
 }
 
 // TestCorpusResolvesIncludesThroughTheSearchPath is the C family's structural assertion, and

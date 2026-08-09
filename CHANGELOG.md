@@ -8,6 +8,37 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-09
+
+- **A module page names its public surface instead of only counting it.** Every extractor
+  already read exported declarations; the page reported the total and dropped the names, so
+  an agent learned that a module *has* four exports and had to open files to find out
+  whether the one it wanted was among them. Module pages now carry
+  `- **Exports** (4): \`Greeting\`, \`Greeting.String\`, \`New\`, \`TestNew\`` — methods
+  qualified by receiver, because `String` alone does not say which of a module's types has
+  it, and two types in one package may both declare it.
+
+  **Only exported declarations, which is the half the test asserts.** A list including
+  private helpers would describe a surface callers cannot reach, and an agent writing
+  against it would produce code the compiler rejects. Visibility is not one rule across
+  eighteen languages and is not always a keyword: Python's is a leading underscore by
+  convention, PHP's default is public, Ruby's `private` is a sticky section marker that
+  applies to methods only, and C inverts the rule entirely — external linkage is the
+  default and only `static` withdraws it, so a name declared in a *private* header is still
+  a real export. `TestCorpusNamesThePublicSurfaceAndNothingElse` asserts the names each
+  language must show and sweeps four that must appear on **no** page, matching on
+  identifier boundaries rather than as substrings, because `corpus_internal_note` is a
+  correct C export and a substring check for `_internal` fails on it.
+
+  **No node, no edge, no ADR.** ADR
+  [0003](docs/adr/0003-directory-granularity-for-module-nodes.md) fixes the graph at
+  directory granularity and this adds no node kind: a symbol is something a module *has*,
+  not something the graph points at. Call and inheritance edges remain out, and arrive from
+  a SCIP index or codeatlas per design §4.3 where they are `extracted` rather than inferred
+  from declaration order. The list is bounded at 60 and states the remainder when it
+  truncates, for the reason the file list is bounded — a module with sixty exports would
+  otherwise push its edges, the part an agent navigates by, off the first screen.
+
 #### 2026-08-08
 
 - **CMake and Bazel build graphs are read, and neither can be settled by the file that states
@@ -889,6 +920,21 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+#### 2026-08-09
+
+- **A module's exported-symbol count double-counted a name two files declared.** The
+  `exported` attribute tallied occurrences across a module's files, so a declaration
+  appearing in more than one file was counted more than once — normal in Objective-C, where
+  a method is declared in `.h` and defined in `.m`, and in any language where a module spans
+  files that repeat a name. `objc/Sources` claimed 13 exports against 9 real ones and
+  `ruby/lib/corpus` claimed 7 against 6.
+
+  Found by naming the symbols on the page, which is why the count is now the length of the
+  list the page prints rather than a second tally of the same declarations. A number a
+  reader can see is wrong discredits the numbers they cannot check, so the two can no longer
+  disagree by construction: the corpus test walks every module page, parses the claimed
+  count out of the rendered line, and compares it to the names beside it.
 
 #### 2026-08-05
 

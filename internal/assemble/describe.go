@@ -39,6 +39,20 @@ func moduleTitle(dir string) string {
 	return dir
 }
 
+// exportName is how one exported declaration is named on a module page.
+//
+// A method is qualified by its receiver, matching extract.SymbolNames: `String` alone
+// says nothing about which of a module's types has it, and two types in one package may
+// both declare it. The kind is not part of the name — a page lists the surface, and a
+// reader who needs to know whether `New` is a function or a constant opens the file the
+// page already names.
+func exportName(s extract.Symbol) string {
+	if s.Recv != "" {
+		return s.Recv + "." + s.Name
+	}
+	return s.Name
+}
+
 func moduleDescription(n *graph.Node, exported int) string {
 	parts := []string{plural(len(n.Files), "file")}
 	if n.Lang != "" {

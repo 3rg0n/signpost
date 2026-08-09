@@ -78,6 +78,12 @@ type Node struct {
 	Attrs map[string]string
 	// Files lists the repo-relative files aggregated into this node, sorted.
 	Files []string
+	// Exports names the exported declarations this node's files expose, sorted.
+	// A public surface, not a symbol table: unexported declarations are absent,
+	// and nothing here is a node of its own. ADR 0003 keeps the graph at
+	// directory granularity, so a symbol is something a module *has* rather
+	// than something the graph points at.
+	Exports []string
 	// Cluster is assigned by Clusters(); -1 until then.
 	Cluster int
 }
@@ -134,6 +140,7 @@ func (g *Graph) AddNode(n *Node) error {
 		cp := *n
 		cp.Tags = dedupe(cp.Tags)
 		cp.Files = dedupe(cp.Files)
+		cp.Exports = dedupe(cp.Exports)
 		if cp.Attrs == nil {
 			cp.Attrs = make(map[string]string)
 		}
@@ -157,6 +164,7 @@ func (g *Graph) AddNode(n *Node) error {
 	}
 	cur.Tags = dedupe(append(cur.Tags, n.Tags...))
 	cur.Files = dedupe(append(cur.Files, n.Files...))
+	cur.Exports = dedupe(append(cur.Exports, n.Exports...))
 	for k, v := range n.Attrs {
 		if _, exists := cur.Attrs[k]; !exists {
 			cur.Attrs[k] = v

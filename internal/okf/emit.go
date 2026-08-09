@@ -310,6 +310,9 @@ func structureText(g *graph.Graph, n *graph.Node) string {
 	if len(n.Files) > 0 {
 		b.WriteString(filesLine(n))
 	}
+	if len(n.Exports) > 0 {
+		b.WriteString(exportsLine(n))
+	}
 	byKind := map[graph.EdgeKind][]graph.Edge{}
 	for _, e := range g.EdgesFrom(n.ID) {
 		byKind[e.Kind] = append(byKind[e.Kind], e)
@@ -356,6 +359,45 @@ func filesLine(n *graph.Node) string {
 	if len(shown) < len(n.Files) {
 		b.WriteString("- and " + strconv.Itoa(len(n.Files)-len(shown)) + " more\n")
 	}
+	return b.String()
+}
+
+// exportsLine names the module's public surface.
+//
+// Named rather than only counted, for the reason filesLine gives: "4 exported symbols"
+// tells an agent a module has a surface, and the names tell it whether the thing it is
+// looking for is in there. This is the one place a page states what a module offers
+// rather than what it depends on.
+//
+// Only exported declarations, which is the negative half of the claim: a page that
+// listed private helpers would describe a surface callers cannot use, and an agent
+// reading it would write code against a name the compiler rejects. Symbols get no node
+// and no edge — ADR 0003 keeps the graph at directory granularity, so this is a page
+// attribute, not a second graph.
+//
+// Comma-separated on one line rather than a bullet each: a module with 60 exports would
+// otherwise push its edges — the part an agent navigates by — off the first screen.
+func exportsLine(n *graph.Node) string {
+	// Higher than filesLine's bound because names are short and a public surface is
+	// nearly always smaller than it looks; a module past this is a god object, and the
+	// bound says so by truncating.
+	const maxExports = 60
+	shown := n.Exports
+	var b strings.Builder
+	b.WriteString("\n- **Exports** (" + strconv.Itoa(len(n.Exports)) + "): ")
+	if len(shown) > maxExports {
+		shown = shown[:maxExports]
+	}
+	for i, s := range shown {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(codeSpan(s))
+	}
+	if len(shown) < len(n.Exports) {
+		b.WriteString(", and " + strconv.Itoa(len(n.Exports)-len(shown)) + " more")
+	}
+	b.WriteString("\n")
 	return b.String()
 }
 
