@@ -1,0 +1,38 @@
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_92f930aa892239 1976-1984
+  s_f6c0b1ac81cb95::t_24a2ef698aa5d2 1912-1917,1921-1922
+  s_f6c0b1ac81cb95::t_c6a3b5639d7416 1918-1920
+  s_f6c0b1ac81cb95::t_e2d578e75e2862 1886-1893
+docs/design.md
+  s_f6c0b1ac81cb95::t_a34810986e2e0e 640-651
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_1be56d6a955bd4 17-19
+  s_f6c0b1ac81cb95::t_efdbe01e9c2058 29,33-45
+  s_5cd1b28ed520c1::t_872a05e9c50d62 46
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_1db44d6f43ba4e 356-368
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d6de135b4b3af55e6b8efd18185380a1b0731717",
+  "prompts": {},
+  "sessions": {
+    "s_5cd1b28ed520c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82e2267c-23d5-4c0c-8d96-7d91a00e70c4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
