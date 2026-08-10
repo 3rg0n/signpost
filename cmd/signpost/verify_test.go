@@ -2,7 +2,9 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -104,6 +106,183 @@ func TestVerifyRejectsTwoPathsWithAUsageCode(t *testing.T) {
 	root := fixture(t)
 	if _, _, code := invoke(t, "verify", root, root); code != 2 {
 		t.Errorf("exit = %d, want 2 for a usage error", code)
+	}
+}
+
+// gitFixture is the fixture in a repository with the code committed, which is what
+// -as-of-bundle needs: the flag reads the commit the bundle records, and there is nothing to
+// record without one.
+//
+// The environment is isolated the way hookRepo isolates it, and for the same measured reasons —
+// a global core.hooksPath runs someone's secret scanner on every commit here, and
+// maintenance.auto leaves a detached process holding handles under .git that block t.TempDir's
+// cleanup on Windows.
+func gitFixture(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, "nonexistent-gitconfig"))
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_AUTHOR_NAME", "T")
+	t.Setenv("GIT_AUTHOR_EMAIL", "t@example.invalid")
+	t.Setenv("GIT_COMMITTER_NAME", "T")
+	t.Setenv("GIT_COMMITTER_EMAIL", "t@example.invalid")
+
+	root := fixture(t)
+	git(t, root, "init", "-q", "--initial-branch=main")
+	git(t, root, "config", "commit.gpgsign", "false")
+	git(t, root, "config", "maintenance.auto", "false")
+	git(t, root, "config", "gc.auto", "0")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the code")
+	return root
+}
+
+// commitAComment appends a line that changes no node, no edge, and no counted fact, and commits
+// it. What a pull request looks like when it is not restructuring anything.
+func commitAComment(t *testing.T, root string) {
+	t.Helper()
+	full := filepath.Join(root, "internal", "auth", "auth.go")
+	src, err := os.ReadFile(full)
+	if err != nil {
+		t.Fatal(err)
+	}
+	note := []byte("\n// A note that changes nothing.\n")
+	if err := os.WriteFile(full, append(src, note...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "a comment")
+}
+
+// The end-to-end regression for the pull-request gate, and the reason -as-of-bundle needed more
+// than a provenance exception.
+//
+// Seven churn attributes and the co-change edges are history-derived and land in page *content*,
+// so before this every commit on a branch moved them: one commit adding a comment changed
+// `commits` and `lines_added` on that directory's page, and the edge a second touched directory
+// created moved the edge totals on index.md, log.md, and manifest.json. The gate went red on
+// every pull request, including ones that changed no code — which is the failure design §4.6
+// warns about arriving from the other direction: a check nobody can keep green is a check
+// somebody turns off, and the staleness guarantee goes with it.
+func TestVerifyAsOfBundlePassesAfterACommitThatChangesNoStructure(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	// Committed, because the bundle is a committed artifact (ADR 0005) and the commit it
+	// records is the one before its own.
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the bundle")
+	commitAComment(t, root)
+
+	stdout, stderr, code := invoke(t, "verify", "-as-of-bundle", root)
+	if code != 0 {
+		t.Fatalf("exit = %d: a commit that changed no structure failed the gate\n%s\n%s",
+			code, stdout, stderr)
+	}
+	// The relaxation stayed the announced one. A pass that also stopped opening pages reads the
+	// same from the exit code.
+	if strings.Contains(stdout, "checked 0 page(s)") {
+		t.Errorf("passed having opened no pages:\n%s", stdout)
+	}
+	// Which commit the churn numbers describe. A reader comparing a page's `commits` attribute
+	// against `git log` on their branch would otherwise find it short by the branch's commits.
+	if !strings.Contains(stderr, "history read as of") {
+		t.Errorf("the run did not say it read history as of the bundle's commit:\n%s", stderr)
+	}
+}
+
+// The same repository, verified strictly, must fail — otherwise the test above passes for a
+// reason that has nothing to do with the flag.
+func TestVerifyStrictStillFailsOnABranchCommit(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the bundle")
+	commitAComment(t, root)
+
+	stdout, _, code := invoke(t, "verify", "--quiet", root)
+	if code != 1 {
+		t.Fatalf("strict exit = %d, want 1: the default has to keep checking the stamp it "+
+			"writes on the default branch\n%s", code, stdout)
+	}
+}
+
+// -as-of-bundle is not a way to stop checking. A commit that really does change the structure
+// fails under it, which is the property that makes it safe to pass on every pull request.
+func TestVerifyAsOfBundleStillFailsOnRealDrift(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the bundle")
+
+	full := filepath.Join(root, "internal", "billing", "billing.go")
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, []byte("package billing\n\nfunc Charge() {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "a new module")
+
+	stdout, _, code := invoke(t, "verify", "-as-of-bundle", "--quiet", root)
+	if code != 1 {
+		t.Fatalf("exit = %d, want 1: a new module is drift the mode must still catch\n%s",
+			code, stdout)
+	}
+	if !strings.Contains(stdout, "billing") {
+		t.Errorf("the failure does not name the module that appeared:\n%s", stdout)
+	}
+}
+
+// A rewritten sha — what a squash merge or a rebase leaves behind — falls back to HEAD rather
+// than failing. The recorded commit has no object in this clone while the content it describes
+// is perfectly current, so refusing to read anything would break the gate on exactly the
+// repositories that squash-merge, which is most of them.
+func TestVerifyAsOfBundleFallsBackWhenTheRecordedCommitIsGone(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	// The manifest names a commit this repository has never had, which is what a rewritten
+	// history leaves in a bundle built before the rewrite.
+	man := filepath.Join(root, okf.BundleDir, okf.ManifestFile)
+	src, err := os.ReadFile(man)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := regexp.MustCompile(`git://[0-9a-f]{40}`).
+		ReplaceAllString(string(src), "git://"+strings.Repeat("a", 40))
+	if out == string(src) {
+		t.Fatalf("the resource was not rewritten, so this test proves nothing:\n%s", src)
+	}
+	if err := os.WriteFile(man, []byte(out), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, code := invoke(t, "verify", "-as-of-bundle", root)
+	// It fails, because the pages still carry the real sha and the manifest now does not — that
+	// is a genuine finding. What must not happen is a git error, or a claim to have read history
+	// as of a commit that does not exist.
+	if code == 2 {
+		t.Fatalf("exit = 2: a rewritten sha became a fault rather than a fallback\n%s\n%s",
+			stdout, stderr)
+	}
+	if strings.Contains(stderr, "history read as of") {
+		t.Errorf("claimed to read history as of a commit this clone does not have:\n%s", stderr)
+	}
+	if !strings.Contains(stderr, "history:") {
+		t.Errorf("history was not read at all:\n%s", stderr)
 	}
 }
 

@@ -28,7 +28,17 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 		return unavailable("not a git repository, so no history signals were read"), nil
 	}
 
-	out, err := run(ctx, dir, opts, logArgs(opts.MaxCommits)...)
+	// A commit named by the bundle is worth nothing if this clone does not have it, which
+	// happens for an ordinary reason: a squash merge or a rebase leaves the recorded sha
+	// with no object behind it while the content it describes is perfectly current. Asked
+	// before the walk so the fallback is "read from HEAD, and say so" rather than a git
+	// failure the caller has to interpret.
+	asOf := opts.AsOf
+	if asOf != "" && !hasCommit(ctx, dir, opts, asOf) {
+		asOf = ""
+	}
+
+	out, err := run(ctx, dir, opts, logArgs(opts.MaxCommits, asOf)...)
 	if err != nil {
 		// An empty repository is the one git failure that is a fact about the tree
 		// rather than a fault: `git log` on a repository with no commits exits
@@ -47,7 +57,8 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 	// the commit being described: the walk passes --no-merges, so on a repository whose
 	// tip is a merge the newest entry is one of its parents, and it counts bundle-only
 	// commits that readHead deliberately looks past. See readHead for why that matters.
-	s.Head = readHead(ctx, dir, opts)
+	s.Head = readHead(ctx, dir, opts, asOf)
+	s.AsOf = asOf
 
 	if isShallow(ctx, dir, opts) {
 		s.Shallow = true
@@ -67,13 +78,19 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 
 // logArgs builds the git invocation.
 //
-// Every element is a compile-time constant except the numeric cap, and the repository
-// path is not among them: it is passed as the subprocess's working directory instead.
-// That is deliberate. A path is attacker-influenced input in a tool pointed at arbitrary
-// directories, and a directory named `--output=...` interpolated into an argument list
-// would be read by git as a flag. As the working directory it cannot be.
-func logArgs(maxCommits int) []string {
-	return []string{
+// Every element is a compile-time constant except the numeric cap and, when a caller
+// asked for one, a validated commit; the repository path is not among them: it is passed
+// as the subprocess's working directory instead. That is deliberate. A path is
+// attacker-influenced input in a tool pointed at arbitrary directories, and a directory
+// named `--output=...` interpolated into an argument list would be read by git as a flag.
+// As the working directory it cannot be.
+//
+// asOf reaches this function only through validCommit, so it is forty hex characters and
+// cannot be a flag either. It is appended after a `--end-of-options` sentinel regardless,
+// because the argument that is only safe by a caller's promise is the argument that stops
+// being safe when someone adds a second caller.
+func logArgs(maxCommits int, asOf string) []string {
+	args := []string{
 		// No pager, no config that could redirect output, no signature verification.
 		"--no-pager", "log",
 		// Merges contribute no numstat of their own under default settings and would
@@ -92,6 +109,44 @@ func logArgs(maxCommits int) []string {
 		"--pretty=format:%H" + fieldSep + "%aN" + fieldSep + "%ad" + fieldSep,
 		"--max-count=" + strconv.Itoa(maxCommits),
 	}
+	if asOf != "" {
+		args = append(args, "--end-of-options", asOf)
+	}
+	return args
+}
+
+// validCommit reports whether s is safe to hand git as a revision.
+//
+// A full hex sha and nothing else. The value arrives from a bundle's manifest.json, which
+// is a committed file anyone with a pull request can edit, so it is untrusted input on its
+// way to an argument list — and git's revision syntax is wide enough to be dangerous on its
+// own terms: `HEAD@{upstream}`, a `:/text` search, or a path-shaped revision would all be
+// accepted and none of them is what the caller meant. Requiring the one form signpost
+// itself writes rejects every other reading without having to reason about which ones are
+// harmful. Abbreviated shas are refused too: they are ambiguous by design, and the bundle
+// always records a full one.
+func validCommit(s string) bool {
+	if len(s) != 40 {
+		return false
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+// hasCommit reports whether dir has the named commit as a commit object.
+//
+// `^{commit}` rather than a bare --verify, which succeeds for a tree or a blob whose sha
+// was pasted in by mistake and would then fail confusingly inside the log walk.
+func hasCommit(ctx context.Context, dir string, opts Options, sha string) bool {
+	if !validCommit(sha) {
+		return false
+	}
+	_, err := run(ctx, dir, opts, "rev-parse", "--verify", "--end-of-options", sha+"^{commit}")
+	return err == nil
 }
 
 // isRepo reports whether dir is inside a git work tree.
@@ -125,14 +180,18 @@ func isShallow(ctx context.Context, dir string, opts Options) bool {
 // the identity is a provenance stamp on an otherwise complete analysis, and losing the
 // whole bundle over an unstamped page would be the wrong trade. The emitter omits the
 // field when it is empty rather than writing a hash it does not have.
-func readHead(ctx context.Context, dir string, opts Options) Commit {
-	if c, ok := logOne(ctx, dir, opts, ".", ":(exclude)"+bundleDir); ok {
+//
+// asOf, when set, is where the search starts instead of HEAD. It must already have been
+// checked to exist — Read does that, so the caller here cannot turn a rewritten sha into an
+// unstamped bundle.
+func readHead(ctx context.Context, dir string, opts Options, asOf string) Commit {
+	if c, ok := logOne(ctx, dir, opts, asOf, ".", ":(exclude)"+bundleDir); ok {
 		return c
 	}
 	// Every commit touched only the bundle, which git reports as empty output and exit 0
 	// rather than as an error. Falling back to HEAD keeps a repository that is nothing but
 	// a bundle stamped, and the fallback cannot loop: there is no earlier commit to prefer.
-	c, _ := logOne(ctx, dir, opts, ".")
+	c, _ := logOne(ctx, dir, opts, asOf, ".")
 	return c
 }
 
@@ -145,9 +204,24 @@ const bundleDir = ".signpost"
 
 // logOne reads one commit's hash and date under a pathspec, reporting whether git named
 // one at all. Empty output is not a failure: it means no commit matched.
-func logOne(ctx context.Context, dir string, opts Options, pathspec ...string) (Commit, bool) {
-	args := append([]string{"--no-pager", "log", "-1",
-		"--date=short", "--pretty=format:%H" + fieldSep + "%ad", "--"}, pathspec...)
+//
+// rev, when set, bounds the search to that commit and its ancestors. It goes before the
+// `--` where git expects a revision, and after `--end-of-options` for the reason logArgs
+// gives.
+//
+// The sentinel is added only when there is a rev to protect, not unconditionally. It wants
+// git 2.24, and every other argument here is a compile-time constant or a pathspec that
+// already follows `--`, so spending a version requirement on them would buy nothing and
+// would cost the stamp on an older git: this function reports failure by returning no
+// commit, so a git that rejected the sentinel would produce an unstamped bundle rather than
+// an error anyone could read.
+func logOne(ctx context.Context, dir string, opts Options, rev string, pathspec ...string) (Commit, bool) {
+	args := []string{"--no-pager", "log", "-1",
+		"--date=short", "--pretty=format:%H" + fieldSep + "%ad"}
+	if rev != "" {
+		args = append(args, "--end-of-options", rev)
+	}
+	args = append(append(args, "--"), pathspec...)
 	out, err := run(ctx, dir, opts, args...)
 	if err != nil {
 		return Commit{}, false
@@ -189,9 +263,11 @@ func run(ctx context.Context, dir string, opts Options, args ...string) (string,
 		"-c", "mailmap.blob=",
 	}, args...)
 
-	// #nosec G204 -- every argument is a compile-time constant from this file plus a
-	// strconv'd integer. The repository path is passed as Dir, never as an argument, so
-	// a directory named like a flag cannot become one. See logArgs.
+	// #nosec G204 -- every argument is a compile-time constant from this file, plus a
+	// strconv'd integer and, on the paths that take one, a commit that validCommit has
+	// restricted to forty hex characters and that follows --end-of-options. The repository
+	// path is passed as Dir, never as an argument, so a directory named like a flag cannot
+	// become one. See logArgs.
 	cmd := exec.CommandContext(ctx, "git", full...)
 	cmd.Dir = dir
 	// GIT_CONFIG_* suppress system and global config only; the repository's own config

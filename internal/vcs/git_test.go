@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -467,5 +468,188 @@ func TestHeadFallsBackWhenEveryCommitIsBundleOnly(t *testing.T) {
 	}
 	if s.Head.SHA != want {
 		t.Errorf("identity is %q, want the HEAD fallback %s", s.Head.SHA, want[:7])
+	}
+}
+
+// The tests below cover Options.AsOf, which exists for `verify -as-of-bundle`. The property
+// they protect is the one that makes the staleness gate usable on a pull request: history read
+// as of a commit is the history that commit had, whatever has landed on the branch since.
+
+// Churn read as of an earlier commit does not see the commits after it.
+//
+// The assertion is the count on a specific path rather than the total, because the total would
+// also be satisfied by a `--max-count` that happened to stop in the right place. The path's
+// count can only be right if the walk actually ended where it was told to.
+func TestAsOfReadsTheHistoryThatCommitHad(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "a/one.go", "package a\n")
+	gitCommit(t, dir, "first")
+	write(t, dir, "a/one.go", "package a\n\nfunc F() {}\n")
+	gitCommit(t, dir, "second")
+	pinned := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	// Three more commits, which is what a branch does while a bundle sits at `pinned`.
+	for i, body := range []string{"// x\n", "// y\n", "// z\n"} {
+		write(t, dir, "a/one.go", "package a\n\nfunc F() {}\n"+body)
+		gitCommit(t, dir, "later "+strconv.Itoa(i))
+	}
+
+	head, err := Read(context.Background(), dir, Options{})
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if got := head.Paths["a/one.go"].Commits; got != 5 {
+		t.Fatalf("from HEAD the path has %d commits, want 5 — the fixture is not what the "+
+			"as-of assertion below assumes", got)
+	}
+
+	s, err := Read(context.Background(), dir, Options{AsOf: pinned})
+	if err != nil {
+		t.Fatalf("Read(AsOf): %v", err)
+	}
+	if got := s.Paths["a/one.go"].Commits; got != 2 {
+		t.Errorf("as of %s the path has %d commits, want 2", pinned[:7], got)
+	}
+	if s.Commits != 2 {
+		t.Errorf("read %d commits, want 2", s.Commits)
+	}
+	if s.Head.SHA != pinned {
+		t.Errorf("identity is %s, want the pinned commit %s", s.Head.Short(), pinned[:7])
+	}
+	if s.AsOf != pinned {
+		t.Errorf("AsOf reported as %q, want %s", s.AsOf, pinned)
+	}
+}
+
+// A co-change pair that only exists because of a later commit must not appear in an as-of
+// read. This is the case that made AsOf necessary rather than an attribute-by-attribute fix:
+// an edge changes the edge *counts* on index.md, log.md, and manifest.json, and no adoption of
+// recorded field values reaches arithmetic over a graph that has an extra edge in it.
+func TestAsOfDoesNotSeeCoChangeFromLaterCommits(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "a/one.go", "package a\n")
+	write(t, dir, "b/two.go", "package b\n")
+	gitCommit(t, dir, "first")
+	pinned := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	// Two commits touching both directories, which is what it takes to clear the
+	// one-shared-commit floor and become a pair.
+	for i := 0; i < 2; i++ {
+		write(t, dir, "a/one.go", "package a\n// "+strconv.Itoa(i)+"\n")
+		write(t, dir, "b/two.go", "package b\n// "+strconv.Itoa(i)+"\n")
+		gitCommit(t, dir, "couple "+strconv.Itoa(i))
+	}
+
+	head, err := Read(context.Background(), dir, Options{})
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if len(head.CoChange) != 1 {
+		t.Fatalf("from HEAD there are %d pairs, want 1 — the fixture does not set up the "+
+			"assertion below", len(head.CoChange))
+	}
+
+	s, err := Read(context.Background(), dir, Options{AsOf: pinned})
+	if err != nil {
+		t.Fatalf("Read(AsOf): %v", err)
+	}
+	if len(s.CoChange) != 0 {
+		t.Errorf("as of %s there are %d co-change pair(s), want 0: %+v",
+			pinned[:7], len(s.CoChange), s.CoChange)
+	}
+}
+
+// A sha this clone does not have falls back to HEAD and says so.
+//
+// Not an error, because the ordinary way to get one is a squash merge or a rebase: the recorded
+// sha has no object behind it while the content it describes is perfectly current. Failing
+// there would break the gate on exactly the repositories that squash-merge, which is most of
+// them. The report is what keeps it from being silent — a caller prints it, so a churn number
+// read from HEAD is never presented as one read from the bundle's commit.
+func TestAsOfFallsBackToHeadWhenTheCommitIsGone(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "a/one.go", "package a\n")
+	gitCommit(t, dir, "first")
+	head := strings.TrimSpace(gitRun(t, dir, "rev-parse", "HEAD"))
+
+	s, err := Read(context.Background(), dir, Options{AsOf: strings.Repeat("a", 40)})
+	if err != nil {
+		t.Fatalf("Read(AsOf): %v", err)
+	}
+	if s.Head.SHA != head {
+		t.Errorf("identity is %q, want the HEAD fallback %s", s.Head.SHA, head[:7])
+	}
+	if s.AsOf != "" {
+		t.Errorf("AsOf reported as %q after falling back, which would present a HEAD read as "+
+			"an as-of one", s.AsOf)
+	}
+	if s.Commits != 1 {
+		t.Errorf("read %d commits, want the 1 HEAD has", s.Commits)
+	}
+}
+
+// Everything git would accept as a revision and signpost never writes is refused.
+//
+// The value arrives from a bundle's manifest.json, which anyone with a pull request can edit,
+// so this is a trust boundary rather than a tidiness check. git's revision syntax is wide:
+// `HEAD@{upstream}` reads a configured remote, `:/text` searches commit messages, and a
+// path-shaped revision resolves against the tree. None is what the caller meant, and refusing
+// every form but the one signpost writes avoids having to reason about which are harmful.
+func TestValidCommitAcceptsOnlyAFullSha(t *testing.T) {
+	ok := strings.Repeat("0", 39) + "f"
+	if !validCommit(ok) {
+		t.Errorf("rejected a full lowercase sha: %s", ok)
+	}
+	for _, bad := range []string{
+		"",
+		"HEAD",
+		"HEAD@{upstream}",
+		"HEAD~1",
+		":/probe",
+		"main",
+		"refs/heads/main",
+		strings.Repeat("a", 7),        // abbreviated: ambiguous by design
+		strings.Repeat("a", 39),       // one short
+		strings.Repeat("a", 41),       // one long
+		strings.Repeat("A", 40),       // uppercase: not what git writes here
+		strings.Repeat("a", 39) + "g", // non-hex
+		strings.Repeat("a", 39) + " ", // trailing space
+		"--upload-pack=touch " + strings.Repeat("a", 20),
+		strings.Repeat("a", 20) + "/../../etc/passwd",
+	} {
+		if validCommit(bad) {
+			t.Errorf("accepted %q as a commit", bad)
+		}
+	}
+}
+
+// A rejected value never reaches git, so it cannot be a revision *or* a flag.
+//
+// Asserted through Read rather than on hasCommit alone, because the property that matters is
+// the end-to-end one: an unusable AsOf produces an ordinary HEAD read rather than a git error
+// the caller has to interpret.
+func TestARejectedAsOfIsNotHandedToGit(t *testing.T) {
+	dir := gitRepo(t)
+	write(t, dir, "a/one.go", "package a\n")
+	gitCommit(t, dir, "first")
+
+	for _, bad := range []string{"HEAD@{upstream}", ":/first", "--output=probe.txt", "main"} {
+		s, err := Read(context.Background(), dir, Options{AsOf: bad})
+		if err != nil {
+			t.Fatalf("Read(AsOf=%q) failed rather than falling back: %v", bad, err)
+		}
+		if s.AsOf != "" {
+			t.Errorf("AsOf=%q was accepted", bad)
+		}
+		if !s.Available || s.Commits != 1 {
+			t.Errorf("AsOf=%q: got %d commits, available=%v; want an ordinary HEAD read",
+				bad, s.Commits, s.Available)
+		}
+	}
+	// `main` is a real revision here, so its refusal is a deliberate narrowing rather than a
+	// side effect of it being unresolvable. Stated because a future change that loosened
+	// validCommit to accept branch names would pass every other assertion above.
+	if got := strings.TrimSpace(gitRun(t, dir, "rev-parse", "--verify", "main")); got == "" {
+		t.Fatal("main does not resolve, so its refusal above proved nothing")
 	}
 }
