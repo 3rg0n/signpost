@@ -72,6 +72,21 @@ func runVerify(args []string, out, errOut io.Writer) error {
 	applyConfig(fs, cfg, &pf)
 	applyRepo(fs, cfg, repo)
 
+	// Before the analysis, because the commit the bundle records is an *input* to it rather
+	// than something to compare afterwards. Seven churn attributes and the co-change edges are
+	// derived from history and land in page content, so on a branch every commit moves them:
+	// one commit adding a comment changes `commits` and `lines_added` on that directory's page,
+	// and a commit touching two directories can add a co_changes edge, which moves the edge
+	// totals on index.md, log.md, and manifest.json. Reading the history the bundle read makes
+	// all of them identical by construction. See vcs.Options.AsOf.
+	//
+	// Empty is the ordinary answer for a repository with no bundle yet, and it needs no branch
+	// here: verify reports the missing bundle, and this analysis was going to read from HEAD
+	// anyway.
+	if *asOf {
+		pf.asOfCommit = okf.RecordedCommit(path)
+	}
+
 	a, err := analyse(context.Background(), path, pf)
 	if err != nil {
 		return err

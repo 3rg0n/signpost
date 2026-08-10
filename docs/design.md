@@ -993,6 +993,35 @@ failure, because the remedy is `signpost build` — the same remedy every other 
 here names. A surplus page a build **keeps** is a warning, because no command can
 resolve it and a red gate with no supported fix is a gate people switch off.
 
+**`-as-of-bundle` reads history as of the bundle's commit, not just its stamp.** The bundle
+is written on the default branch only (§8.0), so everywhere else the commit it records is
+behind by construction — which is why the pull-request gate passes this flag at all. What is
+not obvious, and cost a red gate on every conforming pull request to find, is that the stamp
+is not the only thing a commit moves. Seven churn attributes on a module page (`commits`,
+`lines_added`, `lines_removed`, `first_commit`, `last_commit`, `top_author`,
+`top_author_share`) and the `co_changes` edges are read from git, and they land in page
+*content*. One commit adding a comment changes `commits` and `lines_added` on that
+directory's page. One commit touching two directories can create a `co_changes` edge, and
+that moves the edge totals on `index.md`, `log.md`, and `manifest.json` as well.
+
+Adopting the recorded values field by field does not fix it. The edge counts are arithmetic
+over a graph that genuinely has one more edge in it than the bundle's graph did, and there is
+no field to copy for that. So the flag reads the *history* as of the recorded commit instead:
+`git log` ends there, the analysis sees exactly the commits the bundle saw, and every
+history-derived field is identical by construction rather than by exception. Nothing about the
+content comparison is relaxed — a code change still fails, which is what makes the mode safe
+to pass on every pull request.
+
+Two properties keep that honest. The recorded sha is untrusted input on its way to an argument
+list — it comes from `manifest.json`, a committed file anyone with a pull request can edit — so
+it is accepted only as forty lowercase hex characters and passed after a `--end-of-options`
+sentinel; `HEAD@{upstream}`, `:/text`, a branch name, and an abbreviation are all refused, and
+a refused value falls back to reading from HEAD. And a sha this clone does not have — what a
+squash merge or a rebase leaves behind — is the same fallback rather than an error, because the
+content it describes is perfectly current and failing there would break the gate on exactly the
+repositories that squash-merge. Both fallbacks are printed: a run that read history from HEAD
+never claims to have read it as of anything else.
+
 ---
 
 ## 5. Model backends

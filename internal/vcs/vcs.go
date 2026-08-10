@@ -55,6 +55,22 @@ type Options struct {
 
 	// Timeout bounds the git invocation. Zero applies DefaultTimeout.
 	Timeout time.Duration
+
+	// AsOf walks history ending at this commit rather than at HEAD. Empty means HEAD.
+	//
+	// What `verify -as-of-bundle` needs, and the reason it is a commit rather than a
+	// boolean. Seven churn attributes and the co-change edges are history-derived and
+	// land in page *content*, so on a branch every commit moves them: one commit adding
+	// a comment changes `commits` and `lines_added` on that directory's page, and a
+	// commit touching two directories can add a co_changes edge, which moves the edge
+	// totals on index.md, log.md, and manifest.json. Adopting the recorded values
+	// per-field would fix the attributes and not the counts — the counts are arithmetic
+	// over a graph that genuinely has an extra edge. Reading the history the bundle read
+	// makes every one of them identical by construction rather than by exception.
+	//
+	// Left empty on the default branch, where the bundle is written and the commit being
+	// described is the commit in front of you.
+	AsOf string
 }
 
 // Defaults. Deliberately generous: the point of the caps is to make an unbounded input
@@ -191,6 +207,16 @@ type Signals struct {
 
 	// Head identifies the commit the analysis describes. Zero when Available is false.
 	Head Commit
+
+	// AsOf is the commit history was actually read as of, empty when it was read from HEAD.
+	//
+	// Reported rather than assumed equal to Options.AsOf, because the two differ in the one
+	// case a caller has to handle: a requested commit this clone does not have falls back to
+	// HEAD, and a caller comparing what it asked for against what it got is how that becomes
+	// a printed line instead of a silently different answer. Not folded into Reason, which
+	// callers print as a warning about history being thinner than it looks — reading as of a
+	// named commit is neither thin nor a problem.
+	AsOf string
 }
 
 // Commit identifies the commit an analysis describes.

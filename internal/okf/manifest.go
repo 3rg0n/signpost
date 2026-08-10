@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/3rg0n/signpost/internal/graph"
 )
@@ -83,6 +85,50 @@ func manifestJSON(g *graph.Graph, opts Options) (string, error) {
 		return "", fmt.Errorf("okf: encoding manifest: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// RecordedCommit returns the commit sha the bundle at root records, or "" when there is no
+// readable bundle, no manifest, or no resource in it.
+//
+// Exported for one caller: `verify -as-of-bundle` has to know which commit to read history as
+// of *before* it analyses anything, because seven churn attributes and the co-change edges are
+// history-derived and land in page content. Everything else about the bundle is read after the
+// analysis, which is why this is the only accessor of its kind.
+//
+// No error is returned, and the absence is not distinguished from a failure, because the
+// caller does the same thing either way: read history from HEAD and let the strict comparison
+// report whatever is wrong. A bundle so broken that its manifest will not parse has a finding
+// waiting for it in Verify, and a second one here would name the same defect twice.
+func RecordedCommit(root string) string {
+	man, err := readManifest(filepath.Join(root, BundleDir))
+	if err != nil {
+		return ""
+	}
+	return commitFromResource(man.Resource)
+}
+
+// commitFromResource pulls the sha back out of a `git://repo@sha` or `git://sha` URI.
+//
+// Parsed rather than recorded as its own manifest field, so there is one place a bundle says
+// which commit it describes. A second field would be a second thing to keep in agreement, and
+// the failure would be silent: the two could disagree and every check would still pass.
+//
+// The last `@` wins, because a repository host may carry one and a sha may not.
+func commitFromResource(res string) string {
+	const scheme = "git://"
+	if !strings.HasPrefix(res, scheme) {
+		return ""
+	}
+	rest := res[len(scheme):]
+	if i := strings.LastIndex(rest, "@"); i >= 0 {
+		rest = rest[i+1:]
+	}
+	// A path may follow the sha in a page's resource. The manifest's own is the bare base, but
+	// nothing about this function should depend on which of the two it was handed.
+	if i := strings.Index(rest, "/"); i >= 0 {
+		rest = rest[:i]
+	}
+	return rest
 }
 
 // confidenceCounts tallies edges by confidence.

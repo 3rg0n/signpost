@@ -961,6 +961,41 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+#### 2026-08-10
+
+- **`verify -as-of-bundle` reads the history the bundle read, so the pull-request gate is
+  green on a branch that changed no structure.** The gate had never passed on a conforming
+  pull request. The flag already took the two provenance fields from the bundle's own
+  `manifest.json`, but the stamp is not the only thing a commit moves: seven churn attributes
+  on a module page (`commits`, `lines_added`, `lines_removed`, `first_commit`, `last_commit`,
+  `top_author`, `top_author_share`) and the `co_changes` edges are read from git and land in
+  page *content*. One commit adding a comment changed `commits` and `lines_added` on that
+  directory's page; one commit touching two directories created a `co_changes` edge, which
+  moved the edge totals on `index.md`, `log.md`, and `manifest.json` as well. Measured by
+  probe: one comment line produced one problem, two directories produced two, and PR #26's
+  head produced the five CI reported.
+
+  Adopting the recorded churn values field by field does not fix it, and that is why this is
+  a history change rather than a wider adoption — the edge counts are arithmetic over a graph
+  that genuinely has one more edge in it, and there is no recorded field to copy for a number
+  that was computed. So the log walk now ends at the recorded commit and every
+  history-derived field is identical by construction. Nothing about the content comparison is
+  relaxed: a code change still fails, a new module still fails, and the same repository
+  verified strictly still fails, each asserted end-to-end.
+
+  The recorded sha is untrusted input on its way to a git argument list — `manifest.json` is
+  a committed file anyone with a pull request can edit — so it is accepted only as forty
+  lowercase hex characters and passed after a `--end-of-options` sentinel;
+  `HEAD@{upstream}`, `:/text`, a branch name, a path-shaped revision, and an abbreviation are
+  all refused. A sha this clone does not have, which is what a squash merge or a rebase
+  leaves behind, falls back to reading from HEAD rather than failing. Both fallbacks are
+  printed, so a run never claims to have read history as of a commit it did not. The sentinel
+  goes only on the invocations that carry a sha, not on every git call: it wants git 2.24, and
+  the commit-stamp walk reports failure by returning no commit, so requiring it there would
+  have turned an older git into a silently unstamped bundle instead of an error.
+  [ADR 0024](docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md) records the
+  contract.
+
 #### 2026-08-09
 
 - **A module's exported-symbol count double-counted a name two files declared.** The

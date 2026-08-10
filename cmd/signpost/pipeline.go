@@ -41,6 +41,11 @@ type pipelineFlags struct {
 	ignore          stringList
 	noHistory       bool
 	maxCommits      int
+
+	// asOfCommit reads history as of this commit rather than HEAD. Set only by `verify
+	// -as-of-bundle`, from the sha the bundle recorded, and never registered as a flag: the
+	// value is not a user's to choose. See vcs.Options.AsOf for what it fixes.
+	asOfCommit string
 }
 
 func (p *pipelineFlags) register(fs *flag.FlagSet) {
@@ -138,7 +143,10 @@ func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, err
 			// non-repository, an empty history, and a shallow clone as facts rather than
 			// errors, so anything that reaches this branch is worth failing on rather
 			// than swallowing.
-			s, err := vcs.Read(hctx, path, vcs.Options{MaxCommits: pf.maxCommits})
+			s, err := vcs.Read(hctx, path, vcs.Options{
+				MaxCommits: pf.maxCommits,
+				AsOf:       pf.asOfCommit,
+			})
 			if err != nil {
 				span.Failed()
 				return nil, err
@@ -261,6 +269,12 @@ func reportHistory(p *printer, a *analysis) {
 	}
 	// Halved because addCoChangeEdges draws each symmetric coupling in both directions.
 	p.printf("  history: %d commits, %d co-change pair(s)\n", a.History.Commits, pairs/2)
+	if s := a.History.AsOf; s != "" {
+		// Which commit the churn numbers on the pages describe. Named because they are not
+		// this tree's: a reader comparing a page's `commits` attribute against `git log` on
+		// their branch would otherwise find it short by however many commits the branch has.
+		p.printf("  history read as of %s, not HEAD\n", vcs.Commit{SHA: s}.Short())
+	}
 	if a.History.Reason != "" {
 		// Shallow or truncated. Reported as a warning rather than a note: it is the case
 		// where the numbers above are real but describe less history than the reader will
