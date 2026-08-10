@@ -353,6 +353,19 @@ func (b *builder) addModules() error {
 			if f.Incomplete {
 				incomplete++
 			}
+			// Test files declare no public surface, whatever their visibility says. A Go
+			// `TestFoo` is exported and unreachable — `go test` calls it and nothing else
+			// can — so listing it describes a surface no caller has. On this repository
+			// that was not a cosmetic overcount: test functions were 51% of every name
+			// shown, `internal/assemble` showed 57 of them out of 60, and
+			// `cmd/signpost` showed 60 out of 60, which pushed the real surface past the
+			// bound and off the page. A list whose truncation drops exactly the part a
+			// reader came for is worse than the count it replaced. Test *files* still
+			// appear under Files, and the edge to them is still drawn: what is excluded
+			// is the claim that their declarations are callable.
+			if b.isTest(f.Path) {
+				continue
+			}
 			for _, s := range f.Symbols {
 				if s.Exported {
 					exports = append(exports, exportName(s))
