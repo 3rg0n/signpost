@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 61 concepts, 152 relationships."
-resource: git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13
-generated: { by: signpost/dev, at: "2026-08-10" }
+description: "Structural map of this repository: 62 concepts, 152 relationships."
+resource: git://github.com/3rg0n/signpost@82cb942ea2098d8c7d0a14ddd42b71a21b44db8b
+generated: { by: signpost/dev, at: "2026-08-11" }
 ---
 # Repository map
 
@@ -72,6 +72,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0022: extractors are hand written and tree sitter has a threshold](./references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) — Architecture decision (Accepted), 17 rules read from 0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md.
 - [ADR 0023: a build declaration is settled where the tree is visible](./references/adr-0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) — Architecture decision (Accepted), 23 rules read from 0023-a-build-declaration-is-settled-where-the-tree-is-visible.md.
 - [ADR 0024: a branch verify reads the history the bundle read](./references/adr-0024-a-branch-verify-reads-the-history-the-bundle-read.md) — Architecture decision (Accepted), 15 rules read from 0024-a-branch-verify-reads-the-history-the-bundle-read.md.
+- [ADR 0025: the census long tail is declined by category](./references/adr-0025-the-census-long-tail-is-declined-by-category.md) — Architecture decision (Accepted), 15 rules read from 0025-the-census-long-tail-is-declined-by-category.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

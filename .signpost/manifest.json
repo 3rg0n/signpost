@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13",
-  "date": "2026-08-10",
+  "resource": "git://github.com/3rg0n/signpost@82cb942ea2098d8c7d0a14ddd42b71a21b44db8b",
+  "date": "2026-08-11",
   "counts": {
-    "nodes": 61,
+    "nodes": 62,
     "edges": 152,
-    "clusters": 28
+    "clusters": 29
   },
   "confidence": {
     "ambiguous": 0,
@@ -59,6 +59,7 @@
     "references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md",
     "references/adr-0023-a-build-declaration-is-settled-where-the-tree-is-visible.md",
     "references/adr-0024-a-branch-verify-reads-the-history-the-bundle-read.md",
+    "references/adr-0025-the-census-long-tail-is-declined-by-category.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
