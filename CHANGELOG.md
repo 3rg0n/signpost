@@ -727,6 +727,35 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+#### 2026-08-10
+
+- **What signpost deliberately does not read is now written down, by category rather than by file
+  type.** A census across roughly 14,000 repositories produced a tail far longer than the set
+  signpost reads, and the triage had been living in a task description — the wrong place for it,
+  because what a tool declines to read is a claim about the tool, and a reader who finds `.jinja2`
+  files unread has no way to tell a decision from an oversight. Five categories answer nearly all
+  of it: editor and tooling artifacts are not repository content; diagram formats are a picture of
+  structure rather than a statement of it; templating layers restate their host language's imports,
+  so reading both double-counts and misattributes; stylesheets and markup reach nothing this graph
+  holds a node for; and the low-count languages are declined on count, not on kind. Stating the
+  category is what keeps `.jinja2`, `.erb`, `.hbs` and `.gotmpl` one decision instead of four, and
+  it binds the next one: a new templating language arriving in a census is already answered.
+  [ADR 0025](docs/adr/0025-the-census-long-tail-is-declined-by-category.md), with a summary in
+  design §4.1.
+
+- **Two comments in `internal/manifest/registry.go` promised a coverage report that does not
+  exist.** `RunResult.Unhandled`'s doc said it was "reported for the same reason
+  extract.RunResult reports it", and the `matchGem` comment said an unclaimed Rakefile "lands in
+  the unhandled count, where the gap is visible". Neither was true: the field is populated and
+  never printed. Probing it showed why printing it verbatim would be wrong rather than merely
+  missing — on signpost's own repository the map holds 16 files, most of which *are* read, by a
+  different subsystem: `internal/practice` reads `dependabot.yml` and `renovate.json`,
+  `internal/assemble` reads the docs, `.gitignore` shapes the walk, and `view.html` is embedded in
+  the binary. A line announcing 16 unread files would overstate the gap, which costs a reader the
+  same trust as hiding one. Both comments now say what is actually the case, and the ADR index
+  records the real remaining work: closing the asymmetry needs a cross-subsystem notion of "read by
+  someone", which the source side does not need because it has no such overlap.
+
 #### 2026-08-07
 
 - **A downgraded verification is now marked `signpost_status: stale-verification`, not
