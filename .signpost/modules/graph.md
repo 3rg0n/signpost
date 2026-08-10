@@ -2,7 +2,7 @@
 type: Module
 title: internal/graph
 description: 4 go files; 49 exported symbols.
-resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d/internal/graph
+resource: git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13/internal/graph
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "3" }

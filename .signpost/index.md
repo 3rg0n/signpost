@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 60 concepts, 152 relationships."
-resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d
+description: "Structural map of this repository: 61 concepts, 152 relationships."
+resource: git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13
 generated: { by: signpost/dev, at: "2026-08-10" }
 ---
 # Repository map
@@ -36,7 +36,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/hook](./modules/hook.md) — 2 go files; 17 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 130 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 36 exported symbols.
-- [internal/okf](./modules/okf.md) — 13 go files; 34 exported symbols.
+- [internal/okf](./modules/okf.md) — 14 go files; 35 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 17 exported symbols.
 - [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
@@ -71,6 +71,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0021: track the published spec and never overload its keys](./references/adr-0021-track-the-published-spec-and-never-overload-its-keys.md) — Architecture decision (Accepted), 14 rules read from 0021-track-the-published-spec-and-never-overload-its-keys.md.
 - [ADR 0022: extractors are hand written and tree sitter has a threshold](./references/adr-0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md) — Architecture decision (Accepted), 17 rules read from 0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md.
 - [ADR 0023: a build declaration is settled where the tree is visible](./references/adr-0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) — Architecture decision (Accepted), 23 rules read from 0023-a-build-declaration-is-settled-where-the-tree-is-visible.md.
+- [ADR 0024: a branch verify reads the history the bundle read](./references/adr-0024-a-branch-verify-reads-the-history-the-bundle-read.md) — Architecture decision (Accepted), 15 rules read from 0024-a-branch-verify-reads-the-history-the-bundle-read.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

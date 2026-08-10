@@ -2,7 +2,7 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d/site
+resource: git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13/site
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "15" }

@@ -2,24 +2,24 @@
 type: Module
 title: internal/vcs
 description: 6 go files; 13 exported symbols.
-resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d/internal/vcs
+resource: git://github.com/3rg0n/signpost@3a053ce2a89f8fd620c86f0d6d3dd399ff0bcc13/internal/vcs
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
-  - { name: commits, value: "4" }
+  - { name: commits, value: "5" }
   - { name: exported, value: "13" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-07-31" }
-  - { name: lines_added, value: "1902" }
-  - { name: lines_removed, value: "16" }
+  - { name: last_commit, value: "2026-08-10" }
+  - { name: lines_added, value: "2206" }
+  - { name: lines_removed, value: "34" }
   - { name: package, value: vcs }
-  - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 50% }
+  - { name: top_author, value: Ergon Copeland }
+  - { name: top_author_share, value: 60% }
 edges:
-  - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 3 }
   - { kind: imports, to: ./okf.md, confidence: extracted, weight: 1, source: internal/vcs/git_test.go }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 4 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 5 }
 ---
 # internal/vcs
 
@@ -40,7 +40,7 @@ edges:
 
 - **Exports** (13): `Commit`, `Commit.Short`, `DefaultMaxCommits`, `DefaultMaxDirsPerCommit`, `DefaultTimeout`, `Options`, `Pair`, `PathHistory`, `PathHistory.TopAuthor`, `Read`, `Signals`, `Signals.DirsSorted`, `Signals.PathsSorted`
 
-- **Changes with**: [internal/okf](./okf.md) ×2, [\(repository root\)](./root.md) ×4, [cmd/signpost](./signpost.md) ×4
+- **Changes with**: [internal/okf](./okf.md) ×3, [\(repository root\)](./root.md) ×5, [cmd/signpost](./signpost.md) ×5
 
 - **Imports**: [internal/okf](./okf.md) ×1
 <!-- /signpost:managed:structure -->
