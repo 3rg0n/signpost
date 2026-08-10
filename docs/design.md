@@ -415,6 +415,16 @@ it, which is what fixtures are for. It would be a direct library dependency we b
 ourselves, a different proposition from inheriting a tool's grammar tree, and it stays behind
 the same extractor interface, so it is a swap rather than a redesign.
 
+**What is deliberately not read is written down too, by category rather than by file type**
+([ADR 0025](adr/0025-the-census-long-tail-is-declined-by-category.md)). A census across roughly
+14,000 repositories produced a long tail, and five categories answer nearly all of it: editor and
+tooling artifacts are not repository content; diagram formats are a picture of structure rather
+than a statement of it; templating layers restate their host language's imports, so reading both
+double-counts and misattributes; stylesheets and markup reach nothing this graph holds a node for;
+and the low-count languages are declined on count, not on kind, each revisited when a fleet scan
+shows it blocking coverage somebody actually has. Stating the category rather than the extension is
+what keeps `.jinja2`, `.erb`, `.hbs` and `.gotmpl` one decision instead of four.
+
 The first four languages are chosen for the same reason you chose them: Go, Rust,
 TypeScript, and Python have the strongest tooling and the strongest model training
 coverage. Java and Kotlin follow because they are the largest bodies of code the tool

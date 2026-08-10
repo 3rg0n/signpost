@@ -169,9 +169,22 @@ type RunResult struct {
 	// Facts are the readings, sorted by path.
 	Facts []Facts
 	// Unhandled counts files no route claimed, keyed by basename for extensionless
-	// files and by extension otherwise. Reported for the same reason
-	// extract.RunResult reports it: a repo whose deployment lives entirely in
-	// Terraform must not look covered because signpost read its go.mod.
+	// files and by extension otherwise.
+	//
+	// Not printed in the coverage report, unlike extract.RunResult's field of the same
+	// name, and the asymmetry is deliberate rather than pending. "No route claimed it"
+	// is not the same as "nothing read it": internal/practice reads dependabot.yml and
+	// renovate.json, internal/assemble reads the docs, .gitignore shapes the walk itself,
+	// and view.html is embedded in the binary. On signpost's own repository this map
+	// holds 16 files, and the majority of them are read by one of those. Printing the
+	// count would announce a gap most of which is not there, which costs a reader the
+	// same trust as hiding one. The source side has no such overlap, which is why that
+	// one is printed.
+	//
+	// Kept because it is the honest place a declined format lands (ADR 0025) and a
+	// caller measuring coverage across a fleet wants the raw count rather than a
+	// filtered line. Reporting it needs a cross-subsystem notion of "read by someone"
+	// that does not exist yet.
 	Unhandled map[string]int
 }
 
@@ -291,8 +304,9 @@ func matchTSConfig(f discover.File) bool {
 //
 // A Rakefile is deliberately not claimed. discover classifies it as a manifest because it is
 // a build file rather than library source, but what it holds is task definitions in Ruby, and
-// this reader would find no dependency in it — so it lands in the unhandled count, where the
-// gap is visible. #23's shell and build-graph work is where a task runner's targets belong.
+// this reader would find no dependency in it — so it lands in RunResult.Unhandled, which is
+// counted but not printed; see that field for why. ADR 0023's build-graph work is where a task
+// runner's targets belong, and ADR 0025 records the decision.
 func matchGem(f discover.File) bool {
 	base := path.Base(f.Path)
 	if strings.HasSuffix(base, ".gemspec") {
