@@ -2,9 +2,9 @@
 type: External Dependency
 title: github.com/cespare/xxhash/v2
 description: go dependency github.com/cespare/xxhash/v2 (v2.3.0)
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082
 tags: [external, go]
-generated: { by: signpost/dev, at: "2026-08-09" }
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: github.com/cespare/xxhash/v2 }

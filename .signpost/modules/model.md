@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/model
-description: 15 go files; 98 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/model
-generated: { by: signpost/dev, at: "2026-08-09" }
+description: 15 go files; 97 exported symbols.
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/model
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
-  - { name: exported, value: "98" }
+  - { name: exported, value: "97" }
   - { name: files, value: "15" }
   - { name: first_commit, value: "2026-07-31" }
   - { name: last_commit, value: "2026-08-02" }
@@ -22,7 +22,7 @@ edges:
 # internal/model
 
 <!-- signpost:managed:summary -->
-15 go files; 98 exported symbols.
+15 go files; 97 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -44,6 +44,8 @@ edges:
 - `internal/model/probe_test.go`
 - `internal/model/untrusted.go`
 - `internal/model/untrusted_test.go`
+
+- **Exports** (97): `Backend`, `BedrockBaseURL`, `Config`, `Defang`, `DefaultBedrockModel`, `DefaultInferdAddr`, `DefaultTimeout`, `EnvAPIKey`, `EnvAWSDefaultRegion`, `EnvAWSRegion`, `EnvBackend`, `EnvBaseURL`, `EnvBedrockToken`, `EnvModel`, `ErrUnavailable`, `Inferd`, `Inferd.Actor`, `Inferd.Complete`, `Kind`, `KindInferd`, `KindNone`, `KindOpenAI`, `New`, `OpenAI`, `OpenAI.Actor`, `OpenAI.Complete`, `ParseKind`, `ParseProbe`, `ProbeAnswer`, `ProbeAnswer.AnsweredCorrectly`, `ProbeRequest`, `Request`, `Result`, `Source`, `SystemPrompt`, `TestAPIKeyPrefersSignpostVariable`, `TestAnsweredCorrectlyToleratesPhrasing`, `TestBackendComesFromTheEnvironmentWhenUnset`, `TestBedrockBaseURLUsesTheOpenAICompatiblePath`, `TestBreakTokenHandlesEmptyString`, `TestChatCompletionsURL`, `TestDefangBreaksChatTemplateControlTokens`, `TestDefangCaseInsensitiveOnLineMarkers`, `TestDefangIsCaseInsensitiveOnBlockSentinels`, `TestDefangIsIdempotentInEffect`, `TestDefangLeavesLineMarkersAloneInProse`, `TestDefangLeavesOrdinaryCodeUntouched`, `TestDefangLeavesOrdinaryHeadingsAlone`, `TestDefangNeutralisesLineMarkersAloneOnALine`, `TestDefangNeutralisesRoleHeadingVariants`, `TestDefangPreservesTheCasingItFound`, `TestDefaultInferdAddrIsNotEmpty`, `TestExplicitConfigBeatsTheEnvironment`, `TestFrameRoundTrip`, `TestInferdActor`, `TestInferdBackendTakesTheConfiguredAddress`, `TestInferdCompleteWithNoDaemonIsUnavailable`, `TestInferdErrorCodesSplitUnavailableFromFault`, `TestInferdRequestShape`, `TestNewDefaultsToDeterministicOnly`, and 37 more
 
 - **Changes with**: [\(repository root\)](./root.md) ×2, [cmd/signpost](./signpost.md) ×2
 <!-- /signpost:managed:structure -->

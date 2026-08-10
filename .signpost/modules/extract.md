@@ -2,8 +2,8 @@
 type: Module
 title: internal/extract
 description: 32 go files; 356 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/extract
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/extract
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "9" }
   - { name: exported, value: "356" }
@@ -65,6 +65,8 @@ edges:
 - `internal/extract/shell_test.go`
 - `internal/extract/typescript.go`
 - `internal/extract/typescript_test.go`
+
+- **Exports** (356): `CExtractor`, `CExtractor.Extract`, `CExtractor.Langs`, `CSharpExtractor`, `CSharpExtractor.Extract`, `CSharpExtractor.Langs`, `DefaultRegistry`, `Expected`, `Extractor`, `Facts`, `Facts.ExportedSymbols`, `Facts.ImportPaths`, `Facts.Normalize`, `Facts.SymbolNames`, `Failure`, `FirstSentence`, `Fixture`, `GoExtractor`, `GoExtractor.Extract`, `GoExtractor.Langs`, `Import`, `IncludePath`, `JavaExtractor`, `JavaExtractor.Extract`, `JavaExtractor.Langs`, `KotlinExtractor`, `KotlinExtractor.Extract`, `KotlinExtractor.Langs`, `LangScore`, `LangScore.MeetsTarget`, `LangScore.Report`, `NewRegistry`, `PHPExtractor`, `PHPExtractor.Extract`, `PHPExtractor.Langs`, `PowerShellExtractor`, `PowerShellExtractor.Extract`, `PowerShellExtractor.Langs`, `PythonExtractor`, `PythonExtractor.Extract`, `PythonExtractor.Langs`, `Registry`, `Registry.For`, `Registry.Langs`, `Registry.Register`, `Registry.Run`, `RubyExtractor`, `RubyExtractor.Extract`, `RubyExtractor.Langs`, `RunResult`, `RustExtractor`, `RustExtractor.Extract`, `RustExtractor.Langs`, `SFCExtractor`, `SFCExtractor.Extract`, `SFCExtractor.Langs`, `Score`, `Score.F1`, `Score.Precision`, `Score.Recall`, and 296 more
 
 - **Changes with**: [internal/assemble](./assemble.md) ×5, [internal/discover](./discover.md) ×7, [\(repository root\)](./root.md) ×9, [cmd/signpost](./signpost.md) ×5, [site](./site.md) ×5
 

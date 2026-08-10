@@ -2,8 +2,8 @@
 type: Module
 title: internal/export
 description: 6 go files; 22 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/export
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/export
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
   - { name: exported, value: "22" }
@@ -35,6 +35,8 @@ edges:
 - `internal/export/graphml.go`
 - `internal/export/json.go`
 - `internal/export/mermaid.go`
+
+- **Exports** (22): `Format`, `FormatDOT`, `FormatGraphML`, `FormatJSON`, `FormatMermaid`, `Formats`, `TestClustersBecomeSubgraphs`, `TestDanglingEdgesAreNotRendered`, `TestEmptyGraphIsValidOutput`, `TestEveryFormatIsDeterministic`, `TestEveryNodeIsRendered`, `TestGraphMLIsWellFormedXML`, `TestInferredEdgesAreDistinguishable`, `TestJSONRoundTrips`, `TestMermaidIdentifierCollisionsAreDisambiguated`, `TestMermaidLabelsAreSanitised`, `TestNodeKindIsCarried`, `TestNonASCIITitlesSurvive`, `TestUnclusteredGraphHasNoSubgraph`, `TestUnknownFormatIsAnError`, `TestWeightIsCarried`, `Write`
 
 - **Imports**: [internal/graph](./graph.md) ×6
 <!-- /signpost:managed:structure -->

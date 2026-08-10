@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0009: the semantic pass is opt in and egress is explicit"
 description: "Architecture decision (Accepted), 25 rules read from 0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md."
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/docs/adr/0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/docs/adr/0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-09" }
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: number, value: "0009" }
   - { name: rules, value: "25" }

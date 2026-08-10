@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0005: commit the bundle to the repository"
 description: "Architecture decision (Accepted), 22 rules read from 0005-commit-the-bundle-to-the-repository.md."
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/docs/adr/0005-commit-the-bundle-to-the-repository.md
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/docs/adr/0005-commit-the-bundle-to-the-repository.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-09" }
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: number, value: "0005" }
   - { name: rules, value: "22" }

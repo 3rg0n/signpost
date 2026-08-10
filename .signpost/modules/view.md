@@ -2,8 +2,8 @@
 type: Module
 title: internal/view
 description: 3 go files; 24 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/view
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/view
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "1" }
   - { name: exported, value: "24" }
@@ -31,6 +31,8 @@ edges:
 - `internal/view/browser.go`
 - `internal/view/view.go`
 - `internal/view/view_test.go`
+
+- **Exports** (24): `DefaultPort`, `Options`, `Serve`, `TestAssetsAreTypedLiterally`, `TestCheckHost`, `TestCheckURL`, `TestGraphIsServedVerbatim`, `TestHandlerAcceptsLoopbackHosts`, `TestHandlerHeadHasNoBody`, `TestHandlerRefusesNonLoopbackHost`, `TestHandlerRefusesWrites`, `TestHandlerServesNothingOffDisk`, `TestHandlerServesTheAssetSet`, `TestHandlerSetsHeadersOnErrorsToo`, `TestListenAskedPortCollisionIsAnError`, `TestListenBindsLoopbackOnly`, `TestOpenerNamesALauncher`, `TestRenderEscapesRepositoryStrings`, `TestRenderMakesNoOutboundRequest`, `TestRenderOmitsRepoBaseWhenEmpty`, `TestRenderStatesWhatWasRead`, `TestServeReportsAnAskedPortCollision`, `TestServeStopsOnContextCancel`, `TestViewMarkupMatchesPublishedViewer`
 
 - **Imports**: [site](./site.md) ×2
 <!-- /signpost:managed:structure -->

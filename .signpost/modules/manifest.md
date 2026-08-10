@@ -2,8 +2,8 @@
 type: Module
 title: internal/manifest
 description: 37 go files; 312 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/manifest
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/manifest
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "8" }
   - { name: exported, value: "312" }
@@ -71,6 +71,8 @@ edges:
 - `internal/manifest/workflow.go`
 - `internal/manifest/yaml.go`
 - `internal/manifest/yaml_test.go`
+
+- **Exports** (312): `Alias`, `Contract`, `DefaultRegistry`, `Dep`, `DepScope`, `Diag`, `Diag.Incomplete`, `Diag.Summary`, `Entrypoint`, `ExtractADR`, `ExtractAgentRules`, `ExtractBazel`, `ExtractCMake`, `ExtractCargo`, `ExtractCodeowners`, `ExtractCompose`, `ExtractComposer`, `ExtractContainerfile`, `ExtractGem`, `ExtractGoMod`, `ExtractGraphQL`, `ExtractHelmChart`, `ExtractHelmValues`, `ExtractKubernetes`, `ExtractMSBuild`, `ExtractMakefile`, `ExtractMigration`, `ExtractOpenAPI`, `ExtractPackageJSON`, `ExtractProto`, `ExtractPyProject`, `ExtractRequirements`, `ExtractSolution`, `ExtractTSConfig`, `ExtractTerraform`, `ExtractWorkflow`, `Facts`, `Facts.DepNames`, `Facts.DirectDepNames`, `Facts.ImageRefs`, `Facts.JobNames`, `Facts.Normalize`, `Facts.SecretNames`, `Facts.SecretNamesFor`, `Facts.ServiceNames`, `GoMod`, `GoModReplace`, `GoModReplace.Local`, `GoModRequire`, `Image`, `IsBazelWorkspaceRoot`, `Job`, `KeyValue`, `Kind`, `KindADR`, `KindAgentRules`, `KindBazel`, `KindCMake`, `KindCargo`, `KindCodeowners`, and 252 more
 
 - **Changes with**: [internal/assemble](./assemble.md) ×5, [internal/discover](./discover.md) ×5, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×7, [cmd/signpost](./signpost.md) ×7, [site](./site.md) ×3
 

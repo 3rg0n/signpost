@@ -2,8 +2,8 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/site
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/site
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "15" }
   - { name: exported, value: "1" }
@@ -37,6 +37,8 @@ edges:
 2 files:
 - `site/embed.go`
 - `site/graph.js`
+
+- **Exports** (1): `Files`
 
 - **Changes with**: [internal/assemble](./assemble.md) ×6, [internal/discover](./discover.md) ×8, [internal/extract](./extract.md) ×5, [internal/manifest](./manifest.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×14, [cmd/signpost](./signpost.md) ×12
 <!-- /signpost:managed:structure -->

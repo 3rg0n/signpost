@@ -3,8 +3,8 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 60 concepts, 150 relationships."
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082
+generated: { by: signpost/dev, at: "2026-08-10" }
 ---
 # Repository map
 
@@ -35,12 +35,12 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/graph](./modules/graph.md) — 4 go files; 69 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 39 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 312 exported symbols.
-- [internal/model](./modules/model.md) — 15 go files; 98 exported symbols.
+- [internal/model](./modules/model.md) — 15 go files; 97 exported symbols.
 - [internal/okf](./modules/okf.md) — 13 go files; 198 exported symbols.
 - [internal/practice](./modules/practice.md) — 3 go files; 33 exported symbols.
 - [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 35 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 19 go files; 118 exported symbols; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 19 go files; 119 exported symbols; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 24 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 6 go files; 55 exported symbols.

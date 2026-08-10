@@ -2,8 +2,8 @@
 type: Module
 title: internal/hook
 description: 2 go files; 39 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/hook
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/hook
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
   - { name: exported, value: "39" }
@@ -31,6 +31,8 @@ edges:
 2 files:
 - `internal/hook/hook.go`
 - `internal/hook/hook_test.go`
+
+- **Exports** (39): `Block`, `BundleDir`, `Check`, `CheckFast`, `CheckVerify`, `EnvCheck`, `Fast`, `Install`, `InstallResult`, `ParseCheck`, `Paths`, `Resolve`, `Script`, `Status`, `Status.Stale`, `TestBundleDirAgreesWithTheEmitter`, `TestFastDoesNotReportABundleAheadOfTheCode`, `TestFastExplainsItselfWhenItCannotAnswer`, `TestFastHandlesARepositoryOfOnlyBundle`, `TestFastReportsNothingWhenTheBundleIsCurrent`, `TestFastReportsTheBundleFallingBehind`, `TestInstallAppendsAndKeepsTheExistingHook`, `TestInstallCreatesTheHookWhenThereIsNone`, `TestInstallDoesNotJoinOntoALastLineWithoutANewline`, `TestInstallIsIdempotent`, `TestInstallWritesWhereGitLooks`, `TestMain`, `TestParseCheck`, `TestResolveDoesNotCallAnInsideDirectoryShared`, `TestResolveFollowsCoreHooksPath`, `TestResolveReportsASharedHooksDirectory`, `TestTheBlockIsGuarded`, `TestUninstallHandlesAnUnterminatedBlock`, `TestUninstallIsQuietWhenThereIsNothingOfOurs`, `TestUninstallRemovesAFileThatWasOnlyOurs`, `TestUninstallRemovesEveryBlock`, `TestUninstallRemovesOnlyTheBlock`, `Uninstall`, `UninstallResult`
 
 - **Changes with**: [\(repository root\)](./root.md) ×2
 

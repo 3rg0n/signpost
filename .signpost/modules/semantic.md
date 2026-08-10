@@ -2,8 +2,8 @@
 type: Module
 title: internal/semantic
 description: 3 go files; 35 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/semantic
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/semantic
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "3" }
   - { name: exported, value: "35" }
@@ -35,6 +35,8 @@ edges:
 - `internal/semantic/prompt.go`
 - `internal/semantic/semantic.go`
 - `internal/semantic/semantic_test.go`
+
+- **Exports** (35): `Budget`, `DefaultMaxCalls`, `DefaultMaxTokens`, `Input`, `Result`, `Result.Regions`, `Run`, `Summary`, `TestACitePathCarryingMarkerSyntaxIsRefused`, `TestAFullLengthSummaryThatFinishesIsKept`, `TestAnUnusualButPrintableCitePathIsStillAccepted`, `TestBudgetStopsTheRunAndSaysWhatWasNotDone`, `TestCacheKeyCoversActorAndPromptVersion`, `TestCachedSummaryIsRegroundedBeforeUse`, `TestChangedContentMissesTheCache`, `TestCitationFormattingIsToleratedButNotGuessed`, `TestFileContentIsWrappedAndPathsAreQuoted`, `TestGroundedSummaryIsKept`, `TestInventedCitationDropsTheWholeSummary`, `TestNilBackendProducesNothing`, `TestNoCacheDirStillWorks`, `TestNoCitationsIsRefused`, `TestOverlongProseIsRefusedNotTruncated`, `TestOversizeFilesAreClippedAndReported`, `TestProseCutToFitTheSchemaIsRefused`, `TestProseIsFlattenedToOneParagraph`, `TestRegionMarkersInProseAreStripped`, `TestRenderedRegionNamesTheModelAndSources`, `TestRunNeverReturnsAnErrorOnBackendFailure`, `TestShortProseWithoutAFullStopIsKept`, `TestSourceOrderIsStableAcrossRuns`, `TestTestFilesAreNotSummarised`, `TestUnavailableBackendStopsAndNamesWhatWasLost`, `TestUnchangedInputIsServedFromCache`, `TestUnparseableResponseSkipsOnlyThatNode`
 
 - **Changes with**: [\(repository root\)](./root.md) ×3, [cmd/signpost](./signpost.md) ×3
 

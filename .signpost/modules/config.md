@@ -2,8 +2,8 @@
 type: Module
 title: internal/config
 description: 2 go files; 26 exported symbols.
-resource: git://github.com/3rg0n/signpost@1913961adad858aae9627dd6d27edcd500e90c00/internal/config
-generated: { by: signpost/dev, at: "2026-08-09" }
+resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/config
+generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "1" }
   - { name: exported, value: "26" }
@@ -32,6 +32,8 @@ edges:
 2 files:
 - `internal/config/config.go`
 - `internal/config/config_test.go`
+
+- **Exports** (26): `Config`, `File`, `Load`, `TestAbsentFileIsNotAnError`, `TestBadValuesAreRejected`, `TestBooleanSpellings`, `TestConfigIsNotReadFromAParentDirectory`, `TestCredentialKeysAreRejectedByName`, `TestDashedConfigurableKeySuggestsTheUnderscoreSpelling`, `TestDashedSpellingsAreAlsoRefused`, `TestEmptyDocumentIsNotAnError`, `TestErrorsNameTheLine`, `TestEveryConfigurableKeyIsRead`, `TestEveryRefusalGivesAReason`, `TestFalseIsRead`, `TestIgnoreAcceptsASingleScalar`, `TestInterpolationIsRejected`, `TestMalformedFileIsRejected`, `TestNoKeyIsBothSettableAndRefused`, `TestNonConfigurableFlagsCannotBeSet`, `TestNonMappingDocumentIsRejected`, `TestTheFirstBadKeyIsReported`, `TestTheOtherExtensionIsReported`, `TestUnbracedDollarIsNotInterpolation`, `TestUnknownKeyIsRejected`, `TestUnreadableFileIsAnError`
 
 - **Imports**: [internal/hook](./hook.md) ×1, [internal/manifest](./manifest.md) ×1, [internal/model](./model.md) ×2
 <!-- /signpost:managed:structure -->
