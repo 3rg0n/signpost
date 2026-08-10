@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 60 concepts, 150 relationships."
-resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45
+description: "Structural map of this repository: 60 concepts, 152 relationships."
+resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d
 generated: { by: signpost/dev, at: "2026-08-10" }
 ---
 # Repository map
@@ -19,7 +19,7 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [\(repository root\)](./modules/root.md) — 44 relationships (14 in, 30 out)
+- [\(repository root\)](./modules/root.md) — 46 relationships (15 in, 31 out)
 - [cmd/signpost](./modules/signpost.md) — 38 relationships (12 in, 26 out)
 - [internal/assemble](./modules/assemble.md) — 21 relationships (9 in, 12 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)

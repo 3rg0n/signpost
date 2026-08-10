@@ -2,22 +2,23 @@
 type: Module
 title: internal/export
 description: 6 go files; 7 exported symbols.
-resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/export
+resource: git://github.com/3rg0n/signpost@fdcaf2d2eedb0787b6043e3ebeee7d8e7b1a4b6d/internal/export
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
-  - { name: commits, value: "2" }
+  - { name: commits, value: "3" }
   - { name: exported, value: "7" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-07" }
-  - { name: lines_added, value: "1041" }
-  - { name: lines_removed, value: "1" }
+  - { name: last_commit, value: "2026-08-10" }
+  - { name: lines_added, value: "1117" }
+  - { name: lines_removed, value: "4" }
   - { name: owners, value: "@3rg0n" }
   - { name: package, value: export }
-  - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 50% }
+  - { name: top_author, value: Ergon Copeland }
+  - { name: top_author_share, value: 67% }
 edges:
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 6, source: internal/export/dot.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
 ---
 # internal/export
 
@@ -37,6 +38,8 @@ edges:
 - `internal/export/mermaid.go`
 
 - **Exports** (7): `Format`, `FormatDOT`, `FormatGraphML`, `FormatJSON`, `FormatMermaid`, `Formats`, `Write`
+
+- **Changes with**: [\(repository root\)](./root.md) ×2
 
 - **Imports**: [internal/graph](./graph.md) ×6
 <!-- /signpost:managed:structure -->
