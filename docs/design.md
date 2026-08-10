@@ -625,6 +625,27 @@ external dependencies, documents.
 Typed edges: `imports`, `calls`, `implements`, `defines`, `configures`, `deploys`,
 `tested_by`, `documents`, `co_changes`, `owns`.
 
+**A module page names its public surface, without the graph gaining a node for it.** §4.1
+already extracts exported declarations in every language, and a page reporting only how
+many of them there are tells an agent that a module *has* a surface while withholding the
+part it needs: whether the name it is looking for is in there. So the page lists them —
+methods qualified by their receiver, because `String` alone does not say which of a
+module's types has it. Only exported ones, which is the load-bearing half: a list
+including private helpers would describe a surface callers cannot reach, and an agent
+writing against it would produce code the compiler rejects. Visibility is per-language and
+not always a keyword — Python's is a leading underscore by convention, PHP's default is
+public, and C inverts the rule entirely, where external linkage is the default and only
+`static` withdraws it.
+
+This stays a page attribute rather than becoming symbol nodes and `calls` edges. ADR
+[0003](adr/0003-directory-granularity-for-module-nodes.md) fixes the graph at directory
+granularity, and an import-shaped call graph inferred from declarations would be the
+confidently-wrong artefact §4.6 exists to prevent; real call edges arrive from a SCIP
+index or codeatlas per §4.3, where they are `extracted` rather than guessed. The list is
+bounded and says so when it truncates, for the reason the file list is bounded: a module
+with sixty exports would otherwise push its edges — the part an agent navigates by — off
+the first screen.
+
 Every edge carries `confidence`: `extracted` (found in source or manifest),
 `inferred` (derived by the model), `ambiguous` (model was unsure). An agent can
 therefore weight what it trusts, and a reviewer can audit what was guessed. Recorded as

@@ -341,10 +341,9 @@ func (b *builder) addModules() error {
 			Path:  dir,
 			Attrs: map[string]string{},
 		}
-		var files, entrypoints []string
+		var files, entrypoints, exports []string
 		var incomplete int
 		pkg := ""
-		exported := 0
 		for _, f := range facts {
 			files = append(files, f.Path)
 			if pkg == "" {
@@ -356,11 +355,18 @@ func (b *builder) addModules() error {
 			}
 			for _, s := range f.Symbols {
 				if s.Exported {
-					exported++
+					exports = append(exports, exportName(s))
 				}
 			}
 		}
 		n.Files = sortedUnique(files)
+		n.Exports = sortedUnique(exports)
+		// The count is the length of the list the page prints, not a second tally of the
+		// same symbols. Counting occurrences separately let a module say "5 exported
+		// symbols" above a list of four names — two files declaring the same name in the
+		// same package is normal in C and in Go across build tags — and a number a
+		// reader can see is wrong discredits the numbers they cannot check.
+		exported := len(n.Exports)
 		n.Lang = moduleLang(facts)
 		if pkg != "" {
 			n.Attrs["package"] = pkg
