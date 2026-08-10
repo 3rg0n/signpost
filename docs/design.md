@@ -658,6 +658,18 @@ bounded and says so when it truncates, for the reason the file list is bounded: 
 with sixty exports would otherwise push its edges — the part an agent navigates by — off
 the first screen.
 
+**The exports reach the machine-readable formats split by what each consumer can do with
+them.** The JSON export carries the names, because it is the format a script and the local
+viewer read and a tool asking what a module offers wants the same answer the page gives.
+GraphML carries `n_exports` as a count: its attributes are declared scalars that Gephi and
+networkx size, colour, and rank on, and a 200-name string in a typed column is a value
+nothing can compute over and every table truncates. Mermaid and DOT carry neither, for the
+reason they already carry no file list — a box label is not a place for forty identifiers.
+The two formats also disagree about a module with no exports, and both are right: JSON omits
+the key, because most nodes in a graph are services and documents signpost never extracts
+symbols from and an empty array on each would claim a measured absence; GraphML writes 0,
+because a column that is blank on some rows and numeric on others cannot be ranked.
+
 Every edge carries `confidence`: `extracted` (found in source or manifest),
 `inferred` (derived by the model), `ambiguous` (model was unsure). An agent can
 therefore weight what it trusts, and a reviewer can audit what was guessed. Recorded as

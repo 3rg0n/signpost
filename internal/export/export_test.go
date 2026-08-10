@@ -25,8 +25,9 @@ func sample(t *testing.T) *graph.Graph {
 		ID: "/modules/auth", Kind: graph.KindModule, Title: "internal/auth",
 		Description: "4 go files; 12 exported symbols.", Path: "internal/auth",
 		Lang: "go", Tags: []string{"go", "security-boundary"},
-		Attrs: map[string]string{"package": "auth", "ports": "8080, 8443"},
-		Files: []string{"internal/auth/jwt.go", "internal/auth/pat.go"},
+		Attrs:   map[string]string{"package": "auth", "ports": "8080, 8443"},
+		Files:   []string{"internal/auth/jwt.go", "internal/auth/pat.go"},
+		Exports: []string{"Claims", "Token.Verify", "Validate"},
 	})
 	add(&graph.Node{ID: "/modules/storage", Kind: graph.KindModule, Title: "internal/storage", Lang: "go"})
 	add(&graph.Node{ID: "/services/api", Kind: graph.KindService, Title: "api", Attrs: map[string]string{"image": "cgr.dev/chainguard/go:latest"}})
@@ -283,9 +284,73 @@ func TestJSONRoundTrips(t *testing.T) {
 	if len(auth.Files) != 2 {
 		t.Errorf("files = %v, want 2", auth.Files)
 	}
+	if len(auth.Exports) != 3 {
+		t.Errorf("exports = %v, want 3", auth.Exports)
+	}
 	// A node with no attributes has the key omitted rather than rendered empty.
 	if strings.Contains(out, `"attrs": {}`) {
 		t.Error("empty attrs map rendered instead of omitted")
+	}
+}
+
+// The public surface is carried by name where a script can read it and by count
+// where a layout tool can rank on it, and by neither where a diagram would only be
+// made unreadable by it.
+//
+// The split is the assertion, not an implementation detail: an agent that reads the
+// JSON to find out what a module offers gets the same names the module page shows it,
+// which is the point of exporting them at all. GraphML gets `n_exports` as an int
+// because its attributes are typed scalars a tool sizes and filters on — the names in
+// that cell are a string nothing can compute over. Mermaid and DOT get nothing, for
+// the same reason they already carry no file list: a box label is not a place to put
+// 49 identifiers.
+func TestExportsReachTheDataFormatsAndNotTheDiagrams(t *testing.T) {
+	g := sample(t)
+
+	js := render(t, g, FormatJSON)
+	for _, want := range []string{`"exports"`, `"Claims"`, `"Token.Verify"`, `"Validate"`} {
+		if !strings.Contains(js, want) {
+			t.Errorf("json: %s missing", want)
+		}
+	}
+
+	xmlOut := render(t, g, FormatGraphML)
+	if !strings.Contains(xmlOut, `<data key="n_exports">3</data>`) {
+		t.Error("graphml: export count missing")
+	}
+	// The count and not the names. A GraphML that carried both would have made
+	// `n_exports` mean two different things depending on which node you read.
+	if strings.Contains(xmlOut, "Token.Verify") {
+		t.Error("graphml: carried export names, which its schema types as an int")
+	}
+
+	for _, f := range []Format{FormatMermaid, FormatDOT} {
+		if out := render(t, g, f); strings.Contains(out, "Token.Verify") {
+			t.Errorf("%s: an export name reached a diagram label", f)
+		}
+	}
+}
+
+// A module with no exports: JSON omits the key, GraphML writes the zero.
+//
+// The formats disagree and both are right for their consumer. In JSON a script tests
+// `if (n.exports)`, so an empty array on every service, document, and external node
+// would assert those have a measured public surface of nothing — and this graph is
+// mostly nodes signpost never extracts symbols from, so the honest answer is silence.
+// GraphML has already declared `n_exports` as an int for every node in the document;
+// a column that is blank on some rows and numeric on others cannot be ranked or
+// averaged, and 0 there is a fact a chart can plot. `n_files` and `n_cluster` resolve
+// it the same way, `n_cluster` going as far as writing -1 for unassigned.
+func TestNodesWithNoExportsSayNothingInJSONAndZeroInGraphML(t *testing.T) {
+	g := graph.New()
+	if err := g.AddNode(&graph.Node{ID: "/modules/bare", Kind: graph.KindModule, Title: "bare"}); err != nil {
+		t.Fatal(err)
+	}
+	if out := render(t, g, FormatJSON); strings.Contains(out, `"exports"`) {
+		t.Errorf("json: rendered an exports key for a node with none:\n%s", out)
+	}
+	if out := render(t, g, FormatGraphML); !strings.Contains(out, `<data key="n_exports">0</data>`) {
+		t.Errorf("graphml: an int column has to hold a number on every row:\n%s", out)
 	}
 }
 
