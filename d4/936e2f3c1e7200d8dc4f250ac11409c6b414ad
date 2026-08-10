@@ -1,0 +1,19 @@
+internal/export/dot.go
+  s_9b8d68f5aabdc1::t_7798eba2d0bbe3 166-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d4936e2f3c1e7200d8dc4f250ac11409c6b414ad",
+  "prompts": {},
+  "sessions": {
+    "s_9b8d68f5aabdc1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7333820e-bccc-4f3b-9eb9-50e606acc9ac",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
