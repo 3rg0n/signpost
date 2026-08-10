@@ -14,9 +14,9 @@ All notable changes to this project are documented here. Format follows
   already read exported declarations; the page reported the total and dropped the names, so
   an agent learned that a module *has* four exports and had to open files to find out
   whether the one it wanted was among them. Module pages now carry
-  `- **Exports** (4): \`Greeting\`, \`Greeting.String\`, \`New\`, \`TestNew\`` — methods
-  qualified by receiver, because `String` alone does not say which of a module's types has
-  it, and two types in one package may both declare it.
+  `- **Exports** (3): \`Greeting\`, \`Greeting.String\`, \`New\`` — methods qualified by
+  receiver, because `String` alone does not say which of a module's types has it, and two
+  types in one package may both declare it.
 
   **Only exported declarations, which is the half the test asserts.** A list including
   private helpers would describe a surface callers cannot reach, and an agent writing
@@ -26,9 +26,23 @@ All notable changes to this project are documented here. Format follows
   applies to methods only, and C inverts the rule entirely — external linkage is the
   default and only `static` withdraws it, so a name declared in a *private* header is still
   a real export. `TestCorpusNamesThePublicSurfaceAndNothingElse` asserts the names each
-  language must show and sweeps four that must appear on **no** page, matching on
+  language must show and sweeps six that must appear on **no** page, matching on
   identifier boundaries rather than as substrings, because `corpus_internal_note` is a
   correct C export and a substring check for `_internal` fails on it.
+
+  **A test file declares no surface, and it is the one case where every language's
+  visibility rule gives the wrong answer.** Go's `TestFoo` is exported and reachable by
+  nothing but `go test`; a PHPUnit method is public because the runner requires it. So the
+  file's classification decides rather than the declaration, reusing the same
+  `discover.File` flag the `tested_by` edge is drawn from. Measured on this repository
+  before that rule existed: test functions were **51% of every name the bundle printed**,
+  `internal/assemble` showed 57 of them out of 60 and `cmd/signpost` 60 out of 60, so the
+  bound truncated the real surface off the page — a list whose truncation drops exactly the
+  part a reader came for is worse than the count it replaced. After: 0 test names, and 6 of
+  8 previously-truncated pages now show their surface complete. `internal/graph` went from
+  60 shown names with 20 real ones cut, to all 49. Test files are still listed and the
+  `tested_by` edge is still drawn; what is withheld is the claim that their declarations
+  are callable.
 
   **No node, no edge, no ADR.** ADR
   [0003](docs/adr/0003-directory-granularity-for-module-nodes.md) fixes the graph at

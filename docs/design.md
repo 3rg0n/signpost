@@ -637,6 +637,18 @@ not always a keyword — Python's is a leading underscore by convention, PHP's d
 public, and C inverts the rule entirely, where external linkage is the default and only
 `static` withdraws it.
 
+**A test file declares no surface, and this is the one case where every language's
+visibility rule gives the wrong answer.** Go's `TestFoo` is exported and reachable by
+nothing but `go test`; a PHPUnit method is public because the runner requires it. So the
+file's *classification* decides rather than the declaration, reusing the same
+`discover.File` flag the `tested_by` edge is drawn from — one place decides what a test is.
+Measured on this repository before that rule existed: test functions were 51% of every name
+the bundle printed, `internal/assemble` showed 57 of them out of 60 and `cmd/signpost` 60
+out of 60, so the bound truncated the real surface off the page. A list whose truncation
+drops exactly the part a reader came for is worse than the count it replaced. The test files
+themselves are still listed, and the edge to them is still drawn: what is withheld is the
+claim that their declarations are callable.
+
 This stays a page attribute rather than becoming symbol nodes and `calls` edges. ADR
 [0003](adr/0003-directory-granularity-for-module-nodes.md) fixes the graph at directory
 granularity, and an import-shaped call graph inferred from declarations would be the

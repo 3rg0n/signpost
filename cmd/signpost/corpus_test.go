@@ -1883,6 +1883,14 @@ func TestCorpusReadsBuildGraphsAndDrawsTheirInternalEdges(t *testing.T) {
 //     declared in a *private header* and must, because a header's location is a convention
 //     and linkage is the fact. Reading the second as private would be a reader substituting
 //     its own taste for what the language says.
+//   - A test declaration is the case where every language's visibility rule gives the wrong
+//     answer. Go's `TestNew` is exported and reachable by nothing but `go test`; PHPUnit's
+//     `GreeterTest::testGreets` is public because the runner requires it. Visibility says
+//     surface and the truth is the opposite, so the file's *classification* decides and not
+//     the declaration. This is the negative with a measurement behind it rather than a
+//     hypothetical: when it was missing, test functions were 51% of every name the bundle
+//     for this repository showed, and two module pages showed nothing else — the real
+//     surface was truncated off the page by names no caller can use.
 //
 // The count is asserted against the list on the same page, which is the assertion that cannot
 // be satisfied by half a fix: the number and the names come out of one pass in assemble, so a
@@ -1901,7 +1909,17 @@ func TestCorpusNamesThePublicSurfaceAndNothingElse(t *testing.T) {
 		{"modules/greeter-1i6wvb3.md", "Go states visibility in the capital letter, and a " +
 			"method is only reachable through its receiver",
 			[]string{"`Greeting`", "`Greeting.String`", "`New`"}},
-		{"modules/src-14hy2yg.md", "Rust states it in `pub`, on the item and on the field",
+		// Rust's page is src-1slg0rn and TypeScript's is src-14hy2yg. Worth stating, because
+		// both languages export a `Greeting` and a `greet` in this corpus, so an entry naming
+		// only those two passes against either page and asserts nothing about which rule was
+		// read. `Greeting.new` and `formatter` are Rust's alone.
+		{"modules/src-1slg0rn.md", "Rust states it in `pub`, on the item and on the module",
+			[]string{"`Greeting`", "`Greeting.new`", "`formatter`", "`render`"}},
+		// ts/src holds greeter.ts beside greeter.test.ts, so this is the positive half of the
+		// test-declaration negative below: excluding a test file's declarations must not be
+		// implemented by excluding the directory that holds one.
+		{"modules/src-14hy2yg.md", "TypeScript states it in `export`, and a directory holding " +
+			"production and test files together still names what the production file exports",
 			[]string{"`Greeting`", "`greet`"}},
 		{"modules/format.md", "PHP's default is public, so a method with no modifier is surface",
 			[]string{"`Renderer`", "`Renderer.render`"}},
@@ -1955,6 +1973,15 @@ func TestCorpusNamesThePublicSurfaceAndNothingElse(t *testing.T) {
 		{"normalise", "a method under Ruby's `private` section marker in " +
 			"ruby/lib/corpus/format.rb. The marker is sticky rather than per-method, so a " +
 			"reader that only understands `private def` sees nothing and exports it"},
+		{"TestNew", "an exported Go test func in go/greeter/greeter_test.go. Go says it is " +
+			"surface and Go is wrong about who can call it: `go test` reaches it and no " +
+			"caller can. Visibility is the wrong question for a test file, so the file's " +
+			"classification has to answer it — and when it did not, test declarations were " +
+			"half of every name this repository's own bundle printed"},
+		{"testGreets", "a PHPUnit method in php/tests/GreeterTest.php, public because the " +
+			"runner requires it to be. The inverse of the Go case and the same conclusion: no " +
+			"visibility rule in any language distinguishes a test from a surface, so a reader " +
+			"that trusts the modifier here publishes the test suite as an API"},
 	} {
 		for name, body := range pages {
 			if namesWholeIdentifier(body, bad.name) {
