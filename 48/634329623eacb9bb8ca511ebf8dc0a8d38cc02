@@ -1,0 +1,14 @@
+internal/probemod/probemod.go
+  h_be244358bbcfd2 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "48634329623eacb9bb8ca511ebf8dc0a8d38cc02",
+  "prompts": {},
+  "humans": {
+    "h_be244358bbcfd2": {
+      "author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
