@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/telemetry
-description: 5 go files; 24 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/telemetry
+description: 5 go files; 8 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/telemetry
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "1" }
-  - { name: exported, value: "24" }
+  - { name: exported, value: "8" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-08-02" }
   - { name: last_commit, value: "2026-08-02" }
@@ -23,7 +23,7 @@ edges:
 # internal/telemetry
 
 <!-- signpost:managed:summary -->
-5 go files; 24 exported symbols.
+5 go files; 8 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -36,7 +36,7 @@ edges:
 - `internal/telemetry/telemetry.go`
 - `internal/telemetry/telemetry_test.go`
 
-- **Exports** (24): `EnvEnable`, `Init`, `Shutdown`, `Span`, `Span.Count`, `Span.End`, `Span.Failed`, `Stage`, `TestAFailedStageIsExportedAsOTLPError`, `TestAMalformedHeaderEntryDoesNotDiscardTheRest`, `TestEndpointResolution`, `TestExportAfterShutdownIsSilent`, `TestFailuresNeverReachTheCaller`, `TestHeadersFromTheEnvironmentReachTheCollector`, `TestNoRepositoryContentReachesTheWire`, `TestOnlyHTTPJSONIsClaimed`, `TestPerSignalHeadersReplaceRatherThanMerge`, `TestShutdownIsBoundedAndIdempotent`, `TestSixtyFourBitFieldsAreStringsAndIDsAreHex`, `TestSpansReachACollectorAsOTLPJSON`, `TestTelemetryIsOffUnlessAsked`, `TestTheBodyIsAnnouncedAsJSON`, `TestTheGateOpens`, `TestTimeoutResolution`
+- **Exports** (8): `EnvEnable`, `Init`, `Shutdown`, `Span`, `Span.Count`, `Span.End`, `Span.Failed`, `Stage`
 
 - **Imports**: [go.opentelemetry.io/otel](../references/go-go-opentelemetry-io-otel.md) ×5, [go.opentelemetry.io/otel/sdk](../references/go-go-opentelemetry-io-otel-sdk.md) ×4, [go.opentelemetry.io/otel/trace](../references/go-go-opentelemetry-io-otel-trace.md) ×2
 <!-- /signpost:managed:structure -->

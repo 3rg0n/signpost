@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/vcs
-description: 6 go files; 55 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/vcs
+description: 6 go files; 13 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/vcs
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "4" }
-  - { name: exported, value: "55" }
+  - { name: exported, value: "13" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-07-31" }
@@ -24,7 +24,7 @@ edges:
 # internal/vcs
 
 <!-- signpost:managed:summary -->
-6 go files; 55 exported symbols.
+6 go files; 13 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -38,7 +38,7 @@ edges:
 - `internal/vcs/parse_test.go`
 - `internal/vcs/vcs.go`
 
-- **Exports** (55): `Commit`, `Commit.Short`, `DefaultMaxCommits`, `DefaultMaxDirsPerCommit`, `DefaultTimeout`, `Options`, `Pair`, `PathHistory`, `PathHistory.TopAuthor`, `Read`, `Signals`, `Signals.DirsSorted`, `Signals.PathsSorted`, `TestAggregateBinaryKeepsCountsUnknown`, `TestAggregateBulkCommitStillCountsDirChurn`, `TestAggregateChurnAndDates`, `TestAggregateCoChangePairOrderIsCanonical`, `TestAggregateCoChangePairsAndOrdering`, `TestAggregateDirsCountCommitsNotFiles`, `TestAggregateDirsFollowRenames`, `TestAggregateDirsToleratesBinaryMembers`, `TestAggregateDirsUsesEmptyKeyForRoot`, `TestAggregateEmpty`, `TestAggregateFoldsRenamedHistoryForward`, `TestAggregateFollowsChainedRenames`, `TestAggregateIsDeterministic`, `TestAggregateRootFilesDoNotPairWithThemselves`, `TestAggregateSkipsBulkCommitsForCoChangeButNotChurn`, `TestAggregateTopAuthorConcentration`, `TestBundleDirMatchesTheEmitters`, `TestDirOf`, `TestHeadFallsBackWhenEveryCommitIsBundleOnly`, `TestHeadFollowsACommitThatChangesCodeAndTheBundle`, `TestHeadIgnoresCommitsThatOnlyTouchTheBundle`, `TestNormalizePathRejectsEscapes`, `TestParseLogAwkwardPaths`, `TestParseLogBasic`, `TestParseLogBinary`, `TestParseLogEmptyCommit`, `TestParseLogEmptyInput`, `TestParseLogMalformedHeaderSkipped`, `TestParseLogRenameTakesNewPath`, `TestParseLogRenameThenNormalFile`, `TestReadAgainstRealGit`, `TestReadAwkwardFilenameThroughRealGit`, `TestReadEmptyRepository`, `TestReadExcludesMerges`, `TestReadHonoursInTreeMailmap`, `TestReadIgnoresHostileRepoConfig`, `TestReadNonRepository`, `TestReadReportsShallowClone`, `TestReadReportsTruncation`, `TestReadRespectsCancelledContext`, `TestTopAuthorEmpty`, `TestTopAuthorTieBreaksDeterministically`
+- **Exports** (13): `Commit`, `Commit.Short`, `DefaultMaxCommits`, `DefaultMaxDirsPerCommit`, `DefaultTimeout`, `Options`, `Pair`, `PathHistory`, `PathHistory.TopAuthor`, `Read`, `Signals`, `Signals.DirsSorted`, `Signals.PathsSorted`
 
 - **Changes with**: [internal/okf](./okf.md) ×2, [\(repository root\)](./root.md) ×4, [cmd/signpost](./signpost.md) ×4
 

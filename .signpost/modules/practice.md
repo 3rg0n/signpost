@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/practice
-description: 3 go files; 33 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/practice
+description: 3 go files; 17 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/practice
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "5" }
-  - { name: exported, value: "33" }
+  - { name: exported, value: "17" }
   - { name: files, value: "3" }
   - { name: first_commit, value: "2026-08-01" }
   - { name: last_commit, value: "2026-08-09" }
@@ -28,7 +28,7 @@ edges:
 # internal/practice
 
 <!-- signpost:managed:summary -->
-3 go files; 33 exported symbols.
+3 go files; 17 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -39,7 +39,7 @@ edges:
 - `internal/practice/practice_test.go`
 - `internal/practice/render.go`
 
-- **Exports** (33): `Analyse`, `Finding`, `Input`, `Result`, `Result.Absent`, `Result.Declared`, `Result.Render`, `Source`, `TestABuildSystemThatDeclaresAProgramDeclaresABuild`, `TestABuildSystemThatStatesItsTestsIsNotReportedAsSilent`, `TestAManifestDeclaringNothingIsNotReportedAsUnpinned`, `TestAnUnrecognisedLockfileIsNotReportedAsAnOrphan`, `TestAnalyseWithoutADiscoveryResultFindsNothing`, `TestEveryFindingCarriesItsGrounding`, `TestFindingsAreInTopicOrder`, `TestGatesDistinguishBlockingJobsFromTheRest`, `TestIndirectDependenciesAreSomethingToPin`, `TestLockEcosystemNamesMatchManifestEcosystem`, `TestLockfilesPairWithManifestsByBasename`, `TestRenderBoundsACitationListOutLoud`, `TestRenderPathsAsCodeNotLinks`, `TestRenderStatesAbsencesInWords`, `TestUnreadManifestsAreNotReportedAsAbsences`, `TestWorkflowsThatCannotBlockAMergeAreReported`, `Topic`, `TopicAgentRules`, `TopicBuild`, `TopicDependencies`, `TopicDocumentation`, `TopicGates`, `TopicObservability`, `TopicOwnership`, `TopicTest`
+- **Exports** (17): `Analyse`, `Finding`, `Input`, `Result`, `Result.Absent`, `Result.Declared`, `Result.Render`, `Source`, `Topic`, `TopicAgentRules`, `TopicBuild`, `TopicDependencies`, `TopicDocumentation`, `TopicGates`, `TopicObservability`, `TopicOwnership`, `TopicTest`
 
 - **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/discover](./discover.md) ×4, [internal/manifest](./manifest.md) ×4, [\(repository root\)](./root.md) ×5, [cmd/signpost](./signpost.md) ×5, [site](./site.md) ×4
 

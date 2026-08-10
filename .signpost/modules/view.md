@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/view
-description: 3 go files; 24 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/view
+description: 3 go files; 3 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/view
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "1" }
-  - { name: exported, value: "24" }
+  - { name: exported, value: "3" }
   - { name: files, value: "3" }
   - { name: first_commit, value: "2026-08-06" }
   - { name: last_commit, value: "2026-08-06" }
@@ -21,7 +21,7 @@ edges:
 # internal/view
 
 <!-- signpost:managed:summary -->
-3 go files; 24 exported symbols.
+3 go files; 3 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -32,7 +32,7 @@ edges:
 - `internal/view/view.go`
 - `internal/view/view_test.go`
 
-- **Exports** (24): `DefaultPort`, `Options`, `Serve`, `TestAssetsAreTypedLiterally`, `TestCheckHost`, `TestCheckURL`, `TestGraphIsServedVerbatim`, `TestHandlerAcceptsLoopbackHosts`, `TestHandlerHeadHasNoBody`, `TestHandlerRefusesNonLoopbackHost`, `TestHandlerRefusesWrites`, `TestHandlerServesNothingOffDisk`, `TestHandlerServesTheAssetSet`, `TestHandlerSetsHeadersOnErrorsToo`, `TestListenAskedPortCollisionIsAnError`, `TestListenBindsLoopbackOnly`, `TestOpenerNamesALauncher`, `TestRenderEscapesRepositoryStrings`, `TestRenderMakesNoOutboundRequest`, `TestRenderOmitsRepoBaseWhenEmpty`, `TestRenderStatesWhatWasRead`, `TestServeReportsAnAskedPortCollision`, `TestServeStopsOnContextCancel`, `TestViewMarkupMatchesPublishedViewer`
+- **Exports** (3): `DefaultPort`, `Options`, `Serve`
 
 - **Imports**: [site](./site.md) ×2
 <!-- /signpost:managed:structure -->

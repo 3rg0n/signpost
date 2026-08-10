@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/config
-description: 2 go files; 26 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/config
+description: 2 go files; 3 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/config
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "1" }
-  - { name: exported, value: "26" }
+  - { name: exported, value: "3" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-08-02" }
   - { name: last_commit, value: "2026-08-02" }
@@ -23,7 +23,7 @@ edges:
 # internal/config
 
 <!-- signpost:managed:summary -->
-2 go files; 26 exported symbols.
+2 go files; 3 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -33,7 +33,7 @@ edges:
 - `internal/config/config.go`
 - `internal/config/config_test.go`
 
-- **Exports** (26): `Config`, `File`, `Load`, `TestAbsentFileIsNotAnError`, `TestBadValuesAreRejected`, `TestBooleanSpellings`, `TestConfigIsNotReadFromAParentDirectory`, `TestCredentialKeysAreRejectedByName`, `TestDashedConfigurableKeySuggestsTheUnderscoreSpelling`, `TestDashedSpellingsAreAlsoRefused`, `TestEmptyDocumentIsNotAnError`, `TestErrorsNameTheLine`, `TestEveryConfigurableKeyIsRead`, `TestEveryRefusalGivesAReason`, `TestFalseIsRead`, `TestIgnoreAcceptsASingleScalar`, `TestInterpolationIsRejected`, `TestMalformedFileIsRejected`, `TestNoKeyIsBothSettableAndRefused`, `TestNonConfigurableFlagsCannotBeSet`, `TestNonMappingDocumentIsRejected`, `TestTheFirstBadKeyIsReported`, `TestTheOtherExtensionIsReported`, `TestUnbracedDollarIsNotInterpolation`, `TestUnknownKeyIsRejected`, `TestUnreadableFileIsAnError`
+- **Exports** (3): `Config`, `File`, `Load`
 
 - **Imports**: [internal/hook](./hook.md) ×1, [internal/manifest](./manifest.md) ×1, [internal/model](./model.md) ×2
 <!-- /signpost:managed:structure -->

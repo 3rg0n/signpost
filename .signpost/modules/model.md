@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/model
-description: 15 go files; 97 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/model
+description: 15 go files; 36 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/model
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
-  - { name: exported, value: "97" }
+  - { name: exported, value: "36" }
   - { name: files, value: "15" }
   - { name: first_commit, value: "2026-07-31" }
   - { name: last_commit, value: "2026-08-02" }
@@ -22,7 +22,7 @@ edges:
 # internal/model
 
 <!-- signpost:managed:summary -->
-15 go files; 97 exported symbols.
+15 go files; 36 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -45,7 +45,7 @@ edges:
 - `internal/model/untrusted.go`
 - `internal/model/untrusted_test.go`
 
-- **Exports** (97): `Backend`, `BedrockBaseURL`, `Config`, `Defang`, `DefaultBedrockModel`, `DefaultInferdAddr`, `DefaultTimeout`, `EnvAPIKey`, `EnvAWSDefaultRegion`, `EnvAWSRegion`, `EnvBackend`, `EnvBaseURL`, `EnvBedrockToken`, `EnvModel`, `ErrUnavailable`, `Inferd`, `Inferd.Actor`, `Inferd.Complete`, `Kind`, `KindInferd`, `KindNone`, `KindOpenAI`, `New`, `OpenAI`, `OpenAI.Actor`, `OpenAI.Complete`, `ParseKind`, `ParseProbe`, `ProbeAnswer`, `ProbeAnswer.AnsweredCorrectly`, `ProbeRequest`, `Request`, `Result`, `Source`, `SystemPrompt`, `TestAPIKeyPrefersSignpostVariable`, `TestAnsweredCorrectlyToleratesPhrasing`, `TestBackendComesFromTheEnvironmentWhenUnset`, `TestBedrockBaseURLUsesTheOpenAICompatiblePath`, `TestBreakTokenHandlesEmptyString`, `TestChatCompletionsURL`, `TestDefangBreaksChatTemplateControlTokens`, `TestDefangCaseInsensitiveOnLineMarkers`, `TestDefangIsCaseInsensitiveOnBlockSentinels`, `TestDefangIsIdempotentInEffect`, `TestDefangLeavesLineMarkersAloneInProse`, `TestDefangLeavesOrdinaryCodeUntouched`, `TestDefangLeavesOrdinaryHeadingsAlone`, `TestDefangNeutralisesLineMarkersAloneOnALine`, `TestDefangNeutralisesRoleHeadingVariants`, `TestDefangPreservesTheCasingItFound`, `TestDefaultInferdAddrIsNotEmpty`, `TestExplicitConfigBeatsTheEnvironment`, `TestFrameRoundTrip`, `TestInferdActor`, `TestInferdBackendTakesTheConfiguredAddress`, `TestInferdCompleteWithNoDaemonIsUnavailable`, `TestInferdErrorCodesSplitUnavailableFromFault`, `TestInferdRequestShape`, `TestNewDefaultsToDeterministicOnly`, and 37 more
+- **Exports** (36): `Backend`, `BedrockBaseURL`, `Config`, `Defang`, `DefaultBedrockModel`, `DefaultInferdAddr`, `DefaultTimeout`, `EnvAPIKey`, `EnvAWSDefaultRegion`, `EnvAWSRegion`, `EnvBackend`, `EnvBaseURL`, `EnvBedrockToken`, `EnvModel`, `ErrUnavailable`, `Inferd`, `Inferd.Actor`, `Inferd.Complete`, `Kind`, `KindInferd`, `KindNone`, `KindOpenAI`, `New`, `OpenAI`, `OpenAI.Actor`, `OpenAI.Complete`, `ParseKind`, `ParseProbe`, `ProbeAnswer`, `ProbeAnswer.AnsweredCorrectly`, `ProbeRequest`, `Request`, `Result`, `Source`, `SystemPrompt`, `Wrap`
 
 - **Changes with**: [\(repository root\)](./root.md) ×2, [cmd/signpost](./signpost.md) ×2
 <!-- /signpost:managed:structure -->

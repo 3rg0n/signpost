@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/okf
-description: 13 go files; 198 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/okf
+description: 13 go files; 34 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/okf
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "10" }
-  - { name: exported, value: "198" }
+  - { name: exported, value: "34" }
   - { name: files, value: "13" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-10" }
@@ -26,7 +26,7 @@ edges:
 # internal/okf
 
 <!-- signpost:managed:summary -->
-13 go files; 198 exported symbols.
+13 go files; 34 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -47,7 +47,7 @@ edges:
 - `internal/okf/yaml.go`
 - `internal/okf/yaml_test.go`
 
-- **Exports** (198): `Actor`, `BundleDir`, `Finding`, `Finding.String`, `FindingBrokenLink`, `FindingConformance`, `FindingKind`, `FindingMissingBundle`, `FindingMissingPage`, `FindingOrphanPage`, `FindingOutOfDate`, `FindingStaleResource`, `FindingStaleVerification`, `IndexPage`, `LogPage`, `ManifestFile`, `NewPage`, `Options`, `Page`, `Page.HumanText`, `Page.Managed`, `Page.Merge`, `Page.Render`, `ParsePage`, `PracticesPage`, `Region`, `Region.Managed`, `Result`, `TestAFileNamedLikeACloseMarkerCannotCloseTheRegion`, `TestATitleCannotForgeALinkTarget`, `TestATitleNamedLikeAnOpenMarkerCannotStartARegion`, `TestAttributeMapSortsAndSkipsEmpty`, `TestBundleLinksChecksRelativeTargetsOnlyInGeneratedRegions`, `TestBundleRelRejectsAPathEscapingTheBundle`, `TestCarryHumanKeysDropsALegacyStaleVerificationStatus`, `TestCarryHumanKeysDropsCommentsAttachedToGeneratedKeys`, `TestCarryHumanKeysDropsEveryGeneratedKeyIncludingBlocks`, `TestCarryHumanKeysDropsIndentedContinuations`, `TestCarryHumanKeysKeepsASpecStatus`, `TestCarryHumanKeysOnEmptyFrontmatter`, `TestCarryHumanKeysPreservesRawText`, `TestCheckPageRel`, `TestCodeSpanQuotesOnlyPathsThatWouldBreakTheLine`, `TestConsecutiveHumanLinesAreOneRegion`, `TestDowngrade`, `TestDuplicateRegionNameClaimsOnlyTheFirst`, `TestEdgeKindLabelFallsBackToTheRawValue`, `TestEdgeListAlwaysCarriesConfidence`, `TestEdgeListIsOutgoingOnly`, `TestEdgeTargetsArePagePaths`, `TestEdgeWeightAndSourceAreEmittedWhenPresent`, `TestEmptyManagedRegion`, `TestEnsureTrailingNewline`, `TestEscapeMarkersDefangsGeneratedText`, `TestEveryPageFrontmatterIsReadable`, `TestFilesLineIsBoundedAndSaysSo`, `TestFilesLineSingularAndPlural`, `TestFindStaleSkipsTheCacheDirectory`, `TestFrontmatterCloseIsFoundLineWise`, `TestFrontmatterFenceMustBeTheFirstLine`, and 138 more
+- **Exports** (34): `Actor`, `BundleDir`, `Finding`, `Finding.String`, `FindingBrokenLink`, `FindingConformance`, `FindingKind`, `FindingMissingBundle`, `FindingMissingPage`, `FindingOrphanPage`, `FindingOutOfDate`, `FindingStaleResource`, `FindingStaleVerification`, `IndexPage`, `LogPage`, `ManifestFile`, `NewPage`, `Options`, `Page`, `Page.HumanText`, `Page.Managed`, `Page.Merge`, `Page.Render`, `ParsePage`, `PracticesPage`, `Region`, `Region.Managed`, `Result`, `Verification`, `Verify`, `VerifyCounts`, `VerifyResult`, `VerifyResult.OK`, `Write`
 
 - **Changes with**: [\(repository root\)](./root.md) ×10, [cmd/signpost](./signpost.md) ×8, [site](./site.md) ×2, [internal/vcs](./vcs.md) ×2
 

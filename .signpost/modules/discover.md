@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/discover
-description: 5 go files; 86 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/discover
+description: 5 go files; 43 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/discover
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "12" }
-  - { name: exported, value: "86" }
+  - { name: exported, value: "43" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-07-29" }
   - { name: last_commit, value: "2026-08-09" }
@@ -27,7 +27,7 @@ edges:
 # internal/discover
 
 <!-- signpost:managed:summary -->
-5 go files; 86 exported symbols.
+5 go files; 43 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -40,7 +40,7 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Exports** (86): `Class`, `ClassContract`, `ClassData`, `ClassDoc`, `ClassInfra`, `ClassManifest`, `ClassMigration`, `ClassOther`, `ClassOwnership`, `ClassSource`, `Elision`, `File`, `HeadTailBytes`, `Lang`, `LangAstro`, `LangC`, `LangCSharp`, `LangCpp`, `LangGo`, `LangJS`, `LangJava`, `LangKotlin`, `LangObjC`, `LangOther`, `LangPHP`, `LangPowerShell`, `LangPython`, `LangRuby`, `LangRust`, `LangShell`, `LangSvelte`, `LangTS`, `LangVue`, `MaxFullBytes`, `MaxFullLines`, `Options`, `Result`, `Result.Analyses`, `Result.ByClass`, `Result.Sources`, `Result.Unclassified`, `Skip`, `TestAnalysesHonoursTheOptionAndDefaultsToExcluding`, `TestBundleDirLiteralMatchesTheEmitter`, `TestByClassExcludesVendoredAndBinary`, `TestCFamilyExtensionsMapToTheirLanguage`, `TestCFamilyTestPathsAreRecognisedAndOrdinaryFilesAreNot`, `TestComponentTestAndStoryPaths`, `TestCountLines`, `TestFixtureIsDistinctFromVendoredAndTest`, `TestIgnoreBasicPatterns`, `TestIgnoreCharacterClass`, `TestIgnoreCloneIsolatesSiblings`, `TestIgnoreCommentsBlanksAndEscapes`, `TestIgnoreDoubleStar`, `TestIgnoreIsCaseSensitiveEverywhere`, `TestIgnoreMalformedClassIsLiteral`, `TestIgnoreManyDoubleStarsTerminates`, `TestIgnoreNegationOrderMatters`, `TestIgnoreNestedOverridesParent`, and 26 more
+- **Exports** (43): `Class`, `ClassContract`, `ClassData`, `ClassDoc`, `ClassInfra`, `ClassManifest`, `ClassMigration`, `ClassOther`, `ClassOwnership`, `ClassSource`, `Elision`, `File`, `HeadTailBytes`, `Lang`, `LangAstro`, `LangC`, `LangCSharp`, `LangCpp`, `LangGo`, `LangJS`, `LangJava`, `LangKotlin`, `LangObjC`, `LangOther`, `LangPHP`, `LangPowerShell`, `LangPython`, `LangRuby`, `LangRust`, `LangShell`, `LangSvelte`, `LangTS`, `LangVue`, `MaxFullBytes`, `MaxFullLines`, `Options`, `Result`, `Result.Analyses`, `Result.ByClass`, `Result.Sources`, `Result.Unclassified`, `Skip`, `Walk`
 
 - **Changes with**: [internal/assemble](./assemble.md) ×7, [internal/extract](./extract.md) ×7, [internal/manifest](./manifest.md) ×5, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×12, [cmd/signpost](./signpost.md) ×10, [site](./site.md) ×8
 <!-- /signpost:managed:structure -->

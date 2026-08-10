@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/graph
-description: 4 go files; 69 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/graph
+description: 4 go files; 49 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/graph
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "3" }
-  - { name: exported, value: "69" }
+  - { name: exported, value: "49" }
   - { name: files, value: "4" }
   - { name: first_commit, value: "2026-07-29" }
   - { name: last_commit, value: "2026-08-10" }
@@ -21,7 +21,7 @@ edges:
 # internal/graph
 
 <!-- signpost:managed:summary -->
-4 go files; 69 exported symbols.
+4 go files; 49 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -33,7 +33,7 @@ edges:
 - `internal/graph/louvain.go`
 - `internal/graph/metrics.go`
 
-- **Exports** (69): `Ambiguous`, `Bridge`, `Confidence`, `Degree`, `Edge`, `EdgeCalls`, `EdgeCoChanges`, `EdgeConfigures`, `EdgeDefines`, `EdgeDeploys`, `EdgeDocuments`, `EdgeImplements`, `EdgeImports`, `EdgeKind`, `EdgeOwns`, `EdgeTestedBy`, `Extracted`, `Graph`, `Graph.AddEdge`, `Graph.AddNode`, `Graph.Bridges`, `Graph.Clusters`, `Graph.Components`, `Graph.Counts`, `Graph.Cycles`, `Graph.Dangling`, `Graph.Degrees`, `Graph.DropDangling`, `Graph.Edges`, `Graph.EdgesFrom`, `Graph.EdgesTo`, `Graph.Has`, `Graph.Hubs`, `Graph.Node`, `Graph.Nodes`, `Graph.NodesOfKind`, `Graph.Orphans`, `Graph.Path`, `Inferred`, `Kind`, `KindDataStore`, `KindDocument`, `KindExternal`, `KindInterface`, `KindModule`, `KindService`, `KindSymbol`, `New`, `Node`, `TestAddEdgeDropsSelfEdges`, `TestAddEdgeKeepsStrongerConfidenceRegardlessOfOrder`, `TestAddEdgeMergesWeightAndKeepsStrongerConfidence`, `TestAddNodeKindConflictIsAnError`, `TestAddNodeMergesWithoutClobbering`, `TestAddNodeRejectsEmptyID`, `TestBridgesCrossClustersOnly`, `TestClustersAreDeterministic`, `TestClustersSeparateDenseGroups`, `TestComponentsSeparatesIslands`, `TestCyclesDeepChainDoesNotOverflow`, and 9 more
+- **Exports** (49): `Ambiguous`, `Bridge`, `Confidence`, `Degree`, `Edge`, `EdgeCalls`, `EdgeCoChanges`, `EdgeConfigures`, `EdgeDefines`, `EdgeDeploys`, `EdgeDocuments`, `EdgeImplements`, `EdgeImports`, `EdgeKind`, `EdgeOwns`, `EdgeTestedBy`, `Extracted`, `Graph`, `Graph.AddEdge`, `Graph.AddNode`, `Graph.Bridges`, `Graph.Clusters`, `Graph.Components`, `Graph.Counts`, `Graph.Cycles`, `Graph.Dangling`, `Graph.Degrees`, `Graph.DropDangling`, `Graph.Edges`, `Graph.EdgesFrom`, `Graph.EdgesTo`, `Graph.Has`, `Graph.Hubs`, `Graph.Node`, `Graph.Nodes`, `Graph.NodesOfKind`, `Graph.Orphans`, `Graph.Path`, `Inferred`, `Kind`, `KindDataStore`, `KindDocument`, `KindExternal`, `KindInterface`, `KindModule`, `KindService`, `KindSymbol`, `New`, `Node`
 
 - **Changes with**: [\(repository root\)](./root.md) ×3
 <!-- /signpost:managed:structure -->

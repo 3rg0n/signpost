@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/hook
-description: 2 go files; 39 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/hook
+description: 2 go files; 17 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/hook
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
-  - { name: exported, value: "39" }
+  - { name: exported, value: "17" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-08-02" }
   - { name: last_commit, value: "2026-08-02" }
@@ -22,7 +22,7 @@ edges:
 # internal/hook
 
 <!-- signpost:managed:summary -->
-2 go files; 39 exported symbols.
+2 go files; 17 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -32,7 +32,7 @@ edges:
 - `internal/hook/hook.go`
 - `internal/hook/hook_test.go`
 
-- **Exports** (39): `Block`, `BundleDir`, `Check`, `CheckFast`, `CheckVerify`, `EnvCheck`, `Fast`, `Install`, `InstallResult`, `ParseCheck`, `Paths`, `Resolve`, `Script`, `Status`, `Status.Stale`, `TestBundleDirAgreesWithTheEmitter`, `TestFastDoesNotReportABundleAheadOfTheCode`, `TestFastExplainsItselfWhenItCannotAnswer`, `TestFastHandlesARepositoryOfOnlyBundle`, `TestFastReportsNothingWhenTheBundleIsCurrent`, `TestFastReportsTheBundleFallingBehind`, `TestInstallAppendsAndKeepsTheExistingHook`, `TestInstallCreatesTheHookWhenThereIsNone`, `TestInstallDoesNotJoinOntoALastLineWithoutANewline`, `TestInstallIsIdempotent`, `TestInstallWritesWhereGitLooks`, `TestMain`, `TestParseCheck`, `TestResolveDoesNotCallAnInsideDirectoryShared`, `TestResolveFollowsCoreHooksPath`, `TestResolveReportsASharedHooksDirectory`, `TestTheBlockIsGuarded`, `TestUninstallHandlesAnUnterminatedBlock`, `TestUninstallIsQuietWhenThereIsNothingOfOurs`, `TestUninstallRemovesAFileThatWasOnlyOurs`, `TestUninstallRemovesEveryBlock`, `TestUninstallRemovesOnlyTheBlock`, `Uninstall`, `UninstallResult`
+- **Exports** (17): `Block`, `BundleDir`, `Check`, `CheckFast`, `CheckVerify`, `EnvCheck`, `Fast`, `Install`, `InstallResult`, `ParseCheck`, `Paths`, `Resolve`, `Script`, `Status`, `Status.Stale`, `Uninstall`, `UninstallResult`
 
 - **Changes with**: [\(repository root\)](./root.md) ×2
 

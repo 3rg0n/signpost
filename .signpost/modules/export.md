@@ -1,12 +1,12 @@
 ---
 type: Module
 title: internal/export
-description: 6 go files; 22 exported symbols.
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/internal/export
+description: 6 go files; 7 exported symbols.
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/internal/export
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
   - { name: commits, value: "2" }
-  - { name: exported, value: "22" }
+  - { name: exported, value: "7" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
   - { name: last_commit, value: "2026-08-07" }
@@ -22,7 +22,7 @@ edges:
 # internal/export
 
 <!-- signpost:managed:summary -->
-6 go files; 22 exported symbols.
+6 go files; 7 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -36,7 +36,7 @@ edges:
 - `internal/export/json.go`
 - `internal/export/mermaid.go`
 
-- **Exports** (22): `Format`, `FormatDOT`, `FormatGraphML`, `FormatJSON`, `FormatMermaid`, `Formats`, `TestClustersBecomeSubgraphs`, `TestDanglingEdgesAreNotRendered`, `TestEmptyGraphIsValidOutput`, `TestEveryFormatIsDeterministic`, `TestEveryNodeIsRendered`, `TestGraphMLIsWellFormedXML`, `TestInferredEdgesAreDistinguishable`, `TestJSONRoundTrips`, `TestMermaidIdentifierCollisionsAreDisambiguated`, `TestMermaidLabelsAreSanitised`, `TestNodeKindIsCarried`, `TestNonASCIITitlesSurvive`, `TestUnclusteredGraphHasNoSubgraph`, `TestUnknownFormatIsAnError`, `TestWeightIsCarried`, `Write`
+- **Exports** (7): `Format`, `FormatDOT`, `FormatGraphML`, `FormatJSON`, `FormatMermaid`, `Formats`, `Write`
 
 - **Imports**: [internal/graph](./graph.md) ×6
 <!-- /signpost:managed:structure -->

@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0019: louvain over label propagation"
 description: "Architecture decision (Accepted), 20 rules read from 0019-louvain-over-label-propagation.md."
-resource: git://github.com/3rg0n/signpost@aa1287096af85ed210771f340e57c53aeebd0082/docs/adr/0019-louvain-over-label-propagation.md
+resource: git://github.com/3rg0n/signpost@b9587fa84f48f6ac586fe7cac779743330511e45/docs/adr/0019-louvain-over-label-propagation.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-10" }
 attributes:
