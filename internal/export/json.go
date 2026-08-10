@@ -31,6 +31,7 @@ type jsonNode struct {
 	Tags        []string          `json:"tags,omitempty"`
 	Attrs       map[string]string `json:"attrs,omitempty"`
 	Files       []string          `json:"files,omitempty"`
+	Exports     []string          `json:"exports,omitempty"`
 	Cluster     int               `json:"cluster"`
 }
 
@@ -58,7 +59,7 @@ func writeJSON(w io.Writer, g *graph.Graph) error {
 			ID: n.ID, Kind: string(n.Kind), Title: n.Title,
 			Description: n.Description, Path: n.Path, Lang: n.Lang,
 			Tags: n.Tags, Attrs: nilIfEmpty(n.Attrs), Files: n.Files,
-			Cluster: n.Cluster,
+			Exports: n.Exports, Cluster: n.Cluster,
 		})
 	}
 	for _, e := range g.Edges() {

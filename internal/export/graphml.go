@@ -43,6 +43,12 @@ var graphMLKeys = []graphMLKey{
 	{"n_tags", "node", "tags", "string"},
 	{"n_attrs", "node", "attrs", "string"},
 	{"n_files", "node", "files", "int"},
+	// The export count, not the names. GraphML attributes are typed scalars and a
+	// layout tool uses them to size, colour, and filter — `n_exports` as a number is
+	// a dimension Gephi can rank a node by, where a 200-name string in the same cell
+	// is a value nothing can compute over and every table has to truncate. Whoever
+	// wants the names has the JSON export, which carries them.
+	{"n_exports", "node", "exports", "int"},
 	{"n_cluster", "node", "cluster", "int"},
 	{"e_kind", "edge", "kind", "string"},
 	{"e_conf", "edge", "confidence", "string"},
@@ -73,6 +79,7 @@ func writeGraphML(w io.Writer, g *graph.Graph) error {
 		data(bw, "n_tags", strings.Join(n.Tags, ","))
 		data(bw, "n_attrs", flattenAttrs(n.Attrs))
 		data(bw, "n_files", itoa(len(n.Files)))
+		data(bw, "n_exports", itoa(len(n.Exports)))
 		data(bw, "n_cluster", itoa(n.Cluster))
 		bw.line(`    </node>`)
 	}

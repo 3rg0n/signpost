@@ -8,6 +8,32 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-10
+
+- **The exported symbols reach the machine-readable exports, split by what each consumer can
+  do with them.** The names were on module pages but absent from every export, so a tool
+  reading `graph export -format json` saw a module's files and not its surface — the OKF
+  bundle and the graph exports disagreed about the same repository. JSON nodes now carry
+  `"exports": ["Claims", "Token.Verify", "Validate"]` beside `"files"`, which is what a
+  script and the local viewer read, and what makes the export answer the question the page
+  already answers.
+
+  **GraphML carries `n_exports` as a count, not the names.** Its attributes are declared
+  scalars, and Gephi, yEd and networkx size, colour, and rank nodes on them — a 200-name
+  string in a typed column is a value nothing can compute over and every table truncates.
+  Mermaid and DOT carry neither, for the reason they already carry no file list: a box label
+  is not a place for forty identifiers. The formats also disagree about a module with no
+  exports, and both are right for their consumer — JSON omits the key, because most nodes in
+  a graph are services and documents signpost never extracts symbols from and an empty array
+  on each would assert a measured absence of public surface; GraphML writes `0`, because an
+  int column that is blank on some rows cannot be ranked, which is how `n_files` and
+  `n_cluster` already resolve it.
+
+  Verified against this repository's own graph rather than the fixture alone: 17 of 60 nodes
+  carry names, `internal/graph` lists all 49, `attrs.exported` equals `len(exports)` on
+  every module node, no test declaration appears, and every list is sorted and deduplicated.
+  GraphML emits one `n_exports` row per node, all integers, and leaks no name.
+
 #### 2026-08-09
 
 - **A module page names its public surface instead of only counting it.** Every extractor
