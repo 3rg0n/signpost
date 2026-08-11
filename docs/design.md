@@ -1052,6 +1052,42 @@ content it describes is perfectly current and failing there would break the gate
 repositories that squash-merge. Both fallbacks are printed: a run that read history from HEAD
 never claims to have read it as of anything else.
 
+**On a branch, a difference the merge resolves is reported and does not fail.** Reading the
+bundle's history made every history-derived field identical, and the gate went red anyway on
+thirteen consecutive pull requests — every one of them correctly. The reason is the remedy rather
+than the comparison: the failures above all name `signpost build`, and §8.0 forbids running it on
+a branch. So a pull request that added a package had a red gate whose instructions its author was
+not permitted to follow, and the real remedy was to merge and let the push job rebuild. A check
+that is red whenever anybody touches structure gets merged past as a habit, and the habit does not
+pause for the run where the bundle is genuinely broken. Inverting it would be worse: then the
+broken bundle is the green one.
+
+So under `-as-of-bundle` findings are sorted by what the reader can do about them:
+
+| severity | meaning | the reader's move |
+|---|---|---|
+| failure | wrong now, and wrong after the merge too | fix it; the gate is red |
+| pending | a rebuild after the merge resolves it, and nothing else can | nothing; the gate is green |
+| warning | no command resolves it | a human decides |
+
+Four kinds are pending, and the list is what the distinction lives or dies by: a page a build
+would rewrite, a concept with no page, a page with no concept, and a `pages` list that is
+arithmetic over those two. Everything else stays a failure — a deleted bundle, a link with no
+target, frontmatter no conforming reader can parse, a page claiming a commit that is not the one
+being described. A merge inherits every one of those rather than repairing it.
+
+Pending exists on a branch and nowhere else. The strict verify is the run that *writes* the
+bundle, so it has no later rebuild to defer to and each of those four kinds is a defect there —
+the same asymmetry this flag already draws for provenance, one severity further down. And pending
+findings are printed in full above the verdict, never folded into a count: "nothing to do" is only
+trustworthy if the reader can see what was set aside and disagree with it. A gate that silently
+swallowed a page it decided was somebody else's problem would be the confidently-wrong artefact
+this section exists to prevent, arriving through the exit code instead of the pages.
+
+The post-commit hook (§6.0.1) reads the same run and reports pending as a reminder, because on a
+developer's machine the remedy exists: there is no merge and no push job, so `signpost build` is
+theirs to run. Same comparison, same severity, opposite audience.
+
 ---
 
 ## 5. Model backends

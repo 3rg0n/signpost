@@ -729,8 +729,15 @@ func TestVerifyAsOfBundlePassesWhenOnlyTheCommitMoved(t *testing.T) {
 	}
 }
 
-// The property that makes the mode safe to enable on every pull request: it is still a gate.
-func TestVerifyAsOfBundleStillFailsOnStaleContent(t *testing.T) {
+// Content a rebuild would change is reported and does not fail — on a branch, and only there.
+//
+// This test used to assert the opposite, and the assertion was the defect. A page whose bytes a
+// build would rewrite is what adding a module or editing a doc comment *looks like* by the time
+// it reaches the bundle, and §8.0 forbids the branch from running the build that would fix it. So
+// the failure named a remedy the author was not allowed to apply, on nearly every pull request,
+// until red meant nothing. Both halves below are the property that replaced it: reported in full,
+// and still a failure on the run that writes the bundle.
+func TestVerifyAsOfBundleDefersContentARebuildWillRewrite(t *testing.T) {
 	root, _, g := write(t)
 	const page = "modules/internal-auth.md"
 	// A change to the description is what a code change looks like by the time it reaches a
@@ -741,39 +748,167 @@ func TestVerifyAsOfBundleStillFailsOnStaleContent(t *testing.T) {
 
 	later := demoOptions()
 	later.Resource = "git://example.com/repo@deadbee"
-	later.AsOfBundle = true
 
+	// Strict first, because it is what makes the relaxation below a distinction rather than a
+	// hole. The default branch is where signpost writes these bytes, so there is no later
+	// rebuild to defer to and the same difference is a defect.
+	strict, err := Verify(root, g, later)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !has(strict.Findings, FindingOutOfDate, page) {
+		t.Fatalf("a strict verify did not fail on stale content, so this test proves nothing "+
+			"about what AsOfBundle defers:%s", findings(strict))
+	}
+
+	later.AsOfBundle = true
 	res, err := Verify(root, g, later)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if res.OK() {
-		t.Fatalf("stale content passed under AsOfBundle, so the mode is not a gate:%s",
-			findings(res))
+	if !res.OK() {
+		t.Errorf("content a rebuild resolves failed the branch gate:%s", findings(res))
 	}
-	if !has(res.Findings, FindingOutOfDate, page) {
-		t.Errorf("want an out-of-date finding on %s, got:%s", page, findings(res))
+	// Deferred, never dropped. A gate that silently swallowed a page it decided was somebody
+	// else's problem would be the false pass this file exists to prevent, arriving through the
+	// exit code instead of the output.
+	if !has(res.Pending, FindingOutOfDate, page) {
+		t.Errorf("want a pending out-of-date finding on %s, got:%s", page, findings(res))
+	}
+	if has(res.Findings, FindingOutOfDate, page) {
+		t.Errorf("%s is both pending and failing, so the split moved nothing", page)
 	}
 }
 
-// A missing page is a content difference, not a provenance one. This is the shape a pull
-// request adding a package takes, and it must fail: the bundle genuinely does not describe
-// the repository any more.
-func TestVerifyAsOfBundleFailsOnAMissingPage(t *testing.T) {
+// A missing page is the same event from the other side: the branch added a concept the bundle has
+// no page for. Deferred on a branch, because writing that page is the merge's job, and a failure
+// on the run that writes it.
+func TestVerifyAsOfBundleDefersAMissingPage(t *testing.T) {
 	root, _, g := write(t)
-	const page = "modules/internal-auth.md"
-	if err := os.Remove(filepath.Join(root, BundleDir, filepath.FromSlash(page))); err != nil {
+	// Added to the graph after the bundle was written, rather than deleted from disk. That is
+	// what a branch adding a package *is*, and it isolates the finding: deleting a page instead
+	// would also dangle every link to it, which is a different severity and is asserted below.
+	const page = "modules/late-arrival.md"
+	if err := g.AddNode(&graph.Node{
+		ID: "/modules/late-arrival", Kind: graph.KindModule, Title: "late/arrival",
+		Path: "late/arrival",
+	}); err != nil {
 		t.Fatal(err)
 	}
 
 	opts := demoOptions()
+	strict, err := Verify(root, g, opts)
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if !has(strict.Findings, FindingMissingPage, page) {
+		t.Fatalf("a strict verify did not fail on a missing page:%s", findings(strict))
+	}
+
 	opts.AsOfBundle = true
 	res, err := Verify(root, g, opts)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if !has(res.Findings, FindingMissingPage, page) {
-		t.Errorf("want a missing-page finding on %s, got:%s", page, findings(res))
+	if !has(res.Pending, FindingMissingPage, page) {
+		t.Errorf("want a pending missing-page finding on %s, got:%s", page, findings(res))
+	}
+}
+
+// The negative boundary the whole split lives or dies by: a bundle that is broken *now* stays a
+// failure on a branch, because the merge inherits it rather than repairing it. Every kind here is
+// one a rebuild does not resolve, and every one of them shares a page with a difference the
+// rebuild does resolve — so a classifier keying off the page, or off the message text, or off
+// "anything under -as-of-bundle", passes the tests above and fails these.
+func TestVerifyAsOfBundleStillFailsOnWhatTheMergeCannotFix(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		kind    FindingKind
+		page    string
+		breakIt func(t *testing.T, root string)
+	}{
+		{
+			// Deleting a module page leaves index.md pointing at a path that is not there. The
+			// missing page itself is pending (above); the dangling link is not, because after the
+			// merge the link is still dangling in every checkout of this branch's bundle.
+			name: "a link naming a page the bundle does not contain",
+			kind: FindingBrokenLink,
+			page: IndexPage,
+			breakIt: func(t *testing.T, root string) {
+				rel := filepath.FromSlash("modules/internal-auth.md")
+				if err := os.Remove(filepath.Join(root, BundleDir, rel)); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "frontmatter no conforming reader can parse",
+			kind: FindingConformance,
+			page: "modules/internal-auth.md",
+			breakIt: func(t *testing.T, root string) {
+				edit(t, root, "modules/internal-auth.md", func(s string) string {
+					return strings.Replace(s, "type:", "type: [unterminated\nkey:", 1)
+				})
+			},
+		},
+		{
+			name: "the bundle deleted outright",
+			kind: FindingMissingBundle,
+			page: "",
+			breakIt: func(t *testing.T, root string) {
+				if err := os.RemoveAll(filepath.Join(root, BundleDir)); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, _, g := write(t)
+			tc.breakIt(t, root)
+
+			opts := demoOptions()
+			opts.AsOfBundle = true
+			res, err := Verify(root, g, opts)
+			if err != nil {
+				t.Fatalf("Verify: %v", err)
+			}
+			if res.OK() {
+				t.Fatalf("the branch gate passed on a bundle the merge cannot fix:%s", findings(res))
+			}
+			if !has(res.Findings, tc.kind, tc.page) {
+				t.Errorf("want a failing %s finding on %q, got:%s", tc.kind, tc.page, findings(res))
+			}
+			if has(res.Pending, tc.kind, tc.page) {
+				t.Errorf("%s on %q was deferred to a rebuild that does not resolve it",
+					tc.kind, tc.page)
+			}
+		})
+	}
+}
+
+// Pending exists on a branch and nowhere else. Asserted over every kind at once rather than one
+// per case, because the hole this rules out is a classifier that runs unconditionally: the strict
+// verify is the run that *writes* the bundle, so a difference it deferred would be written to
+// main and never looked at again.
+func TestVerifyPendingIsEmptyWithoutAsOfBundle(t *testing.T) {
+	root, _, g := write(t)
+	edit(t, root, "modules/internal-auth.md", func(s string) string {
+		return strings.Replace(s, "description:", "description: stale ", 1)
+	})
+	if err := g.AddNode(&graph.Node{
+		ID: "/modules/late-arrival", Kind: graph.KindModule, Title: "late/arrival",
+		Path: "late/arrival",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	res := verifyBundle(t, root, g)
+	if len(res.Pending) != 0 {
+		t.Errorf("a strict verify deferred %d finding(s) to a rebuild it is itself performing: %v",
+			len(res.Pending), res.Pending)
+	}
+	if res.OK() {
+		t.Errorf("a strict verify passed on both a stale page and a missing one:%s", findings(res))
 	}
 }
 
@@ -933,12 +1068,25 @@ func TestVerifyFailsOnAManifestPageListThatDisagrees(t *testing.T) {
 			})
 
 			res := verifyBundle(t, root, g)
-			if !has(res.Findings, FindingConformance, ManifestFile) {
-				t.Fatalf("want a conformance finding on the manifest, got:%s", findings(res))
+			if !has(res.Findings, FindingPageList, ManifestFile) {
+				t.Fatalf("want a page-list finding on the manifest, got:%s", findings(res))
 			}
 			if !strings.Contains(findings(res), tc.want) {
 				t.Errorf("no finding says %q, so the reader is not told which way it is wrong:%s",
 					tc.want, findings(res))
+			}
+			// Its own kind rather than a conformance finding, and this is why: on a branch the
+			// list is short by exactly the pages the branch adds, which is the rebuild's job,
+			// where unparseable frontmatter on the same file is not. Severity has to follow the
+			// kind, so the two cannot share one.
+			asOf := demoOptions()
+			asOf.AsOfBundle = true
+			branch, err := Verify(root, g, asOf)
+			if err != nil {
+				t.Fatalf("Verify: %v", err)
+			}
+			if !has(branch.Pending, FindingPageList, ManifestFile) {
+				t.Errorf("want the page list deferred on a branch, got:%s", findings(branch))
 			}
 		})
 	}

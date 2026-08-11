@@ -63,6 +63,30 @@ import (
 //   - **A surplus page a build would keep is a warning.** Somebody has written on it, so no
 //     command can resolve it and only a human can. Failing would be a red gate with no
 //     supported fix, which is the gate that gets switched off.
+//
+// # The third severity, and why severity follows the remedy
+//
+// That last sentence turned out to describe the whole gate rather than one finding. Under
+// `-as-of-bundle` — the pull-request mode — the remedy every failure above names is
+// `signpost build`, and design §8.0 forbids running it on a branch: the bundle is written on
+// the default branch only, so two branches cannot collide in it. So a pull request that adds
+// a module has a red gate whose instructions it is not allowed to follow, and the actual
+// remedy is to merge and let the push job rebuild.
+//
+// Thirteen consecutive pull requests failed that way, every one of them correctly, and the
+// gate was worthless regardless: a check that is red whenever anybody touches structure gets
+// merged past as a habit, and the habit does not pause for the run where the bundle is
+// genuinely broken. Inverting it would be worse — then the broken bundle is the green one.
+//
+// So findings are sorted by what the reader can do about them, in Pending:
+//
+//	failure  — the bundle is wrong now, and it is wrong after the merge too. Act.
+//	pending  — a rebuild after the merge resolves it, and nothing else can. Carry on.
+//	warning  — no command resolves it; a human might want to.
+//
+// Only under `-as-of-bundle`. The strict verify is the run that *writes* the bundle, so it
+// has no later rebuild to defer to and the same differences are defects there. See
+// classifyPending and pendingKinds, which is the list this distinction lives or dies by.
 
 // FindingKind names what kind of problem was found, so a caller can group findings without
 // matching on message text.
@@ -84,6 +108,12 @@ const (
 	FindingOutOfDate FindingKind = "out-of-date"
 	// FindingMissingPage means the bundle lacks a page this repository has a concept for.
 	FindingMissingPage FindingKind = "missing-page"
+	// FindingPageList means manifest.json's `pages` list disagrees with the pages a build
+	// writes. Its own kind rather than a conformance finding, because the two need different
+	// severities on a branch and severity must follow the kind rather than the message text:
+	// a list that is short by exactly the pages this branch adds is the rebuild's job, where
+	// unparseable frontmatter is not.
+	FindingPageList FindingKind = "page-list"
 	// FindingOrphanPage means a page describes a concept the repository no longer has. A
 	// failure when a build would delete it and a warning when a build would keep it, per this
 	// file's header — one kind either way, because the reader's question is the same and only
@@ -130,12 +160,21 @@ type VerifyResult struct {
 	// Warnings are problems that do not make the bundle wrong. Reported because an
 	// unreported warning is indistinguishable from a clean result.
 	Warnings []Finding
-	Checked  VerifyCounts
+	// Pending are differences whose remedy is the rebuild that runs after this branch
+	// merges, so nobody can act on them here. Reported in full and counted separately;
+	// they do not make the command exit non-zero. See classifyPending for the whole
+	// argument, and note that this list is only ever populated under
+	// Options.AsOfBundle — a strict verify has no merge to defer to.
+	Pending []Finding
+	Checked VerifyCounts
 	// Skipped names each check that did not run, and why.
 	Skipped []string
 }
 
-// OK reports whether the bundle passed.
+// OK reports whether anything failed, which is not the same question as whether the bundle
+// matches. Under Options.AsOfBundle a result can be OK and carry a Pending list: the bundle
+// genuinely differs from this tree and the branch is not the place that fixes it. A caller
+// printing a verdict has to look at both, or it will claim a match that does not exist.
 func (r *VerifyResult) OK() bool { return len(r.Findings) == 0 }
 
 func (r *VerifyResult) fail(kind FindingKind, page, format string, args ...any) {
@@ -185,7 +224,71 @@ func Verify(root string, g *graph.Graph, opts Options) (*VerifyResult, error) {
 	checkUpToDate(res, dir, disk, fresh, opts)
 	checkOrphans(res, disk, fresh)
 	checkPageList(res, dir, fresh)
+	if opts.AsOfBundle {
+		classifyPending(res)
+	}
 	return res, nil
+}
+
+// pendingKinds are the finding kinds a branch cannot act on, because the only thing that
+// resolves them is the rebuild that runs on the default branch after the merge.
+//
+// Each one is here because a build on the branch is the remedy and §8.0 forbids it:
+//
+//   - FindingOutOfDate — a rebuild would change these bytes. On a branch that is what
+//     adding a module, renaming a directory, or changing a doc comment *means*.
+//   - FindingMissingPage — the repository has a concept the bundle has no page for. Same
+//     event seen from the other side: the branch added the concept.
+//   - FindingOrphanPage — the branch removed one. Only the failing half reaches here; the
+//     written-on half is already a warning, because no build resolves that one either.
+//   - FindingPageList — manifest.json lists n pages while this run writes n+1. Arithmetic
+//     over the two sets above, so it moves whenever they do.
+//
+// Deliberately not here, and this list is the whole point of the split:
+//
+//   - FindingMissingBundle — the branch deleted the bundle. A merge does not restore it.
+//   - FindingConformance — unparseable frontmatter, a reserved filename carrying the wrong
+//     type, a page that cannot be merged. The bundle is malformed now and the merge
+//     inherits it.
+//   - FindingBrokenLink — a link naming a path the bundle does not contain. Broken on the
+//     branch, broken after the merge.
+//   - FindingStaleResource — a page claiming a commit that is not the one being described.
+//     Under -as-of-bundle provenance is adopted from the bundle's own record, so a finding
+//     that survives that means the record itself disagrees with the pages, which no rebuild
+//     was asked to fix.
+var pendingKinds = map[FindingKind]bool{
+	FindingOutOfDate:   true,
+	FindingMissingPage: true,
+	FindingOrphanPage:  true,
+	FindingPageList:    true,
+}
+
+// classifyPending moves the findings a branch cannot act on out of Findings and into
+// Pending, so that a red gate keeps meaning "you must do something".
+//
+// This is the fix for a failure mode that had nothing to do with correctness. The gate was
+// right thirteen consecutive times and useless anyway: every one of those runs failed
+// because the pull request added or moved structure, whose remedy is "merge it, and the push
+// job rebuilds the bundle" — nothing the author can do on the branch, and the one thing
+// §8.0 forbids them from trying. A check that is red on almost every pull request teaches
+// everybody to merge past it, and then the run where the bundle is genuinely broken is
+// merged past too. The severity had to follow the remedy: a failure means act, a pass means
+// carry on, and a difference nobody can act on is neither.
+//
+// Only under -as-of-bundle. The strict verify on the default branch is the run that writes
+// the stamp, so there is no later rebuild to defer to and every one of these kinds is a
+// defect there — which is what keeps this from being a hole rather than a distinction. The
+// asymmetry is the same one ADR 0024 drew, one severity further down.
+func classifyPending(res *VerifyResult) {
+	kept := res.Findings[:0]
+	for _, f := range res.Findings {
+		if pendingKinds[f.Kind] {
+			res.Pending = append(res.Pending, f)
+			continue
+		}
+		kept = append(kept, f)
+	}
+	res.Findings = kept
 }
 
 // onDisk is the bundle as it exists: page text for the markdown, and the path set every
@@ -854,6 +957,6 @@ func checkPageList(res *VerifyResult, dir string, fresh map[string]string) {
 	if phantom != "" {
 		detail += "; " + phantom + " is listed and was not written"
 	}
-	res.fail(FindingConformance, ManifestFile,
+	res.fail(FindingPageList, ManifestFile,
 		"%s. A consumer reads this list instead of walking the directory", detail)
 }

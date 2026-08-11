@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted. Constraint 1 below is refined by
+[ADR 0027](0027-a-gate-fails-only-on-what-the-reader-can-fix.md): the byte-for-byte comparison is
+unchanged and a new module still produces a difference, but on a branch that difference is reported
+as pending rather than failing, because §8.0 forbids the rebuild it asks for. Not superseded — the
+strict verify still fails on all of it.
 
 ## Context
 

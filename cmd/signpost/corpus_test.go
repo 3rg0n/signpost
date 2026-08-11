@@ -864,6 +864,116 @@ func TestCorpusVerifyPassesOnItsOwnOutput(t *testing.T) {
 	}
 }
 
+// TestCorpusBranchGateSeparatesWhatTheAuthorCanFix is the regression for a gate that was right
+// thirteen consecutive times and useless anyway.
+//
+// Every one of those pull requests failed for the same reason: it added or moved structure, so a
+// rebuild would rewrite pages, and the failure said `run signpost build and commit the result` —
+// which §8.0 forbids on a branch, because the bundle is written on the default branch only so two
+// branches cannot collide in it. A check that is red whenever anybody touches a directory, naming
+// a remedy nobody is allowed to apply, teaches everyone to merge past it; and then the run where
+// the bundle is genuinely broken is merged past too.
+//
+// The pair is the property, not either half. A gate that passes everything under -as-of-bundle
+// satisfies the first stage below and is no gate at all; a gate that fails everything satisfies
+// the second and is the shipped bug. So both run against the *same* branch state — a corpus that
+// has gained a module and had a page it links to deleted — where the two differences are
+// simultaneous and only one of them has a remedy the author can reach.
+func TestCorpusBranchGateSeparatesWhatTheAuthorCanFix(t *testing.T) {
+	dir := buildCorpus(t)
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "the bundle")
+
+	// What a branch does: a module the bundle has no page for. A Go package rather than an edit
+	// to an existing file, so the difference is structural and reaches the page list, index.md,
+	// and log.md as well — the four kinds a rebuild owns, all at once.
+	pkg := filepath.Join(dir, "go", "lateshipping")
+	if err := os.MkdirAll(pkg, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	src := []byte("package lateshipping\n\nfunc Ship() {}\n")
+	if err := os.WriteFile(filepath.Join(pkg, "ship.go"), src, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "feat: a module the bundle predates")
+
+	stdout, stderr, code := invoke(t, "verify", "--quiet", "-as-of-bundle",
+		"-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("the branch gate failed on a difference only the merge can resolve: exit = %d\n%s%s",
+			code, stdout, stderr)
+	}
+	// Reported in full, and named. "Nothing to do" is only trustworthy if the reader can see what
+	// was set aside and disagree with it — a gate that silently swallowed a page it decided was
+	// somebody else's problem would be the false pass §4.6 forbids, arriving through the exit code
+	// instead of the output.
+	for _, want := range []string{"lateshipping", "the merge will rebuild", "rebuilt after this merges"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the pass does not say %q:\n%s", want, stdout)
+		}
+	}
+	if strings.Contains(stdout, "matches this tree") {
+		t.Errorf("claimed a match on a bundle that is a page short:\n%s", stdout)
+	}
+
+	// The same tree, verified strictly. This is what runs on the default branch, where signpost
+	// *writes* the stamp and there is no later rebuild to defer to, so every one of those
+	// differences is a defect. Without this the stage above is indistinguishable from a gate that
+	// stopped checking.
+	stdout, _, code = invoke(t, "verify", "--quiet", "-repo", "example.com/corpus", dir)
+	if code != 1 {
+		t.Fatalf("a strict verify passed on a bundle a build would rewrite: exit = %d\n%s",
+			code, stdout)
+	}
+	if !strings.Contains(stdout, "lateshipping") {
+		t.Errorf("the strict failure does not name the module that appeared:\n%s", stdout)
+	}
+
+	// And now the negative boundary, on that same branch: a page index.md links to, deleted. No
+	// rebuild after the merge repairs this — the link dangles in every checkout of this bundle —
+	// so it has to reach the exit code even though the tree also carries the deferred differences
+	// asserted above. A classifier keyed off the mode, or off the message text, passes everything
+	// above and fails here.
+	// A module page rather than index.md itself, and that distinction is the finding: index.md is
+	// where the links live, so deleting *it* takes the dangling references with it and leaves a
+	// bundle the rebuild does restore. What no rebuild restores is a link with no target.
+	var victim string
+	for _, rel := range sortedPageNames(bundlePages(t, dir)) {
+		if strings.HasPrefix(rel, "modules/") {
+			victim = rel
+			break
+		}
+	}
+	if victim == "" {
+		t.Fatal("the corpus bundle has no module page, so there is no link to dangle")
+	}
+	if err := os.Remove(filepath.Join(dir, okf.BundleDir,
+		filepath.FromSlash(victim))); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "break: delete a page the bundle links to")
+
+	stdout, stderr, code = invoke(t, "verify", "--quiet", "-as-of-bundle",
+		"-repo", "example.com/corpus", dir)
+	if code != 1 {
+		t.Fatalf("the branch gate passed on a bundle no rebuild repairs: exit = %d\n%s%s",
+			code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "is not in the bundle") {
+		t.Errorf("the failure does not say the link resolves to nothing:\n%s", stdout)
+	}
+	// Both severities in one run, and both visible. A failure that stopped printing the deferred
+	// differences would leave the author guessing which half is theirs.
+	if !strings.Contains(stdout, "the merge will rebuild") {
+		t.Errorf("the deferred differences vanished once something else failed:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "problem(s)") {
+		t.Errorf("the failure does not separate what must be acted on:\n%s", stdout)
+	}
+}
+
 // TestCorpusSecretsAreAttributedToTheServiceThatReadsThem is the regression for secrets
 // sprayed across every service in a compose file.
 //
