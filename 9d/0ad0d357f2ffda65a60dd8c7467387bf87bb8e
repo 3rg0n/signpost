@@ -1,0 +1,43 @@
+docs/design.md
+  s_f6c0b1ac81cb95::t_f9737386ac284a 1702-1715
+  s_f6c0b1ac81cb95::t_135889b0822226 1340-1344
+.signpost.yml
+  s_f6c0b1ac81cb95::t_8ae582ea71e53a 1-18
+.github/workflows/signpost.yml
+  s_f6c0b1ac81cb95::t_665e0a3454ed6d 82-88,92
+  s_f6c0b1ac81cb95::t_cd12a77cfe7892 189
+  s_f6c0b1ac81cb95::t_aaf680fd99950d 101
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_af523fd71327b3 1042-1054,1059-1062
+  s_f6c0b1ac81cb95::t_3e991a1b7edbe6 1055-1058
+.github/workflows/signpost-semantic.yml
+  s_f6c0b1ac81cb95::t_a83d9317bdd931 166
+  s_f6c0b1ac81cb95::t_9cc2aa6f395e4c 148-152
+cmd/signpost/config_test.go
+  s_f6c0b1ac81cb95::t_0ba373d59d010c 203-219,235-239,257-259,264-266,274,278-280,304,308-327
+  s_f6c0b1ac81cb95::t_14f254d5e71b4c 183-185
+  s_f6c0b1ac81cb95::t_50b727ebfc2e93 220-230,267,281-282
+  s_f6c0b1ac81cb95::t_eadd0362a8a352 231-234,240-256,260-263,268-273,275-277,283-303,305-307
+  s_f6c0b1ac81cb95::t_26df2582ae3bec 13
+  s_f6c0b1ac81cb95::t_370bb27b3b21d8 5
+README.md
+  s_f6c0b1ac81cb95::t_de9fae3bc3e0b4 294-301
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_e77fa5d03378e1 697-703,708,721,759,781,829,848,871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9d0ad0d357f2ffda65a60dd8c7467387bf87bb8e",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
