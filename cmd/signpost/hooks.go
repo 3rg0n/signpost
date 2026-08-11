@@ -235,13 +235,20 @@ func reportHookStatus(p *printer, st hook.Status) {
 // commit compares against a sha that does not exist yet and calls almost every page stale;
 // measured on this repository it reports 38 problems where -as-of-bundle reports the 1 that
 // is real.
+//
+// Pending is a reminder here and silence in CI, from the same run, and the asymmetry is the
+// point rather than an exception to it. ADR 0027 keeps a difference out of CI's exit code when
+// the only thing that resolves it is the rebuild after the merge — nothing the author of a pull
+// request is permitted to do. On this machine, right after a commit, there is no merge and no
+// push job: `signpost build` is the remedy and the person reading this line is the one who runs
+// it. Same comparison, same severity, opposite audience.
 func hooksRunVerify(path string, out, errOut io.Writer) error {
 	err := runVerify([]string{"-as-of-bundle", "-quiet", path}, errOut, errOut)
 	p := newPrinter(out)
 	switch {
 	case err == nil:
 		return nil
-	case errors.Is(err, errStale):
+	case errors.Is(err, errStale), errors.Is(err, errPending):
 		p.printf("signpost: %s/ does not match this tree — run `signpost build` and commit %s/\n",
 			hook.BundleDir, hook.BundleDir)
 		return p.Err()

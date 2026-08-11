@@ -145,12 +145,15 @@ jobs:
       # render. A pull request that changes what the map says still fails here; one
       # that only moves the commit does not.
       #
-      # The remedy when this fails is *not* to run `signpost build` on the branch —
-      # §8.0 keeps `.signpost/` off branches so two branches cannot conflict in it.
-      # It is to check whether the diff really changed the structure, and if it did,
-      # to let the push job regenerate the bundle after merge. The message is
-      # printed either way, because a failing gate that does not say what it found
-      # is a gate nobody can act on.
+      # A red job here means the bundle is broken in a way this branch has to fix —
+      # never "run `signpost build` and commit it", which §8.0 forbids on a branch so
+      # that two branches cannot conflict in `.signpost/`. That distinction is the
+      # command's, not this file's: differences a rebuild after the merge resolves are
+      # printed as pending and exit 0, and a deleted bundle, a link with no target, or
+      # frontmatter no reader can parse still exits 1. This job failed thirteen
+      # consecutive pull requests before that split, correctly every time and with no
+      # action anybody was allowed to take, which is how a gate becomes something people
+      # merge past by habit. See ADR 0027.
       #
       # The absent-bundle case is a skip rather than a failure, and the condition is
       # narrower than it looks. A repository that has just adopted signpost has no

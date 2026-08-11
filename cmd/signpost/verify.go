@@ -18,10 +18,18 @@ import (
 // which exits zero is worse than no check, because a bundle everyone trusts and nobody
 // validates is confidently wrong.
 //
-// So the exit code is the interface. `1` means the bundle does not match the tree; `0`
-// means every check ran and passed, or ran and found only litter. Which checks ran is
-// printed either way, because "ok" from a verify that opened nothing looks exactly like
+// So the exit code is the interface, and what it has to mean is *whether the reader must
+// act*. `1` means something is wrong that they can fix; `0` means carry on. Which checks ran
+// is printed either way, because "ok" from a verify that opened nothing looks exactly like
 // "ok" from one that opened everything.
+//
+// Under -as-of-bundle that puts one class of difference outside the exit code: the pages a
+// rebuild would change because this branch added or moved structure. §8.0 forbids rebuilding
+// the bundle on a branch, so the remedy is the merge, and a red gate whose instructions the
+// author is not allowed to follow is a gate everybody learns to merge past — including on the
+// run where the bundle is really broken. Those differences are printed in full and counted as
+// pending. See okf.classifyPending; the strict verify has no merge to defer to and keeps
+// failing on all of them.
 func runVerify(args []string, out, errOut io.Writer) error {
 	fs := flag.NewFlagSet("verify", flag.ContinueOnError)
 	// One writer for the whole of this command's usage, so the prose above and
@@ -113,6 +121,9 @@ func runVerify(args []string, out, errOut io.Writer) error {
 	if !res.OK() {
 		return errStale
 	}
+	if len(res.Pending) > 0 {
+		return errPending
+	}
 	return nil
 }
 
@@ -120,6 +131,18 @@ func runVerify(args []string, out, errOut io.Writer) error {
 // it the same way it maps every other "signpost ran and what it found was the problem"
 // case: exit 1, not 2. A CI job needs to tell a stale bundle from a mistyped flag.
 var errStale = fmt.Errorf("the bundle does not match this tree")
+
+// errPending is not a failure and runOr never sees it: the pending case exits 0, which is the
+// whole point of the severity. It exists for the one caller that is neither CI nor a person
+// reading a terminal — the post-commit hook, which shares this function precisely so a second
+// implementation of "is the bundle current" cannot drift from the one CI gates on.
+//
+// The hook needs the opposite answer from the same run. Pending means "a rebuild after the merge
+// resolves this", and on a developer's machine after a commit there is no merge and no push job:
+// the remedy is `signpost build`, right now, by them. So the hook has to print its reminder for
+// exactly the differences CI is right to stay quiet about. Distinguishing them by re-deriving
+// anything would reintroduce the second implementation; this returns the fact.
+var errPending = fmt.Errorf("the bundle will be rebuilt after this merges")
 
 // reportVerify prints what was checked, then what was wrong.
 //
@@ -139,7 +162,25 @@ func reportVerify(p *printer, root string, res *okf.VerifyResult) {
 	for _, w := range res.Warnings {
 		p.printf("  warning: %s\n", w)
 	}
+	// Printed in full, above the verdict, and never folded into a count. These are the
+	// differences the merge resolves, so the reader's action is nothing — but "nothing to do"
+	// is only trustworthy if they can see what was set aside and disagree with it. A gate that
+	// silently swallowed a page it decided was somebody else's problem would be the false pass
+	// this command exists to prevent, arriving through the exit code instead of the output.
+	if len(res.Pending) > 0 {
+		p.printf("  %d difference(s) the merge will rebuild, not this branch:\n",
+			len(res.Pending))
+		for _, f := range res.Pending {
+			p.printf("    %s\n", f)
+		}
+	}
 	if res.OK() {
+		if len(res.Pending) > 0 {
+			// Deliberately not "ok: the bundle matches this tree", which would be false.
+			// It does not match; nothing on this branch is supposed to make it match.
+			p.printf("  ok: nothing to do here — the bundle is rebuilt after this merges\n")
+			return
+		}
 		p.printf("  ok: the bundle matches this tree\n")
 		return
 	}

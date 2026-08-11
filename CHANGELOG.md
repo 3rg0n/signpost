@@ -1039,6 +1039,52 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-11
 
+- **The pull-request gate fails only on a bundle the branch can fix, so a red `verify` job means
+  somebody has to act.** [ADR 0024](docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md)
+  made `verify -as-of-bundle` read the bundle's own history, and the gate still failed thirteen
+  consecutive pull requests afterwards — every one correctly, and not one acted on. Each failure
+  named the same remedy the strict check names, `run signpost build and commit the result`, and
+  design §8.0 forbids that on a branch: the bundle is written on the default branch only, so two
+  branches cannot collide in it. So the gate was red with instructions its author was not permitted
+  to follow, and the response that actually worked was to merge past it. Thirteen times, which is
+  how a check that goes red on every structural change teaches everybody to skim it — and the
+  skimming does not pause for the run where the bundle is genuinely broken.
+
+  **Severity now follows the remedy rather than the correctness of the observation.** A failure
+  means act; a pass means carry on; a difference nobody can act on is neither and gets its own
+  severity, `pending`, which is reported and stays out of the exit code. Four finding kinds
+  qualify, because a build on the branch is the remedy for each and §8.0 forbids it: a page a build
+  would rewrite, a concept with no page, a page with no concept, and a `pages` list that is
+  arithmetic over those two. Everything else stays a failure — a deleted bundle, a link with no
+  target, frontmatter no conforming reader can parse, a page claiming a commit that is not the one
+  being described. A merge inherits every one of those rather than repairing it.
+
+  Inverting the gate was weighed first and is worse: it collapses "this branch added a module" and
+  "this branch contradicts the bundle" into one verdict, and the second one becomes the green case
+  — a broken bundle passing, which is the confidently-wrong artefact §4.6 exists to prevent,
+  arriving through the exit code. `continue-on-error` was considered and refused as the same
+  disease in a yellow coat: a per-job annotation makes every future failure advisory too.
+
+  Pending exists under `-as-of-bundle` and nowhere else, which is what keeps it a distinction
+  rather than a hole — the strict verify is the run that *writes* the bundle, so it has no later
+  rebuild to defer to and all four kinds are defects there. Pending findings print in full above
+  the verdict and are never folded into a count: "nothing to do" is only trustworthy if the reader
+  can see what was set aside and disagree with it. The verdict says
+  `ok: nothing to do here — the bundle is rebuilt after this merges` rather than claiming a match
+  that does not exist. `manifest.json`'s page list moved to its own finding kind in the process,
+  because a short `pages` list and unparseable frontmatter land on the same file and need opposite
+  severities on a branch. See
+  [ADR 0027](docs/adr/0027-a-gate-fails-only-on-what-the-reader-can-fix.md); the cost, which is
+  deliberate, is that a structural change wrong in a way only a rebuild reveals is reported after
+  the merge instead of before it.
+
+  **The post-commit hook still reminds you about exactly what CI stays quiet about.** It shares
+  `verify -as-of-bundle` rather than reimplementing the comparison, so this split reached it too —
+  and pending means the opposite thing there. On a laptop after a commit there is no merge and no
+  push job: `signpost build` is the remedy and the person reading the line is the one who runs it.
+  Same comparison, same severity, opposite audience, pinned by a test that asserts the gate is
+  green and the hook is not on the same tree.
+
 - **An author name containing a unit separator no longer replaces every module page's commit
   dates with a fragment of that name.** git accepts any byte but NUL in an author name —
   verified against git 2.51.1 — including the 0x1f the log format uses as its field separator.

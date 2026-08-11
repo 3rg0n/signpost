@@ -285,7 +285,13 @@ func editDistance(a, b string) int {
 func runOr(errOut io.Writer, fn func() error) int {
 	err := fn()
 	switch {
-	case err == nil, errors.Is(err, flag.ErrHelp):
+	// errPending joins the zero cases because it is not a failure — it is verify reporting
+	// differences whose only remedy is the rebuild that runs after the branch merges, and
+	// design §4.6 makes the exit code mean *whether the reader must act*. It is an error value
+	// at all so that the one caller for whom the remedy does exist — the post-commit hook, on a
+	// machine where nothing is going to merge — can tell that case apart without re-deriving it.
+	// See runVerify.
+	case err == nil, errors.Is(err, flag.ErrHelp), errors.Is(err, errPending):
 		return 0
 	case errors.Is(err, errFlagParse), errors.Is(err, errReported):
 		return 2

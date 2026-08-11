@@ -215,16 +215,10 @@ func TestVerifyStrictStillFailsOnABranchCommit(t *testing.T) {
 	}
 }
 
-// -as-of-bundle is not a way to stop checking. A commit that really does change the structure
-// fails under it, which is the property that makes it safe to pass on every pull request.
-func TestVerifyAsOfBundleStillFailsOnRealDrift(t *testing.T) {
-	root := gitFixture(t)
-	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
-		t.Fatalf("build exit = %d\n%s", code, stderr)
-	}
-	git(t, root, "add", "-A")
-	git(t, root, "commit", "-q", "-m", "the bundle")
-
+// addBilling writes and commits a package the bundle has no page for. The shape of most pull
+// requests that touch the gate at all.
+func addBilling(t *testing.T, root string) {
+	t.Helper()
 	full := filepath.Join(root, "internal", "billing", "billing.go")
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatal(err)
@@ -234,14 +228,151 @@ func TestVerifyAsOfBundleStillFailsOnRealDrift(t *testing.T) {
 	}
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-q", "-m", "a new module")
+}
+
+// A branch that adds a module exits zero, prints every difference, and says nobody has to act.
+//
+// This asserted exit 1 until the gate had failed thirteen consecutive pull requests, every one of
+// them for this reason and every one of them correctly. The remedy the failure named is
+// `signpost build`, which §8.0 forbids on a branch: the bundle is written on the default branch
+// only, so two branches cannot collide in it. A red gate whose instructions the author is not
+// allowed to follow gets merged past as a habit, and the habit does not pause for the run where
+// the bundle is really broken — so the severity had to follow the remedy. The counterpart that
+// still fails is below, and the strict run on the same repository is
+// TestVerifyFailsAfterTheCodeChanges.
+func TestVerifyAsOfBundleReportsANewModuleAsPendingAndPasses(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the bundle")
+	addBilling(t, root)
 
 	stdout, _, code := invoke(t, "verify", "-as-of-bundle", "--quiet", root)
-	if code != 1 {
-		t.Fatalf("exit = %d, want 1: a new module is drift the mode must still catch\n%s",
+	if code != 0 {
+		t.Fatalf("exit = %d: the branch cannot rebuild the bundle, so it cannot be asked to\n%s",
 			code, stdout)
 	}
+	// Printed in full, never folded into a count and never dropped. "Nothing to do" is only
+	// trustworthy if the reader can see what was set aside and disagree with it; a gate that
+	// silently swallowed a page would be the false pass §4.6 forbids, arriving through the exit
+	// code instead of the output.
 	if !strings.Contains(stdout, "billing") {
-		t.Errorf("the failure does not name the module that appeared:\n%s", stdout)
+		t.Errorf("the pass does not name the module that appeared:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "the merge will rebuild") {
+		t.Errorf("the differences were not reported as the merge's work:\n%s", stdout)
+	}
+	// Deliberately not "the bundle matches this tree", which would be false. It does not match;
+	// nothing on this branch is supposed to make it match.
+	if strings.Contains(stdout, "matches this tree") {
+		t.Errorf("claimed a match on a bundle that is a page short:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "rebuilt after this merges") {
+		t.Errorf("the verdict does not say what resolves the differences:\n%s", stdout)
+	}
+}
+
+// The hook prints a reminder for exactly what CI stays quiet about, and both read the same run.
+//
+// Not an exception to the severity — an application of it. Pending means "the rebuild after the
+// merge resolves this", which is true on a branch and false on a laptop: there is no merge here and
+// no push job, so `signpost build` is the remedy and the person reading the line is the one who
+// runs it. The hook calls runVerify rather than reimplementing the comparison precisely so it
+// cannot drift from the gate, which is what makes this worth pinning: the shared function now has
+// to carry a distinction its two callers resolve in opposite directions.
+func TestHookRemindsAboutWhatTheBranchGateDefers(t *testing.T) {
+	root := gitFixture(t)
+	if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+		t.Fatalf("build exit = %d\n%s", code, stderr)
+	}
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "the bundle")
+	addBilling(t, root)
+
+	// The gate's answer on this tree, asserted here as well so the two are compared rather than
+	// assumed: green, because nothing the author can do resolves it.
+	if _, _, code := invoke(t, "verify", "-as-of-bundle", "--quiet", root); code != 0 {
+		t.Fatalf("the branch gate is not green on this tree, so the comparison below is not the "+
+			"asymmetry it claims to be: exit = %d", code)
+	}
+
+	stdout, stderr, code := invoke(t, "hooks", "run", "-check", "verify", root)
+	// Zero regardless: a post-commit hook that failed would reject a commit that already
+	// happened. The reminder is the output, never the exit code.
+	if code != 0 {
+		t.Fatalf("exit = %d, want 0 from a post-commit reminder\n%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "signpost build") {
+		t.Errorf("the hook stayed silent about a bundle this machine can rebuild:\nstdout:\n%s\n"+
+			"stderr:\n%s", stdout, stderr)
+	}
+}
+
+// The counterpart, and the whole reason the split is a distinction rather than a switch-off: a
+// bundle that is broken *now* still exits 1 on a branch, because the merge inherits it rather
+// than repairing it. Both cases here sit on a repository that *also* has a pending difference, so
+// a classifier that keyed off the mode rather than the finding would pass this.
+func TestVerifyAsOfBundleStillFailsOnABundleTheMergeCannotFix(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		want    string
+		breakIt func(t *testing.T, root string)
+	}{
+		{
+			// index.md keeps pointing at a path that is not there, in every checkout of this
+			// branch and in every checkout after the merge.
+			name: "a page the bundle links to deleted",
+			want: "is not in the bundle",
+			breakIt: func(t *testing.T, root string) {
+				page := filepath.Join(root, okf.BundleDir, "modules", "auth.md")
+				if err := os.Remove(page); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "frontmatter no conforming reader can parse",
+			want: "not parseable YAML",
+			breakIt: func(t *testing.T, root string) {
+				page := filepath.Join(root, okf.BundleDir, "modules", "auth.md")
+				src, err := os.ReadFile(page)
+				if err != nil {
+					t.Fatal(err)
+				}
+				out := strings.Replace(string(src), "type:", "type: [unterminated\nkey:", 1)
+				if err := os.WriteFile(page, []byte(out), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := gitFixture(t)
+			if _, stderr, code := invoke(t, "build", "--quiet", root); code != 0 {
+				t.Fatalf("build exit = %d\n%s", code, stderr)
+			}
+			git(t, root, "add", "-A")
+			git(t, root, "commit", "-q", "-m", "the bundle")
+			addBilling(t, root)
+			tc.breakIt(t, root)
+			git(t, root, "add", "-A")
+			git(t, root, "commit", "-q", "-m", "break the bundle")
+
+			stdout, _, code := invoke(t, "verify", "-as-of-bundle", "--quiet", root)
+			if code != 1 {
+				t.Fatalf("exit = %d, want 1: no rebuild resolves this\n%s", code, stdout)
+			}
+			if !strings.Contains(stdout, tc.want) {
+				t.Errorf("the failure does not say %q:\n%s", tc.want, stdout)
+			}
+			// The pending difference is still reported alongside it. A failure that stopped
+			// printing them would leave the author guessing which half to act on.
+			if !strings.Contains(stdout, "the merge will rebuild") {
+				t.Errorf("the deferred differences vanished once something else failed:\n%s", stdout)
+			}
+		})
 	}
 }
 
