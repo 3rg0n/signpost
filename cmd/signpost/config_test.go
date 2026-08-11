@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/3rg0n/signpost/internal/config"
 	"github.com/3rg0n/signpost/internal/model"
+	"github.com/3rg0n/signpost/internal/okf"
 )
 
 // These tests drive the real CLI, which is the only place ADR 0011's precedence exists: the
@@ -178,9 +180,9 @@ func TestConfigNoHistoryAndMaxCommitsAreHonoured(t *testing.T) {
 }
 
 // -repo has to be settable, because it is the key ADR 0011's fourth force names: signpost's own
-// CI passes it in five places across four workflows. And it has to be settable identically for
-// build and verify, since a verify run with a different value reports a difference that
-// describes the invocation rather than the bundle.
+// CI passed it in eight places across three workflows until the key replaced them. And it has to
+// be settable identically for build and verify, since a verify run with a different value reports
+// a difference that describes the invocation rather than the bundle.
 func TestConfigRepoReachesBuildAndVerify(t *testing.T) {
 	root := fixture(t)
 	writeConfig(t, root, "repo: example.com/org/from-file\n")
@@ -196,6 +198,131 @@ func TestConfigRepoReachesBuildAndVerify(t *testing.T) {
 		t.Fatalf("verify does not agree with the bundle build wrote from the same config: "+
 			"exit = %d\n%s", code, stderr)
 	}
+}
+
+// The regression that moved this key out of the workflows: two clones of one repository, built
+// under two different names, produce two different bundles from identical source at an identical
+// commit.
+//
+// The workflows passed `-repo "github.com/${GITHUB_REPOSITORY}"`, which names the repository the
+// *job* is running in and not the one being described. So a fork's own CI restamped every page
+// carrying a `resource:` — index.md, log.md, manifest.json, and each module page — and the fork's
+// first sync from upstream conflicted inside `.signpost/`. That is the merge conflict design §8.0
+// exists to prevent, arriving from the direction §8.0 does not cover: not two branches writing the
+// bundle, but two repositories writing it with different answers to what the repository is called.
+//
+// Asserted as a pair, because either half alone proves nothing. The negative half is what makes
+// this a regression test rather than a restatement of TestConfigRepoReachesBuildAndVerify: without
+// it, a build that had stopped reading the key at all — or one that stamped no resource — would
+// pass the positive by making every bundle identical for the wrong reason.
+func TestConfigRepoKeepsForkBundlesIdenticalWhereTheFlagDidNot(t *testing.T) {
+	// Committed, because a resource URI needs a commit: without history resourceBase returns
+	// empty and neither half of this test can distinguish anything. And a real clone rather than
+	// a second fixture, because the whole claim is about one commit read twice — two fixtures
+	// would carry two shas and the comparison would fail for a reason that is not this bug.
+	upstream := gitFixture(t)
+	writeConfig(t, upstream, "repo: github.com/3rg0n/signpost\n")
+	git(t, upstream, "add", "-A")
+	git(t, upstream, "commit", "-q", "-m", "name the repository")
+
+	fork := filepath.Join(t.TempDir(), "fork")
+	git(t, upstream, "clone", "-q", ".", fork)
+
+	// The whole bundle, not just the manifest: the defect restamped every page carrying a
+	// `resource:`, and a comparison of one file would pass a fix that reached the manifest and
+	// missed index.md.
+	build := func(t *testing.T, root string, args ...string) map[string]string {
+		t.Helper()
+		if _, stderr, code := invoke(t, append([]string{"build", "-quiet"},
+			append(args, root)...)...); code != 0 {
+			t.Fatalf("build exit = %d\n%s", code, stderr)
+		}
+		out := map[string]string{}
+		bundle := filepath.Join(root, okf.BundleDir)
+		err := filepath.WalkDir(bundle, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			src, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(bundle, p)
+			if err != nil {
+				return err
+			}
+			out[filepath.ToSlash(rel)] = string(src)
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(out) == 0 {
+			t.Fatal("the build wrote no pages, so nothing below compares anything")
+		}
+		return out
+	}
+
+	// The fix: the name comes from a committed file, so it is a property of the repository and
+	// travels with the clone. Nothing here says which checkout is running.
+	up, fk := build(t, upstream), build(t, fork)
+	for rel, want := range up {
+		if got := fk[rel]; got != want {
+			t.Errorf("%s differs between a repository and its clone; the bundle records which "+
+				"checkout ran", rel)
+		}
+	}
+	if !strings.Contains(resourceOf(t, up[okf.ManifestFile]), "github.com/3rg0n/signpost") {
+		t.Errorf("the committed name did not reach the resource URI: %s",
+			resourceOf(t, up[okf.ManifestFile]))
+	}
+
+	// The defect, still reachable through the flag and asserted so the comparison above is known
+	// to be capable of failing — it is what the workflows did on every run. A flag still has to
+	// win over the file (ADR 0011), so this doubles as the precedence check.
+	//
+	// The count is asserted, not just the difference: the defect's cost was that it moved *five*
+	// pages, and a fix that left one page reading the running repository's name would still be
+	// the bug. Named rather than counted, so a bundle that grows a page does not need this
+	// number edited.
+	forked := build(t, fork, "-repo", "github.com/someforker/signpost")
+	var moved []string
+	for rel, was := range up {
+		if forked[rel] != was {
+			moved = append(moved, rel)
+		}
+	}
+	if len(moved) == 0 {
+		t.Fatal("-repo moved nothing, so it lost its precedence over the file and the " +
+			"comparison above cannot fail")
+	}
+	for _, rel := range moved {
+		if !strings.Contains(forked[rel], "someforker") {
+			t.Errorf("%s changed without naming the repository that was asked for, so it moved "+
+				"for some other reason and this test is measuring the wrong thing", rel)
+		}
+	}
+	if !strings.Contains(resourceOf(t, forked[okf.ManifestFile]), "someforker") {
+		t.Errorf("-repo lost its precedence over the file: %s",
+			resourceOf(t, forked[okf.ManifestFile]))
+	}
+}
+
+// resourceOf pulls the manifest's `resource` without a JSON dependency, which the bundle's own
+// format makes safe: the field is written by the emitter, one per manifest.
+func resourceOf(t *testing.T, manifest string) string {
+	t.Helper()
+	const key = `"resource": "`
+	i := strings.Index(manifest, key)
+	if i < 0 {
+		t.Fatalf("no resource in the manifest:\n%s", manifest)
+	}
+	rest := manifest[i+len(key):]
+	j := strings.Index(rest, `"`)
+	if j < 0 {
+		t.Fatalf("unterminated resource in the manifest:\n%s", manifest)
+	}
+	return rest[:j]
 }
 
 // hooks.check, the key that was promised in `hooks run -h` before it existed.

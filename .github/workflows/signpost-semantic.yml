@@ -145,8 +145,11 @@ jobs:
           SIGNPOST_OPENAI_API_KEY: ${{ secrets.SIGNPOST_OPENAI_API_KEY }}
         run: |
           set -euo pipefail
-          ./signpost build -semantic -semantic-timeout 30m \
-            -repo "github.com/${GITHUB_REPOSITORY}" .
+          # No -repo: `.signpost.yml` names the repository, so this job and
+          # signpost.yml cannot disagree about what every page's `resource:` says.
+          # Two workflows that both write the bundle are two chances to stamp it
+          # with different names.
+          ./signpost build -semantic -semantic-timeout 30m .
 
       # Strict, with no -as-of-bundle. This job writes the stamp, so it is one of
       # the two places that can check the stamp it just wrote is true.
@@ -160,7 +163,7 @@ jobs:
         if: steps.backend.outputs.configured == 'true'
         run: |
           set -euo pipefail
-          ./signpost verify -repo "github.com/${GITHUB_REPOSITORY}" .
+          ./signpost verify .
 
       # Committed only when the bytes changed, same as signpost.yml, and for the
       # same reason: a weekly no-op commit on the default branch is the churn

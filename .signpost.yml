@@ -1,0 +1,18 @@
+# How this repository wants to be read. ADR 0011 decided one file, one precedence order:
+# flag > environment > file > default.
+#
+# One key, and it is here rather than in the workflows for a reason a fork demonstrates.
+# `repo` feeds every page's `resource:` (`git://<repo>@<sha>`), and the workflows used to
+# pass `-repo "github.com/${GITHUB_REPOSITORY}"`, which is the *running* repository's name.
+# A fork's own CI therefore rebuilt five pages — index.md, log.md, manifest.json,
+# practices.md, and every module page — with its own name over identical source at an
+# identical commit, so a fork bundle never byte-matched upstream and the first sync from
+# upstream conflicted inside `.signpost/`. That is the merge conflict design §8.0 exists to
+# prevent, arriving from the one direction §8.0 does not cover: not two branches writing the
+# bundle, but two *repositories* writing it with different answers to what this repository
+# is called.
+#
+# Committed, so the name is a property of the repository rather than of whoever is running
+# the build — which is what it always was. A fork that means to publish under its own name
+# changes this line, in a diff that says so.
+repo: github.com/3rg0n/signpost

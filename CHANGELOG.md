@@ -1039,6 +1039,27 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-11
 
+- **A fork no longer rebuilds the bundle under its own name, so its first sync from upstream does
+  not conflict inside `.signpost/`.** Every page's `resource:` is `git://<repo>@<sha>`, and the
+  workflows supplied `<repo>` as `-repo "github.com/${GITHUB_REPOSITORY}"` — the repository the
+  *job* runs in, which on a fork is not the repository being described. Measured on a clone: five
+  files diverged over identical source at an identical commit — `index.md`, `log.md`,
+  `manifest.json`, `practices.md`, and every module page — so a fork bundle never byte-matched
+  upstream, and a sync from upstream conflicted in all five. That is the merge conflict design
+  §8.0 exists to prevent, arriving from the one direction §8.0 did not cover: not two branches
+  writing the bundle, but two repositories writing it with different answers to what the
+  repository is called. §8.0 gains that as a fourth decision.
+
+  The name is now a committed fact. A `.signpost.yml` at the root holds `repo:` and nothing else,
+  so it travels with the clone and a fork that means to publish under its own name changes that
+  line in a diff that says so. Thirteen `-repo` flags come out of the workflows — eight from
+  `ci.yml`'s self-analysis, three from `signpost.yml` including the pull-request gate, two from
+  `signpost-semantic.yml` — while the seventeen in `ci.yml` that name `example.com/corpus` stay,
+  because that fixture has no config file and the synthetic name is the point. The flag stays too, and still
+  wins over the file ([ADR 0011](docs/adr/0011-configuration-file-format-and-location.md)), for
+  the caller describing a tree that is not a checkout of the thing being named — which is what
+  the new regression test uses to prove its own comparison can fail.
+
 - **The pull-request gate fails only on a bundle the branch can fix, so a red `verify` job means
   somebody has to act.** [ADR 0024](docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md)
   made `verify -as-of-bundle` read the bundle's own history, and the gate still failed thirteen

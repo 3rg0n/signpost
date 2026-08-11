@@ -694,17 +694,18 @@ jobs:
       - name: Bundle is stable, preserves edits, and ships nothing executable
         run: |
           set -euo pipefail
-          # The same flags on every run below. -repo feeds each page's resource:
-          # URI, so a second run without it would legitimately produce different
-          # bytes and the diff would report a determinism failure that is really a
-          # difference in what was asked for.
-          repo="github.com/${GITHUB_REPOSITORY}"
-          ./signpost build -quiet -repo "$repo" . >build1.txt
+          # No -repo on any run below. Each page's `resource:` URI comes from
+          # `.signpost.yml`, which is committed, so every run in this job asks for
+          # the same thing and a byte difference is a determinism failure rather
+          # than a difference in what was asked for. It was a `-repo` built from
+          # ${GITHUB_REPOSITORY} until a fork showed that names the *running*
+          # repository: identical source at an identical commit, five pages apart.
+          ./signpost build -quiet . >build1.txt
           cat build1.txt
           # Outside the checkout: a copy left in the tree is content the second run
           # would discover, so the comparison would change the thing it measures.
           cp -r .signpost "${RUNNER_TEMP}/first"
-          ./signpost build -quiet -repo "$repo" . >/dev/null
+          ./signpost build -quiet . >/dev/null
           if ! diff -r "${RUNNER_TEMP}/first" .signpost; then
             echo "the bundle is not byte-identical across two runs"
             exit 1
@@ -717,7 +718,7 @@ jobs:
           page="$1"
           note='SENTINEL: a human wrote this outside the managed markers.'
           printf '\n%s\n' "$note" >>"$page"
-          ./signpost build -quiet -repo "$repo" . >build3.txt
+          ./signpost build -quiet . >build3.txt
           grep -qF "$note" "$page" || {
             echo "a human edit to ${page} was lost by a rebuild"
             exit 1
@@ -747,7 +748,6 @@ jobs:
       - name: Verify passes on a current bundle, and fails on a stale one
         run: |
           set -euo pipefail
-          repo="github.com/${GITHUB_REPOSITORY}"
           # Output goes outside the checkout, as in the step above: a file written
           # into the tree is content signpost discovers, so it would be part of
           # the tree being verified but not of the bundle being verified against.
@@ -756,7 +756,7 @@ jobs:
           # would abort the step before the output is printed, and then the log
           # says a gate failed without saying what it found.
           ok=0
-          ./signpost verify -quiet -repo "$repo" . >"$out" || ok=$?
+          ./signpost verify -quiet . >"$out" || ok=$?
           cat "$out"
           [ "$ok" -eq 0 ] || {
             echo "verify failed on the bundle this job just built"
@@ -778,7 +778,7 @@ jobs:
           mkdir -p internal/ciprobe
           printf 'package ciprobe\n\n// Probe exists to make the bundle stale.\nfunc Probe() {}\n' \
             >internal/ciprobe/ciprobe.go
-          if ./signpost verify -quiet -repo "$repo" . >"${RUNNER_TEMP}/verify2.txt"; then
+          if ./signpost verify -quiet . >"${RUNNER_TEMP}/verify2.txt"; then
             echo "verify exited 0 on a stale bundle — the gate cannot fail, so it is not a gate"
             cat "${RUNNER_TEMP}/verify2.txt"
             exit 1
@@ -807,7 +807,6 @@ jobs:
       - name: A page whose concept is gone is deleted, unless somebody wrote on it
         run: |
           set -euo pipefail
-          repo="github.com/${GITHUB_REPOSITORY}"
           # The glob's *last* match, and the reason is the step above: it appended
           # the SENTINEL note to the first one, so that page is human territory now
           # and a copy of it is correctly kept rather than pruned — the tool being
@@ -827,7 +826,7 @@ jobs:
           printf '\nKEEPME: the code this describes moved.\n' >>"$written"
 
           out="${RUNNER_TEMP}/verify3.txt"
-          if ./signpost verify -quiet -repo "$repo" . >"$out"; then
+          if ./signpost verify -quiet . >"$out"; then
             echo "verify exited 0 with a page describing a concept this repository does not have"
             cat "$out"
             exit 1
@@ -846,7 +845,7 @@ jobs:
           }
           echo "verify: non-zero on a surplus page, both pages named"
 
-          ./signpost build -quiet -repo "$repo" . >"${RUNNER_TEMP}/build4.txt"
+          ./signpost build -quiet . >"${RUNNER_TEMP}/build4.txt"
           cat "${RUNNER_TEMP}/build4.txt"
           grep -q 'page(s) removed' "${RUNNER_TEMP}/build4.txt" || {
             echo "build did not report removing anything"
@@ -869,7 +868,7 @@ jobs:
           # fix leaves the gate red is the gate people switch off.
           out="${RUNNER_TEMP}/verify4.txt"
           ok=0
-          ./signpost verify -quiet -repo "$repo" . >"$out" || ok=$?
+          ./signpost verify -quiet . >"$out" || ok=$?
           cat "$out"
           [ "$ok" -eq 0 ] || {
             echo "verify still fails after the rebuild it asked for"

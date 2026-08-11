@@ -1337,6 +1337,11 @@ model: google.gemma-3-12b-it # passed through verbatim
 hooks: { check: fast }       # fast | verify
 ```
 
+`repo` is the key that has to be here rather than in a workflow, and §8.0's fourth decision
+is why: it names the repository being described, a workflow knows only the repository it is
+running in, and on a fork those are different. This repository's own `.signpost.yml` holds
+that one key and nothing else.
+
 Anything that decides whether a check *fails* stays a flag — `-as-of-bundle`,
 `-fail-on-cycle`, any future threshold — because a repository that can weaken its own gate
 by committing a file is not gated. So is anything that is a property of one invocation
@@ -1693,6 +1698,20 @@ gets deleted. Three decisions handle it, in order of how much they matter:
    this must never do is resolve a conflict inside a human region — `## Notes` and
    `verified:` blocks conflict like any other hand-written text and are the
    author's to reconcile.
+
+4. **The repository's name comes from the repository, not from the run.** Every page's
+   `resource:` is `git://<repo>@<sha>`, and `<repo>` is a thing a checkout cannot know —
+   a remote URL is a checkout detail and a fork's remote names the upstream — so it is
+   asked for. Asking the *workflow* is what (1)–(3) do not cover: signpost's own CI
+   passed `-repo "github.com/${GITHUB_REPOSITORY}"`, which names the repository the job
+   runs in. A fork's own CI therefore restamped every page carrying a resource, over
+   identical source at an identical commit, and the fork's first sync from upstream
+   conflicted inside `.signpost/` — not two branches writing the bundle, but two
+   *repositories* writing it with different answers to what the repository is called. So
+   the name belongs in `.signpost.yml`, where it is committed and travels with the clone.
+   A fork that means to publish under its own name changes that line, in a diff that says
+   so. The flag stays, and still wins (ADR 0011), for the caller who is describing a tree
+   that is not a checkout of the thing being named.
 
 We ship no custom git merge driver in v0.1. A merge driver requires every
 contributor to configure it locally (`.gitattributes` names it; only

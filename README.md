@@ -291,8 +291,14 @@ config file instead.
 
 ## Configuring it
 
-Optional. A `.signpost.yml` at the repository root sets the defaults for the flags every
-run would otherwise repeat, so `build` and `verify` cannot drift apart:
+Optional, with one key that is close to not being: a `.signpost.yml` at the repository root
+sets the defaults for the flags every run would otherwise repeat, so `build` and `verify`
+cannot drift apart.
+
+`repo` is the near-exception. It names the repository every page's `resource:` points at,
+and passing it from CI names the repository the *job* runs in — so a fork rebuilds identical
+source under its own name and its next sync from upstream conflicts inside `.signpost/`. Put
+it in the file, where it travels with the clone.
 
 ```yaml
 repo: example.com/org/repo   # what every page's resource: names
