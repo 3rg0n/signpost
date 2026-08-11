@@ -1,0 +1,24 @@
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_346a0d6e5bb0e1 1063-1067
+README.md
+  s_f6c0b1ac81cb95::t_ab9218767586b8 291-294
+  s_f6c0b1ac81cb95::t_24a033e7804d24 269
+  s_f6c0b1ac81cb95::t_d47aed4056957e 352
+  s_f6c0b1ac81cb95::t_479ac38a142a4f 208-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c159a3bc3a2ec5b417a94eb75791ba7f9727413a",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
