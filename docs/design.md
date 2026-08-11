@@ -522,6 +522,26 @@ imports do not show. All of it annotates nodes the structural pass already creat
 none of it creates one:
 [ADR 0020](adr/0020-git-history-annotates-the-map-and-never-draws-it.md).
 
+Two further reads sit alongside those, and both answer a question with a count rather than
+with text. **Commit-message shape** rides on the same walk — one more field on a format git
+is already producing — and yields how many subjects were seen, how many follow Conventional
+Commits, and how many name an issue. No subject is stored anywhere: a message is arbitrary
+bytes from an untrusted repository bound for a committed markdown file, and counting one owns
+no escaping problem where keeping one would. Adoption is bimodal in practice, measured at
+100/99/96/83/11/0/0 percent across seven repositories, so the *rate* is the signal and a
+repository at 11% is reported as not using the convention rather than as partly using it.
+**Tags** are a separate read, because a tag is a ref and not a commit: how many are reachable
+from the described commit, the newest, and how far past it this commit is. Reachability is
+`--merged`, so tagging an unrelated branch does not move the number. A shallow clone has no
+tags and neither does an untagged repository, so the two are distinguished explicitly and the
+first reports as unknown with the fix named — §4.2's rule applied to a signal rather than to
+an extractor. Both land as practice findings, not on the graph. Blame, branch topology, and
+`.git/config` remotes are refused with reasons in
+[ADR 0026](adr/0026-history-is-read-where-a-count-answers-the-question.md), which also records
+the field-order rule the log format follows: the two fields a repository controls come last,
+because git accepts a unit separator inside an author name and a name containing one used to
+shift the date out of its own field.
+
 Git and a forge are the recommended setup, and where they are present they are
 authoritative: what is tracked, what is ignored, and which commit the bundle describes
 are theirs to decide, not signpost's. But git is not a requirement for producing a

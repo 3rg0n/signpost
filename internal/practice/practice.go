@@ -40,17 +40,20 @@ import (
 
 	"github.com/3rg0n/signpost/internal/discover"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/vcs"
 )
 
 // Topic groups findings on the page. The order of the constants is the order of the
 // sections, chosen as the order a contributor meets them: how do I build it, how do I
-// test it, what will stop my merge, who reviews it, what am I expected to know.
+// test it, what will stop my merge, how are changes recorded and released, who reviews it,
+// what am I expected to know.
 type Topic string
 
 const (
 	TopicBuild         Topic = "build"
 	TopicTest          Topic = "test"
 	TopicGates         Topic = "gates"
+	TopicHistory       Topic = "history"
 	TopicDependencies  Topic = "dependencies"
 	TopicOwnership     Topic = "ownership"
 	TopicDocumentation Topic = "documentation"
@@ -64,6 +67,7 @@ var topicOrder = []Topic{
 	TopicBuild,
 	TopicTest,
 	TopicGates,
+	TopicHistory,
 	TopicDependencies,
 	TopicOwnership,
 	TopicDocumentation,
@@ -128,6 +132,11 @@ type Input struct {
 	// run, which is reported as such per topic rather than as an absence — see
 	// noManifests.
 	Manifests *manifest.RunResult
+	// History is what git said. Nil, or unavailable, yields no history findings at all
+	// rather than absences: -no-history and a tarball are both cases where signpost did not
+	// look, and "no release is tagged" would be a claim about the repository that this run
+	// has no basis for.
+	History *vcs.Signals
 }
 
 // Analyse reports what the repository declares.
@@ -152,6 +161,7 @@ func Analyse(in Input) *Result {
 	add(buildFindings(facts)...)
 	add(testFindings(facts, in.Discovered)...)
 	add(gateFindings(facts)...)
+	add(historyFindings(in.History)...)
 	add(dependencyFindings(facts, in.Discovered)...)
 	add(ownershipFindings(facts, in.Discovered)...)
 	add(documentationFindings(in.Discovered)...)
@@ -559,6 +569,138 @@ func lockEcosystem(p string) string {
 		return "NuGet"
 	}
 	return ""
+}
+
+// --- history ---
+
+// conventionalThreshold is the share of subjects that must follow Conventional Commits before
+// the repository is reported as using them.
+//
+// Set from measurement rather than taste. Adoption across seven repositories was 100%, 99%,
+// 96%, 83%, 11%, 0%, 0% — bimodal, with nothing between 11 and 83. So any cut in that gap
+// separates the same two groups, and a repository at 11% is not a partial adopter: it is a
+// repository that does not use them, with four commits that happen to parse. Reporting those
+// four as "the repository uses conventional commits" would be exactly the false positive that
+// makes a findings page untrustworthy.
+//
+// Two thirds rather than the middle of the gap, because the boundary should sit where the
+// claim stops being true rather than where this sample happens to be empty: a repository that
+// adopted the convention partway through its life is genuinely using it, and one where a third
+// of commits ignore it is not something a contributor can rely on.
+const conventionalThreshold = 2.0 / 3.0
+
+// historyFindings reports what the commit log says about how changes are recorded and
+// released.
+//
+// Nothing at all when history was not read. Not an absence, which is the departure from how
+// every other topic here handles a missing input, and the reason is that the two are different
+// claims: a manifest signpost cannot parse is a gap in signpost, reported as one, whereas
+// history that was not read leaves this package with no evidence in either direction. Saying
+// "no release is tagged" about a tarball, or about a run with -no-history, would be asserting
+// something about somebody's repository on the basis of a flag they passed.
+func historyFindings(h *vcs.Signals) []Finding {
+	if h == nil || !h.Available {
+		return nil
+	}
+	var out []Finding
+	out = append(out, conventionFindings(h.Conventions)...)
+	out = append(out, releaseFindings(h.Releases)...)
+	return out
+}
+
+// conventionFindings states whether commit messages follow a machine-readable convention.
+//
+// Worth a finding because it answers a question an agent asks before writing its first commit
+// — what shape does a message take here — and because the answer is not in any file: a
+// repository can have a CONTRIBUTING.md that says nothing about messages and 800 commits that
+// all say `feat:`. The convention is declared by practice, and practice is the only place it
+// is written down.
+func conventionFindings(c vcs.Conventions) []Finding {
+	if !c.Available() {
+		return nil
+	}
+	rate := float64(c.Conventional) / float64(c.Subjects)
+	looked := []string{"the subject line of every commit read"}
+	if rate < conventionalThreshold {
+		// The rate is stated even when the finding is an absence, and stating it is the
+		// point. A bare "commit messages follow no convention" reads as though signpost
+		// found nothing; "17 of 240" says how far from the convention the repository is and
+		// lets a reader adopting it see what they are starting from.
+		return []Finding{{
+			Topic: TopicHistory,
+			Text: "Commit subjects follow no machine-readable convention — " +
+				itoa(c.Conventional) + " of " + itoa(c.Subjects) + " read match the " +
+				"Conventional Commits shape. A message here is prose, so what a change was " +
+				"for has to be read rather than parsed.",
+			Looked: looked,
+		}}
+	}
+	out := []Finding{{
+		Topic:    TopicHistory,
+		Declared: true,
+		Text: "Commit subjects follow Conventional Commits: " + itoa(c.Conventional) +
+			" of " + itoa(c.Subjects) + " read, including " + itoa(c.Fixes) + " fix and " +
+			itoa(c.Features) + " feature. A message here states what kind of change it is.",
+		// No Sources. The evidence is a set of commits rather than a line in a file, which is
+		// the same reason ADR 0020 gives for a co-change edge naming no source: citing
+		// CONTRIBUTING.md here would attribute the claim to a file that does not make it.
+	}}
+	if c.Reverts > 0 {
+		out = append(out, Finding{
+			Topic:    TopicHistory,
+			Declared: true,
+			Text: itoa(c.Reverts) + " of those " + plural(c.Subjects, "commit") +
+				" revert an earlier one. Which change was reverted is in the message, not here.",
+		})
+	}
+	return out
+}
+
+// releaseFindings states how the repository is versioned.
+func releaseFindings(r vcs.Releases) []Finding {
+	if !r.Available {
+		if r.Reason == "" {
+			return nil
+		}
+		// A shallow clone, reported as a gap in the measurement rather than as a fact about
+		// the repository — §4.2. The Reason names the fix, which is what makes this
+		// actionable instead of merely honest.
+		return []Finding{{
+			Topic:  TopicHistory,
+			Text:   "Whether this repository tags releases is not known: " + r.Reason + ".",
+			Looked: []string{"tags reachable from the commit being described"},
+		}}
+	}
+	if r.Count == 0 {
+		return []Finding{{
+			Topic: TopicHistory,
+			Text: "No tag is reachable from this commit, so there is no released version to " +
+				"refer to and \"which version is this\" has no answer.",
+			Looked: []string{"tags reachable from the commit being described"},
+		}}
+	}
+	// The tag name is rendered as inline code by render.go. Safe as text either way: git's
+	// own ref-name rules reject a newline, a tab, and the bracket and quote characters that
+	// could break the line it lands in.
+	text := plural(r.Count, "tag") + " reachable from this commit, the most recent `" +
+		r.Latest + "`"
+	if r.LatestDate != "" {
+		text += " on " + r.LatestDate
+	}
+	switch r.CommitsSince {
+	case 0:
+		text += ", which is this commit."
+	default:
+		// How far the described commit is past the tag, which is the number that says whether
+		// a released version means anything right now: a tag 400 commits back describes code
+		// nobody is running.
+		text += ", " + plural(r.CommitsSince, "commit") + " back."
+	}
+	return []Finding{{
+		Topic:    TopicHistory,
+		Declared: true,
+		Text:     text,
+	}}
 }
 
 var dependabotNames = []string{
