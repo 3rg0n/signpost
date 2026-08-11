@@ -3,7 +3,7 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 64 concepts, 153 relationships."
-resource: git://github.com/3rg0n/signpost@073b67069d8e856c7451f4ec02e65165995e11a6
+resource: git://github.com/3rg0n/signpost@d1cfe34712979ce3da6272cf20b0d43c50b3ab99
 generated: { by: signpost/dev, at: "2026-08-11" }
 ---
 # Repository map

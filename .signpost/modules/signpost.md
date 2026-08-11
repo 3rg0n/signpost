@@ -2,7 +2,7 @@
 type: Module
 title: cmd/signpost
 description: 19 go files; entrypoint main; package main.
-resource: git://github.com/3rg0n/signpost@073b67069d8e856c7451f4ec02e65165995e11a6/cmd/signpost
+resource: git://github.com/3rg0n/signpost@d1cfe34712979ce3da6272cf20b0d43c50b3ab99/cmd/signpost
 tags: [entrypoint]
 generated: { by: signpost/dev, at: "2026-08-11" }
 attributes:
