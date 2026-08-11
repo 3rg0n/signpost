@@ -1,0 +1,74 @@
+internal/okf/verify.go
+  s_f6c0b1ac81cb95::t_9feb3a8012048d 960
+  s_f6c0b1ac81cb95::t_0c087eaa39135b 66-89
+  s_f6c0b1ac81cb95::t_315b12abf1ae0b 111-116
+  s_f6c0b1ac81cb95::t_94d64848143234 163-169
+  s_f6c0b1ac81cb95::t_99c20202a63925 227-229,233-292
+  s_f6c0b1ac81cb95::t_1aa40edfcda90f 174-177
+  s_f6c0b1ac81cb95::t_21861507bd55be 293
+cmd/signpost/verify.go
+  s_f6c0b1ac81cb95::t_e6db657b4e6297 165-170,173-176,178-183
+  s_f6c0b1ac81cb95::t_db133bce7cdc5f 124-126,135-145
+  s_f6c0b1ac81cb95::t_0d6d13733500fc 21-23,25-32
+  s_f6c0b1ac81cb95::t_0fb843069920b3 171-172
+  s_3f706e3f4b4643::t_03fcf1c01ef53f 146
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_579736751cf164 1081-1087
+  s_f6c0b1ac81cb95::t_b483e51fa40e7a 1042-1080
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_9feef720839f9f 46
+docs/design.md
+  s_f6c0b1ac81cb95::t_88dfa79938e0e9 1055-1086
+  s_f6c0b1ac81cb95::t_efb582a4586db9 1087
+  s_f6c0b1ac81cb95::t_6d3c5baeefd26a 1088-1090
+docs/adr/0027-a-gate-fails-only-on-what-the-reader-can-fix.md
+  s_f6c0b1ac81cb95::t_ca9c1b585a9519 88-98
+  s_f6c0b1ac81cb95::t_a5a092b6dd3b8f 1-87,99-122
+internal/okf/verify_test.go
+  s_f6c0b1ac81cb95::t_7677bc8e6bdafa 732-740,752-764,769-770,772-779,783-786,800-807,813-824,829-836,838-847,849-857,859-866,868-897,902-911
+  s_f6c0b1ac81cb95::t_7c63bc60be230f 1071-1072,1078-1090
+  s_f6c0b1ac81cb95::t_2c4421dba7ef02 788-795
+  s_f6c0b1ac81cb95::t_13f380cd89cd4f 898-901
+  s_f6c0b1ac81cb95::t_108b3852f5d568 825-827
+  s_f6c0b1ac81cb95::t_058607aab7dbe4 828,837,848,858,867
+.github/workflows/signpost.yml
+  s_f6c0b1ac81cb95::t_2f389334de0d53 148-156
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_c9f0128b3d3376 288-294
+cmd/signpost/hooks.go
+  s_f6c0b1ac81cb95::t_6e5329c7820e2b 238-244,251
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_136ecbb69f0166 867-893,898-937,951-976
+  s_f6c0b1ac81cb95::t_7c861c0b828b1d 894-897
+  s_f6c0b1ac81cb95::t_ce64219e9baa5a 938-950
+cmd/signpost/verify_test.go
+  s_f6c0b1ac81cb95::t_72a1c6ea63a175 277-312
+  s_f6c0b1ac81cb95::t_29c66449aea6fe 218-221,231-250,253-254,257-260,262-276,313-318,322-327,329-337,339-358,360-375
+  s_f6c0b1ac81cb95::t_2617b12a019c60 319-321,328,338,359
+docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md
+  s_f6c0b1ac81cb95::t_a3b099c03a5094 5-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7bce14e53b63aee62a9825179637dd83ca3f869e",
+  "prompts": {},
+  "sessions": {
+    "s_3f706e3f4b4643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d91ced6-3b3b-46d0-b2cb-8b38a3429c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
