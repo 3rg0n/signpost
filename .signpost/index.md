@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 62 concepts, 152 relationships."
-resource: git://github.com/3rg0n/signpost@82cb942ea2098d8c7d0a14ddd42b71a21b44db8b
+description: "Structural map of this repository: 63 concepts, 153 relationships."
+resource: git://github.com/3rg0n/signpost@004040c5661d330dd1926f9e7d71ed496fbadef6
 generated: { by: signpost/dev, at: "2026-08-11" }
 ---
 # Repository map
@@ -37,13 +37,13 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 130 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 36 exported symbols.
 - [internal/okf](./modules/okf.md) — 14 go files; 35 exported symbols.
-- [internal/practice](./modules/practice.md) — 3 go files; 17 exported symbols.
+- [internal/practice](./modules/practice.md) — 4 go files; 18 exported symbols.
 - [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
 - [cmd/signpost](./modules/signpost.md) — 19 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
-- [internal/vcs](./modules/vcs.md) — 6 go files; 13 exported symbols.
+- [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.
 - [internal/view](./modules/view.md) — 3 go files; 3 exported symbols.
 
 ### Documents
@@ -73,6 +73,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0023: a build declaration is settled where the tree is visible](./references/adr-0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) — Architecture decision (Accepted), 23 rules read from 0023-a-build-declaration-is-settled-where-the-tree-is-visible.md.
 - [ADR 0024: a branch verify reads the history the bundle read](./references/adr-0024-a-branch-verify-reads-the-history-the-bundle-read.md) — Architecture decision (Accepted), 15 rules read from 0024-a-branch-verify-reads-the-history-the-bundle-read.md.
 - [ADR 0025: the census long tail is declined by category](./references/adr-0025-the-census-long-tail-is-declined-by-category.md) — Architecture decision (Accepted), 15 rules read from 0025-the-census-long-tail-is-declined-by-category.md.
+- [ADR 0026: history is read where a count answers the question](./references/adr-0026-history-is-read-where-a-count-answers-the-question.md) — Architecture decision (Accepted), 30 rules read from 0026-history-is-read-where-a-count-answers-the-question.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

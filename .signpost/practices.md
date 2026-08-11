@@ -2,7 +2,7 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@82cb942ea2098d8c7d0a14ddd42b71a21b44db8b
+resource: git://github.com/3rg0n/signpost@004040c5661d330dd1926f9e7d71ed496fbadef6
 generated: { by: signpost/dev, at: "2026-08-11" }
 ---
 # How work is done here
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, Cargo aliases, CMake targets, Bazel targets.
-- 70 test files in the tree.
+- 73 test files in the tree.
 
 ### What blocks a merge
 
@@ -26,6 +26,12 @@ Each line is something this repository states, or something it does not. A missi
   - Stated in `.github/workflows/ci.yml` line 23, `.github/workflows/pages.yml` line 36, and `.github/workflows/signpost.yml` line 43.
 - 2 further CI jobs run outside that gate — on a schedule, a tag, or manually.
   - Stated in `.github/workflows/release.yml` line 17 and `.github/workflows/signpost-semantic.yml` line 41.
+
+### How changes are recorded
+
+- **Not declared.** Commit subjects follow no machine-readable convention — 0 of 117 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
+  - Looked in the subject line of every commit read.
+- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 83 commits back.
 
 ### Dependencies
 
@@ -47,7 +53,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - The repository has a README.
   - Stated in `README.md`.
-- 31 documentation files in the tree, outside the bundle.
+- 32 documentation files in the tree, outside the bundle.
 
 ### Observability
 
@@ -58,8 +64,8 @@ Each line is something this repository states, or something it does not. A missi
 
 - 14 stated rules for agents working in this repository.
   - Stated in `AGENTS.md`.
-- 26 architecture decision records state why things are the way they are.
-  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 20 other files.
+- 27 architecture decision records state why things are the way they are.
+  - Stated in `docs/adr/0001-hand-written-tolerant-yaml-reader.md`, `docs/adr/0002-patchable-dependencies-not-zero-dependencies.md`, `docs/adr/0003-directory-granularity-for-module-nodes.md`, `docs/adr/0004-confidence-is-a-first-class-field.md`, `docs/adr/0005-commit-the-bundle-to-the-repository.md`, `docs/adr/0006-generator-and-viewer-are-separate-repositories.md`, and 21 other files.
 <!-- /signpost:managed:practices -->
 
 ## Notes
