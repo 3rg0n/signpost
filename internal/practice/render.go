@@ -54,6 +54,8 @@ func topicHeading(t Topic) string {
 		return "Testing"
 	case TopicGates:
 		return "What blocks a merge"
+	case TopicHistory:
+		return "How changes are recorded"
 	case TopicDependencies:
 		return "Dependencies"
 	case TopicOwnership:

@@ -709,6 +709,133 @@ func TestCorpusAManifestWithNothingToPinSaysSo(t *testing.T) {
 	}
 }
 
+// TestCorpusHistoryPracticeReportsBothReadings is the corpus half of the history topic, and it
+// needs a repository because both findings come from `git log` and `git for-each-ref` rather than
+// from a file anything can fixture.
+//
+// The corpus as committed is the negative case in both directions: one commit, subject "the
+// corpus", no tags. So this stage adds the positive one on top and asserts both from the same
+// page — conventional subjects and a tag reachable from the described commit.
+//
+// Both readings from one build is the point, and it is the same shape the dependency stages use.
+// A classifier that answered "conventional" to everything satisfies the first assertion and fails
+// the rate; one that answered "no convention" satisfies nothing. And the tag assertions pin the
+// two defects this pass was shipped with: `--merged --end-of-options <sha>`, which git read as a
+// malformed object name and which reported every repository as untagged, and a date-only sort,
+// which on same-day tags let git break the tie by refname ascending and name the *oldest* release
+// as latest.
+func TestCorpusHistoryPracticeReportsBothReadings(t *testing.T) {
+	dir := corpusRepo(t)
+
+	// Four conventional subjects here plus the one after the tag below, against the one prose
+	// subject corpusRepo made: 5 of 6, over the two-thirds threshold and deliberately not 6 of 6.
+	// A page that reports 100% cannot distinguish a rate from a presence check.
+	//
+	// Each one touches a file rather than being `--allow-empty`. That is load-bearing and was
+	// found the hard way: readHead names the newest commit that changed something outside the
+	// bundle, so a run of empty commits leaves the *described* commit back at the initial import
+	// and every tag added after it is genuinely unreachable. The page was right and the test was
+	// wrong.
+	notes := filepath.Join(dir, "history-notes.md")
+	for i, msg := range []string{
+		"feat(greeter): add a second greeting",
+		"fix(greeter): correct the salutation",
+		"docs: describe the corpus layout (#7)",
+		"chore: tidy",
+	} {
+		if err := os.WriteFile(notes, []byte(strings.Repeat("a line\n", i+1)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		gitRun(t, dir, "add", "-A")
+		gitRun(t, dir, "commit", "--quiet", "-m", msg)
+	}
+	// Two tags on the same day, which is what a release cut in one session looks like and the
+	// arrangement that made the sort tiebreak load-bearing. v0.2.0 is the newer name and must be
+	// reported as latest even though v0.1.0 sorts first by refname.
+	gitRun(t, dir, "tag", "v0.1.0")
+	gitRun(t, dir, "tag", "v0.2.0")
+	if err := os.WriteFile(notes, []byte("one more line\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "feat: one more after the tag")
+
+	if _, stderr, code := invoke(t, "build", "--quiet", "-repo", "example.com/corpus", dir); code != 0 {
+		t.Fatalf("build: exit = %d\n%s", code, stderr)
+	}
+	page, ok := bundlePages(t, dir)[okf.PracticesPage]
+	if !ok {
+		t.Fatalf("no %s was written", okf.PracticesPage)
+	}
+
+	if !strings.Contains(page, "### How changes are recorded") {
+		t.Fatalf("%s has no history section:\n%s", okf.PracticesPage, page)
+	}
+	for _, want := range []string{
+		// The convention, with its rate stated rather than asserted.
+		"Commit subjects follow Conventional Commits: 5 of 6",
+		// The release facts. The tag name as inline code, because a tag name may hold a
+		// semicolon or a `$(...)` that git's ref rules do not reject.
+		"`v0.2.0`",
+		"2 tags reachable from this commit",
+		"1 commit back",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("%s does not state %q:\n%s", okf.PracticesPage, want, page)
+		}
+	}
+	// The wrong tag, from the tie that git resolves by refname ascending.
+	if strings.Contains(page, "`v0.1.0`") {
+		t.Errorf("%s names v0.1.0 as the latest release. Two tags share a creation date and the "+
+			"older name won the tie:\n%s", okf.PracticesPage, page)
+	}
+	// Neither absence, from a build where both facts are present. Without these the assertions
+	// above pass on a page that states both readings at once.
+	for _, unwanted := range []string{
+		"follow no machine-readable convention",
+		"No tag is reachable from this commit",
+		"is not known",
+	} {
+		if strings.Contains(page, unwanted) {
+			t.Errorf("%s states %q on a repository that has the fact:\n%s",
+				okf.PracticesPage, unwanted, page)
+		}
+	}
+}
+
+// The negative half, from the corpus exactly as committed: one prose subject and no tags. A page
+// that reported no history findings at all would pass every assertion in the stage above by
+// reporting nothing, and this is what catches that — an untagged repository with unconventional
+// messages is a fact worth stating, not silence.
+func TestCorpusHistoryPracticeReportsTheAbsences(t *testing.T) {
+	dir := buildCorpus(t)
+	page, ok := bundlePages(t, dir)[okf.PracticesPage]
+	if !ok {
+		t.Fatalf("no %s was written", okf.PracticesPage)
+	}
+	for _, want := range []string{
+		"Commit subjects follow no machine-readable convention",
+		// The rate, on the absence too. "follows no convention" alone reads as though signpost
+		// found nothing to say.
+		"0 of 1",
+		"No tag is reachable from this commit",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("%s does not state %q. The corpus has one prose subject and no tags:\n%s",
+				okf.PracticesPage, want, page)
+		}
+	}
+	if strings.Contains(page, "Commit subjects follow Conventional Commits") {
+		t.Errorf("%s claims the corpus follows the convention:\n%s", okf.PracticesPage, page)
+	}
+	// Not the shallow-clone wording. The corpus repository is a full clone, so "not known" would
+	// be signpost reporting a gap in a measurement it made successfully.
+	if strings.Contains(page, "is not known") {
+		t.Errorf("%s reports the tag question as unknown on a full clone:\n%s",
+			okf.PracticesPage, page)
+	}
+}
+
 // rewrite replaces a file in the corpus copy.
 func rewrite(t *testing.T, path, body string) {
 	t.Helper()

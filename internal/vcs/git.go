@@ -53,6 +53,9 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 	commits := parseLog(out)
 	s := aggregate(commits, opts)
 	s.Truncated = len(commits) >= opts.MaxCommits
+	// Counted from the walk already in hand rather than by a second pass. The subjects are
+	// classified and discarded here: nothing past this line has access to the message text.
+	s.Conventions = countConventions(commits)
 	// Asked for separately rather than taken from commits[0], which is neither HEAD nor
 	// the commit being described: the walk passes --no-merges, so on a repository whose
 	// tip is a merge the newest entry is one of its parents, and it counts bundle-only
@@ -60,7 +63,14 @@ func Read(ctx context.Context, dir string, opts Options) (*Signals, error) {
 	s.Head = readHead(ctx, dir, opts, asOf)
 	s.AsOf = asOf
 
-	if isShallow(ctx, dir, opts) {
+	shallow := isShallow(ctx, dir, opts)
+	// After the shallow check, because a shallow clone has no tags and readReleases must
+	// report that as unknown rather than as "nothing is tagged". Read as of the same commit
+	// the rest of the analysis describes, so the tag list on a branch verify is the one the
+	// recorded commit had.
+	s.Releases = readReleases(ctx, dir, opts, s.Head, shallow)
+
+	if shallow {
 		s.Shallow = true
 		// Named as a CI problem specifically, because that is where it happens and
 		// where nobody is watching: a default actions/checkout is depth 1, so a bundle
@@ -106,7 +116,19 @@ func logArgs(maxCommits int, asOf string) []string {
 		// NUL-delimited: paths arrive raw rather than C-quoted. See parseLog.
 		"-z",
 		"--date=short",
-		"--pretty=format:%H" + fieldSep + "%aN" + fieldSep + "%ad" + fieldSep,
+		// Field order is a correctness requirement, not a preference. The two fields whose
+		// contents a repository controls — the author name and the subject — come last, and
+		// the hash and date come first.
+		//
+		// git accepts a unit separator inside an author name (verified against git 2.51,
+		// which takes any byte but NUL there), and a name containing one used to shift every
+		// following field right: `git config user.name $'ev\x1fil'` made the *date* parse as
+		// `il`, so a page's `first_commit` and `last_commit` silently became a fragment of
+		// somebody's name. Ordering by trust does not stop the shift, it bounds what it can
+		// reach: a separator in the author name now only corrupts the author name and the
+		// subject, both of which are already free text, and the date field ahead of them is
+		// out of reach. parseLog's field-count check does the rest.
+		"--pretty=format:%H" + fieldSep + "%ad" + fieldSep + "%aN" + fieldSep + "%s" + fieldSep,
 		"--max-count=" + strconv.Itoa(maxCommits),
 	}
 	if asOf != "" {

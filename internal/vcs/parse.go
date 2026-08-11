@@ -16,14 +16,14 @@ const fieldSep = "\x1f"
 // be adversarial, so not having to unquote is a correctness property rather than a
 // convenience.
 //
-// The stream `-z --numstat --pretty=format:H<US>author<US>date<US>` produces, verified
-// against git rather than inferred from its documentation:
+// The stream `-z --numstat --pretty=format:H<US>date<US>author<US>subject<US>` produces,
+// verified against git rather than inferred from its documentation:
 //
-//	<hash><US><author><US><date><US>\n
+//	<hash><US><date><US><author><US><subject><US>\n
 //	<ins>\t<del>\t<path>\0
 //	<ins>\t<del>\t<path>\0
 //	\0                                  <- separates this commit from the next header
-//	<hash><US><author><US><date><US>\n
+//	<hash><US><date><US><author><US><subject><US>\n
 //	...
 //
 // Three details in that shape drive the implementation, and each one is a test:
@@ -63,7 +63,7 @@ func parseLog(out string) []commit {
 			// everything before it is the header, anything after is a numstat line.
 			head, rest, hasRest := strings.Cut(tok, "\n")
 			fields := strings.Split(head, fieldSep)
-			if len(fields) < 4 {
+			if len(fields) < 5 {
 				// Not the header this code wrote the format for. Skipping rather than
 				// guessing: a partial header would attribute changes to the wrong
 				// commit, which is worse than a commit going uncounted.
@@ -72,7 +72,22 @@ func parseLog(out string) []commit {
 			if cur != nil {
 				commits = append(commits, *cur)
 			}
-			cur = &commit{hash: fields[0], author: fields[1], date: fields[2]}
+			// Positional up to the author, then the whole remainder is the subject. A
+			// separator inside a subject is legal — git accepts every byte but NUL in a
+			// message — so the field count can exceed five, and rejoining the tail is what
+			// keeps `feat: a<US>b` from being read as a five-field header with a spare piece
+			// that shifts nothing. The format's trailing separator makes the last element
+			// empty, which is why the join stops one short of the end.
+			//
+			// A separator in the *author name* is also legal and still shifts: its tail lands
+			// in the subject. That is the whole reason logArgs orders the fields the way it
+			// does. What used to be downstream of a shifted author was the date, which is
+			// written onto every module page as first_commit and last_commit; what is
+			// downstream now is a subject this package only ever counts and never stores. A
+			// name with a separator in it therefore costs at most one miscounted commit
+			// instead of a page asserting that a directory was first touched on "il".
+			cur = &commit{hash: fields[0], date: fields[1], author: fields[2]}
+			cur.subject = strings.Join(fields[3:len(fields)-1], fieldSep)
 			pendingRename, renameOld = nil, false
 			if hasRest && strings.TrimSpace(rest) != "" {
 				applyNumstat(cur, rest, &pendingRename, &renameOld)

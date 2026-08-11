@@ -42,6 +42,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0023](0023-a-build-declaration-is-settled-where-the-tree-is-visible.md) | A build declaration is settled where the tree is visible, not where the file is read | Accepted |
 | [0024](0024-a-branch-verify-reads-the-history-the-bundle-read.md) | A branch verify reads the history the bundle read, not just its stamp | Accepted |
 | [0025](0025-the-census-long-tail-is-declined-by-category.md) | The census long tail is declined by category, not one file type at a time | Accepted |
+| [0026](0026-history-is-read-where-a-count-answers-the-question.md) | History is read where a count answers the question | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that

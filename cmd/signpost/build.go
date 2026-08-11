@@ -248,7 +248,14 @@ func runSemantic(a *analysis, timeout time.Duration, cfg *config.Config) (*seman
 // facts the pipeline has already extracted, and gating them would mean the page an agent most
 // wants first — how do I build and test this — is the one it usually does not get.
 func addPractices(opts *okf.Options, a *analysis) *practice.Result {
-	pr := practice.Analyse(practice.Input{Discovered: a.Discovered, Manifests: a.Manifests})
+	// History may be nil, which is what -no-history and a tarball with no .git both produce.
+	// practice.Analyse takes it as-is: the history topic reports nothing at all rather than
+	// reporting absences, because a flag the operator passed is not a fact about the repository.
+	pr := practice.Analyse(practice.Input{
+		Discovered: a.Discovered,
+		Manifests:  a.Manifests,
+		History:    a.History,
+	})
 	opts.Practices = pr.Render()
 	return pr
 }

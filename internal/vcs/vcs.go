@@ -147,6 +147,76 @@ func (p *PathHistory) TopAuthor() (string, float64) {
 	return best, float64(p.Authors[best]) / float64(p.Commits)
 }
 
+// Conventions counts what commit messages say about how this repository is worked on.
+//
+// Counts and nothing else. No message text is kept, and that is the security boundary
+// rather than an economy: a subject line is free text from an untrusted repository, and the
+// bundle is a committed markdown file — so a subject reaching output would need a length
+// cap, marker escaping, and a rule about the URLs, names, and occasional secrets people put
+// in commit messages. A counter needs none of those, because there is nothing to escape.
+// The classification happens in this process and only the integer leaves it.
+//
+// The rate is the signal, not the presence of a prefix, and that is measured rather than
+// assumed: across seven repositories adoption is bimodal — 100%, 99%, 96%, 83%, 11%, 0%,
+// 0% — so a repository at 11% is not "using conventional commits a bit", it is a repository
+// that does not use them with four commits that happen to parse. A consumer must be able to
+// say "this repository does not do this" and it can only do that from the ratio.
+type Conventions struct {
+	// Subjects is how many commit subjects were read and classified. The denominator for
+	// every other field, and not the same as Signals.Commits: a commit whose header did not
+	// parse is counted there and not here.
+	Subjects int
+	// Conventional counts subjects matching the Conventional Commits shape — a type, an
+	// optional scope in parentheses, an optional `!`, then `: `.
+	Conventional int
+	// Fixes and Features count the two types worth separating, of the conventional subset.
+	// Only those two: the rest of the vocabulary is per-project convention, and a count of
+	// `chore` says nothing a reader can act on.
+	Fixes    int
+	Features int
+	// Reverts counts subjects that revert an earlier commit, by git's own `Revert "…"`
+	// wording and the conventional `revert:` type. A path with a high revert rate is a risk
+	// no static read can see.
+	Reverts int
+	// IssueRefs counts subjects naming an issue or pull request as `#N`. What makes a commit
+	// traceable to the discussion that produced it.
+	IssueRefs int
+}
+
+// Available reports whether any subject was classified, so a consumer can distinguish a
+// repository that uses none of these conventions from one whose subjects were never read.
+func (c Conventions) Available() bool { return c.Subjects > 0 }
+
+// Releases is what tags say about how this repository is versioned.
+//
+// Read because "how is this thing released" is a question a contributor asks before their
+// first change and no file in the tree answers: a repository can have a release workflow,
+// a version constant, and a CHANGELOG and still not tell you whether anything was ever
+// tagged. It annotates nothing on the graph — ADR 0020 — and lands as a practice finding.
+type Releases struct {
+	// Available is false when tags could not be read as a fact about the tree rather than
+	// as an absence. Reason says why.
+	//
+	// The distinction is load-bearing and it is a CI problem: a shallow clone has no tags,
+	// and so does a repository nobody has tagged. Both produce an empty tag list, and
+	// reporting the first as "no release is tagged" would be a false finding about somebody
+	// else's repository — §4.2's rule that absence of measurement is never a clean bill.
+	Available bool
+	Reason    string
+	// Count is how many tags are reachable from the commit being described. Reachable
+	// rather than all of them, so the number does not move when an unrelated branch is
+	// tagged, and so that a bundle read as of a recorded commit sees the tags that commit
+	// had.
+	Count int
+	// Latest is the most recent reachable tag by creation date, and LatestDate is that date
+	// as YYYY-MM-DD. Empty when Count is zero.
+	Latest     string
+	LatestDate string
+	// CommitsSince is how far the described commit is past Latest. Zero when the commit is
+	// the tag, and meaningless when Latest is empty.
+	CommitsSince int
+}
+
 // Pair is two directories that changed in the same commit, and how often.
 //
 // Directories, not files, and that is a deliberate narrowing rather than a limitation.
@@ -207,6 +277,15 @@ type Signals struct {
 
 	// Head identifies the commit the analysis describes. Zero when Available is false.
 	Head Commit
+
+	// Conventions is what the commit subjects in this walk say about message discipline.
+	// Counted over the same commits as everything else above, so it is bounded by MaxCommits
+	// and by AsOf without needing its own caps.
+	Conventions Conventions
+
+	// Releases is what tags say about versioning. Its own read rather than a product of the
+	// walk, because a tag is a ref and not a commit.
+	Releases Releases
 
 	// AsOf is the commit history was actually read as of, empty when it was read from HEAD.
 	//
@@ -280,7 +359,10 @@ type commit struct {
 	hash   string
 	author string
 	date   string
-	files  []fileChange
+	// subject is the commit's first message line. Classified by countConventions and never
+	// stored on any exported type: see Conventions for why only counts leave this package.
+	subject string
+	files   []fileChange
 }
 
 type fileChange struct {

@@ -8,6 +8,53 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-11
+
+- **The practices page says how changes are recorded and released, so an agent learns the
+  commit convention before it writes a commit.** A new topic reports what the log says: how
+  many subjects follow Conventional Commits and how many are fixes, features, or reverts; how
+  many name an issue; how many tags are reachable from the described commit, which is newest,
+  and how far past it this commit is. No file in most repositories answers this — a
+  `CONTRIBUTING.md` can be silent while 800 commits all say `feat:` — because the convention is
+  declared by practice.
+
+  **The rate is the finding, not the count.** Adoption measured across seven repositories was
+  100/99/96/83/11/0/0 percent: bimodal, with nothing between 11 and 83. So a repository above
+  two thirds is reported as following the convention and one below it as following none —
+  *with the rate stated*, because "commit subjects follow no machine-readable convention"
+  alone reads as though signpost found nothing to say, where "17 of 240" tells a reader adopting
+  it what they are starting from.
+
+  **Counts only. No commit subject is stored on any exported type.** A subject is arbitrary
+  bytes from an untrusted repository headed for a committed markdown file, so keeping one would
+  mean owning a length cap, marker escaping, and a rule about URLs and pasted secrets; a
+  counter owns none of that. Classification costs no extra process: `%s` is one more field on a
+  format git already produces. `--grep` looked cheaper and is wrong — it matches any line of the
+  whole message rather than the subject, measured at 528 of 2000 commits for
+  `^Co-Authored-By`, a string a subject can never contain.
+
+  **A shallow clone reports the tag question as unknown rather than answering it.**
+  `git clone --depth 1` yields no tags and so does a repository nobody tagged; calling the
+  first "no release is tagged" would be a false claim about somebody else's repository, so it
+  reports as not known with `fetch-depth: 0` named as the fix. Tags are bounded by `--merged`,
+  so tagging an unrelated branch does not move the number and `verify -as-of-bundle` sees the
+  tags the recorded commit had. Sorted by creation date, with version order breaking the tie:
+  date has to be primary because a repository tagging `2026.08` is not doing semver, and the
+  tiebreak has to exist because `creatordate` compares to the second, so every release cut in one
+  session ties and git resolves an exact tie by refname *ascending* — which named `v0.1.0` as the
+  latest release of a repository whose newest tag was `v0.2.0`. Both that and a
+  `--merged --end-of-options <sha>` invocation that git read as a malformed object name were
+  found by test, and both are pinned by one. Blame, branch topology, and `.git/config` remotes were
+  measured and refused, with reasons and with what would change each answer, in
+  [ADR 0026](docs/adr/0026-history-is-read-where-a-count-answers-the-question.md) — blame's real
+  cost is one process spawn per file, not blame itself, which a corrected bulk measurement puts
+  at 127ms of marginal work against a ~1200ms spawn floor.
+
+  History that was not read produces no findings at all rather than absences, which departs
+  from how every other practice topic treats a missing input. `-no-history` and a tarball with
+  no `.git` are cases where signpost did not look, and "no release is tagged" would be a claim
+  this run has no basis for.
+
 #### 2026-08-10
 
 - **The exported symbols reach the machine-readable exports, split by what each consumer can
@@ -989,6 +1036,29 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+#### 2026-08-11
+
+- **An author name containing a unit separator no longer replaces every module page's commit
+  dates with a fragment of that name.** git accepts any byte but NUL in an author name —
+  verified against git 2.51.1 — including the 0x1f the log format uses as its field separator.
+  The format was `%H<US>%aN<US>%ad<US>`, so a name with one in it shifted every following field
+  right and the **date** parsed as the tail of the name:
+  `git config user.name $'ev\x1fil'` made `first_commit` and `last_commit` read as `il` on
+  every page. A repository set its own config and signpost wrote the consequence into a
+  committed artifact, silently, on all ~53 pages.
+
+  Fixed by ordering the format's fields by trust rather than by convenience — hash, date, then
+  the two fields a repository controls (author name, subject) last. Ordering does not stop the
+  shift; it bounds what the shift can reach. A separator in an author name now bleeds only into
+  the subject, which is counted and discarded, so the cost is one miscounted commit instead of a
+  page asserting a directory was first touched on "il". The parser's field-count guard rejects a
+  header of the old shape rather than reading an author as a date, and the regression is pinned
+  by a test that asserts where the shift lands so a future format change cannot quietly move it
+  back somewhere that matters.
+
+  Found while measuring whether commit messages were worth reading, not by a report: nothing
+  about `first_commit: il` looks like a parsing failure on a rendered page.
 
 #### 2026-08-10
 
