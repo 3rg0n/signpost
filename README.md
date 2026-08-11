@@ -205,11 +205,15 @@ bundle to be correct. Pinning `* text=auto eol=lf` in `.gitattributes` is still 
 doing in a repository that commits a bundle, for the ordinary reason — it keeps the
 diffs readable.
 
-Pass `-repo example.com/org/repo` to name the repository in each page's
-`resource:` URI. It is asked for rather than derived from a git remote: a remote
-URL is a property of your checkout, and a fork's remote names the upstream.
-Without it, pages carry a commit-only resource, which is still enough to tell
-whether a page describes the code in front of you.
+Name the repository in `.signpost.yml`, with `repo: example.com/org/repo`, and every
+page's `resource:` URI points at it. It is asked for rather than derived from a git
+remote: a remote URL is a property of your checkout, and a fork's remote names the
+upstream. It belongs in the committed file rather than in your workflow for the same
+reason — a workflow knows only the repository the job is running in, which on a fork is
+not the repository being described. `-repo` still overrides the file, for the case where
+the tree you are describing is not a checkout of the thing you are naming. With neither,
+pages carry a commit-only resource, which is still enough to tell whether a page
+describes the code in front of you.
 
 ## Point your agents at it
 
@@ -262,7 +266,7 @@ the directory is does not tell an agent where to start.
 this tree? — and answers it with an exit code, so CI can gate on it:
 
 ```bash
-signpost verify -repo example.com/org/repo .   # 0 if it holds, 1 if it does not
+signpost verify .   # 0 if it holds, 1 if it does not
 ```
 
 Five checks, per [design §4.6](docs/design.md): frontmatter parses and carries a
@@ -284,10 +288,10 @@ Two things are deliberate about the output:
   Neither makes the bundle wrong, and a gate that went red on the litter it is
   designed to leave behind is a gate people switch off.
 
-Pass verify the same flags as the build it is checking. `-repo` feeds every page's
-`resource:`, so a mismatch there reports a real difference that describes the
-invocation rather than the bundle — which is the main reason to put those flags in a
-config file instead.
+Pass verify the same flags as the build it is checking, which is the main reason to put
+them in the config file instead: `repo` feeds every page's `resource:`, so a build and a
+verify that disagree about it report a real difference describing the invocation rather
+than the bundle. Both commands read the same committed file, so neither can drift.
 
 ## Configuring it
 
@@ -345,7 +349,7 @@ export SIGNPOST_OPENAI_BASE_URL=https://…/v1
 export SIGNPOST_OPENAI_API_KEY=…
 
 signpost model check                            # prove the backend works first
-signpost build -semantic -repo example.com/org/repo .
+signpost build -semantic .
 ```
 
 It is off unless you ask for it twice — a backend configured *and* the flag passed.

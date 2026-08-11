@@ -1060,6 +1060,11 @@ All notable changes to this project are documented here. Format follows
   the caller describing a tree that is not a checkout of the thing being named — which is what
   the new regression test uses to prove its own comparison can fail.
 
+  The README now names the repository the way the workflows do. Its three worked examples passed
+  `-repo` on the command line, which is the habit this change exists to end: a reader copying them
+  into their own CI reintroduces the defect on the first fork. They read from `.signpost.yml`
+  instead, and the flag is documented as the override it is.
+
 - **The pull-request gate fails only on a bundle the branch can fix, so a red `verify` job means
   somebody has to act.** [ADR 0024](docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md)
   made `verify -as-of-bundle` read the bundle's own history, and the gate still failed thirteen
