@@ -79,10 +79,17 @@ jobs:
       - name: Build signpost
         run: go build -o signpost ./cmd/signpost
 
+      # No -repo. The name every page's `resource:` carries comes from `.signpost.yml`,
+      # because it is a property of the repository and not of whoever is running the
+      # build. This step passed `-repo "github.com/${GITHUB_REPOSITORY}"` until a fork
+      # showed what that means: the running repository's name, so a fork's own CI
+      # rebuilt five pages with its own name over identical source at an identical
+      # commit, and the first sync from upstream conflicted inside `.signpost/` — the
+      # merge conflict §8.0 exists to prevent, from the direction §8.0 does not cover.
       - name: Rebuild the bundle
         run: |
           set -euo pipefail
-          ./signpost build -repo "github.com/${GITHUB_REPOSITORY}" .
+          ./signpost build .
 
       # Strict, with no -as-of-bundle. This is the job that *writes* the stamp, so
       # this is the only place that can check the stamp it just wrote is true.
@@ -91,7 +98,7 @@ jobs:
       - name: Verify strictly
         run: |
           set -euo pipefail
-          ./signpost verify -repo "github.com/${GITHUB_REPOSITORY}" .
+          ./signpost verify .
 
       # Committed only when the bytes changed. A run that committed regardless
       # would put a no-op commit on the default branch for every push, which is
@@ -179,4 +186,4 @@ jobs:
             echo "the push job writes the first one; §8.0 keeps branches from writing it."
             exit 0
           fi
-          ./signpost verify -as-of-bundle -repo "github.com/${GITHUB_REPOSITORY}" .
+          ./signpost verify -as-of-bundle .
