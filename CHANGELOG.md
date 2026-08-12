@@ -8,6 +8,61 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+#### 2026-08-12
+
+- **`signpost init github` writes the CI setup, so adopting signpost is a command rather
+  than a copy.** It produces two files — `.github/workflows/signpost.yml`, which rebuilds the
+  bundle on the default branch and gates pull requests against it, and `.signpost.yml` naming
+  the repository — with `repo:` filled in from the `origin` remote. Until now the README's
+  answer was to copy this repository's workflow by hand, which meant every adopter
+  transcribed three loop guards and a strictness split whose reasons live in comments.
+
+  **It prints by default and writes only with `-y`.** The file it produces requests
+  `contents: write` and pushes to the default branch; that is not something to install into
+  somebody's repository on the strength of a command being typed correctly. Preview-by-default
+  rather than a prompt, deliberately: a prompt needs a terminal, so it either behaves
+  differently under CI and in a pipe or it needs TTY detection no test can exercise. Printing
+  and stopping is the same guarantee with no hidden state, and it makes the preview useful on
+  its own.
+
+  **Neither file is overwritten, and the refusal is all-or-nothing.** One already present
+  stops the whole command — not just that file — because a plan that skipped the blocked file
+  and wrote the other leaves a repository with a config file and no workflow, which is a
+  repository whose bundle silently stops being rebuilt. That exits 0: the files being there is
+  a state somebody can legitimately be in, and a scaffold that fails when the thing already
+  exists is one every caller has to guard.
+
+  **The template is tested against the workflow this repository actually runs.** A scaffold
+  that drifts is worse than no scaffold, because it ships advice we do not follow and the
+  divergence surfaces as somebody else's gate behaving differently from ours. Sixteen
+  structural anchors are asserted in *both* files, so an anchor removed from ours fails as
+  "this test's expectations are stale" rather than silently passing. The one intended
+  difference is asserted rather than tolerated: this repository builds signpost from its own
+  source, and a scaffolded repository installs a pinned release.
+
+  **The install step downloads and verifies rather than piping a script into a shell.** The
+  first version was `curl … install.sh | sh`, and semgrep was right to flag it: `install.sh`
+  checks the archive's SHA-256, but the script doing the checking would itself have arrived
+  unverified, inside the one job holding `contents: write`. A checksum is worth nothing when
+  the code comparing it is fetched the same way. The archive and the release's `checksums.txt`
+  are fetched directly and `sha256sum -c` runs before anything is unpacked — in both jobs,
+  because the pull-request job is the gate and a binary of unknown provenance there decides
+  whether other people's changes merge.
+
+  **The version is pinned, not `latest`.** A floating version lets the bundle's bytes change
+  because signpost changed, on a day nothing in that repository did — and a diff nobody can
+  explain from the repository is the churn that gets a committed artifact deleted.
+
+  `remoteRepo` parses `.git/config` rather than shelling out, so `init` works in a checkout on
+  a machine without git, and it reads `origin` exactly: `[remote "upstream"]` is a different
+  repository, which is the subtlety the fork defect was about. Credentials, ports, and the
+  `.git` suffix come off, so a token in a remote URL cannot reach a committed file.
+
+  The templates are embedded rather than pulled from a registry, and the reasoning for that
+  and for everything above is
+  [ADR 0028](docs/adr/0028-scaffolded-files-are-embedded-and-tested-against-our-own.md).
+  Design §8.2 records the same decisions where the CI section can be read as a whole.
+
 #### 2026-08-11
 
 - **The practices page says how changes are recorded and released, so an agent learns the

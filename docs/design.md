@@ -1760,6 +1760,59 @@ This is also why the semantic pass runs on a schedule rather than per-merge: the
 deterministic pass is genuinely deterministic, and the semantic pass is only
 stable because of the cache.
 
+### 8.2 The workflow is scaffolded, and the scaffold is tested against ours
+
+`signpost init github` writes `.github/workflows/signpost.yml` and `.signpost.yml`
+into another repository. Before it existed the instruction was to copy this
+repository's workflow by hand, which meant every adopter transcribed the three loop
+guards and the strictness split of §8.0 — and the reasons for those live in comments,
+so a partial transcription looks like a working file.
+
+**The template is compared to the workflow this repository runs, on every build.**
+That test is the reason the template can be trusted at all: a scaffold that drifts is
+worse than none, because it ships advice we do not follow and the divergence appears
+as somebody else's gate behaving differently from ours, which is the hardest kind of
+bug to be told about. It compares structure rather than bytes, since one difference is
+intended and must be — this repository builds signpost from its own source, because a
+repository that analyses itself has to use the binary it currently contains, and a
+scaffolded repository installs a pinned release. The anchors are asserted in *both*
+files, so removing one from ours fails as a stale expectation instead of passing
+quietly.
+
+**Embedded in the binary, not pulled from a registry.** The alternative considered was
+publishing the templates as a tagged OCI artifact in GHCR and having `init` fetch the
+release matching the binary. Declined on four grounds. The templates do not version
+independently of the binary — a workflow that installs `vX` is only correct for `vX`
+— so decoupling buys nothing and adds a way for the two to disagree. It would make
+`init` the only command that touches the network, in a tool whose whole posture is
+that it does not. It would put an unauthenticated fetch in the path of a command
+writing a file that requests `contents: write`, which then needs signature
+verification, which is a dependency §2 says we cannot patch ourselves. And `site/` is
+already embedded, so the bytes would be carried twice.
+
+**Preview by default; `-y` writes.** The output requests `contents: write` and pushes
+to the default branch, so typing the command correctly must not be enough to install
+it. A prompt was rejected rather than overlooked: a prompt needs a terminal, so it
+either behaves differently under CI and in a pipe or it needs TTY detection tests
+cannot exercise. Printing and stopping is the same guarantee with no hidden state.
+
+**Nothing is overwritten, and the refusal covers both files.** A plan that skipped the
+blocked file and wrote the other would leave a repository with a config file and no
+workflow — a repository whose bundle silently stops being rebuilt, which is the exact
+failure the command exists to prevent. It exits 0, because the files being present is
+a state somebody can legitimately be in and a scaffold that fails when the thing
+already exists is one every caller has to guard.
+
+**The install step verifies what it downloads.** The archive and the release's
+`checksums.txt` are fetched directly and checked with `sha256sum -c` before anything
+is unpacked, in both jobs. Piping `install.sh` into a shell was the first version and
+is wrong for a reason worth recording: `install.sh` verifies the archive, but the
+script doing the verifying would itself have arrived unverified over the network,
+inside the one job holding `contents: write`. A checksum is worth nothing when the
+code comparing it is fetched the same way. The asset name is written out rather than
+detected because `runs-on` is fixed, and a test ties the two together so a change to
+one cannot silently outlive the other.
+
 ---
 
 ## 9. Relationship to adjacent work
