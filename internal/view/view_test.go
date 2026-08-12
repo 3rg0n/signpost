@@ -46,6 +46,12 @@ func testOptions() Options {
 // names present in each document, and a regexp over the source finds exactly that.
 var hook = regexp.MustCompile(`data-[a-z0-9-]+`)
 
+// htmlComment matches a comment, so an assertion about the markup can be made about the
+// markup. Both documents explain the search control above it, and one of them explains
+// that there is deliberately no <form> — a mention of an element is not one, and the
+// absence-of-form check below failed on that sentence before this existed.
+var htmlComment = regexp.MustCompile(`(?s)<!--.*?-->`)
+
 func hooks(t *testing.T, src string) map[string]bool {
 	t.Helper()
 	found := map[string]bool{}
@@ -93,6 +99,64 @@ func TestViewMarkupMatchesPublishedViewer(t *testing.T) {
 	if len(missing) > 0 {
 		t.Errorf("internal/view/view.html is missing hooks graph.js drives: %s",
 			strings.Join(missing, " "))
+	}
+}
+
+// TestSearchControlIsInBothDocuments asserts the control itself, which the hook-parity
+// test above cannot.
+//
+// Parity compares two *sets*: a search box dropped from both documents at once leaves
+// them in perfect agreement and the feature simply gone, with graph.js's bindSearch
+// returning early and no error anywhere. This is the assertion that the control exists
+// at all, and it is in this package rather than in a JS test because there is no JS test
+// runner here by design (ADR 0008) — the served document is a Go template, so its markup
+// is checkable from Go.
+func TestSearchControlIsInBothDocuments(t *testing.T) {
+	published, err := site.Files.ReadFile("graph.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	served, err := testOptions().render("127.0.0.1:7777")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, doc := range []struct {
+		name string
+		body string
+	}{
+		{"site/graph.html", string(published)},
+		{"the rendered page", string(served)},
+	} {
+		for _, want := range []string{
+			// Every hook bindSearch queries. A control present with a renamed hook is the
+			// exact failure the parity test was written for, and it is worth naming here too
+			// because these three are read by one function.
+			"data-search",
+			"data-search-clear",
+			"data-search-none",
+			// type=search rather than text, which is what supplies the right touch keyboard.
+			`type="search"`,
+			// The box is reachable and labelled: it has no visible <label>, so the accessible
+			// name comes from here and nowhere else.
+			`aria-label="Filter to nodes matching this text"`,
+			// role=status, so a screen reader is told when a query matches nothing. Without
+			// it the only signal is a count that reads the same as every filter switched off.
+			`role="status"`,
+		} {
+			if !strings.Contains(doc.body, want) {
+				t.Errorf("%s does not carry %q", doc.name, want)
+			}
+		}
+		// Not inside a form. Enter would submit it, navigating away from the page and
+		// discarding the reader's zoom, selection, and filters — a reflex keystroke in a
+		// search box, so it has to be structurally impossible rather than handled.
+		//
+		// Comments stripped first: site/graph.html says in prose that there is deliberately
+		// no <form>, and this failed on that sentence before the strip existed.
+		if strings.Contains(htmlComment.ReplaceAllString(doc.body, ""), "<form") {
+			t.Errorf("%s puts the search in a form; Enter would navigate away from the graph",
+				doc.name)
+		}
 	}
 }
 

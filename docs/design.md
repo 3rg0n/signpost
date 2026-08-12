@@ -1562,8 +1562,8 @@ The constraints, which are the whole reason this can live here:
   Fruchterman-Reingold pass followed by an overlap pass that separates nodes by
   the footprint their label occupies rather than by the distance between their
   centres, inside a frame whose height is computed from those footprints so the
-  separation pass has somewhere to move them to; the rest is filtering, a detail
-  panel, and zoom and pan on an SVG transform group. If the viewer ever genuinely
+  separation pass has somewhere to move them to; the rest is filtering, search, a
+  detail panel, and zoom and pan on an SVG transform group. If the viewer ever genuinely
   needs a graph library, that is a new ADR and the two-repository split becomes
   the live option again.
 - **Not in the merge path.** `pages.yml` is a separate workflow with its own
@@ -1585,6 +1585,18 @@ invent, so the parity test between the two files asserts that difference rather 
 tolerating it. Converging them would mean teaching the exporter about this project's
 landing page, which is the wrong direction: the exporter's subject is the viewer, and the
 landing page is content.
+
+**Search narrows the graph; it does not replace it.** A box above the kind and edge
+filters matches a node's name, its path, and the files inside it, and what survives is
+still the diagram in the positions it already had — the layout is solved once at load and
+is never recomputed, so typing removes nodes rather than rearranging them. Recomputing per
+keystroke would move the node whose name is being typed, which is the node the reader is
+watching. Descriptions are excluded on purpose: they are generated prose, so a search for
+`files` would match nearly every module, and the page says so where a query matches
+nothing rather than leaving a reader to infer it. One consequence is structural — a node
+hidden by either the kind filters or the search is hidden by the same predicate, because an
+edge is drawn only when both of its ends are and a second copy of that rule is how a line
+gets drawn into empty space.
 
 The viewer is optional. A team can adopt the generator, read `index.md` and the
 Mermaid graphs in GitHub, open the GraphML in yEd, and never deploy a site.

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/3rg0n/signpost/internal/telemetry"
@@ -29,7 +30,17 @@ import (
 // version is stamped at link time by the release workflow
 // (-ldflags "-X main.version=v0.1.0"). The default says "not from a release",
 // which is what a build from a working tree is.
-var version = "dev"
+//
+// It is deliberately not the whole of what `signpost version` prints: `dev` is the
+// same string for every unreleased build, so on its own it cannot distinguish a
+// binary from this minute from one from a fortnight ago. versionString fills that in
+// from the build info the toolchain records — see version.go.
+var version = devVersion
+
+// devVersion is the value that means "nothing stamped this". Named rather than a bare
+// literal compared in two files: versionString branches on exactly this, and a
+// release that stamped the string "dev" would otherwise be reported as a checkout.
+const devVersion = "dev"
 
 // command is one subcommand, or a group of them. Each leaf owns its own FlagSet,
 // which is what makes `signpost graph export -format dot .` parse the way a user
@@ -362,7 +373,13 @@ func usage(w io.Writer, cmds []command, parents []string) {
 	p := newPrinter(w)
 	path := strings.Join(append([]string{"signpost"}, parents...), " ")
 	if len(parents) == 0 {
-		p.printf("signpost %s — compile a repository into a map an agent can read\n\n", version)
+		// The same string `signpost version` prints, not the bare `version` variable: this
+		// banner is the first thing a reader of an unexpected `unknown command` sees, and it
+		// is where a stale binary is most cheaply noticed. Printing `dev` here while
+		// `version` names the revision would put the answer one command further away.
+		info, ok := debug.ReadBuildInfo()
+		p.printf("signpost %s — compile a repository into a map an agent can read\n\n",
+			versionString(version, info, ok))
 	}
 	// `[args]` rather than `[flags] [path]`, because this line covers several commands
 	// at once and they do not agree: `build` takes a path, `model check` takes none.
@@ -384,11 +401,6 @@ func usage(w io.Writer, cmds []command, parents []string) {
 		p.printf("\n")
 	}
 	p.printf("\nRun `%s <command> -h` for a command's flags.\n", path)
-}
-
-func runVersion(_ []string, out, _ io.Writer) error {
-	_, err := fmt.Fprintln(out, version)
-	return err
 }
 
 // repoPath returns the path a command should analyse: the single positional

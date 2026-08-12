@@ -591,17 +591,9 @@ func TestASuggestionIsScopedToItsLevel(t *testing.T) {
 	}
 }
 
-func TestVersion(t *testing.T) {
-	for _, args := range [][]string{{"version"}, {"--version"}, {"-v"}} {
-		stdout, _, code := invoke(t, args...)
-		if code != 0 {
-			t.Errorf("%v: exit = %d", args, code)
-		}
-		if strings.TrimSpace(stdout) != version {
-			t.Errorf("%v: printed %q, want %q", args, strings.TrimSpace(stdout), version)
-		}
-	}
-}
+// `version`, `--version`, and `-v` are covered in version_test.go, where the build
+// info they now report can be varied. They were asserted here against the bare
+// `version` variable, which is no longer what the command prints.
 
 // A path that does not exist is an error, not an empty graph. Reporting "0 nodes" for
 // a typo'd path is the kind of quiet wrong answer that wastes an afternoon.

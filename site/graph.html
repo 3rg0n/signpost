@@ -77,6 +77,40 @@
            rather than only that something is missing. -->
       <div class="viewer__stage">
         <div class="viewer__controls" hidden data-controls>
+          <!-- First, because it is the control a reader reaches for on a graph too
+               big to scan — which is the case the filters below do not help with.
+               type="search" rather than "text": it gets the browser's own clear
+               affordance and the right keyboard on a touch device. No <form>, so
+               there is nothing to submit and Enter does nothing; filtering happens
+               on input. -->
+          <fieldset class="ctl">
+            <legend class="ctl__legend">find</legend>
+            <div class="find">
+              <input
+                class="find__box"
+                type="search"
+                id="sp-find"
+                name="find"
+                data-search
+                placeholder="name, path, or file"
+                aria-label="Filter to nodes matching this text"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button
+                class="find__clear"
+                type="button"
+                data-search-clear
+                aria-label="Clear the filter"
+              >
+                clear
+              </button>
+            </div>
+            <p class="find__none" data-search-none hidden role="status">
+              Nothing matches. Names, paths, and the files inside each node are
+              searched; descriptions are not.
+            </p>
+          </fieldset>
           <fieldset class="ctl">
             <legend class="ctl__legend">show</legend>
             <div class="ctl__set" data-kind-filters></div>
