@@ -2,7 +2,7 @@
 type: Module
 title: internal/hook
 description: 2 go files; 17 exported symbols.
-resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555/internal/hook
+resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620/internal/hook
 generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
   - { name: commits, value: "2" }

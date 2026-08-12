@@ -2,7 +2,7 @@
 type: Module
 title: internal/practice
 description: 4 go files; 18 exported symbols.
-resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555/internal/practice
+resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620/internal/practice
 generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
   - { name: commits, value: "6" }

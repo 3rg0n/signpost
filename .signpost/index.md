@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 66 concepts, 155 relationships."
-resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555
+description: "Structural map of this repository: 67 concepts, 163 relationships."
+resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620
 generated: { by: signpost/dev, at: "2026-08-12" }
 ---
 # Repository map
@@ -19,8 +19,8 @@ Start here. Each line names a page and what is on it.
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [\(repository root\)](./modules/root.md) — 46 relationships (15 in, 31 out)
-- [cmd/signpost](./modules/signpost.md) — 39 relationships (12 in, 27 out)
+- [\(repository root\)](./modules/root.md) — 50 relationships (17 in, 33 out)
+- [cmd/signpost](./modules/signpost.md) — 43 relationships (14 in, 29 out)
 - [internal/assemble](./modules/assemble.md) — 21 relationships (9 in, 12 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
 - [internal/manifest](./modules/manifest.md) — 19 relationships (12 in, 7 out)
@@ -39,13 +39,13 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/okf](./modules/okf.md) — 14 go files; 36 exported symbols.
 - [internal/practice](./modules/practice.md) — 4 go files; 18 exported symbols.
 - [\(repository root\)](./modules/root.md) — 2 powershell files; 10 exported symbols; entrypoint #!, param.
-- [internal/scaffold](./modules/scaffold.md) — 2 go files; 8 exported symbols.
+- [internal/scaffold](./modules/scaffold.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
 - [cmd/signpost](./modules/signpost.md) — 21 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.
-- [internal/view](./modules/view.md) — 3 go files; 3 exported symbols.
+- [internal/view](./modules/view.md) — 5 go files; 4 exported symbols.
 
 ### Documents
 
@@ -77,6 +77,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0026: history is read where a count answers the question](./references/adr-0026-history-is-read-where-a-count-answers-the-question.md) — Architecture decision (Accepted), 30 rules read from 0026-history-is-read-where-a-count-answers-the-question.md.
 - [ADR 0027: a gate fails only on what the reader can fix](./references/adr-0027-a-gate-fails-only-on-what-the-reader-can-fix.md) — Architecture decision (Accepted), 21 rules read from 0027-a-gate-fails-only-on-what-the-reader-can-fix.md.
 - [ADR 0028: scaffolded files are embedded and tested against our own](./references/adr-0028-scaffolded-files-are-embedded-and-tested-against-our-own.md) — Architecture decision (Accepted), 26 rules read from 0028-scaffolded-files-are-embedded-and-tested-against-our-own.md.
+- [ADR 0029: the viewer is written by the run that publishes it](./references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md) — Architecture decision (Accepted), 24 rules read from 0029-the-viewer-is-written-by-the-run-that-publishes-it.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

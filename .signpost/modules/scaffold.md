@@ -1,25 +1,28 @@
 ---
 type: Module
 title: internal/scaffold
-description: 2 go files; 8 exported symbols.
-resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555/internal/scaffold
+description: 2 go files; 10 exported symbols.
+resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620/internal/scaffold
 generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
-  - { name: commits, value: "1" }
-  - { name: exported, value: "8" }
+  - { name: commits, value: "2" }
+  - { name: exported, value: "10" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-08-12" }
   - { name: last_commit, value: "2026-08-12" }
-  - { name: lines_added, value: "518" }
-  - { name: lines_removed, value: "0" }
+  - { name: lines_added, value: "564" }
+  - { name: lines_removed, value: "6" }
   - { name: package, value: scaffold }
   - { name: top_author, value: Ergon Copeland }
   - { name: top_author_share, value: 100% }
+edges:
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
 ---
 # internal/scaffold
 
 <!-- signpost:managed:summary -->
-2 go files; 8 exported symbols.
+2 go files; 10 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -29,7 +32,9 @@ attributes:
 - `internal/scaffold/scaffold.go`
 - `internal/scaffold/scaffold_test.go`
 
-- **Exports** (8): `Apply`, `ConfigPath`, `ErrExists`, `File`, `Plan`, `Plan.Blocked`, `PlanGitHub`, `WorkflowPath`
+- **Exports** (10): `Apply`, `ConfigPath`, `ErrExists`, `File`, `PagesPath`, `Plan`, `Plan.Blocked`, `PlanGitHub`, `PlanPages`, `WorkflowPath`
+
+- **Changes with**: [\(repository root\)](./root.md) ×2, [cmd/signpost](./signpost.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes
