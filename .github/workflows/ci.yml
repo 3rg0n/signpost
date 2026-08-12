@@ -396,6 +396,8 @@ jobs:
           check 'check'      "offer check"          model
           check '<command>' 'print the group usage' hooks
           check 'install'    "offer install"        hooks
+          check '<command>' 'print the group usage' init
+          check 'github'     "offer github"         init
 
           # A renamed verb says where it went. `export` is unknown now; `graph .`
           # parses as a group handed a path, which is exactly the v0.1.0 spelling.
@@ -440,6 +442,8 @@ jobs:
           helps hooks install
           helps hooks uninstall
           helps hooks run
+          helps init
+          helps init github
 
           # The hook reports and never gates. That division is what makes the hook
           # safe to install, and it is asserted on the real binary because the
@@ -464,6 +468,37 @@ jobs:
           # to the cheap check, which would report "current" from a check that
           # never ran.
           check 'verify' 'name the modes it accepts' hooks run -check quick .
+
+          # `init github` must not touch this repository, and here is the one place
+          # that can be asserted against the files it would really overwrite: both
+          # of its targets are present and tuned, and one of them is this file. A
+          # unit test can only prove the refusal in a temp directory it made.
+          #
+          # -y is passed deliberately. The dangerous invocation is the one that
+          # means "yes, write it", so the preview path proving nothing here would
+          # miss the case that matters.
+          code=0
+          ./signpost init github -y . >"${RUNNER_TEMP}/init.txt" 2>"$err" || code=$?
+          if [ "$code" -ne 0 ]; then
+            echo "signpost init github -y: exit ${code}, want 0 — a target already"
+            echo "present is a legitimate state, so a script must not have to guard it"
+            cat "$err"
+            fail=1
+          fi
+          for f in .github/workflows/signpost.yml .signpost.yml; do
+            grep -q "${f} is already here" "${RUNNER_TEMP}/init.txt" || {
+              echo "signpost init github -y: does not report ${f} as already present"
+              cat "${RUNNER_TEMP}/init.txt"
+              fail=1
+            }
+          done
+          # The bytes, not just the message. A command that said the right thing and
+          # wrote anyway is the failure this is about.
+          if ! git diff --quiet -- .github/workflows/signpost.yml .signpost.yml; then
+            echo "signpost init github -y modified a file it reported as already present"
+            git diff --stat -- .github/workflows/signpost.yml .signpost.yml
+            fail=1
+          fi
 
           # A .signpost.yml signpost cannot use is exit 2 and no bundle, on every
           # command that reads one. Asserted on the real binary because the exit

@@ -393,10 +393,31 @@ configured.
 
 ## Running it in CI
 
-Copy [`.github/workflows/signpost.yml`](.github/workflows/signpost.yml). It is the
-workflow this repository uses on itself, and it is the setup that makes the bundle
-useful to a team where nobody installed signpost: CI builds the map, commits it, and
-everyone reads markdown.
+```
+signpost init github          # print the workflow and .signpost.yml it would write
+signpost init github -y       # write them
+```
+
+This is the setup that makes the bundle useful to a team where nobody installed
+signpost: CI builds the map, commits it, and everyone reads markdown. What it writes
+is the workflow this repository runs on itself — a test compares the two structurally
+on every build, so the scaffold cannot quietly become advice we do not follow — with
+one difference, which is that a scaffolded repository installs a pinned signpost
+release where this one builds from its own source.
+
+**It prints by default and writes only with `-y`.** The workflow it produces asks for
+`contents: write` and pushes to the default branch, which is not something to install
+because a command was typed correctly. Neither file is ever overwritten: one already
+there stops the command and exits 0, because replacing a workflow you tuned with our
+default would be worse than doing nothing.
+
+`.signpost.yml` gets `repo:` filled in from your `origin` remote, and the output says
+so and asks you to check it — a remote is a property of your checkout, and a fork's
+remote names the upstream. Nothing is committed; that is yours to review first.
+
+You can also just copy [`.github/workflows/signpost.yml`](.github/workflows/signpost.yml)
+and write `.signpost.yml` yourself. The command is the same two files with the version
+pinned.
 
 Two jobs, with deliberately different strictness:
 
@@ -468,6 +489,7 @@ in a repository without a bundle.
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
 | `signpost hooks` — optional local post-commit reminder | done |
+| `signpost init github` — scaffold that workflow into another repository | done |
 | `.signpost.yml` — per-repository defaults, no gate keys | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
 | `signpost view` — the same viewer on 127.0.0.1, for any repository | done |
