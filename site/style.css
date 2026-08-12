@@ -701,6 +701,91 @@ code {
   line-height: 1.5;
 }
 
+/* --- find ------------------------------------------------------------------ */
+
+/* The same bordered box the filters and the zoom control sit in, for the same
+   reason: the search is one of the panel's controls, not a widget above it. */
+.find {
+  display: flex;
+  margin-top: 0.7rem;
+  border: 1px solid var(--rule);
+  font-family: var(--mono);
+}
+
+.find__box {
+  /* min-width: 0 because a flex item's default is its intrinsic width, and an
+     input's is wide enough to push the clear button out of a 13.5rem column. */
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  /* The browser's own clear button, removed: there is a labelled one beside it
+     that also resets the graph, and two of them side by side that do different
+     things is worse than one that does the whole job. */
+  appearance: none;
+}
+
+.find__box::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.find__box::placeholder {
+  color: var(--ink-faint);
+}
+
+/* Inside the box's border rather than around it, so focus does not shift the
+   panel's layout by two pixels. */
+.find__box:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.find__clear {
+  flex: none;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: var(--ground);
+  color: var(--ink-dim);
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.find__clear:hover {
+  background: var(--raised);
+}
+
+/* Disabled while the box is empty, on the same argument as the zoom limits: a
+   control that vanishes leaves the reader wondering what they did. */
+.find__clear:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.find__clear:disabled:hover {
+  background: var(--ground);
+}
+
+/* Amber, because the palette reserves it for what signpost cannot confirm, and a
+   search with no hits is exactly that — the reader's query, not a fault. Same
+   left-rule treatment as .notes__item so the two read as one kind of remark. */
+.find__none {
+  margin: 0.7rem 0 0;
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--unsure-dim);
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
 /* --- zoom ------------------------------------------------------------------ */
 
 /* The same bordered-grid grammar as .ctl__set, so the view controls read as part

@@ -524,7 +524,8 @@ in a repository without a bundle.
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |
 | Semantic pass: doc-to-code linking, invariants, cluster labels | v0.3 |
-| Viewer: search, diff between commits, deep links to source | v0.4 |
+| Viewer: search by name, path, or file · deep links to source | done |
+| Viewer: diff between two commits | v0.4 |
 
 The deterministic core is usable end-to-end: build a bundle, commit it, and CI keeps
 it honest. `build -semantic` adds the summaries that say what a module is *for*,

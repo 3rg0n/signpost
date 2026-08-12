@@ -10,6 +10,35 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-12
 
+- **The viewer can be searched.** A box above the kind and edge filters narrows the graph to
+  the nodes whose name, path, or contained files match what is typed, and the result stays a
+  graph rather than becoming a list — which is the point: a reader searching a module graph is
+  looking for where something sits, and a list of names is the one view that cannot answer
+  that.
+
+  **The layout is not recomputed.** It is solved once when the page loads, so a filtered node
+  keeps the position it had and typing narrows the same picture. A re-layout per keystroke
+  would move every remaining node — including the one whose name is being typed, which is
+  the node the reader is watching. There is no debounce either: the work is a substring scan
+  and an SVG rebuild, which every filter toggle already does, so a timer would add a lag a
+  reader can feel in order to hide a cost that is not there.
+
+  **Descriptions are deliberately not searched.** They are generated prose — "6 go files; 39
+  exported symbols" — so a search for `files` would match nearly every module, and a filter
+  that matches everything reads as a broken one. What is searched is said in the page's own
+  no-match message rather than left to be inferred.
+
+  **The visibility rule became one function in the process.** It had been written out four
+  times — the node filter, both ends of the edge filter, and the count of edgeless nodes in
+  the band — and search adds a second clause to it. A rule copied four times gets its new
+  clause added in three of them, and that mutant is not subtle: mutation-testing it drew 160
+  of 163 edges into empty space, lines running to nodes that were no longer on the page.
+
+  A selected node that a search excludes is deselected, because a detail panel describing
+  something the reader cannot see is the viewer asserting two contradictory things at once.
+  Escape clears the box, and only when there is something to clear, so Escape still reaches
+  the browser on an empty one.
+
 - **`signpost init pages` scaffolds the Pages deploy, and `signpost view -static` gives it
   something to publish.** One command writes `.github/workflows/pages.yml`; the other writes
   the viewer — the page, the stylesheet, the script, the icon, and `graph.json` — to a
@@ -1149,6 +1178,30 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+#### 2026-08-12
+
+- **`signpost version` now names the build, so a stale binary is visible.** It printed `dev` for
+  every build that was not a tagged release, which is every `go build` and every `go install` —
+  and `dev` is the same string today as it was a month ago. The failure that surfaced this was a
+  stale `~/go/bin/signpost` answering `unknown command "view"`: that reads as a missing feature,
+  and `version` could not distinguish it from a version of signpost that genuinely had no
+  `view`. Now it prints `dev (af8c6ab, 2026-08-12, dirty)` — the revision, its date, and whether
+  the tree was clean, all from the `vcs.*` settings the toolchain already records in the binary.
+
+  **A case not in the report: the documented install command printed `dev` for a binary that was
+  exactly v0.1.0.** `go install github.com/3rg0n/signpost/cmd/signpost@latest` builds from the
+  module proxy, not from a checkout, and a proxy build carries no `vcs.*` at all — but its
+  `Main.Version` holds the real tag. That is now reported as `v0.1.0 (go install)`, qualified
+  rather than bare, because it is not the artifact the release published and the difference is
+  the reader's to judge.
+
+  **The build info is a parameter, not a call inside the function.** A `go test` binary is a
+  third shape — no `vcs.*`, `Main.Version` of `(devel)` — and a test process is exactly one
+  build, so a function calling `debug.ReadBuildInfo()` itself would leave every branch but its
+  own unreachable by any test. Passing it in is what makes the four cases testable; each was
+  mutation-tested, and each mutant failed a named subtest. Stdlib only, and the release
+  `-ldflags` path is untouched: an injected version still wins outright.
 
 #### 2026-08-11
 

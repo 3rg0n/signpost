@@ -75,6 +75,37 @@
 
       <div class="viewer__stage">
         <div class="viewer__controls" hidden data-controls>
+          <!-- Same control, same hooks, same order as site/graph.html — the parity
+               test compares the two sets, and this is the half a reader of an
+               unfamiliar repository is most likely to want. -->
+          <fieldset class="ctl">
+            <legend class="ctl__legend">find</legend>
+            <div class="find">
+              <input
+                class="find__box"
+                type="search"
+                id="sp-find"
+                name="find"
+                data-search
+                placeholder="name, path, or file"
+                aria-label="Filter to nodes matching this text"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button
+                class="find__clear"
+                type="button"
+                data-search-clear
+                aria-label="Clear the filter"
+              >
+                clear
+              </button>
+            </div>
+            <p class="find__none" data-search-none hidden role="status">
+              Nothing matches. Names, paths, and the files inside each node are
+              searched; descriptions are not.
+            </p>
+          </fieldset>
           <fieldset class="ctl">
             <legend class="ctl__legend">show</legend>
             <div class="ctl__set" data-kind-filters></div>

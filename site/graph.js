@@ -87,6 +87,9 @@
     controls: document.querySelector("[data-controls]"),
     kindFilters: document.querySelector("[data-kind-filters]"),
     edgeFilters: document.querySelector("[data-edge-filters]"),
+    search: document.querySelector("[data-search]"),
+    searchClear: document.querySelector("[data-search-clear]"),
+    searchNone: document.querySelector("[data-search-none]"),
     count: document.querySelector("[data-count]"),
     detail: document.querySelector("[data-detail]"),
     detailHint: document.querySelector("[data-detail-hint]"),
@@ -112,6 +115,11 @@
     byID: {},
     kindOn: {},
     edgeOn: {},
+    // The search text, lowercased once at entry rather than per node per keystroke.
+    // Empty means no search, which is not the same as a search that matches nothing:
+    // "" would match every node as a substring, and the two have to be distinguished
+    // because one of them is the initial state.
+    query: "",
     selected: null,
     // Set by layout(): how the frame was divided between the connected graph and
     // the band of nodes with no edges.
@@ -209,6 +217,7 @@
 
     layout();
     buildFilters();
+    bindSearch();
     bindZoomControls();
     el.controls.hidden = false;
     el.detail.hidden = false;
@@ -772,6 +781,73 @@
     });
   }
 
+  // bindSearch wires the box, and there is no layout in it.
+  //
+  // The layout is computed once in init() and search does not recompute it: a node
+  // filtered out keeps the position it had, so typing narrows the same picture instead
+  // of rearranging it. That is the property that makes searching useful on a graph
+  // somebody is already reading — a re-layout per keystroke would move every remaining
+  // node, and the reader would lose the thing they were looking at while typing its
+  // name.
+  //
+  // No debounce either. The work per keystroke is a substring scan over the node list
+  // and a rebuild of the svg, which render() already does on every filter toggle; a
+  // timer would add a lag a reader can feel to hide a cost that is not there.
+  function bindSearch() {
+    if (!el.search) {
+      return;
+    }
+    el.search.addEventListener("input", function () {
+      // Lowercased here, once, rather than in matches() per node per keystroke. The
+      // node fields are lowercased at comparison instead, which is the asymmetry
+      // that keeps the cased original available for display.
+      state.query = el.search.value.trim().toLowerCase();
+      if (el.searchClear) {
+        el.searchClear.disabled = state.query === "";
+      }
+      // A selected node that the search has just excluded is cleared, so the detail
+      // panel cannot describe something that is no longer on the page. Leaving it
+      // would be the viewer asserting two contradictory things at once.
+      if (state.selected && !shown(state.byID[state.selected])) {
+        state.selected = null;
+        showDetail();
+      }
+      render();
+    });
+    // Escape clears, which is the convention every search box in a browser follows and
+    // is faster than selecting the text to delete it. Bound on the input rather than
+    // the document: a global key handler would swallow Escape for anything else on the
+    // page.
+    el.search.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape" && el.search.value !== "") {
+        // Only when there is something to clear, so Escape still reaches the browser
+        // on an empty box.
+        ev.preventDefault();
+        clearSearch();
+      }
+    });
+    if (el.searchClear) {
+      el.searchClear.disabled = true;
+      el.searchClear.addEventListener("click", clearSearch);
+    }
+  }
+
+  // clearSearch puts the box and the graph back to no-search, from either route.
+  //
+  // One function for the button and the key, because the two have to agree about what
+  // clearing means: emptying the input without clearing state.query would leave the
+  // graph filtered by a query the reader can no longer see.
+  function clearSearch() {
+    el.search.value = "";
+    state.query = "";
+    if (el.searchClear) {
+      el.searchClear.disabled = true;
+    }
+    // Focus stays in the box, so clearing and retyping does not need the mouse.
+    el.search.focus();
+    render();
+  }
+
   function toggle(label, n, mark, onChange) {
     var wrap = document.createElement("label");
     wrap.className = "ctl__item";
@@ -816,18 +892,63 @@
     }).length;
   }
 
-  function visibleNodes() {
-    return state.nodes.filter(function (n) {
-      return state.kindOn[n.kind];
+  // shown is the one place a node's visibility is decided, and everything that needs
+  // the answer asks here.
+  //
+  // That is worth a function rather than an inlined condition: the rule was written out
+  // four times — the node filter, the edge filter twice over, and the count of edgeless
+  // nodes in the band — and search adds a second clause to it. A rule copied four times
+  // is one that gets a clause added in three of them, which renders as an edge drawn to
+  // a node that is not on the page.
+  function shown(n) {
+    return state.kindOn[n.kind] && matches(n);
+  }
+
+  // matches is the search predicate: what a reader typed, against what they can see
+  // and what they cannot.
+  //
+  // Three fields, and the third is the reason this is worth having. The title and the
+  // path are on the picture already, so searching them only saves scanning; the file
+  // list is *inside* a node and invisible until it is selected, so "which module holds
+  // resolve.go" is a question the viewer could not answer at all before this. The
+  // description is deliberately not searched — it is generated prose ("6 go files; 39
+  // exported symbols"), so a search for "files" would match nearly every module and
+  // read as a broken filter.
+  //
+  // Substring rather than fuzzy or regexp. A regexp built from typing is a syntax
+  // error on the way to most useful queries — `internal/` is fine, `(` is not — and
+  // fuzzy matching over paths returns hits a reader cannot see the reason for. A
+  // substring is the rule they are already assuming.
+  function matches(n) {
+    if (state.query === "") {
+      return true;
+    }
+    var q = state.query;
+    if (n.title.toLowerCase().indexOf(q) !== -1) {
+      return true;
+    }
+    if (n.path && n.path.toLowerCase().indexOf(q) !== -1) {
+      return true;
+    }
+    return n.files.some(function (f) {
+      return f.toLowerCase().indexOf(q) !== -1;
     });
   }
 
+  function visibleNodes() {
+    return state.nodes.filter(shown);
+  }
+
+  // An edge is drawn only when both of its ends are, which is what keeps a search from
+  // producing a line into empty space. Both clauses of `shown` matter here: filtering a
+  // kind out and searching for something a node does not match are different reasons
+  // for the same conclusion.
   function visibleEdges() {
     return state.edges.filter(function (e) {
       return (
         state.edgeOn[e.kind] &&
-        state.kindOn[state.byID[e.from].kind] &&
-        state.kindOn[state.byID[e.to].kind]
+        shown(state.byID[e.from]) &&
+        shown(state.byID[e.to])
       );
     });
   }
@@ -847,6 +968,14 @@
       " of " +
       state.edges.length +
       " edges";
+
+    // A search that matches nothing is said in words, because the counts above read
+    // the same as a kind filter with everything switched off and an empty frame does
+    // not say which. The alternative — leaving the reader to work out that their typo
+    // is the reason — is the failure this element exists to prevent.
+    if (el.searchNone) {
+      el.searchNone.hidden = !(state.query !== "" && nodes.length === 0);
+    }
 
     clear(el.plot);
 
@@ -873,7 +1002,7 @@
 
     var aloneShown = state.zones
       ? state.zones.alone.filter(function (id) {
-          return state.kindOn[state.byID[id].kind];
+          return shown(state.byID[id]);
         }).length
       : 0;
     if (aloneShown > 0) {
