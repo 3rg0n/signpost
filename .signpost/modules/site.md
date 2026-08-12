@@ -2,19 +2,19 @@
 type: Module
 title: site
 description: 2 go files; 1 exported symbol.
-resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620/site
+resource: git://github.com/3rg0n/signpost@49f8bbc304ae1463de2155ed03ae127951d56194/site
 generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
-  - { name: commits, value: "15" }
+  - { name: commits, value: "16" }
   - { name: exported, value: "1" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-09" }
-  - { name: lines_added, value: "3312" }
-  - { name: lines_removed, value: "105" }
+  - { name: last_commit, value: "2026-08-12" }
+  - { name: lines_added, value: "3566" }
+  - { name: lines_removed, value: "111" }
   - { name: package, value: site }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 60% }
+  - { name: top_author_share, value: 63% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 8 }
@@ -22,8 +22,9 @@ edges:
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 4 }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 14 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 12 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 15 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 13 }
+  - { kind: co_changes, to: ./view.md, confidence: extracted, weight: 2 }
 ---
 # site
 
@@ -40,7 +41,7 @@ edges:
 
 - **Exports** (1): `Files`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×6, [internal/discover](./discover.md) ×8, [internal/extract](./extract.md) ×5, [internal/manifest](./manifest.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×14, [cmd/signpost](./signpost.md) ×12
+- **Changes with**: [internal/assemble](./assemble.md) ×6, [internal/discover](./discover.md) ×8, [internal/extract](./extract.md) ×5, [internal/manifest](./manifest.md) ×3, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×15, [cmd/signpost](./signpost.md) ×13, [internal/view](./view.md) ×2
 <!-- /signpost:managed:structure -->
 
 ## Notes

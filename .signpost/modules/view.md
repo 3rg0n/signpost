@@ -2,22 +2,23 @@
 type: Module
 title: internal/view
 description: 5 go files; 4 exported symbols.
-resource: git://github.com/3rg0n/signpost@151f810140cfbdcacbc64d5cc0ed632d07fff620/internal/view
+resource: git://github.com/3rg0n/signpost@49f8bbc304ae1463de2155ed03ae127951d56194/internal/view
 generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
-  - { name: commits, value: "2" }
+  - { name: commits, value: "3" }
   - { name: exported, value: "4" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-08-06" }
   - { name: last_commit, value: "2026-08-12" }
-  - { name: lines_added, value: "1608" }
+  - { name: lines_added, value: "1703" }
   - { name: lines_removed, value: "6" }
   - { name: package, value: view }
   - { name: top_author, value: Ergon Copeland }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./site.md, confidence: extracted, weight: 2, source: internal/view/view.go }
 ---
 # internal/view
@@ -38,7 +39,7 @@ edges:
 
 - **Exports** (4): `DefaultPort`, `Options`, `Serve`, `WriteStatic`
 
-- **Changes with**: [\(repository root\)](./root.md) ×2, [cmd/signpost](./signpost.md) ×2
+- **Changes with**: [\(repository root\)](./root.md) ×3, [cmd/signpost](./signpost.md) ×3, [site](./site.md) ×2
 
 - **Imports**: [site](./site.md) ×2
 <!-- /signpost:managed:structure -->
