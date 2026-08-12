@@ -1,0 +1,81 @@
+internal/view/view_test.go
+  s_f6c0b1ac81cb95::t_e08186b2cdb97b 36-38
+  s_f6c0b1ac81cb95::t_bc2b1b50e24536 30-35
+internal/view/static_test.go
+  s_f6c0b1ac81cb95::t_8931e052169e2b 1-251
+cmd/signpost/init_test.go
+  s_f6c0b1ac81cb95::t_b1e05cd50667b3 553
+  s_f6c0b1ac81cb95::t_66dbd3c9a9a8f6 308-370,377,381-552,554-561,579-594
+  s_f6c0b1ac81cb95::t_f312a38b1bfcfa 371-376,378-380
+  s_f6c0b1ac81cb95::t_c7eb7e6bc004fd 562-578
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_f43bf96ae87a5d 13-70
+README.md
+  s_f6c0b1ac81cb95::t_d6033bc9e78595 452-475
+  s_f6c0b1ac81cb95::t_56a59c812c63a1 23-25
+  s_f6c0b1ac81cb95::t_b5c02446bad9a2 522-523
+internal/scaffold/templates/pages.yml
+  s_f6c0b1ac81cb95::t_85cde367e66343 1-12,16-133
+  s_f6c0b1ac81cb95::t_d7dd18eca21f03 13-15
+cmd/signpost/init.go
+  s_f6c0b1ac81cb95::t_5bf41e15068548 132-134
+  s_f6c0b1ac81cb95::t_4cd611defc469e 107-131,135-200
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_f3ca87d8ec324d 91
+  s_f6c0b1ac81cb95::t_146af3bcb6b45c 89
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_84259744333abc 48
+internal/view/static.go
+  s_f6c0b1ac81cb95::t_590404bc9a62b7 1-44,50,56-59,61-65,67-88
+  s_f6c0b1ac81cb95::t_57940b2725ede5 45-49,51-55,60,66
+docs/design.md
+  s_f6c0b1ac81cb95::t_8b77d6a141648b 1647-1683
+  s_f6c0b1ac81cb95::t_830d0cf937657e 1869-1919
+  s_f6c0b1ac81cb95::t_965ba1393a86b1 1579-1588
+  s_f6c0b1ac81cb95::t_9d799dc012dac5 1241-1243
+  s_f6c0b1ac81cb95::t_58ce3db25bbf01 1511-1513
+  s_f6c0b1ac81cb95::t_ecdae863cd75e0 1612-1613
+internal/view/view.html
+  s_f6c0b1ac81cb95::t_8bc15631c608b4 158-160
+  s_f6c0b1ac81cb95::t_2ab3f616a3cb78 16-22
+  s_f6c0b1ac81cb95::t_376e80b083daa3 53
+internal/scaffold/scaffold.go
+  s_f6c0b1ac81cb95::t_7b1e1dbe210d97 126-127
+  s_f6c0b1ac81cb95::t_e7fb44e55ad7e7 128-130,132-164,169,172
+  s_f6c0b1ac81cb95::t_bf2510f24054d5 52-56
+  s_f6c0b1ac81cb95::t_c8fbca30362428 131
+cmd/signpost/view_test.go
+  s_f6c0b1ac81cb95::t_2621bbfaacf208 8
+  s_f6c0b1ac81cb95::t_3d0b72a5bc9729 325-411
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_fdecdcc02a2cad 448
+  s_f6c0b1ac81cb95::t_39274590995c51 505-553
+  s_f6c0b1ac81cb95::t_7a2330ed5a8dbd 401
+cmd/signpost/view.go
+  s_f6c0b1ac81cb95::t_5a4cf81df45273 46-47
+  s_f6c0b1ac81cb95::t_149c47ec8193a8 76-79,84-87,90-92
+  s_f6c0b1ac81cb95::t_8f7e1dc5085019 66-67
+  s_f6c0b1ac81cb95::t_b5cabfcd354547 23-32
+  s_f6c0b1ac81cb95::t_3da8608ce7847c 126,130-151
+  s_f6c0b1ac81cb95::t_3a62301cae8090 120,124-125
+  s_f6c0b1ac81cb95::t_d40d74435a6488 80-83,88-89
+  s_f6c0b1ac81cb95::t_d7883e64bab89e 52-55
+docs/adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md
+  s_f6c0b1ac81cb95::t_ca8468dbadb7ae 1-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "811bf46cdae85c55b6e548263818b9e6317fc7a7",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
