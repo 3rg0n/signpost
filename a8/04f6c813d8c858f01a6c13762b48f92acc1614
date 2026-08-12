@@ -1,0 +1,61 @@
+cmd/signpost/init_test.go
+  s_f6c0b1ac81cb95::t_1031a44b0fef34 273-277,280-287
+  s_f6c0b1ac81cb95::t_b78f8bbd716d42 246-251,259,263-265
+  s_f6c0b1ac81cb95::t_f2c02c4c4122a9 180-181
+  s_f6c0b1ac81cb95::t_05630d355ebecd 212-226,232,234-238,240-242,244
+  s_f6c0b1ac81cb95::t_d7f5320319f5b4 33,56,83,105,115
+  s_f6c0b1ac81cb95::t_ba1e474917fb95 1-3,5-13,27-32,34-55,57-82,84-104,106-114,116-146,150-175,195-211,245,266-272,278-279,288-307,326-386
+  s_f6c0b1ac81cb95::t_9097e6f3682dc2 176-179,182-194
+  s_f6c0b1ac81cb95::t_3ea45a4bb6bb8a 252-258,260-262
+  s_f6c0b1ac81cb95::t_c37dc54285c064 227-231,233,239,243
+  s_f6c0b1ac81cb95::t_5fc2dba871820a 308-325
+  s_f6c0b1ac81cb95::t_f47ae5cba0fd98 4,14-26
+  s_f6c0b1ac81cb95::t_67c4cbf331e0d1 147-149
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_c2e642bc99cba3 61-65
+  s_f6c0b1ac81cb95::t_cf20db07386f46 11-60
+README.md
+  s_f6c0b1ac81cb95::t_6c427f6e00ac07 396-420
+  s_f6c0b1ac81cb95::t_7b57914471bf39 492
+internal/scaffold/scaffold.go
+  s_f6c0b1ac81cb95::t_667b000b6d2e11 146-147,152-155
+  s_f6c0b1ac81cb95::t_ce3fec05cb3cef 1-145,148-151,156-212,214-274
+  s_f6c0b1ac81cb95::t_032cd4284ea578 213
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_00aa1baeba874a 89-91
+docs/design.md
+  s_f6c0b1ac81cb95::t_3f7dc111e464a6 1763-1815
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_caaecfb5b584c5 47
+internal/scaffold/templates/signpost.yml
+  s_f6c0b1ac81cb95::t_a601384dd5511b 84-92,95-104,168-176,179-188
+  s_f6c0b1ac81cb95::t_0da206189131b2 105-107,189-191
+  s_f6c0b1ac81cb95::t_a0460558f07867 1-83,108-167,192-231
+  s_f6c0b1ac81cb95::t_67a584f6353e16 93-94,177-178
+docs/adr/0028-scaffolded-files-are-embedded-and-tested-against-our-own.md
+  s_f6c0b1ac81cb95::t_562817c19d6087 1-132
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_bd0a291a19830c 472-502
+  s_f6c0b1ac81cb95::t_820aac5d05f335 399-400
+  s_f6c0b1ac81cb95::t_1b6e35e36bcaab 445-446
+internal/scaffold/scaffold_test.go
+  s_f6c0b1ac81cb95::t_ada5571851789d 1-244
+cmd/signpost/init.go
+  s_f6c0b1ac81cb95::t_32c835ad2d83dd 1-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a804f6c813d8c858f01a6c13762b48f92acc1614",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
