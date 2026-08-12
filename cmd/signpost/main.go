@@ -86,8 +86,9 @@ func commands() []command {
 			{name: "export", summary: "render the graph as mermaid, dot, graphml, or json", run: runExport},
 		}},
 		{name: "view", summary: "serve the graph on 127.0.0.1 and open a browser", run: runView},
-		{name: "init", summary: "write the CI files that keep the bundle honest", subs: []command{
+		{name: "init", summary: "write the CI files that keep a bundle honest, or publish it", subs: []command{
 			{name: "github", summary: "scaffold the GitHub Actions workflow and .signpost.yml", run: runInitGitHub},
+			{name: "pages", summary: "scaffold the workflow that publishes the graph to GitHub Pages", run: runInitPages},
 		}},
 		{name: "model", summary: "inspect the configured model backend", subs: []command{
 			{name: "check", summary: "send one request to the configured backend and report what came back", run: runModelCheck},

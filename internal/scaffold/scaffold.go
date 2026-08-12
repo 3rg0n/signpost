@@ -49,6 +49,11 @@ var templates embed.FS
 const (
 	WorkflowPath = ".github/workflows/signpost.yml"
 	ConfigPath   = ".signpost.yml"
+	// PagesPath is the deploy workflow. A separate file from WorkflowPath rather than a
+	// second job inside it, because the two have different triggers, different
+	// permissions, and different consequences for failing — and because publishing is a
+	// choice somebody makes separately from keeping a bundle honest.
+	PagesPath = ".github/workflows/pages.yml"
 )
 
 // ErrExists reports that a file this command would write is already there.
@@ -118,18 +123,53 @@ func PlanGitHub(root, repo string) (Plan, error) {
 		{Path: WorkflowPath, Contents: string(workflow)},
 		{Path: ConfigPath, Contents: renderConfig(plan.Repo)},
 	}
+	if err := markExisting(root, &plan); err != nil {
+		return Plan{}, err
+	}
+	return plan, nil
+}
+
+// PlanPages works out what `init pages` would write into root.
+//
+// One file, and no `.signpost.yml`: the deploy names no repository, because the graph it
+// publishes is of whatever tree the workflow checked out. Repo and Derived are left zero
+// for the same reason — there is nothing here for a reader to agree with.
+//
+// It reads nothing over the network, which is the constraint worth stating because the
+// obvious design does. Checking `repos/{owner}/{repo}` for `owner.type` and `visibility`
+// would let this refuse when it cannot confirm a site would be private, and it was
+// declined: it would make `init` the only networked command in a tool that is otherwise
+// hermetic, and it would not actually be the gate it looks like. `configure-pages` can
+// only enable Pages with a token other than GITHUB_TOKEN, so this workflow cannot turn
+// publishing on by itself — somebody has to change a repository setting, and *that* is
+// where the decision is made. What this can do is make sure the consequence is stated
+// where they will read it: in the preview, and in the file's own comments.
+func PlanPages(root string) (Plan, error) {
+	workflow, err := templates.ReadFile("templates/pages.yml")
+	if err != nil {
+		return Plan{}, err
+	}
+	plan := Plan{Files: []File{{Path: PagesPath, Contents: string(workflow)}}}
+	if err := markExisting(root, &plan); err != nil {
+		return Plan{}, err
+	}
+	return plan, nil
+}
+
+// markExisting sets Exists on every file in the plan that is already there.
+//
+// Stat rather than a read: whether something is there is the question, and a directory at
+// that path blocks the write just as a file does. Any error other than not-exist is also
+// treated as present, because a path we cannot inspect is not one to overwrite.
+func markExisting(root string, plan *Plan) error {
 	for i, f := range plan.Files {
-		// Stat rather than a read: whether something is there is the question, and a
-		// directory at that path blocks the write just as a file does. Any error other
-		// than not-exist is also treated as present, because a path we cannot inspect is
-		// not one to overwrite.
 		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(f.Path))); err == nil {
 			plan.Files[i].Exists = true
 		} else if !errors.Is(err, os.ErrNotExist) {
-			return Plan{}, fmt.Errorf("checking %s: %w", f.Path, err)
+			return fmt.Errorf("checking %s: %w", f.Path, err)
 		}
 	}
-	return plan, nil
+	return nil
 }
 
 // Apply writes a plan, or writes nothing.

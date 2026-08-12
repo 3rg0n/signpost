@@ -398,6 +398,7 @@ jobs:
           check 'install'    "offer install"        hooks
           check '<command>' 'print the group usage' init
           check 'github'     "offer github"         init
+          check 'pages'      "offer pages"          init
 
           # A renamed verb says where it went. `export` is unknown now; `graph .`
           # parses as a group handed a path, which is exactly the v0.1.0 spelling.
@@ -444,6 +445,7 @@ jobs:
           helps hooks run
           helps init
           helps init github
+          helps init pages
 
           # The hook reports and never gates. That division is what makes the hook
           # safe to install, and it is asserted on the real binary because the
@@ -499,6 +501,55 @@ jobs:
             git diff --stat -- .github/workflows/signpost.yml .signpost.yml
             fail=1
           fi
+
+          # Same assertion for `init pages`, and this repository is the only place it
+          # can be made against a real target: pages.yml is here, it is tuned, and it
+          # is the deploy that publishes this project's own site. Overwriting it with
+          # the scaffold would replace a working deploy with a template, and the
+          # damage would be invisible until the next push to main.
+          code=0
+          ./signpost init pages -y . >"${RUNNER_TEMP}/pages.txt" 2>"$err" || code=$?
+          if [ "$code" -ne 0 ]; then
+            echo "signpost init pages -y: exit ${code}, want 0 — a target already"
+            echo "present is a legitimate state, so a script must not have to guard it"
+            cat "$err"
+            fail=1
+          fi
+          grep -q ".github/workflows/pages.yml is already here" "${RUNNER_TEMP}/pages.txt" || {
+            echo "signpost init pages -y: does not report pages.yml as already present"
+            cat "${RUNNER_TEMP}/pages.txt"
+            fail=1
+          }
+          if ! git diff --quiet -- .github/workflows/pages.yml; then
+            echo "signpost init pages -y modified a file it reported as already present"
+            git diff --stat -- .github/workflows/pages.yml
+            fail=1
+          fi
+
+          # `view -static` is what the scaffolded deploy runs, so it is asserted on
+          # the real binary against this repository rather than a fixture: the
+          # command a template tells somebody to run has to work on the artifact we
+          # release. Into ${RUNNER_TEMP} for the reason $err is — a site directory in
+          # the workspace would be counted by the census steps below.
+          site="${RUNNER_TEMP}/static"
+          code=0
+          ./signpost view -static "$site" -quiet . >/dev/null 2>"$err" || code=$?
+          if [ "$code" -ne 0 ]; then
+            echo "signpost view -static: exit ${code}, want 0"
+            cat "$err"
+            fail=1
+          fi
+          # Every file the page loads. A missing asset is a page that renders blank
+          # or unstyled, which is not a failure anywhere else: the server has its own
+          # copy of this list, and a fifth file added there is exactly what this
+          # catches.
+          for f in index.html graph.json graph.js style.css favicon.svg; do
+            [ -s "${site}/${f}" ] || {
+              echo "signpost view -static did not write ${f}"
+              ls -la "$site" || true
+              fail=1
+            }
+          done
 
           # A .signpost.yml signpost cannot use is exit 2 and no bundle, on every
           # command that reads one. Asserted on the real binary because the exit

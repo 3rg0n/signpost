@@ -13,6 +13,13 @@
      unchanged — its font stacks already fall through to ui-sans-serif and ui-monospace,
      so not requesting Archivo and Spline Sans Mono costs a typeface and no layout.
 
+     This document serves both `signpost view` and `view -static`, and there is no third
+     file for the second one: graph.js drives everything by data-* attribute, so a third
+     copy of this markup would double the drift this package's parity test exists to
+     catch. Address is what distinguishes them — a served page names the host it is
+     answering on, a written one has no host to name, and the two places below that
+     mention it are guarded rather than duplicated.
+
      data-repo-base is absent unless the repository's own name says where its files can
      be read. graph.js links a file only when it has one; see showDetail. -->
 <html lang="en"{{with .RepoBase}} data-repo-base="{{.}}"{{end}}>
@@ -43,7 +50,7 @@
         <span class="topbar__mark">signpost</span>
       </div>
       <nav class="topbar__nav" aria-label="what this is">
-        <span class="local">{{.Address}}</span>
+        {{with .Address}}<span class="local">{{.}}</span>{{end}}
       </nav>
     </header>
 
@@ -148,7 +155,9 @@
 
     <footer class="foot">
       <p class="foot__line foot__line--quiet">
-        Served from this machine only. Stop it with ctrl-c.
+        {{if .Address}}Served from this machine only. Stop it with ctrl-c.
+        {{else}}Written by <code>signpost view -static</code>. This page describes
+        the tree as it was when that ran; it does not re-read anything.{{end}}
       </p>
     </footer>
 
