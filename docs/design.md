@@ -1238,6 +1238,9 @@ signpost verify [path]             # conformance + link + staleness; non-zero on
 signpost graph show [path]         # report structure: hubs, cycles, bridges, islands
 signpost graph export -format ...  # mermaid, dot, graphml, or json
 signpost view [path]               # serve the graph on 127.0.0.1 and open a browser
+signpost view -static <dir>        # write that same page to a directory and exit
+signpost init github               # scaffold the workflow that keeps a bundle honest
+signpost init pages                # scaffold the workflow that publishes the graph
 signpost model check               # prove the configured backend works; non-zero if not
 signpost ask why "<question>"      # traverse the bundle and answer, citing pages
 signpost ask path <A> <B>          # shortest typed path between two concepts
@@ -1505,7 +1508,9 @@ justified.
 `view` is the one command that opens a socket, and it is a viewer rather than a
 service: it holds a loopback listener for as long as you are looking at the page
 and writes nothing anywhere. There is still nothing to deploy, nothing to
-operate, and no state — see §7.3.
+operate, and no state — see §7.3. `view -static` writes that page to a directory
+you name instead of serving it, which is a deploy's input and not state either
+(§7.4).
 
 Inline in the bundle: **Mermaid** graphs in `index.md` and each cluster page.
 GitHub renders Mermaid natively, so a tech lead clicks `.signpost/index.md` and
@@ -1571,6 +1576,16 @@ The constraints, which are the whole reason this can live here:
   beyond the same-origin `graph.json`, and that JSON treated as untrusted input
   even though we generated it.
 
+**This directory is published by this repository's own deploy and by nothing else.** The
+scaffolded Pages workflow (§8.3) writes the viewer with `signpost view -static` (§7.4)
+instead, because a repository that adopted signpost has no `site/` and no command produces
+one — the assets live in the binary. Ours keeps uploading `site/` because it publishes a
+landing page the exporter knows nothing about and carries a `CNAME` the exporter must not
+invent, so the parity test between the two files asserts that difference rather than
+tolerating it. Converging them would mean teaching the exporter about this project's
+landing page, which is the wrong direction: the exporter's subject is the viewer, and the
+landing page is content.
+
 The viewer is optional. A team can adopt the generator, read `index.md` and the
 Mermaid graphs in GitHub, open the GraphML in yEd, and never deploy a site.
 
@@ -1594,7 +1609,8 @@ Three decisions carry the design, and they are recorded in
   create exactly the stale second artifact §7.2 declines to commit, from the one
   command whose output is transient. It also does not require `build` to have run:
   the graph comes from this invocation, which is the case where somebody most wants
-  to look at the structure *before* deciding to commit a map of it.
+  to look at the structure *before* deciding to commit a map of it. `-static` is the
+  one exception and it is a narrow one — see below.
 - **The graph is a snapshot taken before the listener opens.** Nothing re-analyses on
   a request and nothing watches the tree. A viewer that re-read the repository would
   change while somebody was reading it, and one that re-analysed per request would
@@ -1627,6 +1643,43 @@ command that works over SSH and one that appears to hang.
 cannot be bound is an error, because you named it most likely because something else is
 configured to reach it, and quietly serving a different one satisfies the command and
 not the intent. The default falls back to whatever is free and says so.
+
+### 7.4 `signpost view -static` — the same viewer, as files
+
+`-static <dir>` writes the five things `view` serves — the page, the stylesheet, the
+script, the icon, and `graph.json` — into a directory and exits. It is how a deploy
+publishes the viewer, and it is the reason §8.3's scaffold can exist at all: until it
+did, the viewer was committed here or embedded in a binary that only bound ports, so a
+Pages workflow handed to another repository had nothing to upload.
+
+**The exception to "writes nothing anywhere" is narrower than it looks, and
+[ADR 0029](adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md) records why
+it is not a reversal of §7.2.** What is declined there is a *committed* copy of derived
+data — an artifact that outlives the run that made it, in a project whose central claim
+is that stale fails loudly. These files are written and uploaded by the same run, so
+there is no interval in which they exist and the tree has moved on. The argument §7.2
+makes about `graph.json` extends to the page: it has no value without the graph beside
+it, and they are produced together or not at all.
+
+Three properties are decisions rather than implementation:
+
+- **The files come from the map the server routes, not from a list.** `WriteStatic`
+  reads the same `assets()` the HTTP handler does, and names each file after its route
+  with `/` becoming `index.html`. A fifth asset added to the server and forgotten in the
+  export cannot happen, and the test asserts against `assets()` rather than against
+  filenames so that it stays true.
+- **One document, with the address as the switch.** `view.html` renders the local
+  address and the ctrl-c line only when there is an address, so a published page does
+  not claim to be served from somebody's laptop. A second template would double the
+  drift surface §8.2's parity discipline exists to catch.
+- **The `<meta>` CSP is the only CSP an exported page has.** `Serve` sets the header, and
+  the header is the copy that binds; a static host sends whatever it likes and Pages
+  sends no CSP at all. §7.2's hardening rule therefore rests on a tag inside the
+  document once the page is published, and a test asserts it survives the export.
+
+`-static` refuses `-port` and `-no-open` rather than ignoring them, with exit 2: it does
+not listen, so neither can be honoured, and a dropped flag leaves somebody believing
+something happened that did not.
 
 ---
 
@@ -1812,6 +1865,57 @@ inside the one job holding `contents: write`. A checksum is worth nothing when t
 code comparing it is fetched the same way. The asset name is written out rather than
 detected because `runs-on` is fixed, and a test ties the two together so a change to
 one cannot silently outlive the other.
+
+### 8.3 The Pages deploy is scaffolded too, and publishing is somebody else's decision
+
+`signpost init pages` writes one file, `.github/workflows/pages.yml`. It inherits
+everything §8.2 established — embedded, previewed, `-y` writes, never overwriting, and
+compared against the workflow this repository runs — and it publishes the viewer with
+`signpost view -static` (§7.4) rather than uploading a committed copy of it.
+
+**It requests `contents: read` and writes nothing to the repository.** That is the
+property which makes it safe to hand somebody: `signpost.yml` needs `contents: write`
+because it commits a bundle, and a deploy that acquired the same permission would be a
+token with push access in a job whose entire purpose is to publish to the internet. The
+parity test asserts the absence — no `contents: write`, no `git push`, no `git commit` —
+because that is not the kind of thing to notice in review a year from now.
+
+**Nothing signpost writes can enable Pages, and that is the design rather than a
+limitation.** `actions/configure-pages` will only switch it on when given a token other
+than `GITHUB_TOKEN`, so the scaffolded workflow is inert until somebody sets
+Settings → Pages → Source to "GitHub Actions". That act is the consent.
+
+The obvious alternative was to have `init pages` call `repos/{owner}/{repo}` and refuse
+unless it could confirm the site would be private. Declined for the two reasons in
+[ADR 0029](adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md): it would make
+`init` the only command that touches the network, against §2 and §8.2, and it would gate
+a step that was never the one that publishes.
+
+**So the consequence is stated instead — in the preview, in the confirmation, in
+`init pages -h`, and in the file's own comments — and asserted in all four.** What gets
+published is every module name, every file path, and the ownership signals read out of
+git history. Whether that URL is private follows GitHub's rule and not the intuition:
+publishing a site privately requires GitHub Enterprise Cloud, and access control applies
+only to project sites from private or internal repositories owned by an *organization*. A
+personal account's private repository publishes a site anyone can read, and an
+organization site cannot use access control at any tier.
+
+Two things the scaffolded workflow deliberately omits, both places where copying ours
+would have been wrong:
+
+- **No `site/CNAME` check.** Ours has one because publishing `site/` without that file
+  *clears* the custom domain in settings (§7.2) — a deploy that succeeds while moving the
+  site back to the `github.io` address. An adopter has no apex domain to protect, and a
+  check for a file that will never exist is a step that fails on the first run.
+- **No `paths:` filter, for §7.2's reason.** The graph is derived from the whole tree, so
+  any commit can change what gets published, and the bundle-rebuild commit cannot serve as
+  the trigger because it carries `[skip ci]`.
+
+What it does add is a guard ours does not need: after the export it counts nodes in
+`graph.json` and fails below one. A viewer fed an empty graph renders an empty frame and
+looks like it works, so the deploy fails rather than publishing a page that says nothing.
+The check is in the workflow rather than in `WriteStatic`, because an empty repository is
+not an error in a command whose job is to describe whatever it was pointed at.
 
 ---
 

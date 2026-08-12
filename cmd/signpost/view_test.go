@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -319,5 +320,92 @@ func TestViewOptionsCarriesTheAnalysis(t *testing.T) {
 	}
 	if opts.Title != filepath.Base(a.Discovered.Root) {
 		t.Errorf("Title = %q, want the directory name %q", opts.Title, filepath.Base(a.Discovered.Root))
+	}
+}
+
+// TestViewStaticWritesAndReturns runs the whole command, which the tests above deliberately
+// do not: `view` without -static blocks in Serve until a signal this process cannot portably
+// send itself, so everything else here tests viewOptions and leaves the command alone.
+// -static is the one path that returns, and running it is the only way to see that the flag
+// reaches WriteStatic at all — internal/view's tests build their own Options and would pass
+// against a command that parsed -static and then served.
+func TestViewStaticWritesAndReturns(t *testing.T) {
+	root := fixture(t)
+	dir := filepath.Join(t.TempDir(), "site")
+
+	var out, errOut bytes.Buffer
+	if code := run([]string{"view", "-static", dir, "-quiet", root}, &out, &errOut); code != 0 {
+		t.Fatalf("view -static: exit %d\n%s", code, errOut.String())
+	}
+
+	// The set, not a spot check: a fifth asset added to the server and missed by the export
+	// is the failure this whole surface exists to make impossible, and the command is where
+	// it would be visible to somebody publishing.
+	for _, name := range []string{"index.html", "graph.json", "graph.js", "style.css", "favicon.svg"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("view -static did not write %s: %v", name, err)
+		}
+		if !strings.Contains(out.String(), name) {
+			t.Errorf("stdout does not report writing %s:\n%s", name, out.String())
+		}
+	}
+
+	// A caller about to upload the directory is told what is in it. Stated on every run
+	// rather than behind a flag, because it is the one thing about this command that cannot
+	// be taken back.
+	for _, want := range []string{"module", "publish"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("stdout does not say what publishing this costs (%q):\n%s", want, out.String())
+		}
+	}
+
+	// The graph the page loads is this repository's, not a placeholder. An empty document
+	// renders as a page that looks like it works.
+	data, err := os.ReadFile(filepath.Join(dir, "graph.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Nodes []json.RawMessage `json:"nodes"`
+		Edges []json.RawMessage `json:"edges"`
+	}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("graph.json is not the shape graph.js reads: %v", err)
+	}
+	if len(doc.Nodes) == 0 || len(doc.Edges) == 0 {
+		t.Errorf("graph.json has %d nodes and %d edges; the fixture has modules that import each other",
+			len(doc.Nodes), len(doc.Edges))
+	}
+}
+
+// TestViewStaticRejectsServingFlags asserts the exit code as well as the message, because
+// exit 2 is the half CI depends on: 2 means the command line was wrong, 1 means signpost ran
+// and the repository was the problem. A mutual exclusion reported as 1 tells a deploy its
+// repository is broken.
+func TestViewStaticRejectsServingFlags(t *testing.T) {
+	root := fixture(t)
+	dir := filepath.Join(t.TempDir(), "site")
+
+	for _, flag := range []string{"-port", "-no-open"} {
+		args := []string{"view", "-static", dir, flag}
+		if flag == "-port" {
+			args = append(args, "7777")
+		}
+		args = append(args, "-quiet", root)
+
+		var out, errOut bytes.Buffer
+		code := run(args, &out, &errOut)
+		if code != 2 {
+			t.Errorf("view -static with %s: exit %d, want 2 — a flag that cannot be honoured is "+
+				"a misuse of the command line\n%s", flag, code, errOut.String())
+		}
+		if !strings.Contains(errOut.String(), flag) {
+			t.Errorf("stderr does not name %s: %q", flag, errOut.String())
+		}
+		// Nothing written. Rejecting after the export would leave a directory somebody has
+		// to notice is there.
+		if _, err := os.Stat(dir); !os.IsNotExist(err) {
+			t.Errorf("view -static wrote %s despite rejecting %s", dir, flag)
+		}
 	}
 }

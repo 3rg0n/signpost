@@ -27,10 +27,15 @@ func testOptions() Options {
 		Title:    "github.com/org/repo",
 		Commit:   "abcdef012345",
 		RepoBase: "https://github.com/org/repo/blob/abcdef012345/",
-		Graph:    []byte(`{"nodes":[],"edges":[]}`),
-		Nodes:    53,
-		Edges:    94,
-		Notes:    []string{"The bundle is behind by 2 commit(s)."},
+		// A node with content, not `{"nodes":[],"edges":[]}`. An empty graph is exactly what
+		// a placeholder looks like, so a fixture carrying one cannot distinguish "served the
+		// graph" from "served a stand-in" — which is how a mutant replacing graph.json with
+		// an empty document survived. The path is here because it is the kind of string that
+		// must reach the page verbatim.
+		Graph: []byte(`{"nodes":[{"id":"/modules/auth","files":["internal/auth/auth.go"]}],"edges":[]}`),
+		Nodes: 53,
+		Edges: 94,
+		Notes: []string{"The bundle is behind by 2 commit(s)."},
 	}
 }
 

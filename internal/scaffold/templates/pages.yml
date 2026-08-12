@@ -1,0 +1,133 @@
+# Publishes the graph of this repository to GitHub Pages.
+#
+# Written by `signpost init pages`. Yours to edit.
+#
+# **Read this before enabling Pages.** What gets published is every module name, every
+# file path, and the ownership signals signpost read out of git history — who touched
+# what, and when. That is this repository's structure, at a URL.
+#
+# Whether that URL is private is not something this file can decide, and the intuition
+# that a private repository gets a private site is true in one configuration only.
+# GitHub's rule: publishing a Pages site privately requires GitHub Enterprise Cloud, and
+# access control applies only to project sites published from private or internal
+# repositories owned by an *organization*. A private repository owned by a personal
+# account publishes a site anyone can read. Organization sites cannot use access control
+# at any tier.
+#
+# This workflow cannot turn Pages on, and that is deliberate rather than a limitation to
+# work around: `actions/configure-pages` will only enable it when given a token other
+# than GITHUB_TOKEN, so somebody has to go to Settings → Pages and choose "GitHub
+# Actions" as the source. That step is the consent. Check the visibility your plan
+# actually gives you at the same moment.
+#
+# Deliberately separate from signpost.yml and off the merge path: if this workflow
+# breaks, merges keep working and the bundle is unaffected. It is never a required check.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    # Deliberately unfiltered. The graph is derived from the whole tree, so any commit
+    # can change what this publishes, and a paths: list naming source directories would
+    # go stale the first time a new one was added. signpost.yml's bundle-rebuild commit
+    # cannot serve as the trigger instead: it carries [skip ci] by design, which
+    # suppresses every workflow.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and in-flight runs are not cancelled: a cancelled deploy can
+# leave Pages serving a half-published site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      # id-token for the OIDC exchange deploy-pages uses; no long-lived secret. Note
+      # that contents stays read: unlike signpost.yml, nothing here writes to the
+      # repository.
+      pages: write
+      id-token: write
+    steps:
+      # Pinned by commit SHA rather than tag. A tag is mutable and has been moved in a
+      # real supply-chain compromise, and these actions run in a job that publishes to a
+      # URL.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Required, not a precaution: co-change edges come from git log, so a shallow
+          # clone publishes a graph quietly missing an entire edge kind rather than one
+          # that fails.
+          fetch-depth: 0
+
+      # Installed from a release and pinned to a version, for the reason signpost.yml
+      # gives: a floating version means the published graph can change on a day nothing
+      # in this repository did. Raise it deliberately.
+      - name: Install signpost
+        env:
+          SIGNPOST_VERSION: v0.1.0
+        run: |
+          set -euo pipefail
+          # The release archive is fetched directly and its SHA-256 checked against the
+          # release's own checksums.txt before anything is unpacked. install.sh does the
+          # same thing, and this does not use it: `curl ... | sh` would run a script
+          # nothing verified. The archive's checksum is no use if the code that checks
+          # it arrived unchecked.
+          #
+          # Written out rather than detected because runs-on above is fixed: this is a
+          # linux/amd64 runner, and asking uname on a pinned image is a question with a
+          # constant answer. Change both together if you change the runner.
+          name="signpost_${SIGNPOST_VERSION}_linux_amd64"
+          asset="${name}.tar.gz"
+          base="https://github.com/3rg0n/signpost/releases/download/${SIGNPOST_VERSION}"
+          mkdir -p "${RUNNER_TEMP}/bin" "${RUNNER_TEMP}/dl"
+          cd "${RUNNER_TEMP}/dl"
+          curl -fsSL -O "${base}/${asset}"
+          curl -fsSL -O "${base}/checksums.txt"
+          # Filtered to the one asset first. checksums.txt lists every platform's
+          # archive, and a bare `sha256sum -c` would fail on the six files this runner
+          # did not download.
+          grep " [*]\{0,1\}${asset}\$" checksums.txt >expected.txt
+          sha256sum -c expected.txt
+          # --strip-components because the archive holds a top-level directory named
+          # after the platform, and only the binary is wanted on PATH.
+          tar -xzf "${asset}" -C "${RUNNER_TEMP}/bin" --strip-components=1 "${name}/signpost"
+          echo "${RUNNER_TEMP}/bin" >>"${GITHUB_PATH}"
+
+      # The whole site, written by the binary from its own embedded assets: the page, the
+      # stylesheet, the script, the icon, and graph.json. Nothing here is committed, and
+      # that is the same argument the bundle's own design makes about derived data — a
+      # committed copy of the viewer would be a second artifact that goes stale silently,
+      # in a project whose central claim is that stale fails loudly. These files are
+      # written by the run that publishes them, so they cannot be older than the graph.
+      #
+      # RUNNER_TEMP rather than a directory in the checkout, so a failed run leaves
+      # nothing behind and `git status` in a local clone never shows a published site.
+      - name: Write the site
+        run: |
+          set -euo pipefail
+          signpost view -static "${RUNNER_TEMP}/site" .
+          # A viewer fed an empty graph renders an empty frame and looks like it works,
+          # so the deploy fails here instead of publishing a page that says nothing.
+          nodes=$(grep -c '"id":' "${RUNNER_TEMP}/site/graph.json")
+          echo "graph.json carries ${nodes} node(s)"
+          if [ "${nodes}" -lt 1 ]; then
+            echo "the export produced no nodes; not publishing an empty graph" >&2
+            exit 1
+          fi
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+
+      - id: deploy
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

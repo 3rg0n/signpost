@@ -10,6 +10,64 @@ All notable changes to this project are documented here. Format follows
 
 #### 2026-08-12
 
+- **`signpost init pages` scaffolds the Pages deploy, and `signpost view -static` gives it
+  something to publish.** One command writes `.github/workflows/pages.yml`; the other writes
+  the viewer — the page, the stylesheet, the script, the icon, and `graph.json` — to a
+  directory and exits, which is what that workflow uploads.
+
+  **The exporter exists because the deploy could not be scaffolded without it.** This
+  repository's `pages.yml` uploads `site/`, and `site/` is committed here: hand-written HTML
+  and CSS specific to this project. An adopter's repository has no `site/`, and no command
+  produced one — the viewer lived in the binary and only ever bound a port. So a faithful copy
+  of our workflow would have been a file that succeeds while publishing an empty site. The two
+  obvious fixes were both worse: committing 57KB of the viewer's JavaScript into repositories
+  we cannot see and cannot patch, or fetching executable content unverified into a job that
+  publishes to a URL.
+
+  **Writing the viewer is not the artifact ADR 0008 declined to commit.** That decision is
+  about a *committed* copy of derived data, which outlives the run that made it and goes stale
+  silently. `-static` writes files that the same run uploads and discards, so there is no
+  interval in which they exist and the tree has moved on — the argument that keeps `graph.json`
+  out of the repository extends to the page beside it.
+
+  **The exported files come from the map the server routes, not from a list**, so a fifth asset
+  added to `view` and forgotten in the export cannot happen; the test asserts against that map
+  rather than against filenames. One document serves both modes, with the local address as the
+  switch, so a published page does not claim to be served from somebody's laptop. And the
+  `<meta>` CSP is now load-bearing: `Serve` sets the header and the header is the copy that
+  binds, but a static host sends whatever it likes and Pages sends no CSP at all — so on a
+  published page that tag is the only CSP there is.
+
+  **The scaffolded deploy requests `contents: read` and writes nothing to the repository.**
+  `signpost.yml` needs `contents: write` because it commits a bundle; a deploy that acquired
+  the same permission would be a token with push access in a job whose whole purpose is to
+  publish to the internet. The parity test asserts the absence — no `contents: write`, no `git
+  push`, no `git commit`. It also asserts the three differences from ours that are intended:
+  we build from source where an adopter installs a pinned release, and ours carries a
+  `site/CNAME` check that a repository with no custom domain would fail on its first run.
+
+  **Nothing signpost writes can enable Pages, and the visibility consequence is stated rather
+  than gated.** Refusing unless `repos/{owner}/{repo}` confirms a site would be private was
+  specified and is declined: it would make `init` the only command that touches the network,
+  and it would gate a step that was never the one that publishes —
+  `actions/configure-pages` cannot switch Pages on with `GITHUB_TOKEN`, so somebody has to set
+  Settings → Pages → Source themselves, and that act is the consent. What is left worth doing
+  is making sure they know what they are consenting to, so the preview, the confirmation,
+  `init pages -h`, and the file's own comments each say what gets published — every module
+  name, every file path, and who has been changing them — and each states GitHub's rule rather
+  than the intuition: a private site needs GitHub Enterprise Cloud, access control covers only
+  project sites from organization-owned private repositories, and a personal account's private
+  repository publishes a site anyone can read.
+
+  The deploy counts nodes in `graph.json` and fails below one, because a viewer fed an empty
+  graph renders an empty frame and looks like it works. That guard is in the workflow rather
+  than the exporter: an empty repository is not an error in a command whose job is to describe
+  whatever it was pointed at. `-static` refuses `-port` and `-no-open` with exit 2 rather than
+  ignoring them.
+
+  [ADR 0029](docs/adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md) records the
+  reasoning; design §7.4 and §8.3 carry it where the viewer and CI sections read as a whole.
+
 - **`signpost init github` writes the CI setup, so adopting signpost is a command rather
   than a copy.** It produces two files — `.github/workflows/signpost.yml`, which rebuilds the
   bundle on the default branch and gates pull requests against it, and `.signpost.yml` naming

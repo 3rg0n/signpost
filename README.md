@@ -20,7 +20,9 @@ signpost graph export -format mermaid .   # render the graph for a diagram or an
 
 `view` is the one command that listens on a port, and only while you are looking:
 it serves the graph on 127.0.0.1 until you interrupt it, writes nothing, and there
-is no flag to bind anywhere else.
+is no flag to bind anywhere else. `signpost view -static <dir>` writes that same page
+to a directory instead and exits, which is how a deploy publishes it — anywhere that
+directory is served, it lists every module and file signpost found.
 
 ## Install
 
@@ -447,6 +449,30 @@ attributes for a directory inside that commit change once it lands. If you need 
 atomic commit, build with `-no-history`: a structure-only bundle has nothing that
 moves, and it verifies clean.
 
+**Publishing the graph, optional.** `signpost init pages` writes a second workflow that
+publishes the browsable viewer to GitHub Pages, from the binary's own copy of it:
+
+```
+signpost init pages           # print the deploy workflow it would write
+signpost init pages -y        # write it
+```
+
+The deploy runs `signpost view -static` and uploads what it wrote. Nothing is committed
+and nothing is added to your repository beyond the workflow itself — the viewer is in the
+binary, so the page you publish is the page `view` would have served, produced by the run
+that publishes it. It asks for `contents: read` only, is a separate workflow from the
+bundle's, and is never a required check.
+
+**Read this before turning Pages on.** What gets published is every module name, every
+file path, and who has been changing them — your repository's structure, at a URL. The
+workflow cannot switch Pages on, deliberately: `configure-pages` needs a token GitHub
+Actions is not given, so nothing is published until you set Settings → Pages → Source to
+"GitHub Actions". Check what visibility you actually get at the same moment, because the
+intuition that a private repository gets a private site holds in one configuration only —
+GitHub's rule is that a private site requires GitHub Enterprise Cloud, and access control
+covers only project sites from private or internal repositories owned by an *organization*.
+A personal account's private repository publishes a site anyone can read.
+
 **A local reminder, optional.** `signpost hooks install` adds a `post-commit` hook
 that prints one line when `.signpost/` has fallen behind the code:
 
@@ -493,6 +519,8 @@ in a repository without a bundle.
 | `.signpost.yml` — per-repository defaults, no gate keys | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
 | `signpost view` — the same viewer on 127.0.0.1, for any repository | done |
+| `signpost view -static` — write that viewer to a directory, for a deploy | done |
+| `signpost init pages` — scaffold the Pages deploy into another repository | done |
 | Model backends: local IPC, or any OpenAI-compatible endpoint | done |
 | `build -semantic` — module role summaries, grounded and cited | done |
 | Semantic pass: doc-to-code linking, invariants, cluster labels | v0.3 |
