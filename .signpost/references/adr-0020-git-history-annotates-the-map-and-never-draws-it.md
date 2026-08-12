@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0020: git history annotates the map and never draws it"
 description: "Architecture decision (Accepted), 21 rules read from 0020-git-history-annotates-the-map-and-never-draws-it.md."
-resource: git://github.com/3rg0n/signpost@d1cfe34712979ce3da6272cf20b0d43c50b3ab99/docs/adr/0020-git-history-annotates-the-map-and-never-draws-it.md
+resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555/docs/adr/0020-git-history-annotates-the-map-and-never-draws-it.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-11" }
+generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
   - { name: number, value: "0020" }
   - { name: rules, value: "21" }

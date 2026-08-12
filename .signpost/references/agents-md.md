@@ -2,9 +2,9 @@
 type: Document
 title: AGENTS.md
 description: "Stated constraints, 14 rules read from AGENTS.md."
-resource: git://github.com/3rg0n/signpost@d1cfe34712979ce3da6272cf20b0d43c50b3ab99/AGENTS.md
+resource: git://github.com/3rg0n/signpost@a83c81453c5844a025a8516d36f874a1f41c3555/AGENTS.md
 tags: [agent-rules, constraint]
-generated: { by: signpost/dev, at: "2026-08-11" }
+generated: { by: signpost/dev, at: "2026-08-12" }
 attributes:
   - { name: rules, value: "14" }
   - { name: sections, value: "AGENTS.md, AGENTS.md / The bundle is generated, AGENTS.md / Where to look, AGENTS.md / Working in this repository" }
@@ -21,6 +21,7 @@ edges:
   - { kind: documents, to: ../modules/okf.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/practice.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/root.md, confidence: extracted, source: AGENTS.md }
+  - { kind: documents, to: ../modules/scaffold.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/semantic.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/signpost.md, confidence: extracted, source: AGENTS.md }
   - { kind: documents, to: ../modules/site.md, confidence: extracted, source: AGENTS.md }
@@ -40,7 +41,7 @@ Stated constraints, 14 rules read from AGENTS.md.
 1 file:
 - `AGENTS.md`
 
-- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [\(repository root\)](../modules/root.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/telemetry](../modules/telemetry.md), [internal/vcs](../modules/vcs.md), [internal/view](../modules/view.md)
+- **Documents**: [internal/assemble](../modules/assemble.md), [internal/config](../modules/config.md), [internal/discover](../modules/discover.md), [internal/export](../modules/export.md), [internal/extract](../modules/extract.md), [internal/graph](../modules/graph.md), [internal/hook](../modules/hook.md), [internal/manifest](../modules/manifest.md), [internal/model](../modules/model.md), [internal/okf](../modules/okf.md), [internal/practice](../modules/practice.md), [\(repository root\)](../modules/root.md), [internal/scaffold](../modules/scaffold.md), [internal/semantic](../modules/semantic.md), [cmd/signpost](../modules/signpost.md), [site](../modules/site.md), [internal/telemetry](../modules/telemetry.md), [internal/vcs](../modules/vcs.md), [internal/view](../modules/view.md)
 <!-- /signpost:managed:structure -->
 
 ## Notes
