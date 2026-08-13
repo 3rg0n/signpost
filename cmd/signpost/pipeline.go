@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/3rg0n/signpost/internal/assemble"
@@ -41,6 +43,7 @@ type pipelineFlags struct {
 	ignore          stringList
 	noHistory       bool
 	maxCommits      int
+	maxBytes        byteSize
 
 	// asOfCommit reads history as of this commit rather than HEAD. Set only by `verify
 	// -as-of-bundle`, from the sha the bundle recorded, and never registered as a flag: the
@@ -67,6 +70,20 @@ func (p *pipelineFlags) register(fs *flag.FlagSet) {
 		"skip git history, analysing only the files on disk")
 	fs.IntVar(&p.maxCommits, "max-commits", vcs.DefaultMaxCommits,
 		"how many commits of history to read")
+	// The escape hatch for a repository the default cap cannot hold. Raised rather than
+	// removed, because contents stay in memory for the whole analysis: an uncapped walk of
+	// a large enough tree is an out-of-memory kill, and the person running it knows how
+	// much memory the machine has.
+	//
+	// Worth a flag rather than a rebuild because of what the walk does when it runs out.
+	// Traversal is pre-order with entries sorted per directory, so the files past the cap
+	// are a contiguous *tail* of the tree and not a sample of it — whole subtrees are
+	// absent, and the ones that are absent are the ones that sort last. A repository of a
+	// few hundred thousand files reported 170,530 skipped that way, and its own first-party
+	// packages came back as unresolved imports because the files defining them were never
+	// read.
+	fs.Var(&p.maxBytes, "max-bytes",
+		"byte budget for the whole walk, e.g. 2GiB; files past it are recorded, not read")
 }
 
 // stringList collects a repeatable flag. flag.Value rather than a comma-split
@@ -78,6 +95,68 @@ func (s *stringList) String() string { return fmt.Sprint(*s) }
 func (s *stringList) Set(v string) error {
 	*s = append(*s, v)
 	return nil
+}
+
+// byteSize is a flag holding a byte count written with a unit suffix.
+//
+// A flag.Value rather than an int64 of bytes, because the number this takes is in the
+// hundreds of millions and `-max-bytes 2147483648` is a value nobody can check by eye.
+// Both spellings of each unit are accepted and both mean the binary multiple, which is
+// the lie every tool in this space tells: `2GB` from someone raising a memory budget
+// means 2 GiB, and reading it as 2,000,000,000 to be correct about SI would silently
+// give them 7% less than they asked for.
+type byteSize int64
+
+func (b *byteSize) String() string {
+	if *b == 0 {
+		return ""
+	}
+	return strconv.FormatInt(int64(*b), 10)
+}
+
+// Set parses a decimal count with an optional unit. Fractions are accepted — "1.5GiB" is
+// the natural way to write a budget between two powers of two, and rejecting it would
+// send the reader to a calculator.
+func (b *byteSize) Set(v string) error {
+	s := strings.TrimSpace(v)
+	mult := int64(1)
+	for _, u := range []struct {
+		suffix string
+		mult   int64
+	}{
+		{"KiB", 1 << 10}, {"MiB", 1 << 20}, {"GiB", 1 << 30}, {"TiB", 1 << 40},
+		{"KB", 1 << 10}, {"MB", 1 << 20}, {"GB", 1 << 30}, {"TB", 1 << 40},
+		{"K", 1 << 10}, {"M", 1 << 20}, {"G", 1 << 30}, {"T", 1 << 40},
+		{"B", 1},
+	} {
+		if rest, ok := cutSuffixFold(s, u.suffix); ok {
+			s, mult = strings.TrimSpace(rest), u.mult
+			break
+		}
+	}
+	n, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return fmt.Errorf("not a byte size: %q (try 512MiB or 2GiB)", v)
+	}
+	// Rejected rather than clamped to the default: a zero or negative budget is a
+	// mistake in the invocation, and quietly substituting the default would report a
+	// truncated walk the caller thought they had lifted.
+	if n <= 0 {
+		return fmt.Errorf("byte size must be positive, got %q", v)
+	}
+	if n*float64(mult) > float64(math.MaxInt64) {
+		return fmt.Errorf("byte size out of range: %q", v)
+	}
+	*b = byteSize(n * float64(mult))
+	return nil
+}
+
+// cutSuffixFold is strings.CutSuffix, case-insensitive, so `2gib` and `2GiB` agree.
+func cutSuffixFold(s, suffix string) (string, bool) {
+	if len(s) < len(suffix) || !strings.EqualFold(s[len(s)-len(suffix):], suffix) {
+		return s, false
+	}
+	return s[:len(s)-len(suffix)], true
 }
 
 // analyse walks, extracts, reads manifests, reads history, and assembles the graph.
@@ -103,6 +182,7 @@ func analyse(ctx context.Context, path string, pf pipelineFlags) (*analysis, err
 			IncludeVendored: pf.includeVendored,
 			IncludeFixtures: pf.includeFixtures,
 			ExtraIgnores:    pf.ignore,
+			MaxTotalBytes:   int64(pf.maxBytes),
 		})
 		if err != nil {
 			span.Failed()
@@ -210,6 +290,7 @@ func reportCoverage(w io.Writer, a *analysis) {
 	if n := len(a.Discovered.Skipped); n > 0 {
 		p.printf("  %d file(s) not read: %s\n", n, topSkips(a.Discovered.Skipped))
 	}
+	reportBudget(p, a)
 	if len(a.Source.Unhandled) > 0 {
 		p.printf("  no extractor for: %s\n", unhandledDetail(a))
 	}
@@ -244,6 +325,62 @@ func reportCoverage(w io.Writer, a *analysis) {
 		p.printf("  warning: %d edge(s) dropped as dangling; please report this\n",
 			a.Assembled.DroppedEdges)
 	}
+}
+
+// reportBudget names where the walk ran out of bytes, and what to do about it.
+//
+// Its own line rather than another reason in the skip summary above, because it is the one
+// skip reason that is not a fact about the repository. A symlink, a vendored directory, and
+// a fixture are all things signpost decided not to read and would decide again; this is
+// signpost stopping partway through a tree it was asked to read, which is a different
+// admission and has a fix.
+//
+// The path is the point. Traversal is pre-order with entries sorted per directory, so the
+// files past the cap are a contiguous tail of the tree rather than a sample — naming the
+// first one turns "170,530 files not read" into a range the reader can recognise, and
+// without it the count is alarming and unactionable.
+//
+// The first skip in Skipped is the boundary because skips are appended in the order the
+// walk reached them, which is the order the budget ran out in. Not the lowest-sorting path,
+// which is a different file: a directory sorts before a sibling whose name extends it —
+// ReadDir gives `b` before `b.go`, where a lexical sort puts `b.go` before `b/z.go` because
+// '.' precedes '/'. Traversal order is what bounds the tail; path order does not.
+//
+// Stated as a lower bound: a run that exhausted the budget did not walk the whole tree, so
+// the count is of files it got as far as skipping and not of files that exist.
+func reportBudget(p *printer, a *analysis) {
+	const reason = "walk byte budget exhausted"
+	n, first := 0, ""
+	for _, s := range a.Discovered.Skipped {
+		if s.Reason != reason {
+			continue
+		}
+		n++
+		if first == "" {
+			first = s.Path
+		}
+	}
+	if n == 0 {
+		return
+	}
+	p.printf("  warning: the walk's byte budget ran out at %s, so that path and %d file(s) "+
+		"after it were not read\n", first, n-1)
+	p.printf("    the map is missing whatever they define; raise it with `-max-bytes` "+
+		"(default %s)\n", humanBytes(discover.DefaultMaxTotalBytes))
+}
+
+// humanBytes renders a budget the way the flag accepts it, so the default in the message
+// above can be pasted back in as a starting point.
+func humanBytes(n int64) string {
+	for _, u := range []struct {
+		suffix string
+		mult   int64
+	}{{"TiB", 1 << 40}, {"GiB", 1 << 30}, {"MiB", 1 << 20}, {"KiB", 1 << 10}} {
+		if n >= u.mult && n%u.mult == 0 {
+			return strconv.FormatInt(n/u.mult, 10) + u.suffix
+		}
+	}
+	return strconv.FormatInt(n, 10) + "B"
 }
 
 // reportHistory says what git contributed, and says so even when the answer is nothing.

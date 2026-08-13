@@ -165,6 +165,14 @@ skip it, `-max-commits` to change how far back the walk goes. In CI, check out
 with `fetch-depth: 0`: a shallow clone yields real but truncated signals, and
 signpost says so rather than presenting them as the whole history.
 
+A very large repository has one more limit worth knowing about. File contents are held
+in memory for the whole analysis, so the walk stops reading at 512 MiB of text and
+records the rest as skipped. Because it walks in sorted order, what is missing is the
+*tail* of the tree rather than a sample of it — so a run that hits the cap names the
+first path it did not read, which bounds everything absent, and `-max-bytes 2GiB` lifts
+it. Raise-only: there is no unlimited, because an uncapped walk of a large enough tree
+runs the machine out of memory instead of finishing slowly.
+
 Git is the recommended setup and, where it is there, it is authoritative: what is
 tracked, what is ignored, and which commit the bundle describes are git's business.
 But it is not required. Run signpost on a tarball with no `.git` and you still get a

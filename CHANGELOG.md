@@ -8,7 +8,38 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
-#### 2026-08-12
+- **`-max-bytes` raises the walk's byte budget, and a truncated walk now says where it
+  stopped.** The budget was a 512 MiB constant with no way to change it short of a rebuild,
+  which is too low for a monorepo: file contents are held in memory for the whole analysis,
+  so the cap governs how much of a tree gets read at all. A repository of roughly 275,000
+  files reported `170530 file(s) not read: walk byte budget exhausted` — about a quarter of
+  the tree analysed — and its own first-party packages came back as unresolved imports,
+  because the files defining them were never opened.
+
+  **What the count could not tell anyone was which quarter.** Traversal is pre-order with
+  directory entries sorted, so the files past the cap are a contiguous *tail* of the tree
+  rather than a sample of it: whole subtrees are absent, and the absent ones are the ones
+  that sort last. So the warning names the first path it did not read, which bounds
+  everything missing in one string, and names the flag and the current default:
+
+  ```
+  warning: the walk's byte budget ran out at CONTRIBUTING.md, so that path and 225 file(s)
+  after it were not read
+    the map is missing whatever they define; raise it with `-max-bytes` (default 512MiB)
+  ```
+
+  **Raise-only, deliberately.** There is no `-max-bytes 0` and no unlimited: contents stay
+  in memory, so an uncapped walk of a large enough tree is an out-of-memory kill rather
+  than a slow success, and the person running it knows how much memory the machine has. A
+  zero or negative value is rejected at parse time rather than clamped, because the library
+  reads a zero budget as "use the default" and clamping would hand back the value the
+  caller was trying to change.
+
+  The flag takes a unit — `2GiB`, `512MB`, `1.5G`, `2 GiB` — because the number is in the
+  hundreds of millions and `-max-bytes 2147483648` is a value nobody can check by eye. Both
+  spellings of each unit mean the binary multiple: somebody raising a memory budget who
+  writes `2GB` means two gigabytes as their machine reports them, and being correct about
+  SI would quietly give them 7% less than they asked for.
 
 - **The viewer can be searched.** A box above the kind and edge filters narrows the graph to
   the nodes whose name, path, or contained files match what is typed, and the result stays a
@@ -150,8 +181,6 @@ All notable changes to this project are documented here. Format follows
   [ADR 0028](docs/adr/0028-scaffolded-files-are-embedded-and-tested-against-our-own.md).
   Design §8.2 records the same decisions where the CI section can be read as a whole.
 
-#### 2026-08-11
-
 - **The practices page says how changes are recorded and released, so an agent learns the
   commit convention before it writes a commit.** A new topic reports what the log says: how
   many subjects follow Conventional Commits and how many are fixes, features, or reverts; how
@@ -197,8 +226,6 @@ All notable changes to this project are documented here. Format follows
   no `.git` are cases where signpost did not look, and "no release is tagged" would be a claim
   this run has no basis for.
 
-#### 2026-08-10
-
 - **The exported symbols reach the machine-readable exports, split by what each consumer can
   do with them.** The names were on module pages but absent from every export, so a tool
   reading `graph export -format json` saw a module's files and not its surface — the OKF
@@ -222,8 +249,6 @@ All notable changes to this project are documented here. Format follows
   carry names, `internal/graph` lists all 49, `attrs.exported` equals `len(exports)` on
   every module node, no test declaration appears, and every list is sorted and deduplicated.
   GraphML emits one `n_exports` row per node, all integers, and leaks no name.
-
-#### 2026-08-09
 
 - **A module page names its public surface instead of only counting it.** Every extractor
   already read exported declarations; the page reported the total and dropped the names, so
@@ -267,8 +292,6 @@ All notable changes to this project are documented here. Format follows
   from declaration order. The list is bounded at 60 and states the remainder when it
   truncates, for the reason the file list is bounded — a module with sixty exports would
   otherwise push its edges, the part an agent navigates by, off the first screen.
-
-#### 2026-08-08
 
 - **CMake and Bazel build graphs are read, and neither can be settled by the file that states
   it.** `CMakeLists.txt`, `*.cmake`, `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel` and `*.bzl` yield
@@ -410,8 +433,6 @@ All notable changes to this project are documented here. Format follows
   self-analysis CI job asserted the unhandled-language line naming `.sh` and `.ps1`, with a
   comment saying that adding these extractors was the reminder to update it; that assertion
   now runs in the opposite direction.
-
-#### 2026-08-07
 
 - **Ruby, PHP and C# are read as first-class languages, and no two of them resolve the same
   way.** That is the finding rather than an incidental detail: the C family shared one
@@ -593,8 +614,6 @@ All notable changes to this project are documented here. Format follows
   delimiters, so anything reading a quoted path must read the raw line; and depth tracking has to
   survive char literals, preprocessor braces, and scopes that close without a brace.
 
-#### 2026-08-05
-
 - **`signpost view` serves the graph on `127.0.0.1` and opens a browser.** The published viewer at
   `3rg0n.github.io/signpost` shows *this* repository, because the deploy job runs the export against
   this tree; everyone else's repository is the interesting one, and until now the only way to see it
@@ -685,8 +704,6 @@ All notable changes to this project are documented here. Format follows
   apart; matched on the first segment, a dependency somebody has to upgrade disappears from the
   coverage report instead of appearing in it. `kotlinx` is the same shape against `kotlin`.
 
-#### 2026-08-04
-
 - **`signpost build -suggest-agents-md` prints the pointer an agent needs, and a build says when
   nothing points at the bundle.** Two halves of one gap. A committed bundle is not a discovered
   bundle: given the same task in two repositories that both had one, an agent used it in the one
@@ -727,8 +744,6 @@ All notable changes to this project are documented here. Format follows
   skipped and exits zero. This was already the behaviour; it is now asserted end-to-end against
   the corpus with the `.git` directory removed, and `docs/design.md` no longer claims git is
   present wherever signpost runs.
-
-#### 2026-08-02
 
 - **OpenTelemetry traces for signpost's own run, off unless asked for.** Six spans — `analyse`
   and the five stages under it: `discover`, `extract`, `manifests`, `history`, `assemble` —
@@ -916,8 +931,6 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
-#### 2026-08-10
-
 - **What signpost deliberately does not read is now written down, by category rather than by file
   type.** A census across roughly 14,000 repositories produced a tail far longer than the set
   signpost reads, and the triage had been living in a task description — the wrong place for it,
@@ -945,8 +958,6 @@ All notable changes to this project are documented here. Format follows
   records the real remaining work: closing the asymmetry needs a cross-subsystem notion of "read by
   someone", which the source side does not need because it has no such overlap.
 
-#### 2026-08-07
-
 - **A downgraded verification is now marked `signpost_status: stale-verification`, not
   `status:`.** Google published the Open Knowledge Format v0.2 specification, and a field-by-field
   comparison against what signpost emits found one divergence — ours. §5.4 enumerates `status` as
@@ -973,8 +984,6 @@ All notable changes to this project are documented here. Format follows
   the same run, so the net effect in a diff is a moved line. Anything else on `status:` — including
   a `deprecated` somebody wrote — is theirs and survives untouched, which is a test in both
   directions. A CI check grepping for `status: stale-verification` needs updating.
-
-#### 2026-08-06
 
 - **The last two decisions listed as owed an ADR now have one.** Both were already implemented and
   already explained — in a package doc comment and a paragraph of `docs/design.md` — which is the
@@ -1018,8 +1027,6 @@ All notable changes to this project are documented here. Format follows
   same grouping the bundle index uses for its headings" — four places stating a justification that
   would have made a reader look for code that is not there, and that overstated what a bad partition
   costs while understating how many things it breaks at once.
-
-#### 2026-08-04
 
 - **A declared dependency whose target is a directory of this repository is a composition edge, not
   a reference page.** A local Terraform module — `module "queue" { source = "./modules/queue" }` —
@@ -1102,8 +1109,6 @@ All notable changes to this project are documented here. Format follows
   instead of the key, ignoring the reservation, dropping the terminating counter, and skipping the
   reservation for services or for data stores.
 
-#### 2026-08-02
-
 - **The zero-dependency claim is withdrawn from the README, the landing page, and
   `CONTRIBUTING`, ahead of the three OpenTelemetry modules
   ([ADR 0014](docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md)).** ADR 0002's *rule*
@@ -1179,8 +1184,6 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
-#### 2026-08-12
-
 - **`signpost version` now names the build, so a stale binary is visible.** It printed `dev` for
   every build that was not a tagged release, which is every `go build` and every `go install` —
   and `dev` is the same string today as it was a month ago. The failure that surfaced this was a
@@ -1202,8 +1205,6 @@ All notable changes to this project are documented here. Format follows
   own unreachable by any test. Passing it in is what makes the four cases testable; each was
   mutation-tested, and each mutant failed a named subtest. Stdlib only, and the release
   `-ldflags` path is untouched: an injected version still wins outright.
-
-#### 2026-08-11
 
 - **A fork no longer rebuilds the bundle under its own name, so its first sync from upstream does
   not conflict inside `.signpost/`.** Every page's `resource:` is `git://<repo>@<sha>`, and the
@@ -1298,8 +1299,6 @@ All notable changes to this project are documented here. Format follows
   Found while measuring whether commit messages were worth reading, not by a report: nothing
   about `first_commit: il` looks like a parsing failure on a rendered page.
 
-#### 2026-08-10
-
 - **`verify -as-of-bundle` reads the history the bundle read, so the pull-request gate is
   green on a branch that changed no structure.** The gate had never passed on a conforming
   pull request. The flag already took the two provenance fields from the bundle's own
@@ -1333,8 +1332,6 @@ All notable changes to this project are documented here. Format follows
   [ADR 0024](docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md) records the
   contract.
 
-#### 2026-08-09
-
 - **A module's exported-symbol count double-counted a name two files declared.** The
   `exported` attribute tallied occurrences across a module's files, so a declaration
   appearing in more than one file was counted more than once — normal in Objective-C, where
@@ -1347,8 +1344,6 @@ All notable changes to this project are documented here. Format follows
   reader can see is wrong discredits the numbers they cannot check, so the two can no longer
   disagree by construction: the corpus test walks every module page, parses the claimed
   count out of the rendered line, and compares it to the names beside it.
-
-#### 2026-08-05
 
 - **The workflows were the largest body of shell in the repository and nothing linted them.**
   `install.sh` was shellchecked, the Go was linted four ways, and 2100 lines of `run:` blocks were
@@ -1405,8 +1400,6 @@ All notable changes to this project are documented here. Format follows
   what the failure looked like: it was read as an environment quirk and worked around with
   `-shellcheck=`, which silently disabled the check that was finding the three defects above.
 
-#### 2026-08-04
-
 - **An import signpost placed inside the repository and found nothing at drew no edge and said
   nothing, so a module could report importing nothing while importing plenty.** Three things can
   happen to an import specifier: it resolves to a page; signpost cannot place the name at all,
@@ -1455,8 +1448,6 @@ All notable changes to this project are documented here. Format follows
   resolves inside the repository and reaches nothing. Fixing it draws the edge, and the corrected
   specifier now serves as the negative boundary for the count that found it — same import block,
   same module, differing only in there being Go files at the end of it.
-
-#### 2026-08-03
 
 - **Files signpost could not identify were not reported anywhere, so a repository whose only
   frontend it could not read looked covered.** Discovery assigns a class to every file, and
@@ -1547,8 +1538,6 @@ All notable changes to this project are documented here. Format follows
   `fcntl` — sit in one tree so the list cannot be completed for one platform and left short
   for the other, and the absence checks match the whole name rather than a fragment, since a
   fragment check for `winreg` would be satisfied by the very page that must not exist.
-
-#### 2026-08-02
 
 - **A manifest declaring no dependencies was reported as unpinned, so the practices page told
   readers two builds could resolve different versions of nothing.** Found by reading
@@ -1667,8 +1656,6 @@ All notable changes to this project are documented here. Format follows
   why the defect survived the unit tests that covered the walk and stopped there. Its vendored
   manifest declares a dependency named nowhere else in the corpus, so that name can only reach
   a bundle through the reader that was dropping it.
-
-#### 2026-08-01
 
 - **`build` never deleted a page whose concept was gone, and strict `verify` exited 0 with
   the orphan present.** A renamed or deleted directory left the page behind forever. It was
@@ -1906,16 +1893,12 @@ All notable changes to this project are documented here. Format follows
   anything. The recommendation stands anyway, for the ordinary reason that pinning LF
   keeps diffs readable. Documented in [design §6.4](docs/design.md).
 
-### Notes
-
-#### 2026-08-03
-
 - **Commit `2785918` closes issues that do not exist, and the history is not being
   rewritten to fix it.** Its last two trailers name issues 29 and 35, which are ids from a
   local task list rather than this repository's issues — those stop at
   [#14](https://github.com/3rg0n/signpost/issues/14). GitHub renders both as links to 404s
   and closed nothing. The two real changes are the telemetry work and the empty-manifest
-  lockfile fix, both described in this file under 2026-08-02.
+  lockfile fix, both described in this file under Added and Fixed below.
 
   Nothing is unrecoverable about the numbers themselves — but they cannot be made to
   refer to anything either. GitHub shares one sequence between issues and pull requests,
@@ -1955,7 +1938,7 @@ All notable changes to this project are documented here. Format follows
   repository they name; the check does not cover them, because its token is scoped to this
   one and a number this repository cannot resolve is correct there.
 
-## [0.1.0] — 2026-08-01
+## [0.1.0] - 2026-08-01
 
 The deterministic core, complete. v0.0.1 named the three things that had to land
 before this number was honest — `signpost build`, `signpost verify`, and git signal
@@ -1968,8 +1951,6 @@ No model and no network are required for anything in this release. `go.mod` stil
 no `require` block.
 
 ### Added
-
-#### 2026-07-31
 
 - `practices.md`, a bundle page stating what the repository declares about how it is
   worked in: build and test commands, which CI jobs can block a merge and which run
@@ -2161,8 +2142,6 @@ no `require` block.
   Titan and Nova are not options there; and model ids reject both the `:0`
   suffix and the `global.` cross-region prefix, so the configured id is passed
   through verbatim.
-
-#### 2026-07-30
 
 - `signpost build` writes the knowledge bundle to `.signpost/`, which is the
   output the rest of the project exists to produce: an `index.md`, one page per
@@ -2493,8 +2472,6 @@ no `require` block.
 
 ### Fixed
 
-#### 2026-07-31
-
 - Sample projects under `testdata/` were analysed as though they were the repository
   being described, putting modules and dependencies on committed pages that the
   repository does not have.
@@ -2812,8 +2789,6 @@ no `require` block.
   Windows runner is slow enough at process creation that the default left no
   margin. Raised rather than removed, so a genuine hang still fails the job.
 
-#### 2026-07-30
-
 Both defects below were found by installing v0.0.1 from the published URLs the
 way a user would, not by reading the scripts. Neither is reachable by any check
 that does not actually run an install.
@@ -2859,8 +2834,6 @@ that does not actually run an install.
 
 ### Changed
 
-#### 2026-07-31
-
 - **`verify` now fails, rather than warns, on a page whose frontmatter no conforming
   YAML reader can read.** This is the half of issue #9 that let the defect reach a
   commit: the emitter wrote an unparseable page, the checker read it, and the
@@ -2889,8 +2862,6 @@ that does not actually run an install.
   `github.io` address. Both pages gained a `rel=canonical` and the landing page's
   `og:url` now names the apex, because both hostnames keep resolving and serving
   identical bytes — which is exactly the case a canonical tag settles.
-
-#### 2026-07-30
 
 - Dependabot and Renovate both wait seven days before proposing a version. The
   threat this addresses is not a bad release but a hostile one: an account takeover
@@ -2923,7 +2894,7 @@ that does not actually run an install.
   a phone-width column shrank the 11px node labels to about 5px, which is not
   reading. A graph you pan is usable; a graph whose labels you cannot read is not.
 
-## [0.0.1] — 2026-07-30
+## [0.0.1] - 2026-07-30
 
 First tagged release. Deliberately **not** v0.1.0: v0.1 is the deterministic core
 *complete*, and `signpost build`, `signpost verify`, and git signal extraction
@@ -2932,9 +2903,11 @@ the same commit says is unmet. What is here — `graph` and `export` over the fu
 extraction pipeline — is finished and tested; the version number says only that
 the surface is still moving.
 
-### Added
+No third-party dependencies: `go.mod` has no `require` block. The policy is not zero
+dependencies but *patchable* ones — every direct dependency must be one we can bump
+ourselves, and few enough that bumping stays routine. See `docs/design.md` §2.
 
-#### 2026-07-29
+### Added
 
 - Initial repository: Go module `github.com/3rg0n/signpost`, `.gitignore`,
   README, and this changelog.
@@ -3217,8 +3190,6 @@ the surface is still moving.
   (MIT, © 3rg0n) and `CONTRIBUTING.md` added, the latter stating the full gate,
   the ADR-per-direct-dependency rule, and the scoring requirement for extractors.
 
-#### 2026-07-30
-
 - `install.sh` and `install.ps1` — one-line installers that pull a tagged
   release:
   - **Both refuse rather than degrade.** No SHA-256 tool available, a digest that
@@ -3281,8 +3252,6 @@ the surface is still moving.
 
 ### Changed
 
-#### 2026-07-30
-
 - `cmd/signpost` writes every diagnostic through the latching printer, so a
   closed stdout is caught on the usage and error paths too and not only on the
   export path. The one deliberate exception is the coverage report: it is a
@@ -3295,8 +3264,6 @@ the surface is still moving.
   deliberately excluded, because a 1–5 level is a rubric rather than a
   measurement and reads as measured once it is printed, which is the exact
   failure the confidence model exists to prevent.
-
-#### 2026-07-29
 
 - `docs/design.md` reviewed against the current state of a comparable
   industry-standard tool, using its source rather than a write-up of it. Four
@@ -3332,12 +3299,6 @@ the surface is still moving.
   found: a path that escaped the root would put content from outside the repository
   into a file that gets pushed. `os.Root` is stdlib, so this costs no dependency.
 
-### Notes
-
-- **Zero third-party dependencies so far.** `go.mod` has no `require` block. The
-  policy is not zero dependencies but *patchable* dependencies: every direct
-  dependency must be one we can bump ourselves, and few enough that bumping stays
-  routine. See `docs/design.md` §2.
 - **Louvain replaced label propagation** during implementation. LPA was chosen
   first for being a third the size, on the assumption that cluster quality would
   not matter for index headings. Measurement disproved it: on two dense groups
@@ -3347,3 +3308,7 @@ the surface is still moving.
   failing test is retained in the suite as a regression guard.
 - Tarjan is iterative rather than recursive, with a 20,000-node deep-chain test,
   because recursion risks stack exhaustion on the large monorepos signpost targets.
+
+[Unreleased]: https://github.com/3rg0n/signpost/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/3rg0n/signpost/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/3rg0n/signpost/releases/tag/v0.0.1
