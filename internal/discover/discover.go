@@ -36,10 +36,17 @@ const (
 	HeadTailBytes = 32 << 10 // 32 KiB
 	// sniffBytes is how much is read to decide text vs binary.
 	sniffBytes = 8000
-	// maxTotalBytes caps the whole walk. A repo that exceeds it is still
+	// DefaultMaxTotalBytes caps the whole walk. A repo that exceeds it is still
 	// processed, but remaining files are recorded as skipped rather than read,
 	// so a pathological tree cannot exhaust memory.
-	maxTotalBytes = 512 << 20 // 512 MiB
+	//
+	// A default rather than the limit, and exported, because it is too low for a
+	// monorepo: file contents are held in memory for the whole analysis, so this is
+	// the ceiling on how much of a tree gets read at all, and a repository of a few
+	// hundred thousand files exhausts it partway through. Options.MaxTotalBytes
+	// raises it. Exported so the flag that does so can state the default it is
+	// raising rather than restating the number.
+	DefaultMaxTotalBytes = 512 << 20 // 512 MiB
 )
 
 // File is one discovered file.
@@ -141,6 +148,27 @@ type Options struct {
 	IncludeFixtures bool
 	// ExtraIgnores are additional .gitignore-syntax patterns applied at the root.
 	ExtraIgnores []string
+
+	// MaxTotalBytes overrides DefaultMaxTotalBytes for this walk. Zero or negative
+	// means the default.
+	//
+	// Not an "unlimited" option, deliberately: contents are held in memory, so an
+	// uncapped walk of an arbitrarily large tree is an out-of-memory kill rather than
+	// a slow success, and the caller is better placed to know how much memory it has
+	// than this package is. Raising the cap is a number the caller states; removing it
+	// is not offered.
+	MaxTotalBytes int64
+}
+
+// maxTotal is the byte budget in effect. A method rather than a value normalised in
+// Walk, because readFile is where the budget is consulted and it holds the Options —
+// so a zero-value Options used directly in a test gets the default too, rather than a
+// budget of nothing that skips every file in the tree.
+func (o Options) maxTotal() int64 {
+	if o.MaxTotalBytes > 0 {
+		return o.MaxTotalBytes
+	}
+	return DefaultMaxTotalBytes
 }
 
 // Walk discovers files under root.
@@ -369,7 +397,7 @@ func readFile(rt *os.Root, rel string, opts Options, totalBytes *int64) (File, *
 	if info.Size() == 0 {
 		return f, nil
 	}
-	if *totalBytes >= maxTotalBytes {
+	if *totalBytes >= opts.maxTotal() {
 		return File{}, &Skip{Path: rel, Reason: "walk byte budget exhausted"}
 	}
 

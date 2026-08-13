@@ -1,6 +1,7 @@
 package discover
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -766,6 +767,97 @@ func TestWalkExtraIgnores(t *testing.T) {
 	}
 	if !strings.Contains(got, "other/out.go") {
 		t.Error("ExtraIgnores must not over-match")
+	}
+}
+
+// TestWalkBudgetStopsAtATailAndMaxTotalBytesLiftsIt covers the cap and its override
+// together, because the second is only worth having if the first behaves the way the
+// warning on stderr claims.
+//
+// The claim is that files past the budget are a contiguous *tail* of the traversal rather
+// than a sample of the tree, which is what makes naming the first skipped path useful. So
+// this asserts the shape and not only the count: everything read sorts before everything
+// skipped. A budget that dropped files by size, or that resumed after a large file, would
+// pass a count assertion and fail this.
+//
+// Sizes are set from the budget rather than written as literals — the cap under test is the
+// one in the Options, and a test that hard-coded 700 bytes would start passing for the
+// wrong reason the day the default moved.
+func TestWalkBudgetStopsAtATailAndMaxTotalBytesLiftsIt(t *testing.T) {
+	const each = 4 << 10
+	body := "package a\n" + strings.Repeat("// x\n", each/5)
+	tree := map[string]string{}
+	// Ten files, named so that sorted order is unambiguous at two digits.
+	for i := range 10 {
+		tree[fmt.Sprintf("f%02d.go", i)] = body
+	}
+	root := writeTree(t, tree)
+
+	// A budget that four files exhaust. The check is `>=` before reading, so the fifth is
+	// the first one skipped: four files are already counted when it is considered.
+	res, err := Walk(root, Options{MaxTotalBytes: 4 * int64(len(body))})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	var skipped []string
+	for _, s := range res.Skipped {
+		if s.Reason == "walk byte budget exhausted" {
+			skipped = append(skipped, s.Path)
+		}
+	}
+	if len(res.Files)+len(skipped) != 10 {
+		t.Fatalf("every file should be read or skipped: %d read, %d skipped",
+			len(res.Files), len(skipped))
+	}
+	if len(skipped) == 0 {
+		t.Fatal("a budget smaller than the tree should skip files")
+	}
+	// The shape the warning depends on: a tail, not a scattering. Both slices are sorted by
+	// path, so one comparison settles it.
+	lastRead := res.Files[len(res.Files)-1].Path
+	if lastRead > skipped[0] {
+		t.Errorf("skipped files are not a contiguous tail: read %s after skipping %s",
+			lastRead, skipped[0])
+	}
+
+	// The same tree with room for all of it. Asserted in the same test so that a change
+	// making the override a no-op cannot leave a passing budget test behind.
+	res, err = Walk(root, Options{MaxTotalBytes: 100 << 20})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if len(res.Files) != 10 {
+		t.Errorf("MaxTotalBytes should lift the cap: read %d of 10 files", len(res.Files))
+	}
+	for _, s := range res.Skipped {
+		if s.Reason == "walk byte budget exhausted" {
+			t.Errorf("nothing should be budget-skipped under a raised cap: %s", s.Path)
+		}
+	}
+}
+
+// A zero Options means the default budget, not a budget of zero.
+//
+// The distinction is the whole reason maxTotal is a method on Options rather than a value
+// normalised in Walk: every other test in this file passes Options{} and would read an
+// empty tree if zero meant zero, so this is the assertion that fails first and by name
+// instead of failing everywhere at once.
+func TestWalkZeroMaxTotalBytesMeansTheDefault(t *testing.T) {
+	root := writeTree(t, map[string]string{"a.go": "package a\n"})
+	res, err := Walk(root, Options{})
+	if err != nil {
+		t.Fatalf("Walk: %v", err)
+	}
+	if len(res.Files) != 1 {
+		t.Fatalf("a zero budget must mean the default: read %d files", len(res.Files))
+	}
+	if got := (Options{}).maxTotal(); got != DefaultMaxTotalBytes {
+		t.Errorf("maxTotal() = %d, want the default %d", got, DefaultMaxTotalBytes)
+	}
+	// A negative value is the same case. Reached through Options rather than the flag,
+	// which rejects it earlier: this is the library's own floor.
+	if got := (Options{MaxTotalBytes: -1}).maxTotal(); got != DefaultMaxTotalBytes {
+		t.Errorf("a negative budget should mean the default, got %d", got)
 	}
 }
 
