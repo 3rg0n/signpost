@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0026: history is read where a count answers the question"
 description: "Architecture decision (Accepted), 30 rules read from 0026-history-is-read-where-a-count-answers-the-question.md."
-resource: git://github.com/3rg0n/signpost@49f8bbc304ae1463de2155ed03ae127951d56194/docs/adr/0026-history-is-read-where-a-count-answers-the-question.md
+resource: git://github.com/3rg0n/signpost@47ee0bca705bd7882b9afaeed84f5899505342ba/docs/adr/0026-history-is-read-where-a-count-answers-the-question.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-12" }
+generated: { by: signpost/dev, at: "2026-08-13" }
 attributes:
   - { name: number, value: "0026" }
   - { name: rules, value: "30" }

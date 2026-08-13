@@ -1,33 +1,33 @@
 ---
 type: Module
 title: internal/discover
-description: 5 go files; 43 exported symbols.
-resource: git://github.com/3rg0n/signpost@49f8bbc304ae1463de2155ed03ae127951d56194/internal/discover
-generated: { by: signpost/dev, at: "2026-08-12" }
+description: 5 go files; 44 exported symbols.
+resource: git://github.com/3rg0n/signpost@47ee0bca705bd7882b9afaeed84f5899505342ba/internal/discover
+generated: { by: signpost/dev, at: "2026-08-13" }
 attributes:
-  - { name: commits, value: "12" }
-  - { name: exported, value: "43" }
+  - { name: commits, value: "13" }
+  - { name: exported, value: "44" }
   - { name: files, value: "5" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-09" }
-  - { name: lines_added, value: "2935" }
-  - { name: lines_removed, value: "91" }
+  - { name: last_commit, value: "2026-08-13" }
+  - { name: lines_added, value: "3059" }
+  - { name: lines_removed, value: "94" }
   - { name: package, value: discover }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 58% }
+  - { name: top_author_share, value: 54% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 7 }
   - { kind: co_changes, to: ./extract.md, confidence: extracted, weight: 7 }
   - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 5 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 4 }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 12 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 10 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 13 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 11 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 8 }
 ---
 # internal/discover
 
 <!-- signpost:managed:summary -->
-5 go files; 43 exported symbols.
+5 go files; 44 exported symbols.
 <!-- /signpost:managed:summary -->
 
 ## Structure
@@ -40,9 +40,9 @@ edges:
 - `internal/discover/ignore.go`
 - `internal/discover/ignore_test.go`
 
-- **Exports** (43): `Class`, `ClassContract`, `ClassData`, `ClassDoc`, `ClassInfra`, `ClassManifest`, `ClassMigration`, `ClassOther`, `ClassOwnership`, `ClassSource`, `Elision`, `File`, `HeadTailBytes`, `Lang`, `LangAstro`, `LangC`, `LangCSharp`, `LangCpp`, `LangGo`, `LangJS`, `LangJava`, `LangKotlin`, `LangObjC`, `LangOther`, `LangPHP`, `LangPowerShell`, `LangPython`, `LangRuby`, `LangRust`, `LangShell`, `LangSvelte`, `LangTS`, `LangVue`, `MaxFullBytes`, `MaxFullLines`, `Options`, `Result`, `Result.Analyses`, `Result.ByClass`, `Result.Sources`, `Result.Unclassified`, `Skip`, `Walk`
+- **Exports** (44): `Class`, `ClassContract`, `ClassData`, `ClassDoc`, `ClassInfra`, `ClassManifest`, `ClassMigration`, `ClassOther`, `ClassOwnership`, `ClassSource`, `DefaultMaxTotalBytes`, `Elision`, `File`, `HeadTailBytes`, `Lang`, `LangAstro`, `LangC`, `LangCSharp`, `LangCpp`, `LangGo`, `LangJS`, `LangJava`, `LangKotlin`, `LangObjC`, `LangOther`, `LangPHP`, `LangPowerShell`, `LangPython`, `LangRuby`, `LangRust`, `LangShell`, `LangSvelte`, `LangTS`, `LangVue`, `MaxFullBytes`, `MaxFullLines`, `Options`, `Result`, `Result.Analyses`, `Result.ByClass`, `Result.Sources`, `Result.Unclassified`, `Skip`, `Walk`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×7, [internal/extract](./extract.md) ×7, [internal/manifest](./manifest.md) ×5, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×12, [cmd/signpost](./signpost.md) ×10, [site](./site.md) ×8
+- **Changes with**: [internal/assemble](./assemble.md) ×7, [internal/extract](./extract.md) ×7, [internal/manifest](./manifest.md) ×5, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×13, [cmd/signpost](./signpost.md) ×11, [site](./site.md) ×8
 <!-- /signpost:managed:structure -->
 
 ## Notes
