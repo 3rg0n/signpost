@@ -89,8 +89,8 @@ func TestMaxBytesReportsWhereTheWalkStopped(t *testing.T) {
 		t.Errorf("stderr does not state the default %s:\n%s", want, stderr)
 	}
 	// A path, and specifically one from the fixture: the count alone is the thing that made
-	// this unactionable in the report it came from. Traversal is sorted, so the first
-	// skipped path bounds everything missing.
+	// this unactionable in the report it came from. Skips are appended in traversal order,
+	// so the first one bounds everything missing.
 	if !strings.Contains(stderr, ".go") && !strings.Contains(stderr, ".ts") {
 		t.Errorf("stderr names no path, so a reader cannot tell what is missing:\n%s", stderr)
 	}

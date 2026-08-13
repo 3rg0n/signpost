@@ -812,8 +812,9 @@ func TestWalkBudgetStopsAtATailAndMaxTotalBytesLiftsIt(t *testing.T) {
 	if len(skipped) == 0 {
 		t.Fatal("a budget smaller than the tree should skip files")
 	}
-	// The shape the warning depends on: a tail, not a scattering. Both slices are sorted by
-	// path, so one comparison settles it.
+	// The shape the warning depends on: a tail, not a scattering. The tree is one flat
+	// directory, so traversal order and path order coincide here and one comparison settles
+	// it — in a nested tree they diverge, and it is traversal order that holds.
 	lastRead := res.Files[len(res.Files)-1].Path
 	if lastRead > skipped[0] {
 		t.Errorf("skipped files are not a contiguous tail: read %s after skipping %s",

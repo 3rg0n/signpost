@@ -338,8 +338,13 @@ func reportCoverage(w io.Writer, a *analysis) {
 // The path is the point. Traversal is pre-order with entries sorted per directory, so the
 // files past the cap are a contiguous tail of the tree rather than a sample — naming the
 // first one turns "170,530 files not read" into a range the reader can recognise, and
-// without it the count is alarming and unactionable. Skipped is sorted by path, so scanning
-// for the lowest-sorting one is what finds the boundary.
+// without it the count is alarming and unactionable.
+//
+// The first skip in Skipped is the boundary because skips are appended in the order the
+// walk reached them, which is the order the budget ran out in. Not the lowest-sorting path,
+// which is a different file: a directory sorts before a sibling whose name extends it —
+// ReadDir gives `b` before `b.go`, where a lexical sort puts `b.go` before `b/z.go` because
+// '.' precedes '/'. Traversal order is what bounds the tail; path order does not.
 //
 // Stated as a lower bound: a run that exhausted the budget did not walk the whole tree, so
 // the count is of files it got as far as skipping and not of files that exist.
