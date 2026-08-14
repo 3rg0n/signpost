@@ -189,6 +189,13 @@ recording each date signpost ran, and a `manifest.json` for tools that would
 rather not parse markdown. Commit it — that is the whole point, and
 [ADR 0005](docs/adr/0005-commit-the-bundle-to-the-repository.md) records why.
 
+`index.md` opens with what the shape of the repository says: the most connected
+modules, then the import cycles, cross-cluster edges, disconnected islands, and
+unconnected concepts. A finding with nothing to report says so, rather than being
+left out — in a committed file, a section that disappears when the answer is
+"none" reads exactly like one the build failed to write
+([ADR 0030](docs/adr/0030-a-finding-states-its-own-absence.md)).
+
 Two rules govern rewriting, and they are why the bundle is safe to hand-edit:
 
 - **Only the managed regions are regenerated.** Generated prose sits between

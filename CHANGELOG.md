@@ -931,6 +931,25 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **`index.md` now states the structural findings, including the ones that found nothing.** A
+  `### Structural findings` section between "Most connected" and the page listing names import
+  cycles, cross-cluster edges, disconnected islands, and unconnected concepts, with a link to
+  each concept's page. Design §7.1 promised all five findings as text in `index.md` and one
+  shipped; the other four were computed on every run, printed by `graph show`, and never
+  written down. A finding that only ever reaches a terminal is available to whoever ran the
+  command, which for an agent starting cold is nobody.
+
+  **A finding with nothing to report says so.** "Import cycles: none." is written as the result
+  it is, which is the opposite of what the CLI does — its four writers each return silently on
+  a zero count. In a committed file that silence is indistinguishable from a build that failed
+  to write the section, so a reader cannot tell a clean repository from a broken generator.
+  Both lists are bounded and both name their overflow: 20 lines per finding, 8 concepts named
+  within one line.
+
+  **Every adopter's next build will produce a diff in `.signpost/index.md` nobody asked for**
+  — 51 added lines on this repository. The bundle's shape is a public contract, which is why
+  this is [ADR 0030](docs/adr/0030-a-finding-states-its-own-absence.md) and not a comment.
+
 - **What signpost deliberately does not read is now written down, by category rather than by file
   type.** A census across roughly 14,000 repositories produced a tail far longer than the set
   signpost reads, and the triage had been living in a task description — the wrong place for it,
