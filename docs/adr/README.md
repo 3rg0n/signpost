@@ -47,6 +47,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0028](0028-scaffolded-files-are-embedded-and-tested-against-our-own.md) | Scaffolded files are embedded and tested against our own | Accepted |
 | [0029](0029-the-viewer-is-written-by-the-run-that-publishes-it.md) | The viewer is written by the run that publishes it | Accepted |
 | [0030](0030-a-finding-states-its-own-absence.md) | A finding states its own absence, and the index carries it | Accepted |
+| [0031](0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md) | Scope is a lifecycle test, not a list of non-goals | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
