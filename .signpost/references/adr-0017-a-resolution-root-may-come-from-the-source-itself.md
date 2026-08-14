@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0017: a resolution root may come from the source itself"
 description: "Architecture decision (Accepted), 18 rules read from 0017-a-resolution-root-may-come-from-the-source-itself.md."
-resource: git://github.com/3rg0n/signpost@47ee0bca705bd7882b9afaeed84f5899505342ba/docs/adr/0017-a-resolution-root-may-come-from-the-source-itself.md
+resource: git://github.com/3rg0n/signpost@32ca0701ca62850ad1340cb9a5a5f05fcae38e0c/docs/adr/0017-a-resolution-root-may-come-from-the-source-itself.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-13" }
+generated: { by: signpost/dev, at: "2026-08-14" }
 attributes:
   - { name: number, value: "0017" }
   - { name: rules, value: "18" }
