@@ -507,6 +507,8 @@ func edgeKindLabel(k graph.EdgeKind) string {
 		return "Changes with"
 	case graph.EdgeOwns:
 		return "Owned by"
+	case graph.EdgePrecedes:
+		return "Runs before"
 	}
 	// An edge kind added to graph without a label here renders as its raw value rather
 	// than as nothing, so a missing case is a cosmetic gap in one line of one page and not

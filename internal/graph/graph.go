@@ -25,6 +25,12 @@ const (
 	KindDocument  Kind = "Document"
 	KindExternal  Kind = "External Dependency"
 	KindSymbol    Kind = "Symbol"
+	// KindPipeline is one automated job the repository declares: a job in a CI
+	// workflow, with the steps it runs in order. The job rather than the workflow
+	// file, because a required check is configured against a job and a failing check
+	// names one. Not a Service — nothing here is long-running — and not a Document,
+	// which states a constraint rather than performing work.
+	KindPipeline Kind = "Pipeline"
 )
 
 // EdgeKind is the relationship a directed edge asserts. OKF links are untyped
@@ -43,6 +49,12 @@ const (
 	EdgeDocuments  EdgeKind = "documents"
 	EdgeCoChanges  EdgeKind = "co_changes"
 	EdgeOwns       EdgeKind = "owns"
+	// EdgePrecedes is declared ordering: the source must finish before the target
+	// starts. Drawn only where a file states it — a CI job's `needs`. Jobs with no
+	// stated dependency run concurrently, and inventing an order for them from
+	// their position in the file would assert a sequence the repository does not
+	// have.
+	EdgePrecedes EdgeKind = "precedes"
 )
 
 // Confidence records how an edge was established, so a consumer can weight

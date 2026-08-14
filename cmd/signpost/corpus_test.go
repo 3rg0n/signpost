@@ -633,6 +633,203 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 	}
 }
 
+// TestCorpusPipelinesCarryDeclaredOrderingOnly asserts both halves of `precedes`.
+//
+// The positive is release.yml's `publish: needs: [build]` — the corpus's only declared job
+// ordering, so the edge count is checkable rather than approximate. The negatives are what a
+// plausible wrong reading produces, and there are three distinct ones:
+//
+//   - ci.yml's `test` and `lint` have no `needs`, so they run concurrently. A reader deriving
+//     order from file position draws test → lint, which GitHub does not honour. That is a
+//     confidently wrong edge, and it is worse than no edge because a reader would sequence
+//     work around it.
+//   - `verify: needs: [smoke-test]` names a job that does not exist. Nothing may be invented
+//     for it.
+//   - `build` precedes `publish` and not the reverse. Both directions are one edge in a
+//     count, so the direction is asserted separately.
+//
+// The count is asserted here, against the exception the corpus doc gives for counts: a
+// `precedes` edge exists only where a file states one, so this number moves when the fixture
+// moves and not when an extractor improves. That is the property that makes it safe to assert,
+// and asserting it is the only way a spurious edge fails rather than passing unnoticed.
+func TestCorpusPipelinesCarryDeclaredOrderingOnly(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	// One page per job across the three workflows: ci's test, lint, and platform, nightly's
+	// scan, release's build, publish, and verify.
+	//
+	// `build`'s page is named for its `name:` and not its key, which is the right way round —
+	// the name is what GitHub's checks UI shows and what a required-check rule is written
+	// against, so it is the string a reader arrives with. `platform` is the exception and the
+	// reason both are asserted here: its `name:` interpolates a matrix value, so there is no
+	// one string GitHub shows and none of the ones it does show are in the file. That page is
+	// titled by the key.
+	for _, want := range []string{
+		"pipelines/ci-test.md",
+		"pipelines/ci-lint.md",
+		"pipelines/ci-platform.md",
+		"pipelines/nightly-scan.md",
+		"pipelines/release-build-the-artifact.md",
+		"pipelines/release-publish.md",
+		"pipelines/release-verify.md",
+	} {
+		if _, ok := pages[want]; !ok {
+			t.Errorf("no page at %s. Pages written:\n  %s", want, pageNames(pages))
+		}
+	}
+	// The negative half of the same boundary, asserted on the filename rather than only on
+	// the title: an expression must not reach a path in a committed artifact. Slugging the raw
+	// `platform (${{ matrix.os }})` yields "platform-matrix-os", which is a page named after
+	// GitHub Actions syntax for a job nobody can name.
+	for name := range pages {
+		if strings.Contains(name, "matrix") {
+			t.Errorf("a page is named %s. A `name:` holding `${{ matrix.os }}` is a template, "+
+				"not a job name, and slugging it puts the expression in a committed "+
+				"filename:\n  %s", name, pageNames(pages))
+		}
+	}
+
+	var precedes []string
+	for name, body := range pages {
+		if !strings.HasPrefix(name, "pipelines/") {
+			continue
+		}
+		for _, ln := range strings.Split(body, "\n") {
+			if strings.Contains(ln, "kind: precedes") {
+				precedes = append(precedes, name+": "+strings.TrimSpace(ln))
+			}
+		}
+	}
+	sort.Strings(precedes)
+	if len(precedes) != 1 {
+		t.Errorf("precedes edges = %d, want exactly 1 — the corpus declares one `needs`, on "+
+			"release.yml's publish job. Every other job pair is concurrent, and an edge between "+
+			"two of them asserts an order GitHub does not honour:\n  %s",
+			len(precedes), strings.Join(precedes, "\n  "))
+	}
+
+	// Direction. The edge runs from the job that finishes first to the one that waits, so it
+	// renders on `build`'s page as "runs before publish" — and the reverse view, what publish
+	// is waiting on, is on publish's page as the `needs` attribute. Reversed, the bundle would
+	// tell a reader to publish before building.
+	//
+	// The named page is also what checks the key-versus-name distinction. `publish` states
+	// `needs: [build]`, naming the job's key, while the job's title is "build the artifact";
+	// resolving the `needs` against the title finds nothing and reports a workflow with no
+	// stated ordering at all. That is why `build` carries a `name:` here — with the two
+	// strings equal, as they are for every other job in the corpus, confusing them costs
+	// nothing and this file is the only place it can be caught.
+	if page := pages["pipelines/release-build-the-artifact.md"]; !strings.Contains(page, "kind: precedes") ||
+		!strings.Contains(page, "release-publish.md") {
+		t.Errorf("release-build-the-artifact.md must carry a precedes edge to "+
+			"release-publish.md. `publish` states `needs: [build]`, which names the job's key, "+
+			"while the page is titled by its `name:`:\n%s", page)
+	}
+	if page := pages["pipelines/release-publish.md"]; strings.Contains(page, "kind: precedes") {
+		t.Errorf("release-publish.md carries a precedes edge. It is the job that waits, so the "+
+			"edge belongs on the one that runs first; what it waits on is its `needs`:\n%s", page)
+	}
+	// A `needs` naming a job that does not exist. The workflow is committed in that state and
+	// GitHub never runs the job; inventing a target would be a page linking to nothing.
+	if page := pages["pipelines/release-verify.md"]; strings.Contains(page, "kind: precedes") {
+		t.Errorf("release-verify.md carries a precedes edge. Its `needs` names smoke-test, "+
+			"which no job in the file declares:\n%s", page)
+	}
+	// The `needs` is still reported as an attribute even though no edge could be drawn, so the
+	// broken reference is visible rather than silently dropped.
+	if page := pages["pipelines/release-verify.md"]; !strings.Contains(page, "smoke-test") {
+		t.Errorf("release-verify.md does not name the job its `needs` asks for. An unresolvable "+
+			"reference is a fact about the workflow and must not vanish:\n%s", page)
+	}
+}
+
+// TestCorpusGateFindingCountsBothKinds checks the index states which jobs gate a merge.
+//
+// The corpus has both, deliberately: ci.yml runs on pull_request so its three jobs gate, while
+// nightly.yml is schedule-only and release.yml is tag-only, so their four cannot. A finding
+// that reported a count without the distinction would be wrong about four of seven jobs here.
+func TestCorpusGateFindingCountsBothKinds(t *testing.T) {
+	dir := buildCorpus(t)
+	pages := bundlePages(t, dir)
+
+	index, ok := pages[okf.IndexPage]
+	if !ok {
+		t.Fatalf("no %s was written", okf.IndexPage)
+	}
+	// Three of seven: ci's test, lint, and platform. Stated as a fraction so a reader sees
+	// both halves at once — how many checks a change must pass, and how much automation runs
+	// outside them.
+	//
+	// `platform` counts once here even though the matrix expands it into two checks on the
+	// pull request. That is the fact the file states: a count of expanded checks would need
+	// the matrix values, and those are not in the tree.
+	if !strings.Contains(index, "Merge gates: 3 of 7 CI jobs") {
+		t.Errorf("%s does not state the gate count. ci.yml's three jobs gate; nightly's one and "+
+			"release's three do not:\n%s", okf.IndexPage, findingsSection(index))
+	}
+	for _, want := range []string{
+		"pipelines/ci-test.md", "pipelines/ci-lint.md", "pipelines/ci-platform.md",
+	} {
+		if !strings.Contains(index, want) {
+			t.Errorf("%s does not link %s among the gates:\n%s",
+				okf.IndexPage, want, findingsSection(index))
+		}
+	}
+	// The non-gating jobs must not be listed as gates. Asserted against the finding's own
+	// line rather than the page, since those pages are legitimately listed under Pipelines.
+	gates := gateFindingLines(index)
+	for _, unwanted := range []string{"nightly-scan", "release-build-the-artifact", "release-publish"} {
+		if strings.Contains(gates, unwanted) {
+			t.Errorf("the merge-gate finding lists %s, which runs on a schedule or a tag and "+
+				"cannot block a merge:\n%s", unwanted, gates)
+		}
+	}
+}
+
+// findingsSection returns the index's structural findings, for a failure message that shows the
+// relevant part of a long page rather than all of it.
+func findingsSection(index string) string {
+	i := strings.Index(index, "### Structural findings")
+	if i < 0 {
+		return index
+	}
+	rest := index[i:]
+	if j := strings.Index(rest, "\n## "); j > 0 {
+		return rest[:j]
+	}
+	return rest
+}
+
+// gateFindingLines returns the merge-gate finding and the list of jobs it names, and nothing
+// else on the page.
+//
+// A finding is one unindented `- **` bullet followed by its own indented `  - ` items, so the
+// finding ends at the first line that is not one of those items. Terminating on the *next*
+// finding instead would be wrong here for a reason that is easy to miss: the merge-gate finding
+// is the last one emitted, so there is no following bullet, and the search would run past the
+// end of the section and into the index's Pipelines listing — where every pipeline is named,
+// gate or not, and any assertion about which jobs the finding omits would pass or fail on the
+// wrong text.
+func gateFindingLines(index string) string {
+	lines := strings.Split(index, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.HasPrefix(l, "- **Merge gates:") {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return ""
+	}
+	end := start + 1
+	for end < len(lines) && strings.HasPrefix(lines[end], "  - ") {
+		end++
+	}
+	return strings.Join(lines[start:end], "\n") + "\n"
+}
+
 // TestCorpusAManifestWithNothingToPinSaysSo is the corpus half of the empty-manifest false
 // positive, and it needs a repository rather than a fixture because the defect was found by
 // reading a page, not by running a test.

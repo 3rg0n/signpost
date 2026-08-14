@@ -41,6 +41,7 @@ func ExtractWorkflow(f discover.File) Facts {
 	jobs.Each(func(id string, spec *Node) bool {
 		job := Job{
 			Name:     firstNonEmpty(spec.Get("name").String(), id),
+			Key:      id,
 			Workflow: wfName,
 			Uses:     spec.Get("uses").String(),
 			Needs:    spec.Get("needs").Strings(),
@@ -58,10 +59,12 @@ func ExtractWorkflow(f discover.File) Facts {
 		if len(job.Permissions) == 0 {
 			job.Permissions = wfPerms
 		}
-		// A gate is a job that can block a merge: it runs on pull_request, or on a
-		// push to the default branch. Every job in such a workflow is a gate, since
-		// GitHub's required-checks configuration operates on job names and any of them
-		// can be selected.
+		// A gate is a job that runs on pull_request, or on a push to the default
+		// branch. Every job in such a workflow is one, since GitHub's required-checks
+		// configuration operates on job names and any of them can be selected. Which of
+		// them is actually *required* is branch protection — repository configuration,
+		// not stated in the tree — so this field does not claim a job blocks a merge,
+		// and neither does anything reading it.
 		job.Gate = defaultBranchPush
 
 		steps := spec.Get("steps")

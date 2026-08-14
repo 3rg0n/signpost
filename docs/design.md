@@ -684,10 +684,23 @@ point at a directory. The relationship is enrichment, not dependency.
 ### 4.4 Build the graph — in process
 
 Nodes: modules, files, symbols (when enriched), services, interfaces, data stores,
-external dependencies, documents.
+pipelines, external dependencies, documents.
 
 Typed edges: `imports`, `calls`, `implements`, `defines`, `configures`, `deploys`,
-`tested_by`, `documents`, `co_changes`, `owns`.
+`tested_by`, `documents`, `co_changes`, `owns`, `precedes`.
+
+**A CI job is a node, and `precedes` is drawn only where a file declares the order.** A job is
+the unit rather than a workflow file, because a required-check rule is configured against a job
+and a failing check names one — the job is what a reader arrives with. A job's `needs` is a
+declared ordering and becomes an edge from the job that finishes first to the one that waits.
+Nothing else in the repository is. Jobs with no `needs` run concurrently, and deriving an order
+from their position in the file would put `Extracted` confidence on a sequence GitHub does not
+honour — a reader would then sequence work around it, which is worse than the edge's absence. The
+same rule refuses a flow assembled from imports: traversing them out from an entrypoint yields a
+reachability set, not a sequence, and there is no call graph to order it by (§4.1 discards call
+sites, and [ADR 0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)
+records why). [ADR 0032](adr/0032-order-is-drawn-only-where-a-file-declares-it.md) has the rest,
+including why a `needs` resolves by a job's key and not by its name.
 
 **A module page names its public surface, without the graph gaining a node for it.** §4.1
 already extracts exported declarations in every language, and a page reporting only how
@@ -1565,9 +1578,23 @@ assignments, and arbitrary node attributes, and it opens in tooling teams alread
 have and already trust. For a lot of internal users that is the whole visual story
 and no site needs to exist.
 
-The structural findings — hubs, cycles, bridges, orphans, doc/code islands — are
-written as **text** in `index.md`, because that is what an agent consumes. A
-picture is for the human skim; the prose is the load-bearing artifact.
+The structural findings — hubs, cycles, bridges, orphans, doc/code islands, merge
+gates — are written as **text** in `index.md`, because that is what an agent
+consumes. A picture is for the human skim; the prose is the load-bearing artifact.
+
+The merge-gate finding is the line that answers §4.1's "what gates exist", and it
+states a fraction — "11 of 13 CI jobs" on this repository — because a count of CI
+jobs is not a count of the checks a change meets. It reports what the fact says and no
+more: a job runs on a pull request or on a push to the default branch. A job counts
+once even where a matrix expands it into several checks, since the matrix values are
+not in the tree; for the same reason a job whose `name:` interpolates one is titled by
+its key rather than after the expression. Which of those is *required* is branch
+protection, which is repository configuration and not in the tree, so the
+finding says so — this repository's `pages.yml` gates by that definition and §7 makes
+it never a required check. A repository whose every workflow runs on a schedule or a
+tag has automation and no gates, and one with no CI at all has neither: both are
+reported rather than left blank
+([ADR 0032](adr/0032-order-is-drawn-only-where-a-file-declares-it.md)).
 
 A finding with nothing to report states that it found nothing, rather than being
 omitted. `graph show` does the opposite and both are right: a terminal is scrolled

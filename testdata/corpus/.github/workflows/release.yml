@@ -1,0 +1,46 @@
+# Corpus fixture: the only declared job ordering in the corpus.
+#
+# ci.yml's two jobs and nightly.yml's one have no `needs`, which is the ordinary case and
+# the negative boundary for `precedes`: jobs without it run concurrently, and a reader
+# that derived an order from file position would draw two edges there and be wrong twice.
+# This file is the positive one. `publish` needs `build`, so exactly one precedes edge
+# exists in the whole corpus, and its direction is checkable — build before publish, not
+# the reverse.
+#
+# `verify` needs a job that does not exist. A workflow can be committed in that state and
+# GitHub simply never runs the job; no edge may be invented for a name that matches
+# nothing, so the count stays at one.
+#
+# `build` sets a `name:` that is not its key, which is the ordinary case in a real workflow
+# and the shape that broke: a `needs` names the key, the page is titled by the name, and a
+# reader that resolves one against the other finds nothing and drops the ordering without
+# saying so. The two strings differ here so that confusing them fails this file's edge.
+name: release
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build the artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make build
+
+  publish:
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make publish
+
+  verify:
+    needs: [smoke-test]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: make verify

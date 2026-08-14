@@ -23,9 +23,12 @@ import (
 // thing that runs (stadium), an interface is the boundary you talk through
 // (hexagon), a data store is where state lives (cylinder), a document is
 // something written (parallelogram), an external dependency is outside the
-// repository (double circle).
+// repository (double circle), a pipeline is work that runs and finishes
+// (subroutine).
 func mermaidShape(k graph.Kind, label string) string {
 	switch k {
+	case graph.KindPipeline:
+		return "[[" + label + "]]"
 	case graph.KindService:
 		return "([" + label + "])"
 	case graph.KindInterface:

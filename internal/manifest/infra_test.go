@@ -344,6 +344,13 @@ jobs:
 	if lint.Workflow != "CI" || lint.Runner != "ubuntu-latest" {
 		t.Errorf("lint = %+v", lint)
 	}
+	// A job's name and its key are different strings whenever it sets `name:`, and only the
+	// key is what another job's `needs` names — `test` below says `needs: [lint]`, not
+	// `needs: [Lint]`. Both have to be kept: the name is what GitHub's checks UI shows and
+	// what a required-check rule is written against, the key is what resolves a dependency.
+	if lint.Key != "lint" {
+		t.Errorf("lint key = %q, want the `jobs` map key, which is what a `needs` names", lint.Key)
+	}
 	// A workflow triggered by pull_request can block a merge, which is the fact §4.1
 	// asks for by name.
 	if !lint.Gate {
