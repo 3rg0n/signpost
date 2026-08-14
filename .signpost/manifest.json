@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@f58e740201cd6ecc365fccf2e3178529755f7b33",
+  "resource": "git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6",
   "date": "2026-08-14",
   "counts": {
-    "nodes": 68,
+    "nodes": 69,
     "edges": 165,
-    "clusters": 34
+    "clusters": 35
   },
   "confidence": {
     "ambiguous": 0,
@@ -66,6 +66,7 @@
     "references/adr-0028-scaffolded-files-are-embedded-and-tested-against-our-own.md",
     "references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md",
     "references/adr-0030-a-finding-states-its-own-absence.md",
+    "references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
