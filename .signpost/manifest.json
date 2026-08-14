@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6",
-  "date": "2026-08-14",
+  "resource": "git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03",
+  "date": "2026-08-15",
   "counts": {
-    "nodes": 69,
-    "edges": 165,
-    "clusters": 35
+    "nodes": 83,
+    "edges": 208,
+    "clusters": 36
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 165,
+    "extracted": 208,
     "inferred": 0
   },
   "pages": [
@@ -35,6 +35,19 @@
     "modules/telemetry.md",
     "modules/vcs.md",
     "modules/view.md",
+    "pipelines/ci-commit-trailers-name-real-issues.md",
+    "pipelines/ci-corpus-a-repository-signpost-did-not-write.md",
+    "pipelines/ci-dependency-gate.md",
+    "pipelines/ci-installer-parses-5-1-and-7.md",
+    "pipelines/ci-lint.md",
+    "pipelines/ci-security.md",
+    "pipelines/ci-signpost-analyses-signpost.md",
+    "pipelines/ci-test.md",
+    "pipelines/pages-deploy.md",
+    "pipelines/release-build-and-publish.md",
+    "pipelines/signpost-rebuild-the-bundle.md",
+    "pipelines/signpost-semantic-summarise-modules-with-a-model.md",
+    "pipelines/signpost-the-bundle-still-describes-this-tree.md",
     "practices.md",
     "references/adr-0001-hand-written-tolerant-yaml-reader.md",
     "references/adr-0002-patchable-dependencies-not-zero-dependencies.md",
@@ -67,6 +80,7 @@
     "references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md",
     "references/adr-0030-a-finding-states-its-own-absence.md",
     "references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md",
+    "references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

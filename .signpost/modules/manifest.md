@@ -2,26 +2,27 @@
 type: Module
 title: internal/manifest
 description: 37 go files; 130 exported symbols.
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6/internal/manifest
-generated: { by: signpost/dev, at: "2026-08-14" }
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03/internal/manifest
+generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
-  - { name: commits, value: "9" }
+  - { name: commits, value: "10" }
   - { name: exported, value: "130" }
   - { name: files, value: "37" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-11" }
-  - { name: lines_added, value: "16551" }
-  - { name: lines_removed, value: "53" }
+  - { name: last_commit, value: "2026-08-15" }
+  - { name: lines_added, value: "16574" }
+  - { name: lines_removed, value: "60" }
   - { name: package, value: manifest }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 67% }
+  - { name: top_author_share, value: 60% }
 edges:
-  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 5 }
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: ./discover.md, confidence: extracted, weight: 5 }
   - { kind: imports, to: ./discover.md, confidence: extracted, weight: 23, source: internal/manifest/bazel.go }
+  - { kind: co_changes, to: ./okf.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./practice.md, confidence: extracted, weight: 4 }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 8 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 7 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 9 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 8 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 3 }
 ---
 # internal/manifest
@@ -74,7 +75,7 @@ edges:
 
 - **Exports** (130): `Alias`, `Contract`, `DefaultRegistry`, `Dep`, `DepScope`, `Diag`, `Diag.Incomplete`, `Diag.Summary`, `Entrypoint`, `ExtractADR`, `ExtractAgentRules`, `ExtractBazel`, `ExtractCMake`, `ExtractCargo`, `ExtractCodeowners`, `ExtractCompose`, `ExtractComposer`, `ExtractContainerfile`, `ExtractGem`, `ExtractGoMod`, `ExtractGraphQL`, `ExtractHelmChart`, `ExtractHelmValues`, `ExtractKubernetes`, `ExtractMSBuild`, `ExtractMakefile`, `ExtractMigration`, `ExtractOpenAPI`, `ExtractPackageJSON`, `ExtractProto`, `ExtractPyProject`, `ExtractRequirements`, `ExtractSolution`, `ExtractTSConfig`, `ExtractTerraform`, `ExtractWorkflow`, `Facts`, `Facts.DepNames`, `Facts.DirectDepNames`, `Facts.ImageRefs`, `Facts.JobNames`, `Facts.Normalize`, `Facts.SecretNames`, `Facts.SecretNamesFor`, `Facts.ServiceNames`, `GoMod`, `GoModReplace`, `GoModReplace.Local`, `GoModRequire`, `Image`, `IsBazelWorkspaceRoot`, `Job`, `KeyValue`, `Kind`, `KindADR`, `KindAgentRules`, `KindBazel`, `KindCMake`, `KindCargo`, `KindCodeowners`, and 70 more
 
-- **Changes with**: [internal/assemble](./assemble.md) ×5, [internal/discover](./discover.md) ×5, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×8, [cmd/signpost](./signpost.md) ×7, [site](./site.md) ×3
+- **Changes with**: [internal/assemble](./assemble.md) ×6, [internal/discover](./discover.md) ×5, [internal/okf](./okf.md) ×2, [internal/practice](./practice.md) ×4, [\(repository root\)](./root.md) ×9, [cmd/signpost](./signpost.md) ×8, [site](./site.md) ×3
 
 - **Imports**: [internal/discover](./discover.md) ×23
 <!-- /signpost:managed:structure -->

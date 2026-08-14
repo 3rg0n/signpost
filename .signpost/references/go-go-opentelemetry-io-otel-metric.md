@@ -2,9 +2,9 @@
 type: External Dependency
 title: go.opentelemetry.io/otel/metric
 description: go dependency go.opentelemetry.io/otel/metric (v1.44.0)
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03
 tags: [external, go]
-generated: { by: signpost/dev, at: "2026-08-14" }
+generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
   - { name: ecosystem, value: go }
   - { name: name, value: go.opentelemetry.io/otel/metric }

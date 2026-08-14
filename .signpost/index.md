@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 69 concepts, 165 relationships."
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6
-generated: { by: signpost/dev, at: "2026-08-14" }
+description: "Structural map of this repository: 83 concepts, 208 relationships."
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03
+generated: { by: signpost/dev, at: "2026-08-15" }
 ---
 # Repository map
 
@@ -20,40 +20,40 @@ Start here. What the shape of this repository says, then a line per page naming 
 The places a wrong assumption propagates furthest, so the places to read first.
 
 - [\(repository root\)](./modules/root.md) — 50 relationships (17 in, 33 out)
-- [cmd/signpost](./modules/signpost.md) — 43 relationships (14 in, 29 out)
-- [internal/assemble](./modules/assemble.md) — 21 relationships (9 in, 12 out)
+- [cmd/signpost](./modules/signpost.md) — 45 relationships (15 in, 30 out)
+- [internal/assemble](./modules/assemble.md) — 27 relationships (12 in, 15 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
-- [site](./modules/site.md) — 20 relationships (11 in, 9 out)
+- [internal/manifest](./modules/manifest.md) — 21 relationships (13 in, 8 out)
 
 ### Structural findings
 
 What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
 
 - **Import cycles: none.** No module here imports its way back to itself.
-- **Cross-cluster edges: 74.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
-  - [internal/assemble](./modules/assemble.md) → [internal/graph](./modules/graph.md) (imports)
+- **Cross-cluster edges: 41.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
   - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/assemble](./modules/assemble.md) → [cmd/signpost](./modules/signpost.md) (changes with)
-  - [internal/config](./modules/config.md) → [internal/manifest](./modules/manifest.md) (imports)
   - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/discover](./modules/discover.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/export](./modules/export.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/extract](./modules/extract.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/extract](./modules/extract.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/graph](./modules/graph.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/hook](./modules/hook.md) → [internal/okf](./modules/okf.md) (imports)
   - [internal/hook](./modules/hook.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/manifest](./modules/manifest.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/manifest](./modules/manifest.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/model](./modules/model.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/okf](./modules/okf.md) → [internal/graph](./modules/graph.md) (imports)
   - [internal/okf](./modules/okf.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/okf](./modules/okf.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/practice](./modules/practice.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/practice](./modules/practice.md) → [cmd/signpost](./modules/signpost.md) (changes with)
-  - and 54 more
+  - [\(repository root\)](./modules/root.md) → [internal/assemble](./modules/assemble.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/discover](./modules/discover.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/export](./modules/export.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/extract](./modules/extract.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/graph](./modules/graph.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/hook](./modules/hook.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/manifest](./modules/manifest.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/okf](./modules/okf.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/practice](./modules/practice.md) (changes with)
+  - and 21 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 32.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 33.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,19 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 12 more
+  - and 13 more
+- **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
+  - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
+  - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
+  - [ci dependency gate](./pipelines/ci-dependency-gate.md)
+  - [ci installer parses \(5.1 and 7\)](./pipelines/ci-installer-parses-5-1-and-7.md)
+  - [ci lint](./pipelines/ci-lint.md)
+  - [ci security](./pipelines/ci-security.md)
+  - [ci signpost analyses signpost](./pipelines/ci-signpost-analyses-signpost.md)
+  - [ci test](./pipelines/ci-test.md)
+  - [pages deploy](./pipelines/pages-deploy.md)
+  - [signpost rebuild the bundle](./pipelines/signpost-rebuild-the-bundle.md)
+  - [signpost the bundle still describes this tree](./pipelines/signpost-the-bundle-still-describes-this-tree.md)
 
 ### Modules
 
@@ -83,7 +95,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/discover](./modules/discover.md) — 5 go files; 44 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 7 exported symbols.
 - [internal/extract](./modules/extract.md) — 32 go files; 79 exported symbols.
-- [internal/graph](./modules/graph.md) — 4 go files; 49 exported symbols.
+- [internal/graph](./modules/graph.md) — 4 go files; 51 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 17 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 130 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 36 exported symbols.
@@ -97,6 +109,22 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.
 - [internal/view](./modules/view.md) — 5 go files; 4 exported symbols.
+
+### Pipelines
+
+- [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md) — CI job commit trailers name real issues in the ci workflow, 2 steps; runs on a pull request or a default-branch push
+- [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md) — CI job corpus (a repository signpost did not write) in the ci workflow, 21 steps; runs on a pull request or a default-branch push
+- [ci dependency gate](./pipelines/ci-dependency-gate.md) — CI job dependency gate in the ci workflow, 4 steps; runs on a pull request or a default-branch push
+- [ci installer parses \(5.1 and 7\)](./pipelines/ci-installer-parses-5-1-and-7.md) — CI job installer parses (5.1 and 7) in the ci workflow, 3 steps; runs on a pull request or a default-branch push
+- [ci lint](./pipelines/ci-lint.md) — CI job lint in the ci workflow, 8 steps; runs on a pull request or a default-branch push
+- [ci security](./pipelines/ci-security.md) — CI job security in the ci workflow, 5 steps; runs on a pull request or a default-branch push
+- [ci signpost analyses signpost](./pipelines/ci-signpost-analyses-signpost.md) — CI job signpost analyses signpost in the ci workflow, 13 steps; runs on a pull request or a default-branch push
+- [ci test](./pipelines/ci-test.md) — CI job test (${{ matrix.os }}) in the ci workflow, 6 steps; runs on a pull request or a default-branch push
+- [pages deploy](./pipelines/pages-deploy.md) — CI job deploy in the pages workflow, 7 steps; runs on a pull request or a default-branch push
+- [release build and publish](./pipelines/release-build-and-publish.md) — CI job build and publish in the release workflow, 5 steps
+- [signpost rebuild the bundle](./pipelines/signpost-rebuild-the-bundle.md) — CI job rebuild the bundle in the signpost workflow, 6 steps; runs on a pull request or a default-branch push
+- [signpost-semantic summarise modules with a model](./pipelines/signpost-semantic-summarise-modules-with-a-model.md) — CI job summarise modules with a model in the signpost-semantic workflow, 8 steps
+- [signpost the bundle still describes this tree](./pipelines/signpost-the-bundle-still-describes-this-tree.md) — CI job the bundle still describes this tree in the signpost workflow, 4 steps; runs on a pull request or a default-branch push
 
 ### Documents
 
@@ -131,6 +159,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0029: the viewer is written by the run that publishes it](./references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md) — Architecture decision (Accepted), 24 rules read from 0029-the-viewer-is-written-by-the-run-that-publishes-it.md.
 - [ADR 0030: a finding states its own absence](./references/adr-0030-a-finding-states-its-own-absence.md) — Architecture decision (Accepted), 18 rules read from 0030-a-finding-states-its-own-absence.md.
 - [ADR 0031: scope is a lifecycle test not a list of non goals](./references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md) — Architecture decision (Accepted), 19 rules read from 0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md.
+- [ADR 0032: order is drawn only where a file declares it](./references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md) — Architecture decision (Accepted), 21 rules read from 0032-order-is-drawn-only-where-a-file-declares-it.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

@@ -2,24 +2,27 @@
 type: Module
 title: internal/okf
 description: 14 go files; 36 exported symbols.
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6/internal/okf
-generated: { by: signpost/dev, at: "2026-08-14" }
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03/internal/okf
+generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
-  - { name: commits, value: "13" }
+  - { name: commits, value: "14" }
   - { name: exported, value: "36" }
   - { name: files, value: "14" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-14" }
-  - { name: lines_added, value: "8174" }
+  - { name: last_commit, value: "2026-08-15" }
+  - { name: lines_added, value: "8333" }
   - { name: lines_removed, value: "196" }
   - { name: package, value: okf }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 54% }
+  - { name: top_author_share, value: 57% }
 edges:
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./graph.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 7, source: internal/okf/bundle.go }
+  - { kind: co_changes, to: ./manifest.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 4, source: internal/okf/bundle_test.go }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 13 }
-  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 11 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 14 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 12 }
   - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./vcs.md, confidence: extracted, weight: 3 }
 ---
@@ -50,7 +53,7 @@ edges:
 
 - **Exports** (36): `Actor`, `BundleDir`, `Finding`, `Finding.String`, `FindingBrokenLink`, `FindingConformance`, `FindingKind`, `FindingMissingBundle`, `FindingMissingPage`, `FindingOrphanPage`, `FindingOutOfDate`, `FindingPageList`, `FindingStaleResource`, `FindingStaleVerification`, `IndexPage`, `LogPage`, `ManifestFile`, `NewPage`, `Options`, `Page`, `Page.HumanText`, `Page.Managed`, `Page.Merge`, `Page.Render`, `ParsePage`, `PracticesPage`, `RecordedCommit`, `Region`, `Region.Managed`, `Result`, `Verification`, `Verify`, `VerifyCounts`, `VerifyResult`, `VerifyResult.OK`, `Write`
 
-- **Changes with**: [\(repository root\)](./root.md) ×13, [cmd/signpost](./signpost.md) ×11, [site](./site.md) ×2, [internal/vcs](./vcs.md) ×3
+- **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/graph](./graph.md) ×2, [internal/manifest](./manifest.md) ×2, [\(repository root\)](./root.md) ×14, [cmd/signpost](./signpost.md) ×12, [site](./site.md) ×2, [internal/vcs](./vcs.md) ×3
 
 - **Imports**: [internal/graph](./graph.md) ×7, [internal/manifest](./manifest.md) ×4
 <!-- /signpost:managed:structure -->

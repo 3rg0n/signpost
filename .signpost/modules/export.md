@@ -2,23 +2,25 @@
 type: Module
 title: internal/export
 description: 6 go files; 7 exported symbols.
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6/internal/export
-generated: { by: signpost/dev, at: "2026-08-14" }
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03/internal/export
+generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
-  - { name: commits, value: "3" }
+  - { name: commits, value: "4" }
   - { name: exported, value: "7" }
   - { name: files, value: "6" }
   - { name: first_commit, value: "2026-07-30" }
-  - { name: last_commit, value: "2026-08-10" }
-  - { name: lines_added, value: "1117" }
-  - { name: lines_removed, value: "4" }
+  - { name: last_commit, value: "2026-08-15" }
+  - { name: lines_added, value: "1125" }
+  - { name: lines_removed, value: "5" }
   - { name: owners, value: "@3rg0n" }
   - { name: package, value: export }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 67% }
+  - { name: top_author_share, value: 75% }
 edges:
+  - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./graph.md, confidence: extracted, weight: 2 }
   - { kind: imports, to: ./graph.md, confidence: extracted, weight: 6, source: internal/export/dot.go }
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 3 }
 ---
 # internal/export
 
@@ -39,7 +41,7 @@ edges:
 
 - **Exports** (7): `Format`, `FormatDOT`, `FormatGraphML`, `FormatJSON`, `FormatMermaid`, `Formats`, `Write`
 
-- **Changes with**: [\(repository root\)](./root.md) ×2
+- **Changes with**: [internal/assemble](./assemble.md) ×2, [internal/graph](./graph.md) ×2, [\(repository root\)](./root.md) ×3
 
 - **Imports**: [internal/graph](./graph.md) ×6
 <!-- /signpost:managed:structure -->

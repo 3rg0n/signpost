@@ -2,9 +2,9 @@
 type: Document
 title: AGENTS.md
 description: "Stated constraints, 14 rules read from AGENTS.md."
-resource: git://github.com/3rg0n/signpost@940b3f11054c4deef2d477342b709b8f43d50eb6/AGENTS.md
+resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03/AGENTS.md
 tags: [agent-rules, constraint]
-generated: { by: signpost/dev, at: "2026-08-14" }
+generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
   - { name: rules, value: "14" }
   - { name: sections, value: "AGENTS.md, AGENTS.md / The bundle is generated, AGENTS.md / Where to look, AGENTS.md / Working in this repository" }
