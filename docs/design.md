@@ -38,12 +38,43 @@ Two properties follow from that framing and drive every decision below:
    corrections on every run trains people to ignore its output. Preservation of
    human review is a first-class requirement, not a later feature.
 
-### What signpost is not
+### What belongs here, and what does not
 
-- Not a code search index. `codeatlas` does that, with SCIP precision.
-- Not a readiness assessment. `codebase-agent-readiness` does that, read-only.
-- Not a bug finder or a code reviewer.
-- Not a chat interface.
+Scope is decided by one question about the *thing being proposed*, not by a list of
+tools that already do something adjacent
+([ADR 0031](adr/0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md)):
+
+> Is it durable, evidence-backed repository knowledge with the bundle's lifecycle —
+> compiled from the tree, committed, human-correctable, loudly stale when the
+> evidence moves? Then it belongs here, regardless of which tool first thought to
+> look for it. Is it a ranking, an opinion, an observation that cannot be
+> reproduced from the tree at a commit, or knowledge that exists only while a
+> service is running? Then it does not.
+
+**In:** the structure index — `Exports`, `KindSymbol`, the files behind each node.
+Repository-practice findings (§9.1). Cycles, bridges, doc/code drift, manifest
+conflicts (§7.1). The workflow and data-artifact overlay. An MCP query surface,
+which reads a committed artifact and is therefore optional by construction —
+property 1 above is what makes that a query rather than a service.
+
+**Out:** full-text search, because grep is stateless, already installed, and better
+at it — signpost indexes structure, and the moment it indexed text it would be
+maintaining a stale copy of something the tree already answers exactly. A 1–5
+maturity score, and root-cause ranking, on the same ground: both are opinions with
+no durable truth underneath (§9.1). Runtime traces, which fail the *first* clause
+rather than needing §8.1's determinism argument — an observation of one execution
+cannot be recompiled from the tree at a commit, so nothing downstream can check it.
+Chat, which is a conversation rather than an artifact.
+
+Two of these were written as non-goals at v0.1 and are now false as stated: this
+tool does index code, and it does report readiness signals — §9.1 records that
+routing those facts elsewhere "was wrong." A list of exclusions is a thing nobody
+re-reads, so it went stale in place while the tool it described moved. A test does
+not: it has to be applied to each new proposal, and applying it is what surfaces
+the disagreement.
+
+§6.2 is untouched by this. Which files signpost may overwrite is a trust boundary,
+not a scope one, and it is already correct.
 
 ---
 

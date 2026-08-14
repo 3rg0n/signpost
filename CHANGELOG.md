@@ -931,6 +931,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **Design §1 decides scope by one lifecycle test instead of a list of non-goals.** Two of the
+  four exclusions were false as written — signpost does index code structure, and it does
+  report readiness signals — so the section now asks whether a capability is durable,
+  evidence-backed repository knowledge that is compiled, committed, correctable, and loudly
+  stale ([ADR 0031](docs/adr/0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md)).
+
 - **`index.md` now states the structural findings, including the ones that found nothing.** A
   `### Structural findings` section between "Most connected" and the page listing names import
   cycles, cross-cluster edges, disconnected islands, and unconnected concepts, with a link to
