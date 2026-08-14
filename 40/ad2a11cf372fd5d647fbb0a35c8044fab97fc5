@@ -1,0 +1,122 @@
+internal/assemble/assemble_test.go
+  s_f6c0b1ac81cb95::t_21e2377deaba3d 2117-2285
+  s_f6c0b1ac81cb95::t_65204df25591f2 2286-2334
+internal/export/dot.go
+  s_f6c0b1ac81cb95::t_bded8ba479e432 40-42
+  s_f6c0b1ac81cb95::t_88df731125dffa 29
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_7b6867b2ec5b23 948-949,951-961
+  s_f6c0b1ac81cb95::t_3133671e482dd4 866-868,870-889,891-947,950,962-987,994-997
+  s_f6c0b1ac81cb95::t_479019234d5bf5 869
+  s_f6c0b1ac81cb95::t_8623ad84a40ad6 250-255
+  s_f6c0b1ac81cb95::t_a0189b7a7dcb67 1277-1280
+  s_f6c0b1ac81cb95::t_56044d536963ab 988-993
+  s_f6c0b1ac81cb95::t_21835936d9159c 287-299,301,303
+  s_f6c0b1ac81cb95::t_914bfac83d6d23 277-279
+  s_f6c0b1ac81cb95::t_17576dff61bb70 263-267
+  s_f6c0b1ac81cb95::t_57c380c4fb2f72 1294
+  s_f6c0b1ac81cb95::t_8185a29dc8d41b 256
+  s_f6c0b1ac81cb95::t_4f3326f634670c 1296-1297,1299
+  s_f6c0b1ac81cb95::t_fd1c6a0b2f60ec 1298
+  s_f6c0b1ac81cb95::t_67e67569679903 143-145,152
+  s_f6c0b1ac81cb95::t_282295bea50ec0 257-262,269,273,282
+  s_f6c0b1ac81cb95::t_179bee8156580e 300,302
+  s_f6c0b1ac81cb95::t_140bd58845a6fe 890
+  s_f6c0b1ac81cb95::t_3203a6004b0086 283,1265-1276,1281-1289,1291-1293,1295,1300-1309,1311,1328-1329,1337,1342-1344
+  s_f6c0b1ac81cb95::t_fdfe26582c89b4 285-286
+  s_f6c0b1ac81cb95::t_ad6cdecd144597 1290
+  s_f6c0b1ac81cb95::t_c2256d09d95411 270-272
+  s_f6c0b1ac81cb95::t_1dc8a659fd9e58 1310,1312-1327,1330-1336,1338-1341
+  s_f6c0b1ac81cb95::t_2f1604e531b476 229-249,268,274-276,280-281
+  s_9b8d68f5aabdc1::t_50b761c3da2ead 284
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_a08e309612dcd9 15-19
+  s_f6c0b1ac81cb95::t_f9a5795040ec9d 12-14,20-29
+  s_f6c0b1ac81cb95::t_71d0c1702d7f5b 11
+internal/okf/emit.go
+  s_f6c0b1ac81cb95::t_c6238442cecf50 510-511
+internal/manifest/workflow.go
+  s_f6c0b1ac81cb95::t_8e5598111eada9 62-67
+  s_f6c0b1ac81cb95::t_0d40df4b7cc650 44
+internal/manifest/infra_test.go
+  s_f6c0b1ac81cb95::t_cc70c8097936eb 347-353
+internal/okf/bundle_test.go
+  s_f6c0b1ac81cb95::t_c290440c42d3d3 1087
+  s_f6c0b1ac81cb95::t_9a0a1bfad4330e 1129,1131,1143-1167
+  s_f6c0b1ac81cb95::t_b33af3fd6ec80c 1107,1110-1117,1132,1134-1141
+  s_f6c0b1ac81cb95::t_67db6676f51a60 1088-1106,1108-1109,1118-1128,1130,1133,1142,1168-1196
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_8541646243edbe 51
+internal/graph/graph.go
+  s_f6c0b1ac81cb95::t_9aa94f0408ccaf 52-57
+  s_f6c0b1ac81cb95::t_7095808a6a8266 33
+  s_f6c0b1ac81cb95::t_61c0e3ce07fc40 28-32
+testdata/corpus/.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_6e21e0328b6b36 27-42
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_b47cb241d5b109 754
+  s_f6c0b1ac81cb95::t_3af19007056ad0 643
+  s_f6c0b1ac81cb95::t_da62a9b7f12fe8 644-648,654-665,669-670,674-685
+  s_f6c0b1ac81cb95::t_fadf700d34de47 770-771
+  s_f6c0b1ac81cb95::t_ce717699255c27 558
+  s_f6c0b1ac81cb95::t_695d9417a89c8e 649-653,666-668,671-673
+internal/export/mermaid.go
+  s_f6c0b1ac81cb95::t_d0c948a3354dce 26-27,30-31
+testdata/corpus/.github/workflows/release.yml
+  s_f6c0b1ac81cb95::t_97230c7319be45 13-17
+  s_f6c0b1ac81cb95::t_e81dcf04f5e78a 29
+  s_f6c0b1ac81cb95::t_d17d7588b1088f 1-12,18-28,30-46
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_4b8cc755714039 716,723,725-727
+  s_f6c0b1ac81cb95::t_ae4dcf5f76cf8b 717-722
+  s_f6c0b1ac81cb95::t_447bdd73e2f5f1 636-658,668-670,672,674-678,690-711,728,732-748,750,752-759,769-770,774-781,783-803,814,824-825,829,831-832
+  s_f6c0b1ac81cb95::t_145e77b76ef320 659-660,664-667,671,679-689
+  s_f6c0b1ac81cb95::t_f95cfd26d54256 749,751
+  s_f6c0b1ac81cb95::t_f4e0d3f6875575 661-663,673
+  s_f6c0b1ac81cb95::t_a68348d5d637cc 782
+  s_f6c0b1ac81cb95::t_56b199529559e4 712-715,724,729-731
+  s_f6c0b1ac81cb95::t_78e95fc34a9ff6 760-768,771-773
+  s_f6c0b1ac81cb95::t_bc88e7edd1b029 804-813,815-823,826-828,830
+internal/manifest/facts.go
+  s_f6c0b1ac81cb95::t_d2f7554ebdaea0 299-302
+  s_f6c0b1ac81cb95::t_4bb0e8c4b27aa3 313-317
+docs/adr/0032-order-is-drawn-only-where-a-file-declares-it.md
+  s_f6c0b1ac81cb95::t_434c0de659ad1d 50-52
+  s_f6c0b1ac81cb95::t_66c931d8b2b4c4 87
+  s_f6c0b1ac81cb95::t_b1cd526f9dae40 1-49,53-64,75-86,89-91,104-133
+  s_f6c0b1ac81cb95::t_c9efeb8fc4c021 99-103
+  s_f6c0b1ac81cb95::t_63a3c602b151fd 88,92-98
+  s_f6c0b1ac81cb95::t_7f1c81e28f03b5 65-74
+docs/design.md
+  s_f6c0b1ac81cb95::t_06217907e63147 687,690-703
+  s_f6c0b1ac81cb95::t_0294556f47d83f 1581-1585,1596-1597
+  s_f6c0b1ac81cb95::t_a14f2675e3e087 1586-1590
+  s_f6c0b1ac81cb95::t_93bf1ba696e294 1593-1595
+  s_f6c0b1ac81cb95::t_33f31669963b85 1591-1592
+internal/assemble/id.go
+  s_f6c0b1ac81cb95::t_c4e2b19376b041 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "40ad2a11cf372fd5d647fbb0a35c8044fab97fc5",
+  "prompts": {},
+  "sessions": {
+    "s_9b8d68f5aabdc1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7333820e-bccc-4f3b-9eb9-50e606acc9ac",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    },
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
