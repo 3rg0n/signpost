@@ -555,6 +555,7 @@ func indexFindings(g *graph.Graph) string {
 	b.WriteString(bridgeFinding(g))
 	b.WriteString(islandFinding(g))
 	b.WriteString(orphanFinding(g))
+	b.WriteString(gateFinding(g))
 	return b.String()
 }
 
@@ -639,6 +640,49 @@ func islandFinding(g *graph.Graph) string {
 		})
 }
 
+// gateFinding reports which CI jobs run against a change.
+//
+// Design §4.1 asks a workflow for "what gates exist", and this is the one line in the bundle
+// that answers it: an agent about to open a pull request needs to know which checks will run
+// against it, and no other file in a repository states that. A repository with pipelines but
+// no gates is reported as such — a workflow set that gates nothing is a finding, not a blank.
+//
+// The wording says "on a pull request or a push to the default branch", matching the fact
+// `manifest.Job.Gate` actually carries and the sentence `internal/practice` writes from the
+// same fact. Saying only "against a pull request" would be false for a push-only workflow —
+// this repository's `pages.yml` is one, and it is in this list.
+func gateFinding(g *graph.Graph) string {
+	pipes := g.NodesOfKind(graph.KindPipeline)
+	if len(pipes) == 0 {
+		return "- **Merge gates: no CI jobs found.** Nothing here declares an automated check.\n"
+	}
+	var gates []string
+	for _, n := range pipes {
+		if hasTag(n, "gate") {
+			gates = append(gates, n.ID)
+		}
+	}
+	if len(gates) == 0 {
+		return "- **Merge gates: none of " + strconv.Itoa(len(pipes)) + " CI jobs.** No job runs " +
+			"on a pull request or on a push to the default branch, so none of them can stop a " +
+			"change from landing.\n"
+	}
+	return "- **Merge gates: " + strconv.Itoa(len(gates)) + " of " + strconv.Itoa(len(pipes)) +
+		" CI jobs.** These run on a pull request or on a push to the default branch, so they " +
+		"are the automated checks a change meets. Which of them is *required* is configured on " +
+		"the repository and is not in the tree.\n" +
+		findingItems(len(gates), func(i int) string { return nodeLink(g, gates[i]) })
+}
+
+func hasTag(n *graph.Node, tag string) bool {
+	for _, t := range n.Tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
 // orphanFinding reports nodes with no edges at all. Which of the three causes it is needs a
 // human, so the list is stated rather than judged.
 func orphanFinding(g *graph.Graph) string {
@@ -707,6 +751,7 @@ var indexKindOrder = []graph.Kind{
 	graph.KindService,
 	graph.KindInterface,
 	graph.KindDataStore,
+	graph.KindPipeline,
 	graph.KindDocument,
 	graph.KindSymbol,
 	graph.KindExternal,
@@ -722,6 +767,8 @@ func kindHeading(k graph.Kind) string {
 		return "Interfaces"
 	case graph.KindDataStore:
 		return "Data stores"
+	case graph.KindPipeline:
+		return "Pipelines"
 	case graph.KindDocument:
 		return "Documents"
 	case graph.KindExternal:

@@ -140,12 +140,16 @@ func (b *builder) run() error {
 	if err := b.addData(); err != nil {
 		return err
 	}
+	if err := b.addPipelines(); err != nil {
+		return err
+	}
 	if err := b.addDocuments(); err != nil {
 		return err
 	}
 	// Edges last, for the reason Build's comment gives.
 	b.addImportEdges()
 	b.addDeclaredDepEdges()
+	b.addPipelineEdges()
 	b.addTestEdges()
 	b.addServiceEdges()
 	b.addDocEdges()
@@ -222,6 +226,81 @@ func (b *builder) reserveIDs() {
 	b.ids.reserve(prefixService, sortedKeys(services))
 	b.ids.reserve(prefixInterface, interfaces)
 	b.ids.reserve(prefixData, sortedKeys(data))
+	b.ids.reserve(prefixPipeline, pipelineNames(b.in.Manifests.Facts))
+}
+
+// pipelineNames is the page name for every job addPipelines will create.
+//
+// Shared with the pass itself so the two cannot drift: a name counted here for a job
+// that gets no page suffixes the page of a job that does.
+func pipelineNames(facts []manifest.Facts) []string {
+	var out []string
+	for _, f := range facts {
+		for _, j := range f.Jobs {
+			if name := pipelineName(f, j); name != "" {
+				out = append(out, name)
+			}
+		}
+	}
+	return out
+}
+
+// pipelineName titles a job by the workflow that holds it.
+//
+// Qualified rather than bare, because a job name is unique only within its workflow, and the
+// names that repeat across workflows are the ordinary ones: `build`, `test`, `verify`. No two
+// workflows in this repository collide today — measured — but `signpost.yml` already holds a
+// `build` and a `verify`, so a second workflow needing either would collide on the day it is
+// added. An unqualified page would then be one of them arbitrarily suffixed, and the reader
+// could not tell which job they had opened.
+//
+// A job whose `name:` interpolates an expression is titled by its key instead. An
+// expression is not a name: `test (${{ matrix.os }})` is one line in the file and three
+// checks on the pull request, called `test (ubuntu-24.04)` and two more, and the bundle
+// cannot know those strings — the values come from the matrix at run time, and `github.*`
+// or a variable from anywhere. Slugging the raw text titles the page after syntax and
+// puts the expression in a committed filename, so the key stands in: it is short, stated
+// in the file, and it is what a `needs` names. Deliberately not jobKey, whose fallback is
+// the name — here the name is the thing being rejected. A job with no key either is a
+// composite action's synthetic one, and one of those with a templated name is left without
+// a page rather than titled after syntax; GitHub does not interpolate an action's `name:`
+// in the first place, so nothing in a working repository lands there.
+func pipelineName(f manifest.Facts, j manifest.Job) string {
+	name := j.Name
+	if strings.Contains(name, "${{") {
+		name = j.Key
+	}
+	if name == "" {
+		return ""
+	}
+	wf := j.Workflow
+	if wf == "" || strings.Contains(wf, "${{") {
+		// A workflow-level `name:` may interpolate as well, and the path is the fallback
+		// GitHub itself uses for a workflow that sets no name at all.
+		wf = f.Path
+	}
+	return wf + " " + name
+}
+
+// pipelineKey identifies a job for the ID map: its file, then its key within that file.
+//
+// Takes the key as a string rather than a Job, because the other caller has only a string
+// — a `needs` is the name of a job the loop is not looking at.
+func pipelineKey(path, key string) string { return path + "\x00" + key }
+
+// jobKey is the half of a pipeline's ID that identifies the job within its workflow.
+//
+// The key from the `jobs` map and not the job's name, because a `needs` names the key. The
+// two are the same string only when the job omits `name:`, so keying on the name would
+// resolve every `needs` in a workflow whose jobs are named — the common case — to nothing,
+// silently dropping the ordering the file states. A job with no key is a composite action's
+// synthetic one, which nothing can depend on; its name stands in so two of them in one file
+// could not collide.
+func jobKey(j manifest.Job) string {
+	if j.Key != "" {
+		return j.Key
+	}
+	return j.Name
 }
 
 // index records what exists, before anything is named.
@@ -784,6 +863,138 @@ func (b *builder) addData() error {
 	return nil
 }
 
+// addPipelines creates one node per CI job.
+//
+// Per job rather than per workflow, because the two facts that make a pipeline legible
+// are both per job: `Gate` says which checks run against a change, which is what a
+// contributor needs and what GitHub's required-checks rules are written against, and
+// `Needs` is job-to-job. A node per workflow file would have to join eight jobs' gate
+// status and eleven runners into one attribute and would have nowhere to put an
+// ordering edge.
+//
+// The steps are the flow, and they are recorded in file order because that is the order
+// they run in — the one sequence a workflow states unambiguously. Ordering *between*
+// jobs is a separate claim and is only drawn where `needs` states it; see addPipelineEdges.
+func (b *builder) addPipelines() error {
+	if b.in.Manifests == nil {
+		return nil
+	}
+	for _, f := range b.in.Manifests.Facts {
+		for _, j := range f.Jobs {
+			name := pipelineName(f, j)
+			if name == "" {
+				// A job with no name and no key is not addressable: nothing can require it
+				// as a check and no `needs` can name it.
+				continue
+			}
+			id := b.ids.assign(prefixPipeline, pipelineKey(f.Path, jobKey(j)), name)
+			n := &graph.Node{
+				ID:    id,
+				Kind:  graph.KindPipeline,
+				Title: name,
+				Path:  f.Path,
+				Files: []string{f.Path},
+				Attrs: map[string]string{
+					"workflow": j.Workflow,
+					"job":      j.Name,
+					"steps":    strconv.Itoa(len(j.Steps)),
+				},
+			}
+			if j.Runner != "" {
+				n.Attrs["runner"] = j.Runner
+			}
+			if j.Uses != "" {
+				// A job that calls a reusable workflow has no steps of its own; what it runs
+				// is stated by the reference.
+				n.Attrs["uses"] = j.Uses
+			}
+			if len(j.Permissions) > 0 {
+				// The job's blast radius, in the words the workflow used.
+				n.Attrs["permissions"] = strings.Join(j.Permissions, ", ")
+			}
+			if len(j.Needs) > 0 {
+				n.Attrs["needs"] = strings.Join(j.Needs, ", ")
+			}
+			// The step names, in order, as the one place the bundle states what a job
+			// actually does. Bounded: a job with ninety steps would otherwise put ninety
+			// on one attribute, and the first few name the shape.
+			if s := stepSummary(j.Steps); s != "" {
+				n.Attrs["runs"] = s
+			}
+			if j.Gate {
+				// The fact §4.1 asks for by name. A tag rather than an attribute because it
+				// is what a reader filters on.
+				n.Tags = append(n.Tags, "gate")
+			}
+			n.Description = pipelineDescription(j)
+			if err := b.g.AddNode(n); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// maxStepNames bounds the `runs` attribute.
+//
+// Eight, matching the bundle's other named-list bound: enough to show what a job does,
+// few enough that the attribute stays one readable line. This repository's longest job
+// has over twenty steps.
+const maxStepNames = 8
+
+func stepSummary(steps []manifest.Step) string {
+	names := make([]string, 0, len(steps))
+	for _, s := range steps {
+		if s.Name == "" {
+			continue
+		}
+		name := s.Name
+		// A step the author did not name is named by ExtractWorkflow after its `uses`,
+		// and a pinned ref carries a 40-character SHA that is the same in every job and
+		// tells a reader nothing about what the step does. The version stays on the
+		// action's own reference page, where it is the point.
+		if name == s.Uses {
+			if i := strings.LastIndex(name, "@"); i > 0 {
+				name = name[:i]
+			}
+		}
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	if len(names) > maxStepNames {
+		// The count of what is not shown, rather than a bare ellipsis: a reader who needs
+		// the rest has to open the workflow either way, and knowing how much is missing is
+		// what tells them whether it is worth doing.
+		return strings.Join(names[:maxStepNames], " → ") +
+			" → +" + strconv.Itoa(len(names)-maxStepNames) + " more"
+	}
+	return strings.Join(names, " → ")
+}
+
+func pipelineDescription(j manifest.Job) string {
+	d := "CI job " + j.Name
+	if j.Workflow != "" {
+		d += " in the " + j.Workflow + " workflow"
+	}
+	switch {
+	case j.Uses != "":
+		d += ", calling " + j.Uses
+	case len(j.Steps) > 0:
+		d += ", " + plural(len(j.Steps), "step")
+	}
+	if j.Gate {
+		// What the fact says, and no more: `Gate` is set by a pull_request trigger or a push
+		// to the default branch. "Can block a merge" reads as stronger than that and is wrong
+		// for a push-only workflow — this repository's `pages.yml` is one, and design §7 says
+		// in so many words that it is never a required check. Which checks are *required* is
+		// configured on the repository, not stated in the tree.
+		d += "; runs on a pull request or a default-branch push"
+	}
+	return d
+}
+
 // addDocuments creates a node per human-authored input that states a constraint.
 //
 // ADRs and agent-rules files only. An ordinary README is a document, but it makes no
@@ -1048,6 +1259,86 @@ func (b *builder) addTestEdges() {
 				Weight: 1, Source: f.Path,
 			})
 		}
+	}
+}
+
+// addPipelineEdges draws declared job ordering, and the actions each job uses.
+//
+// Two different claims, and only the first is a sequence. `needs` states that one job
+// must finish before another starts, which is the only ordering evidence in the
+// repository — jobs without it run concurrently, and deriving an order from their
+// position in the file would assert a sequence GitHub does not honour. A repository with
+// no `needs` anywhere therefore gets no precedes edges, which is correct: this one has
+// none, and eleven parallel jobs is the fact.
+//
+// The action edges are what connect a job to the supply chain it pulls in.
+// addDeclaredDepEdges already lands every workflow dependency on the module nearest the
+// workflow file, which for `.github/workflows/` is the repository root — true, and too
+// coarse to answer "what does the lint job download". The job's own steps are read here
+// instead of the file's Deps, because Deps is deduplicated per file: eight jobs all
+// running `actions/checkout` produce one Dep, so attributing by it would credit the
+// action to one arbitrary job and leave the other seven with no edge at all.
+func (b *builder) addPipelineEdges() {
+	if b.in.Manifests == nil {
+		return
+	}
+	for _, f := range b.in.Manifests.Facts {
+		if len(f.Jobs) == 0 {
+			continue
+		}
+		for _, j := range f.Jobs {
+			from := b.ids.lookup(prefixPipeline, pipelineKey(f.Path, jobKey(j)))
+			if from == "" {
+				continue
+			}
+			b.pipelineActionEdges(f, j, from)
+			for _, need := range j.Needs {
+				// A `needs` names a job by its key within the same workflow — see jobKey. A
+				// name that matches no job in the file is a broken workflow, and no edge is
+				// invented for it.
+				if to := b.ids.lookup(prefixPipeline, pipelineKey(f.Path, need)); to != "" {
+					b.g.AddEdge(graph.Edge{
+						From: to, To: from, Kind: graph.EdgePrecedes,
+						Conf: graph.Extracted, Source: f.Path,
+					})
+				}
+			}
+		}
+	}
+}
+
+// pipelineActionEdges links one job to every action it runs.
+//
+// A local action (`./.github/actions/x`) is this repository's own and has no external
+// node — the same rule ExtractWorkflow applies when it decides what is a dependency.
+func (b *builder) pipelineActionEdges(f manifest.Facts, j manifest.Job, from string) {
+	refs := make([]string, 0, len(j.Steps)+1)
+	for _, s := range j.Steps {
+		if s.Uses != "" {
+			refs = append(refs, s.Uses)
+		}
+	}
+	if j.Uses != "" {
+		// A job that calls a reusable workflow instead of running steps. The called
+		// workflow is a build dependency in exactly the way an action is.
+		refs = append(refs, j.Uses)
+	}
+	for _, ref := range refs {
+		if strings.HasPrefix(ref, "./") {
+			continue
+		}
+		name := ref
+		if i := strings.LastIndex(ref, "@"); i >= 0 {
+			name = ref[:i]
+		}
+		to := b.ids.lookup(prefixReference, "github-actions\x00"+name)
+		if to == "" {
+			continue
+		}
+		b.g.AddEdge(graph.Edge{
+			From: from, To: to, Kind: graph.EdgeConfigures,
+			Conf: graph.Extracted, Source: f.Path,
+		})
 	}
 }
 

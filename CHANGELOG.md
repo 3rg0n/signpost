@@ -8,6 +8,25 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A CI job is a page, and the index states which of them gate a change.** Design §4.1
+  promised `.github/workflows/*` would answer "what gates exist" and nothing in the bundle
+  did — a contributor could not link to the check that stopped them, and an agent had to read
+  the workflow files itself. Each job now gets a `Pipeline` node carrying its runner, its
+  declared permissions, its steps in order, and whether it runs on a pull request or a
+  default-branch push, and `index.md` reports the count as a fraction — "Merge gates: 11 of 13
+  CI jobs" — because a count of CI jobs is not a count of the checks a change meets. Which of
+  them is *required* is configured on the repository and is not in the tree, so the finding
+  says so rather than implying every gating job blocks.
+
+  **Ordering between jobs is drawn only where a file declares it.** A `needs` becomes a
+  `precedes` edge from the job that finishes first to the one that waits; jobs without one run
+  concurrently and get no edge, because deriving an order from their position in the file would
+  assert a sequence GitHub does not honour and a reader would sequence work around it. A `needs`
+  naming a job the file does not declare is left as a named attribute with no edge, so the
+  broken reference stays visible.
+  [ADR 0032](docs/adr/0032-order-is-drawn-only-where-a-file-declares-it.md) records why that
+  boundary also rules out a flow assembled from imports.
+
 - **`-max-bytes` raises the walk's byte budget, and a truncated walk now says where it
   stopped.** The budget was a 512 MiB constant with no way to change it short of a rebuild,
   which is too low for a monorepo: file contents are held in memory for the whole analysis,

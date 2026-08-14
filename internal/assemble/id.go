@@ -17,6 +17,7 @@ const (
 	prefixInterface = "/interfaces/"
 	prefixData      = "/data/"
 	prefixReference = "/references/"
+	prefixPipeline  = "/pipelines/"
 )
 
 // slug reduces arbitrary text to a filesystem- and URL-safe identifier.

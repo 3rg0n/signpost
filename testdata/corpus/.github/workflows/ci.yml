@@ -24,3 +24,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: make lint
+
+  # A job whose `name:` interpolates an expression, which is ordinary in any repository
+  # testing on more than one platform — and the shape that put `${{ matrix.os }}` in a
+  # committed filename. One line here is three checks on the pull request, called
+  # `platform (ubuntu-24.04)` and two more, and none of those strings is in the file: the
+  # values come from the matrix at run time. So the page is titled by the key, and a page
+  # named after the expression is the regression this job fails.
+  platform:
+    name: platform (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: make test

@@ -26,6 +26,7 @@ var dotFill = map[graph.Kind]string{
 	graph.KindDocument:  "lavender",
 	graph.KindExternal:  "gainsboro",
 	graph.KindSymbol:    "white",
+	graph.KindPipeline:  "peachpuff",
 }
 
 var dotShape = map[graph.Kind]string{
@@ -36,6 +37,9 @@ var dotShape = map[graph.Kind]string{
 	graph.KindDocument:  "note",
 	graph.KindExternal:  "doublecircle",
 	graph.KindSymbol:    "ellipse",
+	// A pipeline is a sequence, and Graphviz's own name for the shape that reads as
+	// one step in a flowchart is `cds`.
+	graph.KindPipeline: "cds",
 }
 
 func writeDOT(w io.Writer, g *graph.Graph) error {

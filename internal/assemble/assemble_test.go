@@ -2114,3 +2114,221 @@ func TestAnUndeclaredLinkedLibraryStaysExternal(t *testing.T) {
 		node(t, out.Graph, want)
 	}
 }
+
+// A CI job becomes a node, and the ordering between jobs is drawn only where the workflow
+// states one.
+//
+// Both directions in one test, because each is a distinct wrong answer. Drawing no `precedes`
+// edge loses the one sequence a repository declares unambiguously; drawing one between jobs
+// that merely sit next to each other in the file asserts an order GitHub does not honour, and
+// a reader would sequence work around it. `build` and `lint` here have no relationship at all
+// and run concurrently.
+func TestCIJobsBecomeNodesAndOnlyDeclaredOrderingIsDrawn(t *testing.T) {
+	out := build(t, map[string]string{
+		".github/workflows/ci.yml": "name: ci\n" +
+			"on:\n  pull_request:\n" +
+			"permissions:\n  contents: read\n" +
+			"jobs:\n" +
+			"  build:\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n" +
+			"      - uses: actions/checkout@v5\n" +
+			"      - run: make build\n" +
+			"  lint:\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n" +
+			"      - run: make lint\n" +
+			"  publish:\n" +
+			"    needs: [build]\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n" +
+			"      - run: make publish\n",
+	})
+
+	b := node(t, out.Graph, "/pipelines/ci-build")
+	if b.Kind != graph.KindPipeline {
+		t.Errorf("build kind = %q", b.Kind)
+	}
+	if b.Attrs["workflow"] != "ci" || b.Attrs["job"] != "build" || b.Attrs["steps"] != "2" {
+		t.Errorf("build attrs = %+v", b.Attrs)
+	}
+	// A pull_request trigger means every job in the file can be a required check, so the
+	// bundle has to say which ones a change must pass.
+	if !containsStr(b.Tags, "gate") {
+		t.Errorf("build tags = %v, want gate — the workflow runs on pull_request", b.Tags)
+	}
+	// The steps in order, which is the one sequence a job states unambiguously.
+	if b.Attrs["runs"] != "actions/checkout → make build" {
+		t.Errorf("runs = %q, want the steps in file order", b.Attrs["runs"])
+	}
+	// An action a job runs is a supply-chain dependency of the check, and the reference page
+	// for it already exists — the edge is what says which job pulls it in.
+	if !hasEdge(out.Graph, b.ID, "/references/github-actions-actions-checkout", graph.EdgeConfigures) {
+		t.Error("no edge from the job to the action it runs")
+	}
+
+	if !hasEdge(out.Graph, "/pipelines/ci-build", "/pipelines/ci-publish", graph.EdgePrecedes) {
+		t.Error("`publish` states `needs: [build]`; that ordering must be an edge")
+	}
+	// Direction: reversed, the bundle would tell a reader to publish before building.
+	if hasEdge(out.Graph, "/pipelines/ci-publish", "/pipelines/ci-build", graph.EdgePrecedes) {
+		t.Error("the edge runs from the job that finishes first to the one that waits")
+	}
+	var pairs []string
+	for _, n := range out.Graph.NodesOfKind(graph.KindPipeline) {
+		for _, e := range out.Graph.EdgesFrom(n.ID) {
+			if e.Kind == graph.EdgePrecedes {
+				pairs = append(pairs, e.From+" → "+e.To)
+			}
+		}
+	}
+	if len(pairs) != 1 {
+		t.Errorf("precedes edges = %v, want only the one `needs` states. `build` and `lint` "+
+			"declare no relationship and run concurrently", pairs)
+	}
+}
+
+// A `needs` names a job by its key in the `jobs` map, which is not the job's name whenever it
+// sets one — and setting one is ordinary. Resolving the reference against the name instead finds
+// nothing, so the workflow reports as having no stated ordering: an edge lost without a word
+// about it, on the one claim in this pass that is not derivable from anywhere else.
+//
+// The page is still titled by the name, which is the string GitHub's checks UI shows and what a
+// required-check rule is written against. Both are needed, for different jobs.
+func TestAJobsNeedsResolvesByKeyNotByItsDisplayName(t *testing.T) {
+	out := build(t, map[string]string{
+		".github/workflows/ci.yml": "name: ci\n" +
+			"on:\n  pull_request:\n" +
+			"jobs:\n" +
+			"  build:\n" +
+			"    name: build the artifact\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n      - run: make build\n" +
+			"  publish:\n" +
+			"    name: publish the release\n" +
+			"    needs: [build]\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n      - run: make publish\n",
+	})
+
+	from := node(t, out.Graph, "/pipelines/ci-build-the-artifact")
+	to := node(t, out.Graph, "/pipelines/ci-publish-the-release")
+	if !hasEdge(out.Graph, from.ID, to.ID, graph.EdgePrecedes) {
+		t.Errorf("no precedes edge for `needs: [build]`. The reference names the job's key "+
+			"while its page is titled %q", from.Title)
+	}
+	// And the key stays out of the title: a reader arriving from a failed check has the name.
+	if from.Title != "ci build the artifact" {
+		t.Errorf("title = %q, want the workflow and the job's `name:`", from.Title)
+	}
+}
+
+// A `needs` naming a job the file does not declare. A workflow can be committed in that state —
+// GitHub simply never runs the job — and no edge may be invented for a name that matches
+// nothing, because the page it pointed at would not exist.
+//
+// The reference still has to be visible. Dropping the edge and saying nothing leaves a reader
+// with a job that appears to run unconditionally, when in fact it never runs at all.
+func TestAJobWaitingOnANonexistentJobGetsNoEdgeAndKeepsTheName(t *testing.T) {
+	out := build(t, map[string]string{
+		".github/workflows/ci.yml": "name: ci\n" +
+			"on:\n  pull_request:\n" +
+			"jobs:\n" +
+			"  verify:\n" +
+			"    needs: [smoke-test]\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n      - run: make verify\n",
+	})
+
+	n := node(t, out.Graph, "/pipelines/ci-verify")
+	for _, e := range out.Graph.EdgesFrom(n.ID) {
+		if e.Kind == graph.EdgePrecedes {
+			t.Errorf("edge %+v was invented for a `needs` naming no job in the file", e)
+		}
+	}
+	if !strings.Contains(n.Attrs["needs"], "smoke-test") {
+		t.Errorf("needs = %q, want the unresolvable reference kept — it is a fact about the "+
+			"workflow and the reason this job never runs", n.Attrs["needs"])
+	}
+}
+
+// A step the author did not name is named after its `uses`, and a pinned action carries a
+// 40-character SHA that is identical in every job in the repository and tells a reader nothing
+// about what the step does. Six of those in one attribute is the whole line spent on noise.
+//
+// Stripped only when the name came from the `uses`. An author who writes a ref into a step's
+// own `name:` said it deliberately, and rewriting what a file says is not this pass's business.
+func TestAnUnnamedStepIsSummarisedWithoutItsPin(t *testing.T) {
+	const sha = "11bd71901bbe5b1630ceea73d27597364c9af683"
+	out := build(t, map[string]string{
+		".github/workflows/ci.yml": "name: ci\n" +
+			"on:\n  pull_request:\n" +
+			"jobs:\n" +
+			"  test:\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n" +
+			"      - uses: actions/checkout@" + sha + "\n" +
+			"      - name: actions/setup-go@v5 as written\n" +
+			"        uses: actions/setup-go@v5\n",
+	})
+
+	runs := node(t, out.Graph, "/pipelines/ci-test").Attrs["runs"]
+	if strings.Contains(runs, sha) {
+		t.Errorf("runs = %q, want the pin stripped from a step named after its `uses`", runs)
+	}
+	if !strings.Contains(runs, "actions/checkout") {
+		t.Errorf("runs = %q, want the action still named", runs)
+	}
+	if !strings.Contains(runs, "actions/setup-go@v5 as written") {
+		t.Errorf("runs = %q, want a name the author wrote left alone", runs)
+	}
+}
+
+// TestAMatrixJobIsTitledByItsKeyAndNotByItsTemplate checks what a page is called when the
+// job's `name:` is not a name.
+//
+// `test (${{ matrix.os }})` is one line in the file and three checks on the pull request, and
+// the bundle holds none of those three strings — the values come from the matrix at run time.
+// Slugging the raw text produces `/pipelines/ci-test-matrix-os`, a concept path named after
+// GitHub Actions syntax, in a filename committed to the repository and linked from every page
+// that mentions the job. The key is the honest title: short, stated in the file, and the string
+// a `needs` names.
+//
+// The second job is the negative boundary. A `name:` with no expression is still preferred over
+// the key, so a fix that titled every job by its key would fail here — that would lose the name
+// GitHub's checks UI shows and a required-check rule is written against.
+func TestAMatrixJobIsTitledByItsKeyAndNotByItsTemplate(t *testing.T) {
+	out := build(t, map[string]string{
+		".github/workflows/ci.yml": "name: ci\n" +
+			"on:\n  pull_request:\n" +
+			"jobs:\n" +
+			"  test:\n" +
+			"    name: test (${{ matrix.os }})\n" +
+			"    strategy:\n      matrix:\n        os: [ubuntu-24.04, windows-2025]\n" +
+			"    runs-on: ${{ matrix.os }}\n" +
+			"    steps:\n      - run: make test\n" +
+			"  lint:\n" +
+			"    name: lint the tree\n" +
+			"    runs-on: ubuntu-24.04\n" +
+			"    steps:\n      - run: make lint\n",
+	})
+
+	for _, n := range out.Graph.NodesOfKind(graph.KindPipeline) {
+		if strings.Contains(n.ID, "matrix") || strings.Contains(n.Title, "${{") {
+			t.Errorf("pipeline %s is titled %q. An expression is not a job name, and slugging "+
+				"one puts it in a committed filename", n.ID, n.Title)
+		}
+	}
+	if n := node(t, out.Graph, "/pipelines/ci-test"); n.Title != "ci test" {
+		t.Errorf("title = %q, want the job keyed `test` titled by its key", n.Title)
+	}
+	// The unexpanded name is still recorded, so a reader can see what the file says and why
+	// the title differs from the checks they saw on their pull request.
+	if job := node(t, out.Graph, "/pipelines/ci-test").Attrs["job"]; job != "test (${{ matrix.os }})" {
+		t.Errorf("job attr = %q, want the `name:` as written — declining it as a title is not a "+
+			"reason to drop the fact", job)
+	}
+	if n := node(t, out.Graph, "/pipelines/ci-lint-the-tree"); n.Title != "ci lint the tree" {
+		t.Errorf("title = %q, want a `name:` holding no expression used as written", n.Title)
+	}
+}

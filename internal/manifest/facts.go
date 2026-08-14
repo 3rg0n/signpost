@@ -296,6 +296,10 @@ type Image struct {
 // Job is one CI job.
 type Job struct {
 	Name string
+	// Key is the job's key in the workflow's `jobs` map, which is what a `needs`
+	// names. It is not the same string as Name whenever the job sets `name:`, and
+	// resolving one against the other silently drops the dependency.
+	Key string
 	// Workflow is the name of the workflow that contains it.
 	Workflow string
 	// Runner is the runs-on value.
@@ -306,9 +310,11 @@ type Job struct {
 	Steps []Step
 	// Needs are jobs that must finish first.
 	Needs []string
-	// Gate marks a job that can block a merge: it runs on pull_request, or on push
-	// to the default branch. This is the fact §4.1 asks for by name — "what gates
-	// exist" — and it is what tells a contributor which check will stop them.
+	// Gate marks a job that runs on pull_request, or on push to the default branch.
+	// This is the fact §4.1 asks for by name — "what gates exist" — and it is what
+	// tells a contributor which checks a change meets. Not that the job blocks: which
+	// checks are *required* is branch protection, repository configuration rather than
+	// anything in the tree.
 	Gate bool
 	// Permissions are the declared GITHUB_TOKEN permissions, which are the job's
 	// blast radius.

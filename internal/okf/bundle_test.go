@@ -1084,6 +1084,116 @@ func TestIndexFindingsBoundLongListsAndNameTheOverflow(t *testing.T) {
 	}
 }
 
+// pipelineGraph holds CI jobs, some of which gate a change and some of which cannot.
+func pipelineGraph(t *testing.T, gates ...string) *graph.Graph {
+	t.Helper()
+	g := graph.New()
+	for _, id := range []string{"test", "lint", "nightly-scan", "release"} {
+		n := &graph.Node{ID: "/pipelines/" + id, Kind: graph.KindPipeline, Title: id}
+		for _, gate := range gates {
+			if gate == id {
+				n.Tags = []string{"gate"}
+			}
+		}
+		if err := g.AddNode(n); err != nil {
+			t.Fatalf("AddNode(%s): %v", id, err)
+		}
+	}
+	return g
+}
+
+// Design §4.1 asks a workflow for "what gates exist", and this finding is the one line in the
+// bundle that answers it. The distinction is the whole content: a count of CI jobs is not a
+// count of the checks a change meets, and reporting four where two gate would be wrong about
+// half of them.
+//
+// Stated as a fraction so a reader sees both halves at once — how many checks a change meets,
+// and how much automation runs outside them. The non-gating jobs are asserted absent from the
+// list rather than from the page, since they are legitimately named in the page listing below.
+//
+// The claim is also asserted to stop where the fact does. `Gate` is set by a pull_request
+// trigger *or* a push to the default branch, and whether a gating check is *required* is branch
+// protection — repository configuration, which no file in the tree states. A finding that said
+// these jobs block a merge would be asserting both beyond its evidence.
+func TestGateFindingDistinguishesBlockingJobsFromTheRest(t *testing.T) {
+	body := indexBody(pipelineGraph(t, "test", "lint"), Options{})
+
+	if !strings.Contains(body, "**Merge gates: 2 of 4 CI jobs.**") {
+		t.Errorf("the gate finding does not state the fraction:\n%s", body)
+	}
+	for _, want := range []string{"[test](./pipelines/test.md)", "[lint](./pipelines/lint.md)"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the gate finding does not link %s:\n%s", want, body)
+		}
+	}
+	gates := gateFindingLines(body)
+	for _, unwanted := range []string{"nightly-scan", "release"} {
+		if strings.Contains(gates, unwanted) {
+			t.Errorf("the gate finding lists %s, which does not gate a change:\n%s", unwanted, gates)
+		}
+	}
+	if !strings.Contains(body, "pull request or on a push to the default branch") {
+		t.Errorf("the gate finding does not say what makes a job a gate. Either trigger sets it, "+
+			"and naming only the pull request is false for a push-only workflow:\n%s", gates)
+	}
+	if !strings.Contains(body, "is configured on the repository and is not in the tree") {
+		t.Errorf("the gate finding does not say that *required* is branch protection rather than "+
+			"anything it read:\n%s", gates)
+	}
+}
+
+// gateFindingLines returns the merge-gate finding and the jobs it names, and nothing else.
+//
+// A finding is one unindented `- **` bullet followed by its own indented items, so it ends at
+// the first line that is neither. Terminating on the next finding instead would be wrong here:
+// this one is emitted last, so there is none, and the search would run into the page listing —
+// where every pipeline is named whether it gates or not.
+func gateFindingLines(body string) string {
+	lines := strings.Split(body, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.HasPrefix(l, "- **Merge gates:") {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return ""
+	}
+	end := start + 1
+	for end < len(lines) && strings.HasPrefix(lines[end], "  - ") {
+		end++
+	}
+	return strings.Join(lines[start:end], "\n")
+}
+
+// A repository whose every workflow runs on a schedule or a tag has automation and no gates, and
+// that is a finding rather than a blank — ADR 0030. A reader looking for the checks a change must
+// pass needs to be told there are none, not left with a section that says nothing.
+func TestGateFindingReportsAWorkflowSetThatGatesNothing(t *testing.T) {
+	body := indexBody(pipelineGraph(t), Options{})
+
+	if !strings.Contains(body, "**Merge gates: none of 4 CI jobs.**") {
+		t.Errorf("a workflow set with no gates is not reported:\n%s", body)
+	}
+	// Not the empty-repository line: this repository has CI, and saying it does not would be a
+	// different and false claim.
+	if strings.Contains(body, "no CI jobs found") {
+		t.Errorf("four CI jobs were reported as none found:\n%s", body)
+	}
+}
+
+// And the absence, on a graph that has other findings to report. A repository with no CI at all
+// is the case a reader most needs stated: silence here is indistinguishable from a run that
+// failed to look, and the answer changes what an agent does with the repository.
+func TestGateFindingReportsARepositoryWithNoCI(t *testing.T) {
+	body := indexBody(findingsGraph(t), Options{})
+
+	if !strings.Contains(body, "**Merge gates: no CI jobs found.**") {
+		t.Errorf("a repository with no CI does not say so:\n%s", body)
+	}
+}
+
 // Nothing measured, nothing stated — §4.2. On an empty graph every finding above would read
 // as a clean bill of health for a repository the run never looked at.
 func TestIndexFindingsAreSilentOnAnEmptyGraph(t *testing.T) {
