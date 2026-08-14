@@ -1938,6 +1938,13 @@ All notable changes to this project are documented here. Format follows
   repository they name; the check does not cover them, because its token is scoped to this
   one and a number this repository cannot resolve is correct there.
 
+### Security
+
+- **The Go directive in `go.mod` moves to 1.26.6**, closing seven standard-library advisories
+  `govulncheck` reports as reachable from this code — GO-2026-6218, -6091, -6090, -6089, -6088,
+  -5972, and -5026, in `net/url`, `html/template`, `crypto/tls`, `net/http`, `encoding/xml`, and
+  `encoding/asn1`. CI resolves its toolchain from this file, so nothing else pins it.
+
 ## [0.1.0] - 2026-08-01
 
 The deterministic core, complete. v0.0.1 named the three things that had to land
