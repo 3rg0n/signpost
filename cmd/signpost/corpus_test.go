@@ -3327,6 +3327,90 @@ func TestCorpusGateWeakeningConfigStopsTheBuild(t *testing.T) {
 // bundle root (index, log, practices) linking down into subdirectories, pages under
 // `modules/` linking to siblings, and pages linking across to `references/` and
 // `interfaces/`. A bundle with one directory would pass with `./` hard-coded.
+// TestCorpusIndexStatesEveryStructuralFinding is the regression for issue #42: four of the
+// five findings design §7.1 promises in `index.md` were computed on every run, printed by
+// `graph show`, and never written into the bundle. The analysis reached a terminal and stopped
+// there, which for an agent reading a checkout is nowhere.
+//
+// It runs on the corpus rather than on this repository because the corpus is the only tree that
+// carries both boundaries at once. Signpost's own bundle has no import cycles and no islands,
+// so a self-hosted assertion could only ever check the "none" wording, and an emitter that
+// hardcoded "none" everywhere would pass it. The corpus has a genuine two-node island — the
+// Terraform `api` and `db` services, linked to each other and to nothing else — alongside no
+// cycles, so the positive and negative halves are asserted against the same file.
+//
+// The counts are deliberately not asserted, per this file's rule: 31 cross-cluster edges is a
+// number every extractor improvement moves, and a test that pins it teaches people to update
+// the number rather than read the diff. What is asserted is that each finding is *named*, that
+// the one with something to report names the concepts and links to their pages, and that the
+// ones with nothing to report say so instead of vanishing.
+func TestCorpusIndexStatesEveryStructuralFinding(t *testing.T) {
+	dir := buildCorpus(t)
+	idx := bundlePages(t, dir)[okf.IndexPage]
+	if idx == "" {
+		t.Fatal("the build wrote no index")
+	}
+
+	// Every finding is named, whatever it found. This is the half that made the section
+	// worth adding: a section that disappears when clean is indistinguishable from one the
+	// build failed to write, so a reader cannot tell a clean repository from a broken
+	// generator without running the tool themselves.
+	for _, want := range []string{
+		"### Structural findings",
+		"**Import cycles:",
+		"**Cross-cluster edges:",
+		"**Disconnected islands:",
+		"**Unconnected concepts:",
+	} {
+		if !strings.Contains(idx, want) {
+			t.Errorf("the index does not state %q, so the finding is unavailable to anyone "+
+				"who did not run `graph show`:\n%s", want, idx)
+		}
+	}
+
+	// The negative boundary. The corpus has no import cycle, and the absence has to be
+	// written down as the result it is rather than omitted.
+	if !strings.Contains(idx, "**Import cycles: none.**") {
+		t.Errorf("the corpus has no import cycles and the index does not say so:\n%s", idx)
+	}
+
+	// The positive boundary, from the same file: the Terraform services are an island, and
+	// the finding names them and links to their pages. Asserted by name rather than by count
+	// so an extractor that stopped producing the island fails here.
+	island := findingLine(idx, "**Disconnected islands:")
+	if strings.Contains(island, "none") {
+		t.Errorf("the corpus's two-node Terraform island is not reported:\n%s", idx)
+	}
+	for _, want := range []string{"[api](./services/api.md)", "[db](./services/db.md)"} {
+		if !strings.Contains(idx, want) {
+			t.Errorf("the island finding does not link %s:\n%s", want, idx)
+		}
+	}
+
+	// Cross-cluster edges are non-empty here, end to end through the binary: the corpus falls
+	// into several communities with edges between them, so a `none` means the cluster pass or
+	// Bridges() stopped producing anything on the real build path.
+	//
+	// It does not assert that `indexFindings` calls `Clusters()` itself, and the distinction
+	// is worth stating because it was measured: removing that call leaves this test green,
+	// since `build` already clusters before writing. The emitter's own test in internal/okf
+	// is what covers it, on a graph nothing else has clustered.
+	if bridges := findingLine(idx, "**Cross-cluster edges:"); strings.Contains(bridges, "none") {
+		t.Errorf("the corpus falls into several clusters with edges between them, so a "+
+			"`none` here means the cluster pass did not run:\n%s", idx)
+	}
+}
+
+// findingLine returns the index line beginning with prefix, or "" when there is none.
+func findingLine(idx, prefix string) string {
+	for _, line := range strings.Split(idx, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "- "+prefix) {
+			return line
+		}
+	}
+	return ""
+}
+
 func TestCorpusEveryLinkResolvesAndSurvivesRelocation(t *testing.T) {
 	dir := buildCorpus(t)
 	pages := bundlePages(t, dir)

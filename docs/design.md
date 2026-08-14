@@ -125,7 +125,10 @@ node's ID.
 
 `index.md` is the file an agent is pointed at. It is a grouped, described listing
 per OKF §8 — headings by concern, one line per concept with a description — so the
-model can pick the three pages it needs instead of reading the bundle.
+model can pick the three pages it needs instead of reading the bundle. It also
+carries the structural findings §7.1 names, above the listing, because an agent
+that reads the index and stops has to have them
+([ADR 0030](adr/0030-a-finding-states-its-own-absence.md)).
 
 **A page name is a contract, so it is derived from the thing it names.** The filename is the node
 ID and every other page links to it by that ID, and the bundle is committed, so renaming a page
@@ -1534,6 +1537,12 @@ and no site needs to exist.
 The structural findings — hubs, cycles, bridges, orphans, doc/code islands — are
 written as **text** in `index.md`, because that is what an agent consumes. A
 picture is for the human skim; the prose is the load-bearing artifact.
+
+A finding with nothing to report states that it found nothing, rather than being
+omitted. `graph show` does the opposite and both are right: a terminal is scrolled
+past, and in a committed file a section that vanishes when clean is
+indistinguishable from one a build failed to write
+([ADR 0030](adr/0030-a-finding-states-its-own-absence.md)).
 
 ### 7.2 `site/` — the landing page and the viewer
 

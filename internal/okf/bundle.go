@@ -478,7 +478,8 @@ func indexDescription(g *graph.Graph) string {
 // indexBody groups pages by kind, with the hubs called out first.
 func indexBody(g *graph.Graph, opts Options) string {
 	var b strings.Builder
-	b.WriteString("Start here. Each line names a page and what is on it.\n")
+	b.WriteString("Start here. What the shape of this repository says, then a line per page " +
+		"naming what is on it.\n")
 
 	// Linked from the index rather than left to be found, and near the top: the practices
 	// page answers "how do I build and test this" before any module page becomes useful, and
@@ -500,6 +501,8 @@ func indexBody(g *graph.Graph, opts Options) string {
 		b.WriteString(hubs)
 	}
 
+	b.WriteString(indexFindings(g))
+
 	for _, k := range indexKindOrder {
 		ns := g.NodesOfKind(k)
 		if len(ns) == 0 {
@@ -515,6 +518,183 @@ func indexBody(g *graph.Graph, opts Options) string {
 		}
 	}
 	return b.String()
+}
+
+// indexFindings states what the shape of the graph says, per design §7.1.
+//
+// Four findings the analysis has always computed and only ever printed: import cycles,
+// cross-cluster edges, disconnected islands, and unconnected concepts. `graph show` writes
+// them to a terminal, which for an agent starting cold is nowhere. The bundle is the artifact
+// that is committed, reviewed and read, so a finding that is not in it is not part of what
+// this repository knows about itself.
+//
+// Every line is emitted whether or not it has anything to report, which is deliberately the
+// opposite of what the CLI does. A section that disappears when the answer is "none" is
+// indistinguishable from a section a build failed to write, and a reader cannot tell which
+// without running the tool themselves — so "no import cycles" is written down as the result
+// it is.
+//
+// Clusters() is called here rather than assumed. Bridges() reads the assignment Clusters()
+// writes and returns nothing at all when it has not run, so a caller that skipped it would
+// get a confident "no cross-cluster edges" on a graph full of them — a wrong finding, which
+// is worse than a missing one. It is deterministic and idempotent, so calling it costs one
+// traversal and removes an ordering dependency nothing in this file could show.
+func indexFindings(g *graph.Graph) string {
+	if len(g.Nodes()) == 0 {
+		// Nothing was measured, so nothing is stated: §4.2's rule, and on an empty graph
+		// every line below would read as a clean bill of health.
+		return ""
+	}
+	g.Clusters()
+
+	var b strings.Builder
+	b.WriteString("\n" + heading(3, "Structural findings"))
+	b.WriteString("What the shape of this repository says. Each line is a result — where one " +
+		"reads \"none\", that is the finding.\n\n")
+	b.WriteString(cycleFinding(g))
+	b.WriteString(bridgeFinding(g))
+	b.WriteString(islandFinding(g))
+	b.WriteString(orphanFinding(g))
+	return b.String()
+}
+
+const (
+	// maxFindingItems bounds one finding's list of lines.
+	//
+	// Higher than the caps `graph show` uses, because this file is opened once and kept
+	// rather than scrolled past — but bounded all the same: a repository with four thousand
+	// cross-cluster edges would otherwise produce an index nobody reads. The count is stated
+	// before the list and the overflow is counted rather than dropped, so a bounded list
+	// never reads as a complete one.
+	maxFindingItems = 20
+	// maxFindingNames bounds the concepts named *within* one line — a cycle's members, an
+	// island's. Much lower, because a line is read at a glance and an eleven-module cycle
+	// wraps into a paragraph. Whether a cycle exists and roughly how big it is are the facts
+	// worth having here; the full membership is on the pages the line links to.
+	maxFindingNames = 8
+)
+
+// cycleFinding reports import cycles: two modules in one cannot be understood or changed
+// independently, whatever the directory layout suggests.
+func cycleFinding(g *graph.Graph) string {
+	cycles := g.Cycles()
+	if len(cycles) == 0 {
+		return "- **Import cycles: none.** No module here imports its way back to itself.\n"
+	}
+	return "- **Import cycles: " + strconv.Itoa(len(cycles)) + ".** The modules in a cycle " +
+		"cannot be understood or changed independently, whatever the directory layout " +
+		"suggests.\n" +
+		findingItems(len(cycles), func(i int) string {
+			return plural(len(cycles[i]), "module") + ": " + nodeLinks(g, cycles[i])
+		})
+}
+
+// bridgeFinding reports edges crossing a cluster boundary.
+//
+// The cluster numbers `graph show` prints are left out. They are dense indices with no
+// meaning outside one run's partition, and no page in the bundle is named after one, so
+// printing them here would ask a reader to resolve a reference the bundle does not hold. That
+// an edge crosses a boundary at all is the finding.
+func bridgeFinding(g *graph.Graph) string {
+	bridges := g.Bridges()
+	if len(bridges) == 0 {
+		return "- **Cross-cluster edges: none.** Every relationship here stays inside the " +
+			"group of concepts it belongs to.\n"
+	}
+	return "- **Cross-cluster edges: " + strconv.Itoa(len(bridges)) + ".** Where a change is " +
+		"most likely to surprise someone: the two sides are maintained as separate concerns " +
+		"and coupled anyway.\n" +
+		findingItems(len(bridges), func(i int) string {
+			e := bridges[i]
+			return nodeLink(g, e.From) + " → " + nodeLink(g, e.To) +
+				" (" + strings.ToLower(edgeKindLabel(e.Kind)) + ")"
+		})
+}
+
+// islandFinding reports parts of the repository with no structural link to the main body.
+//
+// Single-node components are excluded: they are orphans, and orphanFinding names them. A
+// finding that counted them twice would report the same absence as two different problems.
+// The largest component is the body everything else is measured against, so it is excluded
+// too — a repository that is all one piece has no islands, which is the point.
+func islandFinding(g *graph.Graph) string {
+	comps := g.Components()
+	var islands [][]string
+	if len(comps) > 1 {
+		for _, c := range comps[1:] {
+			if len(c) > 1 {
+				islands = append(islands, c)
+			}
+		}
+	}
+	if len(islands) == 0 {
+		return "- **Disconnected islands: none.** Everything that is linked at all is linked " +
+			"into one body.\n"
+	}
+	return "- **Disconnected islands: " + strconv.Itoa(len(islands)) + ".** Concepts linked to " +
+		"each other and to nothing else — most often documents describing code nothing " +
+		"connects them to.\n" +
+		findingItems(len(islands), func(i int) string {
+			return plural(len(islands[i]), "concept") + ": " + nodeLinks(g, islands[i])
+		})
+}
+
+// orphanFinding reports nodes with no edges at all. Which of the three causes it is needs a
+// human, so the list is stated rather than judged.
+func orphanFinding(g *graph.Graph) string {
+	orphans := g.Orphans()
+	if len(orphans) == 0 {
+		return "- **Unconnected concepts: none.** Every concept here links to something or is " +
+			"linked to.\n"
+	}
+	return "- **Unconnected concepts: " + strconv.Itoa(len(orphans)) + ".** Nothing links to or " +
+		"from these: dead code, an unreferenced document, or a gap in extraction. Which of " +
+		"the three it is needs a human.\n" +
+		findingItems(len(orphans), func(i int) string { return nodeLink(g, orphans[i]) })
+}
+
+// findingItems renders one finding's indented sub-list, bounded, naming the overflow.
+func findingItems(n int, line func(i int) string) string {
+	var b strings.Builder
+	shown := min(n, maxFindingItems)
+	for i := range shown {
+		b.WriteString("  - " + line(i) + "\n")
+	}
+	if shown < n {
+		b.WriteString("  - and " + strconv.Itoa(n-shown) + " more\n")
+	}
+	return b.String()
+}
+
+// nodeLinks renders node IDs as prose links from the index, on one line, bounded.
+func nodeLinks(g *graph.Graph, ids []string) string {
+	shown := min(len(ids), maxFindingNames)
+	parts := make([]string, 0, shown)
+	for _, id := range ids[:shown] {
+		parts = append(parts, nodeLink(g, id))
+	}
+	s := strings.Join(parts, ", ")
+	if shown < len(ids) {
+		s += ", and " + strconv.Itoa(len(ids)-shown) + " more"
+	}
+	return s
+}
+
+// nodeLink renders one node ID as a link from the index to its page.
+func nodeLink(g *graph.Graph, id string) string {
+	n := g.Node(id)
+	if n == nil {
+		// A link to a page renderAll never wrote is a dangling bundle link, which verify
+		// fails on. Every metric above returns IDs from the node set, so this cannot happen
+		// — and if it ever does, naming the concept without linking it is the failure a
+		// reader can act on.
+		return codeSpan(id)
+	}
+	label := n.Title
+	if label == "" {
+		label = id
+	}
+	return proseLink(label, relTarget(IndexPage, pagePath(id)))
 }
 
 // indexKindOrder fixes the section order.

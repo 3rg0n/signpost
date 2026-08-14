@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -913,11 +914,182 @@ func TestIndexHubsExcludeUnconnectedNodes(t *testing.T) {
 	root, _, _ := write(t)
 	idx := read(t, root, IndexPage)
 	hubs := idx[strings.Index(idx, "### Most connected"):]
-	if end := strings.Index(hubs, "### Modules"); end > 0 {
+	// Bounded at the findings section rather than at "### Modules", because the findings sit
+	// between the two and name the orphan on purpose — as an unconnected concept, which is
+	// the opposite claim.
+	if end := strings.Index(hubs, "### Structural findings"); end > 0 {
 		hubs = hubs[:end]
 	}
 	if strings.Contains(hubs, "/modules/orphan.md") {
 		t.Errorf("an unconnected node was listed as a hub:\n%s", hubs)
+	}
+}
+
+// Every structural finding is named whether or not it has anything to report. This is the
+// half that made the analysis useful only to whoever ran the command: a section that vanishes
+// when the answer is "none" is indistinguishable from a section a build failed to write, so a
+// reader cannot tell a clean repository from a broken generator without running the tool.
+func TestIndexFindingsNameEveryResultIncludingTheAbsentOnes(t *testing.T) {
+	root, _, _ := write(t)
+	idx := read(t, root, IndexPage)
+
+	if !strings.Contains(idx, "### Structural findings") {
+		t.Fatalf("the index carries no findings section:\n%s", idx)
+	}
+	// Between the hubs and the page listing: the findings are about the repository, and the
+	// lines below them are navigation.
+	iHubs := strings.Index(idx, "### Most connected")
+	iFindings := strings.Index(idx, "### Structural findings")
+	iModules := strings.Index(idx, "### Modules")
+	if iHubs >= iFindings || iFindings >= iModules {
+		t.Errorf("findings are not between the hubs and the page listing (%d, %d, %d)",
+			iHubs, iFindings, iModules)
+	}
+	// The demo graph is clean on three of the four, so three of these assert an absence is
+	// *written down* rather than omitted.
+	for _, want := range []string{
+		"**Import cycles: none.**",
+		"**Cross-cluster edges:",
+		"**Disconnected islands: none.**",
+		"**Unconnected concepts: 1.**",
+	} {
+		if !strings.Contains(idx, want) {
+			t.Errorf("findings do not state %q:\n%s", want, idx)
+		}
+	}
+	// The finding links to the page, so a reader can act on it without going back to the
+	// graph. Page-relative, for the reason the section above this one gives.
+	if !strings.Contains(idx, "[orphan](./modules/orphan.md)") {
+		t.Errorf("the unconnected concept is named but not linked:\n%s", idx)
+	}
+	if strings.Contains(idx, "](/") {
+		t.Errorf("a finding carries a root-absolute link, which 404s on GitHub:\n%s", idx)
+	}
+}
+
+// findingsGraph has one of each finding: two import cycles in two communities joined by a
+// single edge, a two-node island, and an orphan.
+//
+// Two triangles joined by one edge is the shape ADR 0019 names, and it is here for the same
+// reason: it is the smallest graph whose Louvain partition is genuinely two clusters, which is
+// what makes the cross-cluster count non-zero and therefore assertable.
+func findingsGraph(t *testing.T) *graph.Graph {
+	t.Helper()
+	g := graph.New()
+	add := func(id, title string, k graph.Kind) {
+		if err := g.AddNode(&graph.Node{ID: id, Kind: k, Title: title}); err != nil {
+			t.Fatalf("AddNode(%s): %v", id, err)
+		}
+	}
+	ring := func(ids ...string) {
+		for i, from := range ids {
+			g.AddEdge(graph.Edge{
+				From: from, To: ids[(i+1)%len(ids)], Kind: graph.EdgeImports,
+				Conf: graph.Extracted,
+			})
+		}
+	}
+	for _, n := range []string{"a1", "a2", "a3", "b1", "b2", "b3", "lonely"} {
+		add("/modules/"+n, n, graph.KindModule)
+	}
+	add("/references/doc-one", "doc one", graph.KindDocument)
+	add("/references/doc-two", "doc two", graph.KindDocument)
+
+	ring("/modules/a1", "/modules/a2", "/modules/a3")
+	ring("/modules/b1", "/modules/b2", "/modules/b3")
+	// The one edge between the two communities.
+	g.AddEdge(graph.Edge{
+		From: "/modules/a1", To: "/modules/b1", Kind: graph.EdgeImports, Conf: graph.Extracted,
+	})
+	// Linked to each other and to nothing else: an island, not two orphans.
+	g.AddEdge(graph.Edge{
+		From: "/references/doc-one", To: "/references/doc-two", Kind: graph.EdgeDocuments,
+		Conf: graph.Extracted,
+	})
+	return g
+}
+
+// The positive half: each finding reports what it found, with the concepts named.
+//
+// The cross-cluster assertion is the load-bearing one. Bridges() reads the assignment
+// Clusters() writes and returns an empty slice when it has not run, so an emitter that
+// skipped Clusters() would write "Cross-cluster edges: none." over a graph that has one —
+// a confident wrong finding, which is worse than a missing section. Only a graph whose
+// partition is really two clusters can catch that, which is what findingsGraph is for.
+func TestIndexFindingsReportWhatTheyFound(t *testing.T) {
+	root := t.TempDir()
+	g := findingsGraph(t)
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	idx := read(t, root, IndexPage)
+
+	for _, want := range []string{
+		// Two directed triangles are two strongly connected components.
+		"**Import cycles: 2.**",
+		"3 modules: [a1](./modules/a1.md), [a2](./modules/a2.md), [a3](./modules/a3.md)",
+		"**Cross-cluster edges: 1.**",
+		"[a1](./modules/a1.md) → [b1](./modules/b1.md) (imports)",
+		"**Disconnected islands: 1.**",
+		"2 concepts: [doc one](./references/doc-one.md), [doc two](./references/doc-two.md)",
+		"**Unconnected concepts: 1.**",
+		"[lonely](./modules/lonely.md)",
+	} {
+		if !strings.Contains(idx, want) {
+			t.Errorf("findings do not state %q:\n%s", want, idx)
+		}
+	}
+	// The negatives, so a run that emitted every line unconditionally with a hardcoded "none"
+	// would fail rather than read as clean.
+	for _, unwanted := range []string{
+		"Import cycles: none",
+		"Cross-cluster edges: none",
+		"Disconnected islands: none",
+		"Unconnected concepts: none",
+	} {
+		if strings.Contains(idx, unwanted) {
+			t.Errorf("findings claim %q on a graph that has one:\n%s", unwanted, idx)
+		}
+	}
+	// A single-node component is an orphan and is reported as one. Counting it as an island
+	// too would report the same absence as two different problems.
+	if strings.Contains(idx, "1 concept: [lonely]") {
+		t.Errorf("the orphan was also counted as an island:\n%s", idx)
+	}
+}
+
+// A long finding is bounded, and the bound says so. An index listing four thousand
+// cross-cluster edges is one nobody reads, and a truncated list that did not name its
+// overflow would read as a complete one — which is the failure the count exists to prevent.
+func TestIndexFindingsBoundLongListsAndNameTheOverflow(t *testing.T) {
+	root := t.TempDir()
+	g := graph.New()
+	const orphans = maxFindingItems + 7
+	for i := range orphans {
+		id := "/modules/n" + strconv.Itoa(i)
+		if err := g.AddNode(&graph.Node{ID: id, Kind: graph.KindModule, Title: id}); err != nil {
+			t.Fatalf("AddNode(%s): %v", id, err)
+		}
+	}
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	idx := read(t, root, IndexPage)
+
+	if !strings.Contains(idx, "**Unconnected concepts: "+strconv.Itoa(orphans)+".**") {
+		t.Errorf("the full count is not stated:\n%s", idx)
+	}
+	if !strings.Contains(idx, "and 7 more") {
+		t.Errorf("the truncated tail is not counted, so the list reads as complete:\n%s", idx)
+	}
+}
+
+// Nothing measured, nothing stated — §4.2. On an empty graph every finding above would read
+// as a clean bill of health for a repository the run never looked at.
+func TestIndexFindingsAreSilentOnAnEmptyGraph(t *testing.T) {
+	body := indexBody(graph.New(), Options{})
+	if strings.Contains(body, "Structural findings") {
+		t.Errorf("an empty graph produced findings:\n%s", body)
 	}
 }
 
