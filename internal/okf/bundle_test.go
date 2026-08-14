@@ -941,7 +941,7 @@ func TestIndexFindingsNameEveryResultIncludingTheAbsentOnes(t *testing.T) {
 	iHubs := strings.Index(idx, "### Most connected")
 	iFindings := strings.Index(idx, "### Structural findings")
 	iModules := strings.Index(idx, "### Modules")
-	if !(iHubs < iFindings && iFindings < iModules) {
+	if iHubs >= iFindings || iFindings >= iModules {
 		t.Errorf("findings are not between the hubs and the page listing (%d, %d, %d)",
 			iHubs, iFindings, iModules)
 	}
