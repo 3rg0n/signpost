@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@32ca0701ca62850ad1340cb9a5a5f05fcae38e0c",
+  "resource": "git://github.com/3rg0n/signpost@f58e740201cd6ecc365fccf2e3178529755f7b33",
   "date": "2026-08-14",
   "counts": {
-    "nodes": 67,
+    "nodes": 68,
     "edges": 165,
-    "clusters": 33
+    "clusters": 34
   },
   "confidence": {
     "ambiguous": 0,
@@ -65,6 +65,7 @@
     "references/adr-0027-a-gate-fails-only-on-what-the-reader-can-fix.md",
     "references/adr-0028-scaffolded-files-are-embedded-and-tested-against-our-own.md",
     "references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md",
+    "references/adr-0030-a-finding-states-its-own-absence.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

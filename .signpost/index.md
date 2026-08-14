@@ -2,14 +2,14 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 67 concepts, 165 relationships."
-resource: git://github.com/3rg0n/signpost@32ca0701ca62850ad1340cb9a5a5f05fcae38e0c
+description: "Structural map of this repository: 68 concepts, 165 relationships."
+resource: git://github.com/3rg0n/signpost@f58e740201cd6ecc365fccf2e3178529755f7b33
 generated: { by: signpost/dev, at: "2026-08-14" }
 ---
 # Repository map
 
 <!-- signpost:managed:index -->
-Start here. Each line names a page and what is on it.
+Start here. What the shape of this repository says, then a line per page naming what is on it.
 
 ### How work is done here
 
@@ -24,6 +24,57 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [internal/assemble](./modules/assemble.md) — 21 relationships (9 in, 12 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
 - [site](./modules/site.md) — 20 relationships (11 in, 9 out)
+
+### Structural findings
+
+What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
+
+- **Import cycles: none.** No module here imports its way back to itself.
+- **Cross-cluster edges: 74.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
+  - [internal/assemble](./modules/assemble.md) → [internal/graph](./modules/graph.md) (imports)
+  - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/assemble](./modules/assemble.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/config](./modules/config.md) → [internal/manifest](./modules/manifest.md) (imports)
+  - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/discover](./modules/discover.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/export](./modules/export.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/extract](./modules/extract.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/extract](./modules/extract.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/graph](./modules/graph.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/hook](./modules/hook.md) → [internal/okf](./modules/okf.md) (imports)
+  - [internal/hook](./modules/hook.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/manifest](./modules/manifest.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/manifest](./modules/manifest.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/model](./modules/model.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/okf](./modules/okf.md) → [internal/graph](./modules/graph.md) (imports)
+  - [internal/okf](./modules/okf.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/okf](./modules/okf.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/practice](./modules/practice.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/practice](./modules/practice.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - and 54 more
+- **Disconnected islands: none.** Everything that is linked at all is linked into one body.
+- **Unconnected concepts: 31.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+  - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
+  - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
+  - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
+  - [ADR 0004: confidence is a first class field](./references/adr-0004-confidence-is-a-first-class-field.md)
+  - [ADR 0005: commit the bundle to the repository](./references/adr-0005-commit-the-bundle-to-the-repository.md)
+  - [ADR 0006: generator and viewer are separate repositories](./references/adr-0006-generator-and-viewer-are-separate-repositories.md)
+  - [ADR 0007: the bundle names the commit it describes](./references/adr-0007-the-bundle-names-the-commit-it-describes.md)
+  - [ADR 0008: the viewer lives in this repository](./references/adr-0008-the-viewer-lives-in-this-repository.md)
+  - [ADR 0009: the semantic pass is opt in and egress is explicit](./references/adr-0009-the-semantic-pass-is-opt-in-and-egress-is-explicit.md)
+  - [ADR 0010: a stale page is deleted only when nobody wrote on it](./references/adr-0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md)
+  - [ADR 0011: configuration file format and location](./references/adr-0011-configuration-file-format-and-location.md)
+  - [ADR 0012: a group name is never an action](./references/adr-0012-a-group-name-is-never-an-action.md)
+  - [ADR 0013: the local hook reports and ci gates](./references/adr-0013-the-local-hook-reports-and-ci-gates.md)
+  - [ADR 0014: adopt the otel sdk and write the exporter](./references/adr-0014-adopt-the-otel-sdk-and-write-the-exporter.md)
+  - [ADR 0015: a colliding page name is suffixed from its own key](./references/adr-0015-a-colliding-page-name-is-suffixed-from-its-own-key.md)
+  - [ADR 0016: a reader records what only it can know](./references/adr-0016-a-reader-records-what-only-it-can-know.md)
+  - [ADR 0017: a resolution root may come from the source itself](./references/adr-0017-a-resolution-root-may-come-from-the-source-itself.md)
+  - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
+  - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
+  - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
+  - and 11 more
 
 ### Modules
 
@@ -78,6 +129,7 @@ The places a wrong assumption propagates furthest, so the places to read first.
 - [ADR 0027: a gate fails only on what the reader can fix](./references/adr-0027-a-gate-fails-only-on-what-the-reader-can-fix.md) — Architecture decision (Accepted), 21 rules read from 0027-a-gate-fails-only-on-what-the-reader-can-fix.md.
 - [ADR 0028: scaffolded files are embedded and tested against our own](./references/adr-0028-scaffolded-files-are-embedded-and-tested-against-our-own.md) — Architecture decision (Accepted), 26 rules read from 0028-scaffolded-files-are-embedded-and-tested-against-our-own.md.
 - [ADR 0029: the viewer is written by the run that publishes it](./references/adr-0029-the-viewer-is-written-by-the-run-that-publishes-it.md) — Architecture decision (Accepted), 24 rules read from 0029-the-viewer-is-written-by-the-run-that-publishes-it.md.
+- [ADR 0030: a finding states its own absence](./references/adr-0030-a-finding-states-its-own-absence.md) — Architecture decision (Accepted), 18 rules read from 0030-a-finding-states-its-own-absence.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

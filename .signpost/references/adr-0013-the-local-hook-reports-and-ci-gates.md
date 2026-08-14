@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0013: the local hook reports and ci gates"
 description: "Architecture decision (Accepted), 23 rules read from 0013-the-local-hook-reports-and-ci-gates.md."
-resource: git://github.com/3rg0n/signpost@32ca0701ca62850ad1340cb9a5a5f05fcae38e0c/docs/adr/0013-the-local-hook-reports-and-ci-gates.md
+resource: git://github.com/3rg0n/signpost@f58e740201cd6ecc365fccf2e3178529755f7b33/docs/adr/0013-the-local-hook-reports-and-ci-gates.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-14" }
 attributes:

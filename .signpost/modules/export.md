@@ -2,7 +2,7 @@
 type: Module
 title: internal/export
 description: 6 go files; 7 exported symbols.
-resource: git://github.com/3rg0n/signpost@32ca0701ca62850ad1340cb9a5a5f05fcae38e0c/internal/export
+resource: git://github.com/3rg0n/signpost@f58e740201cd6ecc365fccf2e3178529755f7b33/internal/export
 generated: { by: signpost/dev, at: "2026-08-14" }
 attributes:
   - { name: commits, value: "3" }
