@@ -110,6 +110,10 @@ func commands() []command {
 			{name: "run", summary: "report whether .signpost/ is behind the code; what the hook calls", run: runHooksRun},
 		}},
 		{name: "version", summary: "print the version", run: runVersion},
+		// Next to version, which is the command that sends people here: it is the one that
+		// says this binary is old, and the answer to that should be the following line
+		// rather than a trip back to the README.
+		{name: "update", summary: "replace this binary with the latest published release", run: runUpdate},
 	}
 }
 
