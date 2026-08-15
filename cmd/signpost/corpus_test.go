@@ -4211,6 +4211,28 @@ func TestCorpusSaysNothingPointsAtTheBundle(t *testing.T) {
 		t.Errorf("the stub signpost suggested does not satisfy the check that suggested "+
 			"it:\n%s", stderr)
 	}
+
+	// And the stub's second sentence has to be true of the bundle sitting next to it, which is
+	// the assertion no unit test on the string can make. It tells a reader that a data store's
+	// page names the modules that write and read it; this checks that a bundle built from a
+	// repository with data stores in it actually renders both. An instruction naming content the
+	// artifact does not carry is worse than no instruction — a model follows it once, finds a
+	// page that answers nothing, and stops trusting the file (ADR 0034). This stage is where
+	// that can be caught, because it has both the stub and a built bundle.
+	pages := bundlePages(t, dir)
+	orders, ok := pages["data/orders.md"]
+	if !ok {
+		t.Fatalf("no data/orders.md, so the corpus no longer has the data store the stub's "+
+			"triage sentence sends a reader to: %v", sortedPageNames(pages))
+	}
+	for _, sentence := range []string{"**Written by**", "**Read by**"} {
+		if !strings.Contains(orders, sentence) {
+			t.Errorf("data/orders.md carries no %s sentence, and the AGENTS.md stub appended "+
+				"above promises a reader that it does. Either the stub's claim or the page's "+
+				"content is wrong, and the stub is the one that costs the reader's trust:\n%s",
+				sentence, orders)
+		}
+	}
 }
 
 // TestCorpusViewServesWhatItAnalysed is `view`'s stage, and it is here rather than only in
