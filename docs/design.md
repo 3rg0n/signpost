@@ -1295,6 +1295,7 @@ signpost hooks install             # optional local post-commit hook
 signpost hooks uninstall           # remove it, leaving any other hook alone
 signpost hooks run                 # what the hook calls; reports, never fails
 signpost version
+signpost update                    # replace this binary with a verified release
 ```
 
 `ask why` and `ask path` are pure bundle traversal — no model, no network. They exist
@@ -1413,6 +1414,45 @@ a line the tolerant reader notes and steps over, and stepping over it would mean
 the repository the way the file said not to while reporting success. The file is also
 repository content and is not exempt from the walk it configures — signpost does not get
 to be invisible in its own map.
+
+### 6.0.3 The binary replaces itself only from a verified release
+
+`signpost update` exists for a symptom that does not look like its cause. A stale binary
+does not report a version; it reports `signpost: unknown command "view"`, which reads as a
+missing feature or a typo. §6's banner and `version` made that answerable — and then left
+the reader with a tool they now know is old and a README to go and find.
+
+It adds no distribution channel. The artifacts are the GitHub Releases that
+`.github/workflows/release.yml` publishes, which is what `install.sh` and `install.ps1`
+already read, and `internal/selfupdate` performs the same transaction in the same order so
+there is one place the verification rules live. The rules, in full:
+
+- **Three refusals, none of them a warning.** No `checksums.txt` published, the platform's
+  archive not listed in it, or a digest that does not match — and nothing is written. Each
+  is a separate error because each means something different: a broken release, a partial
+  publish, or a substituted archive. Verification happens *inside* the download, so no
+  caller can be written that unpacks first and checks second.
+- **The release source is hard-coded.** No flag or environment variable names the host. A
+  configurable update source turns one mistyped hostname into arbitrary code execution as
+  the user.
+- **The tag from the network is validated before it enters a URL.** It arrives in a
+  `Location` header, which is remote input concatenated into a download path.
+- **Nothing runs unless it is typed.** No auto-update, no background check, nothing on a
+  timer. A build that passed this morning and fails this afternoon with no commit between
+  them is the hardest kind of failure to be told about.
+- **No privilege escalation.** An install needing elevation fails with the permission error
+  and points at the installer.
+- **Write-then-rename in the target's own directory**, so an interrupted update leaves a
+  working binary and a running process is never written into. Symlinks are resolved, so a
+  version manager's link keeps pointing at the binary it manages.
+
+The asset naming is a contract between two files that cannot import each other, and a
+disagreement is invisible at run time — a renamed asset is a 404, blamed on the network.
+So a test reads `release.yml` and derives the expectation from it, for all six published
+platforms rather than the one the test runs on.
+[ADR 0033](adr/0033-the-binary-replaces-itself-only-from-a-verified-release.md) records the
+decision, including what this does *not* verify: that the release was built from this
+source by this workflow, which nothing in a release attests to today.
 
 ### 6.1 Human-review preservation
 

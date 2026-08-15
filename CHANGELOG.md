@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`signpost update` replaces the binary with the latest published release**, verifying the
+  archive's sha256 against the release's `checksums.txt` before writing anything and refusing
+  outright when a release publishes no checksums, omits the asset, or the digest does not
+  match. It runs only when typed — no auto-update, no background check — and never escalates
+  privilege; `-dry-run`, `-force`, `-version`, and `-path` cover the rest
+  ([ADR 0033](docs/adr/0033-the-binary-replaces-itself-only-from-a-verified-release.md)).
+
 - **A CI job is a page, and the index states which of them gate a change.** Design §4.1
   promised `.github/workflows/*` would answer "what gates exist" and nothing in the bundle
   did — a contributor could not link to the check that stopped them, and an agent had to read

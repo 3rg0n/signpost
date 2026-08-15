@@ -45,6 +45,21 @@ Windows). Or, with a Go toolchain:
 go install github.com/3rg0n/signpost/cmd/signpost@latest
 ```
 
+Afterwards, `signpost update` does the same thing without the script — it replaces
+the binary you are running with the latest release, verifying the archive against
+that release's `checksums.txt` first and writing nothing if the check fails. It runs
+only when you type it: there is no background check and no auto-update.
+
+```bash
+signpost update              # replace this binary with the latest release
+signpost update -dry-run     # verify and report what would change; write nothing
+signpost update -version v0.1.0
+```
+
+An install in a directory that needs elevated permission is not updated this way —
+`update` reports the permission error rather than asking for privilege, and the
+installer above is the way to replace it.
+
 ## Why it exists
 
 An agent opening an unfamiliar repo rediscovers the same things every time:
@@ -530,6 +545,7 @@ in a repository without a bundle.
 | `signpost verify` — conformance, links, staleness | done |
 | `signpost.yml` — rebuild on push, gate pull requests | done |
 | `signpost hooks` — optional local post-commit reminder | done |
+| `signpost update` — replace the binary from a checksum-verified release | done |
 | `signpost init github` — scaffold that workflow into another repository | done |
 | `.signpost.yml` — per-repository defaults, no gate keys | done |
 | [Graph viewer](https://signpost.md/graph.html) — in `site/`, no JS dependencies | done |
