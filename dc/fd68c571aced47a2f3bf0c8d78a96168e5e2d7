@@ -1,0 +1,119 @@
+testdata/corpus/ts/packages/api/src/store.ts
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-33
+docs/adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-118
+internal/extract/golang.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 70,74-96
+  s_f6c0b1ac81cb95::t_0eaa75437177e7 97-98
+internal/extract/java.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 136
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_164d861da4531b 11-17,1245-1249
+  s_f6c0b1ac81cb95::t_5e69820e4e818c 1250
+testdata/corpus/db/migrations/0001_create_tables.sql
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-20
+internal/extract/extract.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 86-94,277
+internal/graph/graph.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 58-69
+testdata/corpus/go/store/store.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-54
+testdata/corpus/jvm/src/main/kotlin/com/example/app/Orders.kt
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-34
+testdata/corpus/cpp/src/store.cc
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-56
+internal/extract/csharp.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 160
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 4438-4751
+testdata/corpus/dotnet/Corpus.Api/Orders.cs
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-50
+testdata/corpus/db/migrations/0002_add_audit.sql
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-11
+testdata/corpus/README.md
+  s_f6c0b1ac81cb95::t_164d861da4531b 129-198,738-746
+  s_f6c0b1ac81cb95::t_6aee9dcd8cb72e 747
+internal/extract/shell.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 84
+internal/extract/rust.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 189
+testdata/corpus/rust/src/store.rs
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-34
+.github/workflows/ci.yml
+  s_f6c0b1ac81cb95::t_a39263d7f31afd 1711-1767
+internal/assemble/assemble.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 32,70-94,108-114,121,133-136,183,1206-1259,1262-1263
+  s_f6c0b1ac81cb95::t_d6ab096603899e 1260-1261,1264-1265
+internal/manifest/repo.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 9,44-45,49
+README.md
+  s_f6c0b1ac81cb95::t_e1b547d27cf511 173-180
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_164d861da4531b 53
+internal/extract/kotlin.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 156
+internal/extract/typescript.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 109
+testdata/corpus/shell/scripts/purge.sh
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-45
+internal/extract/powershell.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 185
+internal/extract/ruby.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 191
+internal/extract/sql.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-233
+internal/extract/cfamily.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 205
+internal/sqlstmt/sqlstmt.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-654
+testdata/corpus/c/src/store.c
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-52
+testdata/corpus/jvm/src/main/java/com/example/store/Orders.java
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-45
+internal/extract/python.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 128
+internal/okf/emit_test.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 607-688
+internal/assemble/data_test.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-364
+testdata/corpus/py/greeter/store.py
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-32
+internal/extract/lines.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 36-68,144-161,335-343,345-349,355-359,363-365,370,382-384,387,395,402,408,412-416,421,427-428,432-433,438-461,482,535-541,557-559,570-577,590-592,594,599-601,612,614-622,660-662,685-687,705-713,721,726,729,1035-1041
+internal/okf/emit.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 331,339-390,565-568
+internal/extract/php.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 140
+testdata/corpus/php/src/Store.php
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-56
+cmd/signpost/pipeline.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 321-335
+docs/design.md
+  s_f6c0b1ac81cb95::t_164d861da4531b 537-572,726
+testdata/corpus/powershell/src/Corpus/Store.psm1
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-70
+testdata/corpus/ruby/lib/corpus/store.rb
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-33
+testdata/corpus/rust/src/lib.rs
+  s_f6c0b1ac81cb95::t_164d861da4531b 4
+internal/sqlstmt/sqlstmt_test.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-517
+internal/extract/sql_test.go
+  s_f6c0b1ac81cb95::t_164d861da4531b 1-701
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "dcfd68c571aced47a2f3bf0c8d78a96168e5e2d7",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
