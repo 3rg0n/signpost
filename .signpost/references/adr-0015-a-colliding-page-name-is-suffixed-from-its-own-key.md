@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0015: a colliding page name is suffixed from its own key"
 description: "Architecture decision (Accepted), 25 rules read from 0015-a-colliding-page-name-is-suffixed-from-its-own-key.md."
-resource: git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192/docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md
+resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615/docs/adr/0015-a-colliding-page-name-is-suffixed-from-its-own-key.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:

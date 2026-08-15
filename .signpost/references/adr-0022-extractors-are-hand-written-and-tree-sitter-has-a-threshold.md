@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0022: extractors are hand written and tree sitter has a threshold"
 description: "Architecture decision (Accepted), 17 rules read from 0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md."
-resource: git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192/docs/adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md
+resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615/docs/adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:

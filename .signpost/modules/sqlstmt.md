@@ -1,8 +1,8 @@
 ---
 type: Module
-title: internal/selfupdate
+title: internal/sqlstmt
 description: 2 go files; 10 exported symbols.
-resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615/internal/selfupdate
+resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615/internal/sqlstmt
 generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
   - { name: commits, value: "1" }
@@ -10,13 +10,13 @@ attributes:
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-08-15" }
   - { name: last_commit, value: "2026-08-15" }
-  - { name: lines_added, value: "1373" }
+  - { name: lines_added, value: "1171" }
   - { name: lines_removed, value: "0" }
-  - { name: package, value: selfupdate }
+  - { name: package, value: sqlstmt }
   - { name: top_author, value: Ergon Copeland }
   - { name: top_author_share, value: 100% }
 ---
-# internal/selfupdate
+# internal/sqlstmt
 
 <!-- signpost:managed:summary -->
 2 go files; 10 exported symbols.
@@ -26,10 +26,10 @@ attributes:
 
 <!-- signpost:managed:structure -->
 2 files:
-- `internal/selfupdate/selfupdate.go`
-- `internal/selfupdate/selfupdate_test.go`
+- `internal/sqlstmt/sqlstmt.go`
+- `internal/sqlstmt/sqlstmt_test.go`
 
-- **Exports** (10): `Client`, `Client.Apply`, `Client.Download`, `Client.Latest`, `DefaultTimeout`, `Options`, `Release`, `ReleasesURL`, `Repo`, `Result`
+- **Exports** (10): `Access`, `Destructive`, `LooksLikeSQL`, `Reads`, `Reference`, `Split`, `Statement`, `Subject`, `Tables`, `Writes`
 <!-- /signpost:managed:structure -->
 
 ## Notes

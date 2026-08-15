@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192",
+  "resource": "git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615",
   "date": "2026-08-15",
   "counts": {
-    "nodes": 85,
-    "edges": 210,
-    "clusters": 37
+    "nodes": 87,
+    "edges": 218,
+    "clusters": 38
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 210,
+    "extracted": 218,
     "inferred": 0
   },
   "pages": [
@@ -33,6 +33,7 @@
     "modules/semantic.md",
     "modules/signpost.md",
     "modules/site.md",
+    "modules/sqlstmt.md",
     "modules/telemetry.md",
     "modules/vcs.md",
     "modules/view.md",
@@ -83,6 +84,7 @@
     "references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md",
     "references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md",
     "references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md",
+    "references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

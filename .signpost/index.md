@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 85 concepts, 210 relationships."
-resource: git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192
+description: "Structural map of this repository: 87 concepts, 218 relationships."
+resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615
 generated: { by: signpost/dev, at: "2026-08-15" }
 ---
 # Repository map
@@ -21,16 +21,16 @@ The places a wrong assumption propagates furthest, so the places to read first.
 
 - [\(repository root\)](./modules/root.md) — 50 relationships (17 in, 33 out)
 - [cmd/signpost](./modules/signpost.md) — 46 relationships (15 in, 31 out)
-- [internal/assemble](./modules/assemble.md) — 27 relationships (12 in, 15 out)
+- [internal/assemble](./modules/assemble.md) — 28 relationships (12 in, 16 out)
+- [internal/manifest](./modules/manifest.md) — 26 relationships (15 in, 11 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
-- [internal/manifest](./modules/manifest.md) — 21 relationships (13 in, 8 out)
 
 ### Structural findings
 
 What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
 
 - **Import cycles: none.** No module here imports its way back to itself.
-- **Cross-cluster edges: 41.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
+- **Cross-cluster edges: 43.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
   - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/export](./modules/export.md) → [\(repository root\)](./modules/root.md) (changes with)
@@ -51,9 +51,9 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/okf](./modules/okf.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/practice](./modules/practice.md) (changes with)
-  - and 21 more
+  - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 34.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 35.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 14 more
+  - and 15 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -90,12 +90,12 @@ What the shape of this repository says. Each line is a result — where one read
 
 ### Modules
 
-- [internal/assemble](./modules/assemble.md) — 6 go files; 3 exported symbols.
+- [internal/assemble](./modules/assemble.md) — 7 go files; 3 exported symbols.
 - [internal/config](./modules/config.md) — 2 go files; 3 exported symbols.
 - [internal/discover](./modules/discover.md) — 5 go files; 44 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 7 exported symbols.
-- [internal/extract](./modules/extract.md) — 32 go files; 79 exported symbols.
-- [internal/graph](./modules/graph.md) — 4 go files; 51 exported symbols.
+- [internal/extract](./modules/extract.md) — 34 go files; 80 exported symbols.
+- [internal/graph](./modules/graph.md) — 4 go files; 53 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 17 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 130 exported symbols.
 - [internal/model](./modules/model.md) — 15 go files; 36 exported symbols.
@@ -107,6 +107,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
 - [cmd/signpost](./modules/signpost.md) — 26 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
+- [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.
 - [internal/view](./modules/view.md) — 5 go files; 4 exported symbols.
@@ -114,7 +115,7 @@ What the shape of this repository says. Each line is a result — where one read
 ### Pipelines
 
 - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md) — CI job commit trailers name real issues in the ci workflow, 2 steps; runs on a pull request or a default-branch push
-- [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md) — CI job corpus (a repository signpost did not write) in the ci workflow, 21 steps; runs on a pull request or a default-branch push
+- [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md) — CI job corpus (a repository signpost did not write) in the ci workflow, 22 steps; runs on a pull request or a default-branch push
 - [ci dependency gate](./pipelines/ci-dependency-gate.md) — CI job dependency gate in the ci workflow, 4 steps; runs on a pull request or a default-branch push
 - [ci installer parses \(5.1 and 7\)](./pipelines/ci-installer-parses-5-1-and-7.md) — CI job installer parses (5.1 and 7) in the ci workflow, 3 steps; runs on a pull request or a default-branch push
 - [ci lint](./pipelines/ci-lint.md) — CI job lint in the ci workflow, 8 steps; runs on a pull request or a default-branch push
@@ -162,6 +163,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0031: scope is a lifecycle test not a list of non goals](./references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md) — Architecture decision (Accepted), 19 rules read from 0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md.
 - [ADR 0032: order is drawn only where a file declares it](./references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md) — Architecture decision (Accepted), 21 rules read from 0032-order-is-drawn-only-where-a-file-declares-it.md.
 - [ADR 0033: the binary replaces itself only from a verified release](./references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md) — Architecture decision (Accepted), 24 rules read from 0033-the-binary-replaces-itself-only-from-a-verified-release.md.
+- [ADR 0034: a deterministic pass may not produce an ambiguous edge](./references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) — Architecture decision (Accepted), 18 rules read from 0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

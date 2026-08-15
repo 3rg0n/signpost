@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0021: track the published spec and never overload its keys"
 description: "Architecture decision (Accepted), 14 rules read from 0021-track-the-published-spec-and-never-overload-its-keys.md."
-resource: git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192/docs/adr/0021-track-the-published-spec-and-never-overload-its-keys.md
+resource: git://github.com/3rg0n/signpost@0a0581afb5baa3f1b037f83b6ab27a134ea29615/docs/adr/0021-track-the-published-spec-and-never-overload-its-keys.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
