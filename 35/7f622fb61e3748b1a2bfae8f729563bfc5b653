@@ -1,0 +1,34 @@
+docs/design.md
+  s_f6c0b1ac81cb95::t_9e5f60fa0e82dd 562-568
+  s_f6c0b1ac81cb95::t_8910328463deec 1528-1539,1542
+  s_f6c0b1ac81cb95::t_631447c9a71bc7 1540-1541
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_6727cf864b3c8a 11-16
+  s_f6c0b1ac81cb95::t_b6a12377e58dd9 755
+cmd/signpost/build_test.go
+  s_f6c0b1ac81cb95::t_6f1fae2a1484c6 265-300
+README.md
+  s_f6c0b1ac81cb95::t_210b920b71e108 277-291
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_0f8d353721abe5 4214-4235
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_ac2bb404f2704a 314
+  s_f6c0b1ac81cb95::t_a262ddb3bbc482 326
+  s_f6c0b1ac81cb95::t_b3758f6f3532f1 291-293,303-313,315,327-330
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "357f622fb61e3748b1a2bfae8f729563bfc5b653",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
