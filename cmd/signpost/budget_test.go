@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -126,5 +128,107 @@ func TestHumanBytesRoundTripsThroughTheFlag(t *testing.T) {
 		if int64(b) != n {
 			t.Errorf("humanBytes(%d) = %q, which parses back as %d", n, s, int64(b))
 		}
+	}
+}
+
+// The default renders as a unit, not as a byte count.
+//
+// The round-trip above is satisfied by either: `3221225473B` parses back exactly, so a
+// default one byte off a power of two would pass it and still put eleven digits in the one
+// message that has to be read and acted on. That is the whole argument for the flag taking a
+// unit in the first place — a number nobody can check by eye — and it applies to the default
+// the message tells them to raise from.
+//
+// The negative boundary is what makes it a test rather than a comment: asserting the suffix
+// is absent from a byte count, not merely present in a good rendering, so a humanBytes that
+// appended "B" to everything fails here.
+func TestTheDefaultBudgetRendersAsAUnit(t *testing.T) {
+	got := humanBytes(discover.DefaultMaxTotalBytes)
+	if strings.HasSuffix(got, "B") && !strings.HasSuffix(got, "iB") {
+		t.Errorf("the default budget renders as %q, a raw byte count. It is quoted in the "+
+			"warning that tells somebody to raise it, and a value they cannot check by eye is "+
+			"the reason -max-bytes takes a unit at all. Pick a default that is a whole "+
+			"multiple of a binary unit", got)
+	}
+}
+
+// The usage line states the default and gives an example above it.
+//
+// Read before a run rather than after one, which is what distinguishes it from the warning:
+// by the time the warning appears the walk has already been truncated. The example is the
+// case that actually broke — it was a literal `2GiB` and the default grew past it, so the
+// help suggested a budget smaller than the one already in force — and asserting the ordering
+// rather than the number is what keeps it correct through the next raise.
+func TestMaxBytesUsageStatesTheDefaultAndExceedsIt(t *testing.T) {
+	// Stdout and exit 0: an explicit -h is a request that succeeded, not a usage error.
+	usage, stderr, code := invoke(t, "graph", "show", "-h")
+	if code != 0 {
+		t.Fatalf("-h exit = %d\n%s", code, stderr)
+	}
+	i := strings.Index(usage, "-max-bytes")
+	if i < 0 {
+		t.Fatalf("no -max-bytes in usage:\n%s", usage)
+	}
+	// The flag's own entry only: its name line plus the indented description beneath it.
+	// Cut at the next entry rather than at a named neighbour, so a reordered flag set cannot
+	// silently widen this to the whole usage text and satisfy the size check below from
+	// somebody else's example.
+	line := usage[i:]
+	if j := strings.Index(line, "\n  -"); j > 0 {
+		line = line[:j]
+	}
+	if want := humanBytes(discover.DefaultMaxTotalBytes); !strings.Contains(line, want) {
+		t.Errorf("the -max-bytes usage line does not state the default %s, so somebody sizing "+
+			"a run has to trigger the truncation warning to learn it:\n%s", want, line)
+	}
+	// Every size in the line, so the example is checked against the default rather than
+	// against a literal that has to be updated here as well.
+	var largest int64
+	for _, f := range strings.FieldsFunc(line, func(r rune) bool {
+		return r == ' ' || r == ';' || r == ',' || r == '(' || r == ')' || r == '\n' || r == '\t'
+	}) {
+		var b byteSize
+		if err := b.Set(f); err == nil && int64(b) > largest {
+			largest = int64(b)
+		}
+	}
+	if largest <= discover.DefaultMaxTotalBytes {
+		t.Errorf("the largest size in the -max-bytes usage line is %s, which is not above the "+
+			"default %s. Raising the budget is why somebody reads this flag, and an example at "+
+			"or below the default suggests a change that would shrink it:\n%s",
+			humanBytes(largest), humanBytes(discover.DefaultMaxTotalBytes), line)
+	}
+}
+
+// The README states the default in prose, so the constant and the sentence can disagree
+// silently. This is the only test in the repo that reads its own README, and the reason is
+// specific rather than general: the number is not an implementation detail a reader can
+// look up, it is the thing they size a runner against, and a documented budget that is
+// wrong by a factor of six sends somebody to buy memory they already have.
+//
+// Raising the default is what proved the need. The value lived in the constant, the flag's
+// help line, this paragraph, and a parse-error hint, and three of the four had to be found
+// by grep — one of them, an example below the new default, was wrong for a release before
+// anybody looked. A test is cheaper than remembering.
+//
+// Both spellings are accepted because prose takes the space and the flag does not; what is
+// asserted is the pairing of number and unit, which is the part that goes stale.
+func TestTheReadmeStatesTheDefaultBudget(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	rendered := humanBytes(discover.DefaultMaxTotalBytes)
+	spaced := strings.TrimRight(rendered, "KMGTiB")
+	for _, unit := range []string{"KiB", "MiB", "GiB", "TiB", "B"} {
+		if strings.HasSuffix(rendered, unit) {
+			spaced += " " + unit
+			break
+		}
+	}
+	if !strings.Contains(string(readme), rendered) && !strings.Contains(string(readme), spaced) {
+		t.Errorf("README.md states neither %q nor %q, so the documented walk budget has "+
+			"drifted from discover.DefaultMaxTotalBytes. A reader sizes a CI runner against "+
+			"that sentence; update it in the same change as the constant", rendered, spaced)
 	}
 }

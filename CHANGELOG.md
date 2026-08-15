@@ -970,6 +970,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **The walk's default byte budget is 3 GiB, raised from 512 MiB.** A monorepo of roughly
+  275,000 files recorded 170,530 of them as skipped under the old default and reported its
+  own first-party packages as unresolved imports, because the files defining them were never
+  opened. The number is a ceiling on what a walk may hold rather than what it will, so a tree
+  that fit before allocates exactly what it did before, and `-max-bytes` still sets it. A
+  large enough tree still truncates, and the run still names the first path it did not read.
+
 - **Design §1 decides scope by one lifecycle test instead of a list of non-goals.** Two of the
   four exclusions were false as written — signpost does index code structure, and it does
   report readiness signals — so the section now asks whether a capability is durable,

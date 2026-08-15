@@ -189,12 +189,15 @@ with `fetch-depth: 0`: a shallow clone yields real but truncated signals, and
 signpost says so rather than presenting them as the whole history.
 
 A very large repository has one more limit worth knowing about. File contents are held
-in memory for the whole analysis, so the walk stops reading at 512 MiB of text and
+in memory for the whole analysis, so the walk stops reading at 3 GiB of text and
 records the rest as skipped. Because it walks in sorted order, what is missing is the
 *tail* of the tree rather than a sample of it — so a run that hits the cap names the
-first path it did not read, which bounds everything absent, and `-max-bytes 2GiB` lifts
-it. Raise-only: there is no unlimited, because an uncapped walk of a large enough tree
-runs the machine out of memory instead of finishing slowly.
+first path it did not read, which bounds everything absent, and `-max-bytes 6GiB` lifts
+it. The number is a ceiling on what a walk may hold, not what it will: a tree that fits
+in a few hundred megabytes allocates a few hundred megabytes. The flag takes any positive
+size, so a memory-constrained runner can tighten it as well, but there is no unlimited:
+an uncapped walk of a large enough tree runs the machine out of memory instead of
+finishing slowly.
 
 Git is the recommended setup and, where it is there, it is authoritative: what is
 tracked, what is ignored, and which commit the bundle describes are git's business.
