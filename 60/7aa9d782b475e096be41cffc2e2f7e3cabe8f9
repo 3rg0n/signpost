@@ -1,0 +1,62 @@
+docs/design.md
+  s_f6c0b1ac81cb95::t_65d482ed2cd3b2 1298
+  s_f6c0b1ac81cb95::t_190247c6361284 1418-1456
+internal/selfupdate/selfupdate.go
+  s_f6c0b1ac81cb95::t_1899ae29b3ab45 226-231
+  s_f6c0b1ac81cb95::t_73bb3fd0ec69f0 233-237,245
+  s_f6c0b1ac81cb95::t_8383a4d6b9ca0e 311-317
+  s_f6c0b1ac81cb95::t_c60bda57e62763 149-151
+  s_f6c0b1ac81cb95::t_c31eb73fe7fac2 28,342,369
+  s_f6c0b1ac81cb95::t_2682f1d3be4584 521-523
+  s_f6c0b1ac81cb95::t_691fe925a7365b 108-110
+  s_f6c0b1ac81cb95::t_7db73c378e72c6 1-27,29-107,111-126,128-132,153-225,232,238-244,246-310,318-341,343-368,370-520,524-553
+  s_f6c0b1ac81cb95::t_580b3ee4dc55a8 127,133-148
+  s_f6c0b1ac81cb95::t_0bad5eeee1e03f 152
+cmd/signpost/update_test.go
+  s_f6c0b1ac81cb95::t_71021390ce7138 1-44,47,51-103,127-182
+  s_f6c0b1ac81cb95::t_984e6e48a720d7 121-124
+  s_f6c0b1ac81cb95::t_8e4e4ce7ae4766 104-114
+  s_f6c0b1ac81cb95::t_ba2cb1ab64a1c9 115-120,125-126
+  s_f6c0b1ac81cb95::t_7e9d1d1e0da951 45-46,48-50
+internal/selfupdate/selfupdate_test.go
+  s_f6c0b1ac81cb95::t_ce50c695f95bb9 1-199,201-799
+  s_f6c0b1ac81cb95::t_8bc9117f06278f 200
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_a678867d2ff903 11-17
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_0ac39359c61cca 52
+docs/adr/0033-the-binary-replaces-itself-only-from-a-verified-release.md
+  s_f6c0b1ac81cb95::t_5d2ad898985bf2 1-94,98-132
+  s_f6c0b1ac81cb95::t_30fe8732bb92a2 95-97
+cmd/signpost/update.go
+  s_f6c0b1ac81cb95::t_c1e507810b3a74 86
+  s_f6c0b1ac81cb95::t_c4434617c88f37 146-149
+  s_f6c0b1ac81cb95::t_4a090f22e2e24a 58
+  s_f6c0b1ac81cb95::t_f0b362cd92626e 1-4,6-52,59-72,74,76-80,82-85,87-92,95,107-108,118-119,124-135,142-145,150-153
+  s_f6c0b1ac81cb95::t_dae580f640fa3d 109-116
+  s_f6c0b1ac81cb95::t_3a32d421539918 120-123
+  s_f6c0b1ac81cb95::t_4439de38ff4434 136-141
+  s_f6c0b1ac81cb95::t_c2605631de399f 5,53-57,73,75,81
+  s_f6c0b1ac81cb95::t_908e4dfbb88694 93-94,96-106,117
+README.md
+  s_f6c0b1ac81cb95::t_8903bb3d9565b5 48-62
+  s_f6c0b1ac81cb95::t_91b28e2e97b9ea 548
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_c86997c7de7ea3 113-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "607aa9d782b475e096be41cffc2e2f7e3cabe8f9",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
