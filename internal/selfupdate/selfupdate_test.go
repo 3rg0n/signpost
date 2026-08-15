@@ -516,9 +516,30 @@ func TestASymlinkedInstallIsFollowed(t *testing.T) {
 	if got := readFile(t, realBin); got != "new" {
 		t.Errorf("the real binary holds %q; the update did not follow the link", got)
 	}
-	if res.Path != realBin {
-		t.Errorf("Path = %q, want the resolved target %q, which is what the command prints",
+	// Compared as files rather than as strings. On macOS the temporary directory is itself
+	// reached through a symlink — /var is /private/var — so targetPath resolves that prefix
+	// too, and the path it returns is right while not being the string this test built. A
+	// string comparison here passed on Linux and Windows and failed on macOS only, which is
+	// the worst place for the difference to surface: in CI, on a platform this host cannot
+	// run. What the assertion is about is which file was named, so ask that.
+	wantFile, err := os.Stat(realBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotFile, err := os.Stat(res.Path)
+	if err != nil {
+		t.Fatalf("Path = %q, which does not exist: %v", res.Path, err)
+	}
+	if !os.SameFile(gotFile, wantFile) {
+		t.Errorf("Path = %q, want the file at %q, which is the binary the link points into",
 			res.Path, realBin)
+	}
+	// And separately: not the link. os.SameFile cannot tell those apart, because Stat follows
+	// the link and reports the target either way — so reporting the link would satisfy the
+	// check above while telling the reader a path that is still a symlink after the update.
+	if res.Path == link {
+		t.Errorf("Path = %q is the symlink, not the binary it resolves to; the command would "+
+			"report the path it did not write to", res.Path)
 	}
 }
 
