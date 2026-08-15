@@ -186,6 +186,7 @@ func (RustExtractor) Extract(f discover.File) (Facts, error) {
 			inTrait = false
 		}
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

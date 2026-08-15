@@ -55,6 +55,18 @@ const (
 	// their position in the file would assert a sequence the repository does not
 	// have.
 	EdgePrecedes EdgeKind = "precedes"
+	// EdgeWrites and EdgeReads are data access: a module holds a statement that
+	// changes, or only observes, the rows of a table. Two kinds rather than one with a
+	// direction attribute, because they are the question a reader arrives with — a
+	// duplicate row asks who writes, a stale read asks who reads, and answering either
+	// with "these six modules touch it" is not an answer.
+	//
+	// Drawn from the module to the table and never between two modules, even when both
+	// write one table. That coupling is real and no file declares it; asserting it is
+	// the same invention EdgePrecedes refuses for two CI jobs with no `needs`
+	// (ADR 0034).
+	EdgeWrites EdgeKind = "writes"
+	EdgeReads  EdgeKind = "reads"
 )
 
 // Confidence records how an edge was established, so a consumer can weight

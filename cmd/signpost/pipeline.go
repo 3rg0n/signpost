@@ -318,6 +318,21 @@ func reportCoverage(w io.Writer, a *analysis) {
 		p.printf("  %d first-party import(s) reached no page across %d specifier(s): %s\n",
 			n, len(a.Assembled.Unlinked), topCounts(a.Assembled.Unlinked, 5))
 	}
+	// The data pass's two gaps, on two lines, because they have two fixes. This one names
+	// tables the source spelled out and no migration declares: the name is in the code, so
+	// what is missing is the migration — a schema managed by a console or by a framework's
+	// model classes lands its whole query surface here.
+	if n := totalCount(a.Assembled.UnknownTables); n > 0 {
+		p.printf("  %d statement(s) named %d table(s) no migration declares: %s\n",
+			n, len(a.Assembled.UnknownTables), topCounts(a.Assembled.UnknownTables, 5))
+	}
+	// And this one names nothing, because there is nothing to name — the table is whatever
+	// the caller passed. Counted rather than guessed at (ADR 0034), and reported because the
+	// alternative is a module that touches nine tables appearing to touch three with nothing
+	// saying so.
+	if n := a.Assembled.InterpolatedTables; n > 0 {
+		p.printf("  %d statement(s) build a table name at run time; no edge drawn\n", n)
+	}
 	reportHistory(p, a)
 	// A dropped edge means assemble created an edge to a node it never created,
 	// which is a bug in assemble rather than a fact about the repository.

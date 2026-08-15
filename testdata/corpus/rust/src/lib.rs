@@ -1,6 +1,7 @@
 //! Greeting types. Corpus fixture: not compiled, not run.
 
 pub mod formatter;
+pub mod store;
 
 use serde::Serialize;
 

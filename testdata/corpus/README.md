@@ -126,6 +126,76 @@ spellings sit here so the list cannot be completed for one platform and left sho
 other. Their absence checks match the whole name rather than a fragment, because a fragment
 check for `winreg` is satisfied by the `winreg_helpers` page that must not exist.
 
+## Which code touches which table
+
+`db/migrations/` declares four things — `orders`, `customers`, the index `orders_customer_idx`,
+and `audit_log` — and thirteen store files reach three of them. One schema for every language,
+which is what a polyglot repository actually is: the database is shared and the code that
+reaches it is not, so the table is the one page a reader with a data symptom can start from
+whichever service reported it.
+
+There are **twelve stores rather than fifteen, and the unit is a recovery path rather than a
+language.** The pass that reads SQL is one implementation; the recovery of a string literal out
+of source is twelve — eleven scanner configurations plus Go's parser. C, C++ and Objective-C
+share one scanner (ADR 0022), as TypeScript and JavaScript do. A fixture in one language proves
+the reader; a fixture per recovery path proves the recovery, and the recovery is where the
+defects have been.
+
+Each store holds the same three shapes, in that language's own spellings:
+
+| Shape | Must produce | What the other direction would cost |
+|---|---|---|
+| a table spelled out, in the idiomatic multi-line string | the edge | the shipped state before this pass: a migration says the table exists and nothing says which code touches it |
+| a table the language interpolates — `%s`, `${t}`, `#{t}`, `" + t` | a counted gap and **no** edge (ADR 0034) | a page named after formatting syntax, or — quieter and worse — a module reported as touching one table fewer with nothing saying so |
+| a string that mentions a verb and is prose | silence in both | a table called `the` read out of "could not update the order", and a gap count a reader cannot act on |
+
+The third shape is the one with no positive assertion available, which is why every store has
+one — thirteen prose strings, no two of them the same sentence. Eleven produce silence. Two do
+not, and that is the limitation below rather than a defect in the fixtures.
+
+`TestCorpusDrawsEveryDataEdgeAndNoneItGuessedAt` asserts the **sets and the count**, never
+presence. A presence check — "orders has a writer" — is satisfied by a reader that draws an edge
+from every module to every table, and that reader looks like a richer map:
+
+| Boundary | Must hold | What the other direction would cost |
+|---|---|---|
+| the tables | exactly four data nodes, all four from `db/migrations/` | a table page minted from an interpolation placeholder or a raw string's unquoted middle line — a committed artifact naming a table the database does not have, which is worse than one missing an edge |
+| the readers | all thirteen stores read `orders`; exactly seven also read `customers` | a module missing names the recovery path that broke; a module appearing means a table was read out of text that is not a statement. The short list is the one that fails if the reader starts finding a table per bare word |
+| the writers | twelve stores write `customers`, `go/store` alone writes `orders` | one shared fixture would make the read/write split an artefact of itself; one writer for `orders` is what makes "who writes this" a question with an answer |
+| the direction | a `writes` is a write and a `reads` is a read, per statement | the on-call reader's actual question is who *writes* the table, and a pass folding the two into "touches" answers a different one |
+| `audit_log` | the page exists, with **no** writer and **no** reader | see below — this is the C++ boundary |
+| the gaps | 15 interpolated statements counted, and none resolved | lower is the silent failure ADR 0034 separates the counts to prevent; higher inflates the one number a reader uses to judge how much of the map is missing |
+| unknown tables | the "no migration declares" line absent entirely | every table the corpus's sources name is created by a migration, so an entry there is a bare word taken for a table name — and folding it into the interpolated count is what would hide it, since the two have different remedies |
+| provenance and confidence | every data edge names a source file, is `extracted`, and carries no weight | an edge with no file sends a reader to grep the repository; an `Ambiguous` one from a deterministic pass teaches them to discount the whole bundle; a weight of eleven renders verbosity as coupling strength |
+
+**`audit_log` is a negative boundary that only C++ can express, and it is the reason
+`cpp/src/store.cc` exists beside `c/src/store.c` rather than being assumed from it.** The one
+statement in the corpus naming that table sits inside a C++11 raw string, `R"SQL(...)SQL"`, which
+the scanner does not model: the delimiter is arbitrary text rather than a run of hashes, so
+there is no rule shared with Rust's `r#"..."#` to lean on (stated in `scanC`'s config comment).
+The fixture pins what that costs — a query read as nothing — and asserts that it stays the
+*acceptable* cost. A raw string's middle lines survive as code, and `FROM audit_log` sitting
+there unquoted is exactly the text a looser reader mints a table page from. So the correct page
+for a table nothing reaches in a readable form names no module at all.
+
+**One limitation is asserted rather than fixed, and the gap count is 15 rather than 13 because
+of it.** A comma closes a run of two bare words, because `FROM orders o, customers c` is that
+shape and is the oldest way SQL writes a join. So "insert into `${table}` failed, retrying" — the
+prose fixture in `ts/packages/api/src/store.ts` and its shell twin in `shell/scripts/purge.sh` —
+is accepted by the gate, and its interpolated name is counted. No table is drawn, so the cost is
+confined to the number moving *up*: a reader is told more of the map is missing than really is.
+`TestProseClosedByAPunctuationMarkIsCountedAsAGap` in `internal/sqlstmt` states it and bounds it,
+and separating `into ${table} failed,` from `FROM orders o,` needs a lexicon of English function
+words — which is what the whole grammar-based gate was written to avoid. The eleven other prose
+fixtures are declined correctly, including the two that come closest: `go/store`'s
+`"insert into %s failed: %w"` differs from the accepted pair by one punctuation mark, and
+`php/src`'s `"insert into {$table} failed: retry"` by the same. That the colon is declined and the
+comma is not is what makes this a boundary in the grammar rather than a hole in the rule.
+
+`.sql` files are read by the migration reader and never as source, so **a migration is never a
+writer** — the file that creates `orders` does not also appear as code that writes it. Table
+names match exactly, qualifier included.
+
 ## Two packages that cannot see each other
 
 `py/services/alpha/handler.py` and `py/services/beta/handler.py` contain the byte-identical
@@ -664,6 +734,16 @@ moves if the new language's fixtures import anything inside the repository that 
 which the *first-party* half of the instruction above is otherwise silent about: an import that
 signpost places and cannot link is a different failure from one it cannot place, and the language
 is covered for only one of them until both counts are stated.
+
+A new **recovery path** is a separate obligation from a new language, and most new languages are
+not one: a language whose strings are scanned by an existing configuration needs no store
+fixture, and one that needs its own configuration needs all three shapes at once. Check
+`internal/extract/lines.go` for which it is before writing anything. If it is a new path, add the
+store — a spelled-out table in that language's multi-line string form, an interpolated one in its
+own syntax, and a prose string mentioning a verb — and add the module to every set in
+`TestCorpusDrawsEveryDataEdgeAndNoneItGuessedAt` plus the edge and gap counts. A store fixture
+holding only the first two shapes proves nothing about the third, which is the only one with no
+positive assertion available and the one every defect in this pass has been.
 
 A language with **no package registry** is the case the instruction above does not cover, and
 shell is the first of them. There is nothing for its near-miss to shadow, because a `source`

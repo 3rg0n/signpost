@@ -33,6 +33,39 @@ type codeLine struct {
 	// started on an earlier line. Its Text is fully blanked, but callers
 	// sometimes need to know why.
 	InBlockString bool
+	// BodyStart is the offset in Raw where a multi-line string's body begins on this
+	// line, or -1 when no such string opens here. len(Raw) means the string opened but
+	// its body begins on the next line, which is what a heredoc always does.
+	//
+	// BodyEnd is the offset in Raw where an open multi-line string's body ends, or -1
+	// when none closes here.
+	//
+	// These exist because the value of a multi-line literal is otherwise unrecoverable.
+	// Text is blanked, and Raw holds the delimiters and the surrounding code as well as
+	// the body, so a caller reading Raw has no way to tell where one stops and the other
+	// starts — and the scanner is the only thing that knows, since the answer depends on
+	// which of eight delimiter forms opened the string. Reconstructing it downstream
+	// would be a second scanner disagreeing with this one about C#'s `@"` and Ruby's
+	// `<<~SQL`.
+	BodyStart int
+	BodyEnd   int
+	// Bodies are the half-open offsets in Raw of literals that opened *and closed* on
+	// this line in a form whose delimiters Text does not keep.
+	//
+	// An ordinary `"..."` needs nothing here: the scanner preserves its quotes, so a
+	// caller finds the literal by looking for a quote in Text and reads its value from
+	// Raw at the same offset. The delimiter forms cannot be found that way. `r#"..."#`,
+	// `@"..."` and a one-line `"""..."""` are blanked delimiters and all, because a
+	// preserved `"` would be read as an ordinary quote and the body recovered from it
+	// would run to the wrong place — for `"""SELECT 1"""` it would end at the opener's
+	// second quote and yield the empty string.
+	//
+	// So the scanner records the spans instead, and it is the same reasoning BodyStart
+	// carries: only the scanner knows which of eight forms opened the literal, and a
+	// caller guessing at it is a second scanner that will disagree. Without this, a
+	// query in any of those forms is invisible to every caller that reads literals —
+	// which is how a Rust `r#"SELECT ... FROM customers"#` drew no edge at all.
+	Bodies [][2]int
 }
 
 // scanConfig describes a language's comment and string syntax.
@@ -108,6 +141,24 @@ type scanState struct {
 	// outsideScript is true when the scanner is in the text a script language is
 	// embedded in rather than in its code: a PHP file before its first <?php.
 	outsideScript bool
+	// bodyStart is where the body of a multi-line string opened on the line being
+	// scanned begins, or -1. Reset per line by scanLines and read into
+	// codeLine.BodyStart, which is the only thing that consumes it.
+	bodyStart int
+	// bodies collects the spans of literals that opened and closed on the line being
+	// scanned in a form whose delimiters Text does not keep. Reset per line by
+	// scanLines and read into codeLine.Bodies, which is the only thing that consumes
+	// it. Several per line, since `f(r#"a"#, r#"b"#)` is one call and two literals.
+	bodies [][2]int
+}
+
+// addBody records a closed delimited literal's body span, offsetting nothing: the
+// caller passes offsets into the line it is scanning.
+func (st *scanState) addBody(start, end int) {
+	if end < start {
+		return
+	}
+	st.bodies = append(st.bodies, [2]int{start, end})
 }
 
 // heredoc is one open heredoc body.
@@ -281,23 +332,42 @@ func scanLines(src string, cfg scanConfig) []codeLine {
 	// Starting inside would read a template's HTML as source.
 	st.outsideScript = cfg.scriptTags
 
+	// emit carries the per-line scanner state onto the line before it is appended. A
+	// closure rather than an assignment at each of the eight return paths, because
+	// missing one would drop every delimited literal on whichever line took that path
+	// — silently, since the line is still emitted and still holds its code.
+	emit := func(cl codeLine) {
+		cl.Bodies = st.bodies
+		out = append(out, cl)
+	}
+
 	for i, line := range raw {
-		cl := codeLine{Raw: line, Num: i + 1, Indent: indentWidth(line)}
+		cl := codeLine{Raw: line, Num: i + 1, Indent: indentWidth(line), BodyStart: -1, BodyEnd: -1}
+		st.bodyStart = -1
+		// Nil rather than truncated, so the slice handed to the previous line is not
+		// overwritten by this one's literals.
+		st.bodies = nil
 		// A heredoc's body is checked before everything else, including an open
 		// string: the heredoc opened later, so it closes first.
 		if len(st.heredocs) > 0 {
 			if end, ok := heredocCloses(line, st.heredocs[0]); ok {
 				st.heredocs = st.heredocs[1:]
+				// The body ended on the line before this one — a heredoc terminator is its
+				// own line, and even a PowerShell here-string's `"@` begins one. So the body
+				// contributed by this line is empty rather than absent, which is a different
+				// thing from the -1 a line outside any string carries.
+				cl.BodyEnd = 0
 				// The remainder of a PowerShell here-string's terminator line is code. For
 				// every other heredoc end is the line's length, so this rescans nothing.
 				if end < len(line) && len(st.heredocs) == 0 {
-					cl.Text = strings.Repeat(" ", end) + scanOne(line[end:], cfg, &st)
-					out = append(out, cl)
+					cl.Text = scanFrom(line, end, cfg, &st)
+					cl.BodyStart = st.bodyStart
+					emit(cl)
 					continue
 				}
 			}
 			cl.InBlockString = true
-			out = append(out, cl)
+			emit(cl)
 			continue
 		}
 		if st.outsideScript {
@@ -309,11 +379,12 @@ func scanLines(src string, cfg scanConfig) []codeLine {
 				if strings.HasPrefix(line[open:], "php") {
 					open += 3
 				}
-				cl.Text = strings.Repeat(" ", open) + scanOne(line[open:], cfg, &st)
-				out = append(out, cl)
+				cl.Text = scanFrom(line, open, cfg, &st)
+				cl.BodyStart = st.bodyStart
+				emit(cl)
 				continue
 			}
-			out = append(out, cl)
+			emit(cl)
 			continue
 		}
 		if cfg.lineBlockStart != "" && st.blockDepth == 0 &&
@@ -321,40 +392,71 @@ func scanLines(src string, cfg scanConfig) []codeLine {
 			// Ruby's =begin. Only a comment at column 0, which is why it is matched
 			// against the unindented line and not tested inside scanOne.
 			st.blockDepth = 1
-			out = append(out, cl)
+			emit(cl)
 			continue
 		}
 		if cfg.lineBlockEnd != "" && st.blockDepth > 0 {
 			if strings.HasPrefix(line, cfg.lineBlockEnd) {
 				st.blockDepth = 0
 			}
-			out = append(out, cl)
+			emit(cl)
 			continue
 		}
 		if st.strDelim != "" {
 			// Inside a multi-line string: look for its terminator.
 			if end := st.closes(line); end >= 0 {
+				delim := st.strDelim
 				st.strDelim, st.strRaw, st.strVerbatim = "", false, false
 				// Everything up to and including the terminator is string body;
 				// the remainder of the line is code again.
-				cl.Text = strings.Repeat(" ", end) + scanOne(line[end:], cfg, &st)
+				cl.Text = scanFrom(line, end, cfg, &st)
+				// Up to the terminator, not past it. A caller reading the body wants the
+				// value, and the delimiter is syntax.
+				cl.BodyEnd = end - len(delim)
+				cl.BodyStart = st.bodyStart
 			} else {
 				cl.Text = ""
 				cl.InBlockString = true
 			}
-			out = append(out, cl)
+			emit(cl)
 			continue
 		}
 		if st.blockDepth > 0 {
 			// Inside a block comment.
 			cl.Text = consumeBlockComment(line, cfg, &st)
-			out = append(out, cl)
+			cl.BodyStart = st.bodyStart
+			emit(cl)
 			continue
 		}
 		cl.Text = scanOne(line, cfg, &st)
-		out = append(out, cl)
+		cl.BodyStart = st.bodyStart
+		emit(cl)
 	}
 	return out
+}
+
+// scanFrom scans the tail of a line from offset i, padding the result so its offsets still
+// line up with Raw.
+//
+// A wrapper rather than the two lines it replaces, because a multi-line string opened in
+// that tail reports its body's offset relative to the tail, and the pad is what makes the
+// number the caller sees an offset into the whole line. Three callers resume mid-line — a
+// heredoc terminator, a `?>` tag, a closed block string — and getting the adjustment wrong
+// in one of them would slice a literal's value at the wrong place.
+func scanFrom(line string, i int, cfg scanConfig, st *scanState) string {
+	before := len(st.bodies)
+	text := strings.Repeat(" ", i) + scanOne(line[i:], cfg, st)
+	if st.bodyStart >= 0 {
+		st.bodyStart += i
+	}
+	// The same adjustment, for the same reason: a literal that closed inside the tail
+	// reported its span relative to the tail. Only the spans this call added are shifted,
+	// since anything recorded before it was measured against the whole line.
+	for k := before; k < len(st.bodies); k++ {
+		st.bodies[k][0] += i
+		st.bodies[k][1] += i
+	}
+	return text
 }
 
 // consumeBlockComment advances through a line already inside a block comment,
@@ -377,7 +479,7 @@ func consumeBlockComment(line string, cfg scanConfig, st *scanState) string {
 	if st.blockDepth > 0 {
 		return ""
 	}
-	return strings.Repeat(" ", i) + scanOne(line[i:], cfg, st)
+	return scanFrom(line, i, cfg, st)
 }
 
 // scanOne strips comments and blanks string bodies in a single line of code,
@@ -430,6 +532,13 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 		if cfg.heredocPrefix != "" && strings.HasPrefix(line[i:], cfg.heredocPrefix) {
 			if hd, consumed, ok := scanHeredocOpen(line[i:], cfg.heredocPrefix); ok {
 				st.heredocs = append(st.heredocs, hd)
+				// A heredoc's body always begins on the next line, whatever else follows the
+				// opener here — `query(<<~SQL, id)` puts an argument after it and no body.
+				// Recorded only for the first of several opened on one line, since the body
+				// that begins next is that one's.
+				if st.bodyStart < 0 {
+					st.bodyStart = len(line)
+				}
 				b.WriteString(strings.Repeat(" ", consumed))
 				i += consumed
 				continue
@@ -445,6 +554,9 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 			if strings.TrimSpace(line[i+2:]) == "" {
 				st.heredocs = append(st.heredocs,
 					heredoc{term: string(line[i+1]) + "@", atTerm: true})
+				if st.bodyStart < 0 {
+					st.bodyStart = len(line)
+				}
 				b.WriteString(strings.Repeat(" ", len(line)-i))
 				i = len(line)
 				continue
@@ -455,6 +567,14 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 		if cfg.verbatimAt && line[i] == '@' && i+1 < len(line) && line[i+1] == '"' {
 			consumed, open := scanVerbatim(line[i:])
 			b.WriteString(strings.Repeat(" ", consumed))
+			if open && st.bodyStart < 0 {
+				st.bodyStart = i + 2 // past @"
+			}
+			if !open {
+				// Closed here: between the `@"` and the closing quote. Recorded because
+				// the delimiters are blanked, so nothing in Text marks the literal.
+				st.addBody(i+2, i+consumed-1)
+			}
 			i += consumed
 			if open {
 				st.strDelim, st.strVerbatim = `"`, true
@@ -467,11 +587,17 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 		if len(cfg.tripleQuotes) > 0 {
 			if d := matchAny(line[i:], cfg.tripleQuotes); d != "" {
 				if end := findUnescaped(line[i+len(d):], d); end >= 0 {
-					// Opens and closes on this line.
+					// Opens and closes on this line. The body is recorded rather than
+					// left to a caller: all three delimiter bytes are blanked, so a
+					// caller reading Raw at a quote in Text would find nothing here.
 					blank := len(d)*2 + end
+					st.addBody(i+len(d), i+len(d)+end)
 					b.WriteString(strings.Repeat(" ", blank))
 					i += blank
 					continue
+				}
+				if st.bodyStart < 0 {
+					st.bodyStart = i + len(d)
 				}
 				st.strDelim = d
 				break
@@ -483,8 +609,17 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 		// preceding-character check keeps an identifier that merely ends in r
 		// (`for`, `iter`) from being read as a raw-string prefix.
 		if cfg.rawStringHash && (line[i] == 'r' || line[i] == 'b') && !identChar(prevByte(line, i)) {
-			if consumed, term, ok := scanRustRawString(line[i:]); ok {
+			if consumed, body, term, ok := scanRustRawString(line[i:]); ok {
 				b.WriteString(strings.Repeat(" ", consumed))
+				if term != "" && st.bodyStart < 0 {
+					// Past the prefix, the hashes, and the quote: r#"…
+					st.bodyStart = i + (len(term) - 1) + 2
+				}
+				if term == "" {
+					// Closed here, so the body is recorded: the `r#"` and its closing
+					// `"#` are blanked, leaving nothing in Text to find it by.
+					st.addBody(i+body[0], i+body[1])
+				}
 				i += consumed
 				if term != "" {
 					// Unterminated on this line: the string continues, and inside a
@@ -522,6 +657,9 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 				i += end + 2
 				continue
 			}
+			if st.bodyStart < 0 {
+				st.bodyStart = i + 1
+			}
 			st.strDelim = "`"
 			break
 		}
@@ -544,6 +682,9 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 			// this is a syntax error, and the safe reading is "the rest is not code".
 			if cfg.multiLineQuote && q == `"` {
 				st.strDelim = q
+				if st.bodyStart < 0 {
+					st.bodyStart = i + 1
+				}
 			}
 			break
 		}
@@ -561,10 +702,15 @@ func scanOne(line string, cfg scanConfig, st *scanState) string {
 
 // scanRustRawString measures a Rust raw string starting at s[0]=='r' or 'b'.
 //
-// Returns the byte length consumed, the terminator still outstanding when the
-// string runs past the end of the line (empty when it closed here), and whether a
-// raw string was found at all.
-func scanRustRawString(s string) (consumed int, open string, ok bool) {
+// Returns the byte length consumed, the span of the body within s when the string
+// closed here, the terminator still outstanding when it runs past the end of the
+// line (empty when it closed here), and whether a raw string was found at all.
+//
+// The body span is returned rather than computed by the caller because the prefix
+// length depends on the hash count, which only this function counted: `r"` is two
+// bytes and `r###"` is five, and a caller reconstructing that from the terminator
+// would be re-deriving what was already measured here.
+func scanRustRawString(s string) (consumed int, body [2]int, open string, ok bool) {
 	i := 1
 	hashes := 0
 	for i < len(s) && s[i] == '#' {
@@ -572,15 +718,15 @@ func scanRustRawString(s string) (consumed int, open string, ok bool) {
 		i++
 	}
 	if i >= len(s) || s[i] != '"' {
-		return 0, "", false
+		return 0, [2]int{}, "", false
 	}
 	i++
 	term := `"` + strings.Repeat("#", hashes)
 	if idx := strings.Index(s[i:], term); idx >= 0 {
-		return i + idx + len(term), "", true
+		return i + idx + len(term), [2]int{i, i + idx}, "", true
 	}
 	// Unterminated on this line: consume the remainder and report what closes it.
-	return len(s), term, true
+	return len(s), [2]int{}, term, true
 }
 
 // scanHeredocOpen measures a heredoc opener at the start of s and reports what
@@ -886,7 +1032,13 @@ func joinWhile(lines []codeLine, i int, open, close string) (codeLine, int) {
 			depth = 0
 		}
 	}
-	return codeLine{Text: text, Raw: raw, Num: cur.Num, Indent: cur.Indent}, i
+	// No body offsets: the joined Raw is several lines' text spliced together, so an
+	// offset from any one of them points somewhere else in it. A caller wanting a
+	// multi-line literal's value reads the unjoined lines.
+	return codeLine{
+		Text: text, Raw: raw, Num: cur.Num, Indent: cur.Indent,
+		BodyStart: -1, BodyEnd: -1,
+	}, i
 }
 
 func endsWithBackslash(s string) bool {

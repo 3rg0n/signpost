@@ -81,6 +81,7 @@ func (ShellExtractor) Extract(f discover.File) (Facts, error) {
 			}
 		}
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

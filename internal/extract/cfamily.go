@@ -202,6 +202,7 @@ func (CExtractor) Extract(f discover.File) (Facts, error) {
 
 		depth, scopes = cAdvance(depth, scopes, cl.Text)
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 
