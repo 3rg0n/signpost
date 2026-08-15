@@ -67,7 +67,33 @@ func (GoExtractor) Extract(f discover.File) (Facts, error) {
 			facts.Symbols = append(facts.Symbols, goGenSymbols(fs, d)...)
 		}
 	}
+	facts.addQueries(goStringLiterals(fs, file))
 	return facts, nil
+}
+
+// goStringLiterals collects every string literal in a file, as the SQL reader wants them.
+//
+// The AST rather than the line scanner, for the same reason the rest of this extractor uses
+// it: the parser already knows what a literal is, including a raw string spanning forty
+// lines, and its position is exact. The concatenated form is the one case worth naming —
+// `"DELETE FROM " + table` arrives here as its literal half alone, which is precisely what
+// the reader reports as a gap rather than resolving, since resolving it needs the call graph
+// ADR 0022 says this project does not have.
+func goStringLiterals(fs *token.FileSet, file *ast.File) []sqlLiteral {
+	var out []sqlLiteral
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return true
+		}
+		val, err := strconv.Unquote(lit.Value)
+		if err != nil {
+			return true
+		}
+		out = append(out, sqlLiteral{text: val, line: fs.Position(lit.Pos()).Line})
+		return true
+	})
+	return out
 }
 
 // goImport converts one import spec.

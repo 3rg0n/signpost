@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/3rg0n/signpost/internal/discover"
+	"github.com/3rg0n/signpost/internal/sqlstmt"
 )
 
 // Repository-convention extraction: migrations, ownership, stated rules, and build
@@ -40,12 +41,12 @@ func ExtractMigration(f discover.File) Facts {
 	// keywords, which covers hand-written SQL and the generated SQL that Alembic, Prisma,
 	// and golang-migrate all emit; an ORM migration written in Python or TypeScript is
 	// read for the same verbs, which appear there as method names.
-	for _, ln := range sqlStatements(f.Content) {
-		verb, target := sqlStatementSubject(ln.text)
+	for _, ln := range sqlstmt.Split(f.Content) {
+		verb, target := sqlstmt.Subject(ln.Text)
 		if target != "" {
 			m.Tables = append(m.Tables, target)
 		}
-		if sqlDestructive(ln.text, verb) {
+		if sqlstmt.Destructive(ln.Text, verb) {
 			// Recorded on the migration rather than per statement: "this migration is
 			// destructive" is the fact a reader needs before running it.
 			m.Destructive = true
@@ -55,165 +56,6 @@ func ExtractMigration(f discover.File) Facts {
 	// is part of the name so both halves stay visible without doubling the sequence.
 	facts.Migrations = append(facts.Migrations, m)
 	return facts
-}
-
-// destructiveSQL are the statement verbs that lose data or break a running deployment.
-//
-// DROP and TRUNCATE are obvious. A column rename is here because it breaks every reader
-// of the old name at the moment it lands, which in a rolling deployment is the old
-// version of the application still serving traffic.
-var destructiveSQL = map[string]bool{
-	"DROP": true, "TRUNCATE": true, "DELETE": true, "RENAME": true,
-}
-
-// sqlDestructive reports whether a statement loses data or breaks a running deployment.
-//
-// The leading verb is not enough, and the case it misses is the one that matters most:
-// `ALTER TABLE things DROP COLUMN legacy_id` leads with ALTER, which is additive far more
-// often than not, and drops a column. So an ALTER is also searched for a destructive
-// action word. The search is over whole fields rather than the raw text because a column
-// named `dropped_at` or a table named `deleted_things` is not an action.
-func sqlDestructive(stmt, verb string) bool {
-	if destructiveSQL[verb] {
-		return true
-	}
-	if verb != "ALTER" {
-		return false
-	}
-	for _, f := range strings.Fields(stmt)[1:] {
-		if destructiveSQL[strings.ToUpper(strings.Trim(f, "`\"'();,"))] {
-			return true
-		}
-	}
-	return false
-}
-
-// sqlStatement is one statement, with the line it began on.
-type sqlStatement struct {
-	text string
-	num  int
-}
-
-// sqlStatements splits SQL into statements, skipping comments and string bodies.
-//
-// A `;` inside a string literal or a `--` comment does not end a statement, and both
-// appear in real migrations — a seeded row of text, a commented-out rollback.
-func sqlStatements(src string) []sqlStatement {
-	var out []sqlStatement
-	var cur strings.Builder
-	start := 0
-	inBlock := false
-	q := byte(0)
-	// A dollar-quoted body ($$ ... $$) holds a whole function in Postgres, and
-	// everything inside it is content.
-	inDollar := false
-
-	for i, raw := range strings.Split(strings.ReplaceAll(src, "\r\n", "\n"), "\n") {
-		num := i + 1
-		for j := 0; j < len(raw); j++ {
-			c := raw[j]
-			switch {
-			case inBlock:
-				if c == '*' && j+1 < len(raw) && raw[j+1] == '/' {
-					inBlock = false
-					j++
-				}
-			case inDollar:
-				if c == '$' && j+1 < len(raw) && raw[j+1] == '$' {
-					inDollar = false
-					j++
-				}
-			case q != 0:
-				// SQL escapes a quote by doubling it, not with a backslash.
-				if c == q {
-					if j+1 < len(raw) && raw[j+1] == q {
-						j++
-						cur.WriteByte(c)
-						continue
-					}
-					q = 0
-				}
-				cur.WriteByte(c)
-			case c == '\'' || c == '"' || c == '`':
-				q = c
-				cur.WriteByte(c)
-			case c == '$' && j+1 < len(raw) && raw[j+1] == '$':
-				inDollar = true
-				j++
-			case c == '-' && j+1 < len(raw) && raw[j+1] == '-':
-				j = len(raw)
-			case c == '#' && cur.Len() == 0:
-				// A `#` comment is MySQL's, and a leading one is unambiguous.
-				j = len(raw)
-			case c == '/' && j+1 < len(raw) && raw[j+1] == '*':
-				inBlock = true
-				j++
-			case c == ';':
-				if text := strings.TrimSpace(cur.String()); text != "" {
-					out = append(out, sqlStatement{text: text, num: max(start, num)})
-				}
-				cur.Reset()
-				start = 0
-			default:
-				if cur.Len() == 0 {
-					if c == ' ' || c == '\t' {
-						continue
-					}
-					start = num
-				}
-				cur.WriteByte(c)
-			}
-		}
-		if cur.Len() > 0 {
-			cur.WriteByte(' ')
-		}
-	}
-	if text := strings.TrimSpace(cur.String()); text != "" {
-		out = append(out, sqlStatement{text: text, num: max(start, 1)})
-	}
-	return out
-}
-
-// sqlNoiseWords are the keywords between a statement's verb and the name it acts on.
-var sqlNoiseWords = map[string]bool{
-	"TABLE": true, "INDEX": true, "VIEW": true, "TYPE": true, "SCHEMA": true,
-	"UNIQUE": true, "IF": true, "NOT": true, "EXISTS": true, "COLUMN": true,
-	"CONSTRAINT": true, "MATERIALIZED": true, "CONCURRENTLY": true, "TRIGGER": true,
-	"FUNCTION": true, "SEQUENCE": true, "INTO": true, "FROM": true, "ONLY": true,
-	"OR": true, "REPLACE": true, "TEMPORARY": true, "TEMP": true, "PRIMARY": true,
-	"KEY": true, "FOREIGN": true, "EXTENSION": true, "DATABASE": true,
-}
-
-// sqlStatementSubject returns a statement's verb and the object it names.
-//
-// The verb decides whether the migration is destructive; the object is the table, which
-// is the node a data-model graph is built from.
-func sqlStatementSubject(stmt string) (string, string) {
-	fields := strings.Fields(stmt)
-	if len(fields) == 0 {
-		return "", ""
-	}
-	verb := strings.ToUpper(fields[0])
-	switch verb {
-	case "CREATE", "DROP", "ALTER", "TRUNCATE", "INSERT", "DELETE", "UPDATE", "RENAME":
-	default:
-		// Not a DDL or DML statement: a SET, a COMMENT, a BEGIN. Nothing §4.1 asks for.
-		return verb, ""
-	}
-	for _, f := range fields[1:] {
-		word := strings.ToUpper(f)
-		if sqlNoiseWords[word] {
-			continue
-		}
-		name := strings.Trim(f, "`\"'();,")
-		// A schema-qualified name keeps its qualifier: `public.things` and
-		// `audit.things` are different tables.
-		if name == "" || strings.HasPrefix(name, "(") {
-			continue
-		}
-		return verb, name
-	}
-	return verb, ""
 }
 
 // splitMigrationName separates a migration's version from its description.

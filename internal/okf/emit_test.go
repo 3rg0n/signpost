@@ -604,3 +604,85 @@ func TestPagePath(t *testing.T) {
 		t.Errorf("pagePath = %q", got)
 	}
 }
+
+// A table's page renders its incoming access edges, and it is the only page that renders
+// incoming edges at all.
+//
+// The asymmetry is the point. Everywhere else the question a page answers is "what does this
+// depend on", asked from the page it is asked about, and the importers of a module are reached
+// through the index. A table depends on nothing — a data node has no outgoing edges — and the
+// question a reader arrives with is entirely about the other end: something wrote a duplicate
+// row, and which code can write this table is the answer. Rendering only outgoing edges left
+// the page a data symptom sends a reader to holding its migration history and nothing about
+// the code.
+func TestADataPageNamesItsWritersAndReaders(t *testing.T) {
+	g := graph.New()
+	for _, n := range []*graph.Node{
+		{ID: "/data/orders", Kind: graph.KindDataStore, Title: "orders"},
+		{ID: "/modules/store", Kind: graph.KindModule, Title: "internal/store"},
+		{ID: "/modules/reconcile", Kind: graph.KindModule, Title: "reconcile"},
+		{ID: "/modules/report", Kind: graph.KindModule, Title: "report"},
+	} {
+		if err := g.AddNode(n); err != nil {
+			t.Fatalf("AddNode(%s): %v", n.ID, err)
+		}
+	}
+	for _, e := range []graph.Edge{
+		{From: "/modules/store", To: "/data/orders", Kind: graph.EdgeWrites, Conf: graph.Extracted},
+		{From: "/modules/reconcile", To: "/data/orders", Kind: graph.EdgeWrites, Conf: graph.Extracted},
+		{From: "/modules/report", To: "/data/orders", Kind: graph.EdgeReads, Conf: graph.Extracted},
+		// An import into the same module, to check the exception stays scoped: this is an
+		// incoming edge to a module page and must not be rendered there.
+		{From: "/modules/report", To: "/modules/store", Kind: graph.EdgeImports, Conf: graph.Extracted},
+	} {
+		g.AddEdge(e)
+	}
+	got, ok := pageFor(g, g.Node("/data/orders"), demoOptions()).Managed(regionStructure)
+	if !ok {
+		t.Fatal("no structure region")
+	}
+	// Both writers, named, on the page a reader chasing a duplicate row opens. ADR 0034
+	// declines to link the two writers to each other precisely because this page is where
+	// their coupling is legible, so a page that did not name them would leave it nowhere.
+	for _, want := range []string{
+		"**Written by**",
+		"[internal/store](../modules/store.md)",
+		"[reconcile](../modules/reconcile.md)",
+		"**Read by**",
+		"[report](../modules/report.md)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("data page missing %q:\n%s", want, got)
+		}
+	}
+	// Writes before reads: the reader is more often chasing a row that is wrong than one
+	// that is stale, and a bare list of "these three modules touch it" is what the two kinds
+	// exist to avoid.
+	if strings.Index(got, "Written by") > strings.Index(got, "Read by") {
+		t.Errorf("reads were rendered before writes:\n%s", got)
+	}
+	// And the exception does not leak. A module page still shows only what it points at.
+	mod, _ := pageFor(g, g.Node("/modules/store"), demoOptions()).Managed(regionStructure)
+	if strings.Contains(mod, "report") {
+		t.Errorf("a module page rendered an incoming import. Every edge appears on exactly "+
+			"one page, which is what keeps the bundle linear in the edge count:\n%s", mod)
+	}
+	if !strings.Contains(mod, "**Writes**") {
+		t.Errorf("the writer's own page does not name the table it writes:\n%s", mod)
+	}
+}
+
+// A table nothing touches says so, rather than rendering an empty pair of headings that reads
+// as a page still being filled in.
+func TestADataPageWithNoAccessSaysNothingLinksToIt(t *testing.T) {
+	g := graph.New()
+	if err := g.AddNode(&graph.Node{
+		ID: "/data/orders", Kind: graph.KindDataStore, Title: "orders",
+	}); err != nil {
+		t.Fatalf("AddNode: %v", err)
+	}
+	got, _ := pageFor(g, g.Node("/data/orders"), demoOptions()).Managed(regionStructure)
+	if !strings.Contains(got, "Nothing links to or from this page") {
+		t.Errorf("data page structure region = %q", got)
+	}
+}

@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A data store page names the code that writes it and the code that reads it.** A migration
+  says a table exists; only the source says which module touches it, and reading SQL out of
+  string literals in thirteen languages supplies the half of the data map that was missing.
+  A statement whose table is not spelled out draws no edge and is counted instead, reported
+  separately from a table no migration declares because the two have different remedies
+  ([ADR 0034](docs/adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md)).
+
 - **`signpost update` replaces the binary with the latest published release**, verifying the
   archive's sha256 against the release's `checksums.txt` before writing anything and refusing
   outright when a release publishes no checksums, omits the asset, or the digest does not
@@ -1234,6 +1241,12 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+- **A string literal written on one line in a delimited form was invisible to every reader of
+  literals.** The scanner blanks `r#"…"#`, `@"…"` and a one-line `"""…"""` delimiters and all,
+  so a Rust raw string holding a query was recovered as no literal at all — drawing neither an
+  edge nor a gap. The scanner now records those spans, since only it knows which of eight forms
+  opened the literal.
 
 - **`signpost version` now names the build, so a stale binary is visible.** It printed `dev` for
   every build that was not a tagged release, which is every `go build` and every `go install` —

@@ -125,6 +125,7 @@ func (PythonExtractor) Extract(f discover.File) (Facts, error) {
 		facts.Symbols = pyApplyAll(facts.Symbols, allNames)
 		facts.Symbols = append(facts.Symbols, pyReExports(facts, allNames)...)
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

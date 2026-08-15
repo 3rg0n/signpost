@@ -1708,6 +1708,63 @@ jobs:
           done
           echo "unlinked: ${got} specifier(s), each placed exactly and holding no page"
 
+      # The fourth kind of gap, and the only one that is not about an import: a statement whose
+      # table the source assembles at run time. `"DELETE FROM " + table` is a real statement
+      # against a real table whose name is the caller's, so there is nothing to draw and
+      # something to count — a module whose every query interpolates its table would otherwise
+      # report no data access at all, which reads as "this code touches no tables" rather than
+      # "signpost could not tell" (ADR 0034).
+      #
+      # Counted here as well as in the Go stage because the two assert different things about
+      # the same number. The stage checks it against the fixtures, which it knows; this step
+      # checks that the *report* still carries the line, which is the only place a reader ever
+      # sees it. A refactor that stopped printing it would leave the stage green.
+      - name: Statements whose table is built at run time are counted
+        run: |
+          set -euo pipefail
+          gaps="${RUNNER_TEMP}/gaps.txt"
+          got=$(sed -n \
+            's/^ *\([0-9]*\) statement(s) build a table name at run time.*/\1/p' "$gaps" | head -1)
+          [ -n "$got" ] || {
+            echo "no run-time table-name line in the coverage report. Every one of the twelve"
+            echo "store fixtures interpolates a table name in its own language's syntax, so"
+            echo "silence here says the pass read every statement in the corpus."
+            cat "$gaps"
+            exit 1
+          }
+          # Thirteen store files, and two above that from a stated limitation rather than two
+          # more statements: a comma closes a run of two bare words the same way it does in
+          # `FROM orders o, customers c`, so the TypeScript and shell prose fixtures —
+          # "insert into <interpolation> failed, retrying" — are accepted and counted.
+          # `TestProseClosedByAPunctuationMarkIsCountedAsAGap` in internal/sqlstmt bounds it:
+          # no table is drawn, so the whole cost is this number reading high.
+          want=15
+          [ "$got" = "$want" ] || {
+            echo "${got} statement(s) building a table name at run time, want ${want}."
+            echo
+            echo "Lower means an interpolated statement stopped being counted, and that is the"
+            echo "silent direction: the module reads as touching one table fewer with nothing"
+            echo "saying so. Higher means prose was accepted as a query, which inflates the one"
+            echo "number a reader uses to judge how much of the data map is missing."
+            cat "$gaps"
+            exit 1
+          }
+          # And the fifth kind stays absent, because it is a separate line with a separate
+          # remedy. A table a source spells out that no migration declares means write the
+          # migration or fix the typo; an interpolated name means static reading cannot reach
+          # it. Every table the corpus names is created by db/migrations, so an entry here is a
+          # bare word the reader took for a table name — and one merged count is what would
+          # hide it.
+          if grep -q 'no migration declares' "$gaps"; then
+            echo "the coverage report names tables no migration declares:"
+            grep 'no migration declares' "$gaps"
+            echo
+            echo "Every table the corpus's sources name is created by db/migrations, so this is"
+            echo "a name read out of text that is not a statement."
+            exit 1
+          fi
+          echo "run-time table names: ${got} statement(s) counted, none guessed at"
+
       # A page's name is its node ID and every other page links to it by that name (ADR 0003),
       # so a renamed page is that file plus every page citing it, rewritten in the diff of a
       # commit that need not have touched the directory. Nothing in the graph is wrong

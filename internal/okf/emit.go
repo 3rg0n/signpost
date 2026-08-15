@@ -328,11 +328,64 @@ func structureText(g *graph.Graph, n *graph.Node) string {
 		b.WriteString(edgeSentence(g, from, es))
 		b.WriteString("\n")
 	}
+	b.WriteString(accessText(g, n, from))
 	if b.Len() == 0 {
 		return "Nothing links to or from this page. It may be dead code, an unreferenced " +
 			"document, or a gap in extraction — the coverage report says which.\n"
 	}
 	return b.String()
+}
+
+// accessText names the modules that write and read a table, on the table's own page.
+//
+// The one place a page renders its *incoming* edges, and the exception edgeList's comment
+// does not cover. Everywhere else, "what does this depend on" is the question asked from the
+// page it is asked about: a module's page lists what the module imports, and the importers
+// are reachable from the index. A table is the other way round. It depends on nothing — a
+// data node has no outgoing edges at all — and the question a reader arrives with is
+// entirely about the other end: something wrote a duplicate row, and which code can write
+// this table is the answer. Without this the page a data symptom sends a reader to would
+// show its migration history and nothing about the code, which is the gap ADR 0034 exists
+// to close.
+//
+// Limited to writes and reads on a data page, so the asymmetry stays a property of this one
+// kind of page rather than a general "and also everything pointing here", which is what
+// would double the bundle's size in the edge count.
+func accessText(g *graph.Graph, n *graph.Node, from string) string {
+	if n.Kind != graph.KindDataStore {
+		return ""
+	}
+	var writes, reads []graph.Edge
+	for _, e := range g.EdgesTo(n.ID) {
+		switch e.Kind {
+		case graph.EdgeWrites:
+			writes = append(writes, e)
+		case graph.EdgeReads:
+			reads = append(reads, e)
+		}
+	}
+	var b strings.Builder
+	// Writes first, and both lines labelled from the module's side rather than the table's:
+	// the reader is looking for code, and "Written by" says which end of the link they are
+	// about to follow.
+	if len(writes) > 0 {
+		b.WriteString("\n- **Written by**: " + incomingSentence(g, from, writes) + "\n")
+	}
+	if len(reads) > 0 {
+		b.WriteString("\n- **Read by**: " + incomingSentence(g, from, reads) + "\n")
+	}
+	return b.String()
+}
+
+// incomingSentence is edgeSentence for edges pointing at this page: same rendering, linking
+// From rather than To.
+func incomingSentence(g *graph.Graph, from string, es []graph.Edge) string {
+	flipped := make([]graph.Edge, 0, len(es))
+	for _, e := range es {
+		e.To = e.From
+		flipped = append(flipped, e)
+	}
+	return edgeSentence(g, from, flipped)
 }
 
 func filesLine(n *graph.Node) string {
@@ -509,6 +562,10 @@ func edgeKindLabel(k graph.EdgeKind) string {
 		return "Owned by"
 	case graph.EdgePrecedes:
 		return "Runs before"
+	case graph.EdgeWrites:
+		return "Writes"
+	case graph.EdgeReads:
+		return "Reads"
 	}
 	// An edge kind added to graph without a label here renders as its raw value rather
 	// than as nothing, so a missing case is a cosmetic gap in one line of one page and not

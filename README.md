@@ -170,6 +170,14 @@ and GraphQL SDL for contracts; SQL migrations, CODEOWNERS, ADRs, and Makefiles
 for the rest. Secrets are recorded as *references* — a name and its key names,
 never a value — because the bundle gets committed.
 
+A migration says a table exists and nothing about which code touches it, so the SQL inside
+string literals is read as well: a table page names the modules that write it and the modules
+that read it, which is the half of the data map a reader with a duplicate row or a missing write
+actually needs. Where the table name is not in the source — `"DELETE FROM " + table` — no edge is
+drawn and the statement is counted in the coverage report instead, on a separate line from a
+table a source names that no migration declares, because one means static reading cannot reach
+it and the other means the migration is missing.
+
 It also reads the repository's own history. Churn, first and last commit dates,
 and author concentration land on each module; directories that keep changing in
 the same commit become a co-change edge weighted by how often. That is the one

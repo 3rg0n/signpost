@@ -83,6 +83,15 @@ type Facts struct {
 	// Entrypoints are declarations that start execution: `func main`,
 	// `if __name__ == "__main__"`, a `bin` script target, `fn main`.
 	Entrypoints []string
+	// Queries are the tables this file's SQL names, and in which direction. This is
+	// the half of the data map a migration cannot supply: the migration says a table
+	// exists, and only the source says which code touches it.
+	Queries []Query
+	// UnnamedQueries counts statements needing a table name the source assembles at
+	// run time — `"DELETE FROM " + t`, `DELETE FROM %s`. Counted rather than guessed
+	// at (ADR 0034), and counted because the alternative is reporting a module that
+	// touches six tables as touching four with nothing saying so.
+	UnnamedQueries int
 	// Incomplete marks a file the extractor could not fully read — a syntax
 	// error, or content truncated by the size caps. The bundle reports these
 	// rather than presenting partial extraction as complete (design §4.2).
@@ -265,6 +274,7 @@ func (fa *Facts) Normalize() {
 	fa.Symbols = mergeSymbols(fa.Symbols)
 	sort.Strings(fa.Entrypoints)
 	fa.Entrypoints = dedupeStrings(fa.Entrypoints)
+	fa.normalizeQueries()
 }
 
 // mergeSymbols folds two records of the same declaration into one.

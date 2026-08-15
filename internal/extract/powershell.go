@@ -182,6 +182,7 @@ func (PowerShellExtractor) Extract(f discover.File) (Facts, error) {
 			depth, types = jvmAdvance(depth, types, cl.Text)
 		}
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

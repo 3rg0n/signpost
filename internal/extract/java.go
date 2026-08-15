@@ -133,6 +133,7 @@ func (JavaExtractor) Extract(f discover.File) (Facts, error) {
 			i = last
 		}
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

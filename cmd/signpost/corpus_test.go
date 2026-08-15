@@ -4435,3 +4435,317 @@ func workingTree(t *testing.T, root string) map[string]string {
 	}
 	return files
 }
+
+// TestCorpusDrawsEveryDataEdgeAndNoneItGuessedAt is the stage for the data pass, and it
+// asserts counts rather than presence for a reason the store fixtures are built around.
+//
+// Twelve stores hold the same three shapes — a query whose table is spelled out, a query
+// whose table the language builds at run time, and a string that mentions a verb and is
+// prose — because the reader is one implementation and the *recovery* of a string literal is
+// twelve: eleven scanner configurations plus Go's parser. A fixture in one language proves
+// the reader; a fixture per recovery path proves the recovery. This stage is where the
+// second claim is checked against the binary rather than against a scanner unit test.
+//
+// The failure it guards is not a missing edge. It is an edge nobody wrote: a page named
+// `%s`, a table called `the` read out of "could not update the order", a writer minted from
+// the middle line of a C++ raw string. Every one of those looks like a richer map, and a
+// presence assertion — "orders has a writer" — passes for all of them. A count fails in both
+// directions, which is the only shape that catches the over-claim.
+func TestCorpusDrawsEveryDataEdgeAndNoneItGuessedAt(t *testing.T) {
+	dir := corpusRepo(t)
+	// No -quiet: the interpolated-gap count is on stderr and -quiet is what suppresses it.
+	_, stderr, code := invoke(t, "build", "-repo", "example.com/corpus", dir)
+	if code != 0 {
+		t.Fatalf("build failed: exit = %d\n%s", code, stderr)
+	}
+
+	stdout, _, code := invoke(t, "graph", "export", "-format", "json", "--quiet", dir)
+	if code != 0 {
+		t.Fatalf("export failed: exit = %d", code)
+	}
+	var g struct {
+		Nodes []struct {
+			ID, Kind, Path, Title string
+		}
+		Edges []struct {
+			From, To, Kind, Confidence, Source string
+			Weight                             int
+		}
+	}
+	if err := json.Unmarshal([]byte(stdout), &g); err != nil {
+		t.Fatalf("export did not produce JSON: %v", err)
+	}
+
+	// The four tables the two migrations declare, and nothing else. A data node is created
+	// only by a migration (ADR 0034), so this list is also the assertion that no name a
+	// *source file* held became a page — which is where `%s`, `{table}` and `$table` would
+	// arrive from.
+	tables := map[string]string{} // node ID -> table name
+	var names []string
+	for _, n := range g.Nodes {
+		if n.Kind != "Data Store" {
+			continue
+		}
+		tables[n.ID] = n.Title
+		names = append(names, n.Title)
+	}
+	sort.Strings(names)
+	wantTables := []string{"audit_log", "customers", "orders", "orders_customer_idx"}
+	if strings.Join(names, " ") != strings.Join(wantTables, " ") {
+		t.Fatalf("data store nodes = %v, want %v.\n\nHigher means a table page was minted from "+
+			"something no migration declares — an interpolation placeholder, a raw string's "+
+			"unquoted middle line, a bare word out of prose — and a committed artifact naming "+
+			"a table that does not exist is worse than one missing an edge. Lower means the "+
+			"migration reader stopped seeing a CREATE.", names, wantTables)
+	}
+
+	byPath := map[string]string{}
+	for _, n := range g.Nodes {
+		if n.Path != "" {
+			byPath[n.ID] = n.Path
+		}
+	}
+	access := map[string][]string{}
+	total := 0
+	for _, e := range g.Edges {
+		if e.Kind != "writes" && e.Kind != "reads" {
+			continue
+		}
+		total++
+		table, ok := tables[e.To]
+		if !ok {
+			t.Errorf("a %s edge from %s points at %s, which is not a data store. A data edge's "+
+				"target is a table, and one pointing anywhere else means the access was "+
+				"attached to whatever node happened to carry the name", e.Kind, e.From, e.To)
+			continue
+		}
+		access[e.Kind+" "+table] = append(access[e.Kind+" "+table], byPath[e.From])
+		// Provenance on every edge rather than sampled. A data edge is the one an on-call
+		// reader acts on — "who writes this table" — and one with no file behind it is an
+		// assertion they cannot check.
+		if e.Source == "" {
+			t.Errorf("the %s edge %s -> %s names no source file. A reader following a data "+
+				"edge is looking for the statement, and an edge with no provenance sends them "+
+				"to grep the repository", e.Kind, byPath[e.From], table)
+		}
+		// Extracted and never Ambiguous: the pass is deterministic, and ADR 0034 reserves
+		// Ambiguous for a model flagging its own output. A deterministic pass that hedged
+		// would teach a reader to discount every edge in the bundle.
+		if e.Confidence != "extracted" {
+			t.Errorf("the %s edge %s -> %s has confidence %q, want extracted. The SQL pass "+
+				"reads a literal name or draws nothing (ADR 0034)",
+				e.Kind, byPath[e.From], table, e.Confidence)
+		}
+		// No weight, ever. A module writing `orders` from eleven call sites is more verbose,
+		// not eleven times a writer, and a weight there renders as coupling strength.
+		if e.Weight != 0 {
+			t.Errorf("the %s edge %s -> %s carries weight %d. A data edge has no count — "+
+				"eleven statements against one table is one module writing it",
+				e.Kind, byPath[e.From], table, e.Weight)
+		}
+	}
+
+	// The twelve recovery paths, named by the module each store fixture lands in. Asserted as
+	// the exact set rather than as a count, because a count of twelve is satisfied by one
+	// language's store being read twice and another's not at all — and "not at all" is the
+	// failure the fixtures exist to catch. `c/src` and `cpp/src` share one scanner (ADR 0022)
+	// and `ts/packages/api/src` covers both JS-like configurations, which is why twelve
+	// recovery paths reach thirteen module entries.
+	everyStore := []string{
+		"c/src",
+		"cpp/src",
+		"dotnet/Corpus.Api",
+		"go/store",
+		"jvm/src/main/java/com/example/store",
+		"jvm/src/main/kotlin/com/example/app",
+		"php/src",
+		"powershell/src/Corpus",
+		"py/greeter",
+		"ruby/lib/corpus",
+		"rust/src",
+		"shell/scripts",
+		"ts/packages/api/src",
+	}
+	// Every store reads `orders`. Twelve of the thirteen write `customers`: Go is the one that
+	// writes `orders` instead, so `orders` has exactly one writer and the read/write split is
+	// not an artefact of a single shared fixture.
+	//
+	// `reads customers` is the short list on purpose. Seven of the stores hold a second read
+	// naming `customers` — a JOIN, or Rust's raw-string LIKE query — and the rest do not, so
+	// this is the entry that fails if the reader starts finding a table per bare word.
+	want := map[string][]string{
+		"reads orders": everyStore,
+		"writes customers": {
+			"c/src",
+			"cpp/src",
+			"dotnet/Corpus.Api",
+			"jvm/src/main/java/com/example/store",
+			"jvm/src/main/kotlin/com/example/app",
+			"php/src",
+			"powershell/src/Corpus",
+			"py/greeter",
+			"ruby/lib/corpus",
+			"rust/src",
+			"shell/scripts",
+			"ts/packages/api/src",
+		},
+		"writes orders": {"go/store"},
+		"reads customers": {
+			"dotnet/Corpus.Api",
+			"go/store",
+			"jvm/src/main/java/com/example/store",
+			"php/src",
+			"powershell/src/Corpus",
+			"rust/src",
+			"shell/scripts",
+		},
+	}
+	for key, wantMods := range want {
+		got := access[key]
+		sort.Strings(got)
+		// Compared as joined text rather than element by element: a module path holds no
+		// spaces, so the join is unambiguous, and the failure message wants both lists whole
+		// anyway.
+		if strings.Join(got, " ") != strings.Join(wantMods, " ") {
+			t.Errorf("%s: modules = %v, want %v.\n\nA module missing here is a recovery path "+
+				"that stopped working, and since the store fixtures are one per path the "+
+				"absent entry names the scanner configuration to look at. A module appearing "+
+				"that should not is a table read out of text that is not a statement.",
+				key, got, wantMods)
+		}
+	}
+	// The count as well as the sets, so an access pair this test does not name cannot appear
+	// at all. `writes audit_log` is what that would be, and it is why the total is asserted
+	// alongside the four sets rather than derived from them and trusted.
+	wantTotal := 0
+	for _, mods := range want {
+		wantTotal += len(mods)
+	}
+	if total != wantTotal {
+		t.Errorf("%d data edge(s), want %d. The sets above name every one, so a difference "+
+			"here is an access pair nothing in this test expects", total, wantTotal)
+	}
+
+	// audit_log is the negative boundary, and it is the C++ raw string's. `scanC` does not
+	// model `R"delim(...)delim"` — the delimiter is arbitrary text rather than a run of
+	// hashes, so Rust's rule does not transfer — and the fixture states the cost: the query is
+	// read as nothing. That is the acceptable direction. The unacceptable one is a table
+	// minted from the delimiter, or an access read off `FROM audit_log` sitting unquoted in
+	// the middle of the literal, which is exactly the text a looser reader finds.
+	//
+	// So audit_log must exist, because a migration creates it, and must carry no access at
+	// all, because nothing in the corpus touches it in a form this reader recovers.
+	for key, mods := range access {
+		if strings.HasSuffix(key, " audit_log") {
+			t.Errorf("audit_log has %s: %v. Nothing in the corpus reaches it in a readable "+
+				"form — the only statement naming it is inside a C++ raw string, which the "+
+				"scanner does not model — so an edge here was read out of an unmodelled "+
+				"literal's unquoted body, meaning a delimiter or a bare word became an access",
+				key, mods)
+		}
+	}
+
+	// The page, since the graph is not what a reader opens. A data page is the one page that
+	// renders *incoming* edges, so these two sentences are the pass's whole output as far as
+	// anybody using the bundle is concerned.
+	pages := bundlePages(t, dir)
+	orders, ok := pages["data/orders.md"]
+	if !ok {
+		t.Fatalf("no data/orders.md in the bundle: %v", sortedPageNames(pages))
+	}
+	if !strings.Contains(orders, "**Written by**: [go/store]") {
+		t.Errorf("data/orders.md does not name go/store as its writer. One module in the whole "+
+			"corpus writes orders, and which one is the question a data page exists to "+
+			"answer:\n%s", orders)
+	}
+	for _, mod := range everyStore {
+		if !strings.Contains(orders, "["+mod+"]") {
+			t.Errorf("data/orders.md does not name %s. Every store fixture reads orders, and "+
+				"the reader list is what an on-call reader scans:\n%s", mod, orders)
+		}
+	}
+	auditLog, ok := pages["data/audit-log.md"]
+	if !ok {
+		t.Fatalf("no data/audit-log.md in the bundle: %v", sortedPageNames(pages))
+	}
+	for _, sentence := range []string{"**Written by**", "**Read by**"} {
+		if strings.Contains(auditLog, sentence) {
+			t.Errorf("data/audit-log.md carries a %s sentence. The table exists because a "+
+				"migration creates it and nothing reaches it in a form this reader recovers, "+
+				"so the correct page names no module at all:\n%s", sentence, auditLog)
+		}
+	}
+	// And no page named after interpolation syntax. Checked against the page names rather
+	// than the node titles because the pages are what gets committed: a file called
+	// `data/table.md` in a repository is a claim, and a slugger that strips `%`, `{` and `$`
+	// turns every placeholder into a plausible-looking name.
+	for rel := range pages {
+		if !strings.HasPrefix(rel, "data/") {
+			continue
+		}
+		switch rel {
+		case "data/audit-log.md", "data/customers.md", "data/orders.md",
+			"data/orders-customer-idx.md":
+			continue
+		}
+		t.Errorf("%s is a data page, and the corpus declares four tables. It was named after "+
+			"something a source file held rather than something a migration declares — a "+
+			"format placeholder, an interpolated variable, a bare word out of prose", rel)
+	}
+
+	// The gaps, which are the other half of ADR 0034 and the half no presence assertion
+	// reaches. Each store holds a statement whose table it builds at run time, and every one
+	// must be counted and none resolved. Asserted as a number rather than "at least one" for
+	// the reason the counts above are: a gap silently dropped is a query read as touching no
+	// table, which in the output is indistinguishable from a module that touches none.
+	//
+	// Fifteen, and the two above thirteen are a known limitation rather than two more
+	// interpolated statements — `TestProseClosedByAPunctuationMarkIsCountedAsAGap` in
+	// internal/sqlstmt states it. The TypeScript and shell prose fixtures both read
+	// "insert into <interpolation> failed, retrying", and a comma closes a two-run of bare
+	// words exactly as it does in `FROM orders o, customers c`, so the gate accepts them and
+	// their interpolated name is counted. No table is drawn, which is the bound on the cost.
+	// The number is written here rather than derived so that fixing the limitation fails this
+	// stage and points at the test that explains it.
+	const wantGaps = 15
+	gaps, ok := interpolatedCount(stderr)
+	if !ok {
+		t.Fatalf("no run-time table-name line in the coverage report. Every store fixture "+
+			"builds one table name at run time, so silence here means the pass is claiming it "+
+			"read every statement in the corpus:\n%s", stderr)
+	}
+	if gaps != wantGaps {
+		t.Errorf("%d statement(s) building a table name at run time, want %d.\n\nLower means "+
+			"an interpolated statement stopped being counted, which is the silent failure ADR "+
+			"0034 separates the two counts to prevent — the module reads as touching one table "+
+			"fewer and nothing says so. Higher means prose was counted as a query signpost "+
+			"could not resolve, which inflates the number a reader uses to judge how much of "+
+			"the map is missing.\n\nReport:\n%s", gaps, wantGaps, stderr)
+	}
+	// And the other gap count stays empty. A table a *source* names and no migration declares
+	// is a separate line with a separate remedy — write the migration, or fix the typo — and
+	// the corpus has none, so anything here is a name read out of text that is not a
+	// statement. Folding the two counts into one is what would hide it.
+	if line := coverageLine(stderr, "no migration declares"); line != "" {
+		t.Errorf("the coverage report names tables no migration declares: %q. Every table the "+
+			"corpus's sources name is created by db/migrations, so an entry here is a bare "+
+			"word the reader took for a table name", line)
+	}
+}
+
+// interpolatedCount reads the statement count out of the run-time table-name line.
+//
+// The statement count is the only number on the line, and deliberately: unlike an unresolved
+// import there is no name to group by. `DELETE FROM %s` and `DELETE FROM {table}` are the
+// same gap to a reader — a statement whose target is not knowable from the source — and a
+// list of the placeholders would be a list of format-string syntax rather than of tables.
+func interpolatedCount(stderr string) (int, bool) {
+	for _, line := range strings.Split(stderr, "\n") {
+		var stmts int
+		if _, err := fmt.Sscanf(strings.TrimSpace(line),
+			"%d statement(s) build a table name at run time", &stmts); err == nil {
+			return stmts, true
+		}
+	}
+	return 0, false
+}

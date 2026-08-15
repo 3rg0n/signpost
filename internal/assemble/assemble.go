@@ -29,6 +29,7 @@ import (
 	"github.com/3rg0n/signpost/internal/extract"
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
+	"github.com/3rg0n/signpost/internal/sqlstmt"
 	"github.com/3rg0n/signpost/internal/vcs"
 )
 
@@ -66,6 +67,31 @@ type Result struct {
 	// numbers it means a resolution root is missing, which is what the tsconfig `paths`
 	// gap looked like from the outside: 542 edges absent, nothing saying so.
 	Unlinked map[string]int
+	// UnknownTables counts table names a statement spelled out that no migration in
+	// this repository declares, keyed by name.
+	//
+	// A repository whose schema is managed outside the tree — by a console, by a
+	// framework's model classes, by a migration tool whose files are not committed —
+	// lands every one of its queries here. That is the fix this count points at, and
+	// it is a different one from the count below: the name is right there in the
+	// source, so what is missing is the migration, not the string.
+	//
+	// No node is created for one (ADR 0034). A table page is a durable concept, and
+	// minting one from a query would let a typo in a string literal put a table that
+	// does not exist on the map.
+	UnknownTables map[string]int
+	// InterpolatedTables counts statements needing a table name the source assembles
+	// at run time — `"DELETE FROM " + t`, `DELETE FROM %s`.
+	//
+	// A count and not a map, because there is no key: the text signpost saw is
+	// formatting syntax, and listing `%s` five times names nothing a reader could go
+	// look at. The number is the whole fact — this many statements ran against tables
+	// the map does not show, so a module reporting three tables may touch nine.
+	//
+	// Separate from UnknownTables for the reason ADR 0034 gives: resolving one of
+	// these needs the call graph, which ADR 0022 says this project does not have, so
+	// the remedy is a reader's judgement rather than a missing migration.
+	InterpolatedTables int
 	// DroppedEdges is the number of edges removed for pointing at a node that does
 	// not exist. Non-zero is a bug in this package, and the CLI reports it.
 	DroppedEdges int
@@ -79,18 +105,20 @@ type Result struct {
 // depend on traversal, which is exactly what §8.1 forbids.
 func Build(in Input) (*Result, error) {
 	b := &builder{
-		g:          graph.New(),
-		ids:        newIDs(),
-		res:        newResolver(),
-		unresolved: make(map[string]int),
-		unlinked:   make(map[string]int),
-		in:         in,
+		g:            graph.New(),
+		ids:          newIDs(),
+		res:          newResolver(),
+		unresolved:   make(map[string]int),
+		unlinked:     make(map[string]int),
+		unknownTable: make(map[string]int),
+		in:           in,
 	}
 	if err := b.run(); err != nil {
 		return nil, err
 	}
 	return &Result{
 		Graph: b.g, Unresolved: b.unresolved, Unlinked: b.unlinked,
+		UnknownTables: b.unknownTable, InterpolatedTables: b.interpolated,
 		DroppedEdges: b.dropped,
 	}, nil
 }
@@ -102,7 +130,10 @@ type builder struct {
 	in         Input
 	unresolved map[string]int
 	unlinked   map[string]int
-	dropped    int
+	// unknownTable and interpolated are the data pass's two gaps; see Result.
+	unknownTable map[string]int
+	interpolated int
+	dropped      int
 
 	// moduleFiles groups source facts by the module directory they belong to, so a
 	// module node's description can be written from all of its files at once.
@@ -149,6 +180,7 @@ func (b *builder) run() error {
 	// Edges last, for the reason Build's comment gives.
 	b.addImportEdges()
 	b.addDeclaredDepEdges()
+	b.addDataEdges()
 	b.addPipelineEdges()
 	b.addTestEdges()
 	b.addServiceEdges()
@@ -1165,6 +1197,66 @@ func (b *builder) addDeclaredDepEdges() {
 			// finds both unused dependencies and undeclared ones.
 			b.g.AddEdge(graph.Edge{
 				From: from, To: to, Kind: graph.EdgeConfigures,
+				Conf: graph.Extracted, Source: f.Path,
+			})
+		}
+	}
+}
+
+// addDataEdges links a module to the tables its SQL names.
+//
+// This is the half of the data map only the source has. addData builds a table's page from
+// the migrations that changed it, which is the schema's history; nothing there says which
+// code touches the table, and until this pass ran, a reader who opened `/data/orders`
+// reached it from the index and from nowhere else.
+//
+// Two kinds rather than one, because they are two different questions — a duplicate row
+// asks who writes and a stale read asks who reads — and the direction is the extractor's,
+// read from the statement's own verb.
+//
+// The pass points modules at tables and never at each other. Two writers of one table are
+// both one hop from it, on its page, which is the page a reader with a data symptom opens;
+// an edge between them would assert a coupling no file declares (ADR 0034).
+//
+// Nothing here creates a node. A table the source names and no migration declares is
+// counted, and a statement whose table is assembled at run time is counted separately,
+// because the two have different fixes: the first is a missing migration and the second
+// needs a call graph this project does not have.
+func (b *builder) addDataEdges() {
+	if b.in.Source == nil {
+		return
+	}
+	for _, f := range b.in.Source.Facts {
+		// Counted before the module is resolved, because the statement is in the
+		// repository whether or not its directory became a page — a gap that disappeared
+		// when a file failed to place would be the quiet failure Unlinked was added for.
+		b.interpolated += f.UnnamedQueries
+		from := b.res.moduleAt(dirOf(f.Path))
+		if from == "" {
+			continue
+		}
+		for _, q := range f.Queries {
+			// Exact match, qualifier included, because that is how the migration reader
+			// spelled it: two schemas holding a table of one name are two tables, and
+			// deciding that `things` is `public.things` would need the search_path, which
+			// is a run-time value. A name that does not match is reported rather than
+			// resolved to the nearest thing that looks like it.
+			to := b.ids.lookup(prefixData, q.Table)
+			if to == "" {
+				b.unknownTable[q.Table]++
+				continue
+			}
+			kind := graph.EdgeReads
+			if q.Access == sqlstmt.Writes {
+				kind = graph.EdgeWrites
+			}
+			// No weight. Imports count importing files because thirty call sites is
+			// stronger coupling than one shared helper; a table is not like that. The
+			// facts a reader wants are which modules write it and which read it, and a
+			// module that writes `orders` from eleven statements is not eleven times as
+			// much of a writer than one that writes it from one — it is just more verbose.
+			b.g.AddEdge(graph.Edge{
+				From: from, To: to, Kind: kind,
 				Conf: graph.Extracted, Source: f.Path,
 			})
 		}

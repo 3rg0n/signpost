@@ -106,6 +106,7 @@ func (TSExtractor) Extract(f discover.File) (Facts, error) {
 			depth = 0
 		}
 	}
+	facts.addQueries(sqlLiterals(lines))
 	return facts, nil
 }
 

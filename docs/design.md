@@ -534,6 +534,42 @@ wrong way, a library the repository builds becomes a supply-chain entry for its 
 real dependency drops out of it; a label read repository-relative loses every internal edge a
 workspace below the top declares, or lands one on an unrelated directory of the same name.
 
+**A migration says a table exists; only the source says which code touches it.** Both facts are
+in the repository and until now only the first was on the map, which leaves the reader with a
+data symptom — duplicate rows, a missing write, an ordering problem between two services —
+holding a page that names a schema and no code. So the SQL inside string literals is read too,
+and the table gets the writers and readers a migration cannot supply. This runs on the far side
+of the scanner that removes string bodies from source, over the raw line the scanner preserves,
+so it inherits that scanner's judgement about which lines are code at all: a `DROP TABLE` in a
+comment is gone before this pass sees it. DDL in a literal is not read, because `CREATE TABLE` in
+source is a test fixture or an embedded schema and a migration is where a schema change is a fact
+about the repository.
+
+The precision rule is
+[ADR 0034](adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md)'s: read a table
+where the source spells one out, count a gap where it does not, and never guess. `"DELETE FROM "
++ table` is a real statement against a real table whose name is the caller's, and the honest
+output is a number in the coverage report rather than an edge to whatever `table` might hold.
+The gaps are reported on two lines, not one — a name the source builds at run time, and a name
+the source spells out that no migration declares — because the remedies differ: the first is a
+limit of static reading, the second is a missing migration or a typo. A deterministic pass that
+hedged with an `Ambiguous` edge instead would teach a reader to discount every edge in the
+bundle; `Ambiguous` is reserved for a model flagging its own output. Two writers of one table are
+each linked to the table and never to each other, since sharing a table is not a dependency
+either module declares, and a data edge carries no weight: a module writing `orders` from eleven
+call sites is more verbose, not eleven times a writer.
+
+Telling a query from prose is the whole difficulty, and the rule is SQL's grammar rather than a
+list of English words. "could not update the order" and "select the row you want from the list"
+both read as SQL to anything searching for a verb, and the second names a table called `the`. So
+a literal must *begin* with a statement verb, be followed by the keyword its syntax requires, and
+have no run of bare words on either side of that keyword — because SQL punctuates between its
+names and prose does not. A blacklist of function words would answer those two sentences; the
+grammar answers the ones nobody thought of. One shape gets through and is documented rather than
+fixed: prose whose third word is followed by a comma is the same structure as a table and its
+alias, so `"insert into %s failed, retrying"` is counted as a gap. It draws no table, so the cost
+is the gap count reading high — the direction that overstates how much is missing.
+
 **A configuration is mostly wiring, and only some of it is a unit.** Terraform is read
 for what a reader can act on: resources that run something or hold state become units,
 and the policy attachments, firewall rules, and route table associations a real
@@ -687,7 +723,7 @@ Nodes: modules, files, symbols (when enriched), services, interfaces, data store
 pipelines, external dependencies, documents.
 
 Typed edges: `imports`, `calls`, `implements`, `defines`, `configures`, `deploys`,
-`tested_by`, `documents`, `co_changes`, `owns`, `precedes`.
+`tested_by`, `documents`, `co_changes`, `owns`, `precedes`, `writes`, `reads`.
 
 **A CI job is a node, and `precedes` is drawn only where a file declares the order.** A job is
 the unit rather than a workflow file, because a required-check rule is configured against a job
