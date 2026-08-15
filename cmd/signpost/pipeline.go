@@ -82,8 +82,17 @@ func (p *pipelineFlags) register(fs *flag.FlagSet) {
 	// few hundred thousand files reported 170,530 skipped that way, and its own first-party
 	// packages came back as unresolved imports because the files defining them were never
 	// read.
+	//
+	// The default is in the usage line because this is the one place somebody reads
+	// before a run rather than after one: the warning states it too, but by then the walk
+	// has already been truncated. The example is above the default for the same reason —
+	// raising it is why the flag is being read — and it is built from the constant so it
+	// cannot drift the way the 2GiB it replaced did, which named a size the default had
+	// grown past.
 	fs.Var(&p.maxBytes, "max-bytes",
-		"byte budget for the whole walk, e.g. 2GiB; files past it are recorded, not read")
+		"byte budget for the whole walk, e.g. "+humanBytes(2*discover.DefaultMaxTotalBytes)+
+			"; files past it are recorded, not read (default "+
+			humanBytes(discover.DefaultMaxTotalBytes)+")")
 }
 
 // stringList collects a repeatable flag. flag.Value rather than a comma-split
@@ -136,7 +145,11 @@ func (b *byteSize) Set(v string) error {
 	}
 	n, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return fmt.Errorf("not a byte size: %q (try 512MiB or 2GiB)", v)
+		// The first example is above the default, because raising it is why somebody is
+		// typing this flag. The second is below on purpose: any positive value is
+		// honoured, so the budget can be tightened as well, and a hint showing only
+		// larger numbers would imply otherwise.
+		return fmt.Errorf("not a byte size: %q (try 6GiB or 512MiB)", v)
 	}
 	// Rejected rather than clamped to the default: a zero or negative budget is a
 	// mistake in the invocation, and quietly substituting the default would report a

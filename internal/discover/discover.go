@@ -40,13 +40,28 @@ const (
 	// processed, but remaining files are recorded as skipped rather than read,
 	// so a pathological tree cannot exhaust memory.
 	//
-	// A default rather than the limit, and exported, because it is too low for a
-	// monorepo: file contents are held in memory for the whole analysis, so this is
-	// the ceiling on how much of a tree gets read at all, and a repository of a few
-	// hundred thousand files exhausts it partway through. Options.MaxTotalBytes
-	// raises it. Exported so the flag that does so can state the default it is
-	// raising rather than restating the number.
-	DefaultMaxTotalBytes = 512 << 20 // 512 MiB
+	// A default rather than the limit, and exported, because no single number is right
+	// for every tree: file contents are held in memory for the whole analysis, so this
+	// is the ceiling on how much of a tree gets read at all. Options.MaxTotalBytes
+	// overrides it in either direction. Exported so the flag that does so can state
+	// the default it is replacing rather than restating the number.
+	//
+	// Raised from 512 MiB, which truncated the case this tool is for. A monorepo of
+	// roughly 275,000 files recorded 170,530 of them as skipped and reported its own
+	// first-party packages as unresolved imports, because the files defining them were
+	// never opened — and a partial map is the failure that looks like success, since
+	// nothing downstream can tell an absent module from one that does not exist. The
+	// flag was the remedy for a truncated walk and it is still the remedy for a larger
+	// one, but a default that leaves a repository this tool is aimed at three-fifths
+	// unread is the wrong default. Six times the budget is chosen against that ratio
+	// rather than against a measured run of the whole tree, so it is a better default
+	// and not a guarantee: a tree large enough still truncates, and still says so.
+	//
+	// It is a memory ceiling and reads as one: the number is what a walk may hold, not
+	// what it will, and every tree small enough to finish under 512 MiB allocates
+	// exactly what it did before. Raising it costs nothing until a tree is large enough
+	// to need it, which is the direction the trade should run.
+	DefaultMaxTotalBytes = 3 << 30 // 3 GiB
 )
 
 // File is one discovered file.
