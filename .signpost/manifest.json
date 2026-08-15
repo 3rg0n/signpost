@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03",
+  "resource": "git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192",
   "date": "2026-08-15",
   "counts": {
-    "nodes": 83,
-    "edges": 208,
-    "clusters": 36
+    "nodes": 85,
+    "edges": 210,
+    "clusters": 37
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 208,
+    "extracted": 210,
     "inferred": 0
   },
   "pages": [
@@ -29,6 +29,7 @@
     "modules/practice.md",
     "modules/root.md",
     "modules/scaffold.md",
+    "modules/selfupdate.md",
     "modules/semantic.md",
     "modules/signpost.md",
     "modules/site.md",
@@ -81,6 +82,7 @@
     "references/adr-0030-a-finding-states-its-own-absence.md",
     "references/adr-0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md",
     "references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md",
+    "references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

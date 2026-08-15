@@ -2,7 +2,7 @@
 type: Pipeline
 title: ci installer parses (5.1 and 7)
 description: "CI job installer parses (5.1 and 7) in the ci workflow, 3 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@6f554adbb5141c6edf4d43976782a665ec622c03/.github/workflows/ci.yml
+resource: git://github.com/3rg0n/signpost@f1c85cb4603e356013b50452bd0aa50f8b4d1192/.github/workflows/ci.yml
 tags: [gate]
 generated: { by: signpost/dev, at: "2026-08-15" }
 attributes:
