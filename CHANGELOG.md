@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The `AGENTS.md` stub says when to reach for the bundle, not only where it is.** Telling a
+  model the map exists is orientation; it opens the handler it would have grepped for anyway,
+  because nothing connected the symptom to a page. The stub now names a symptom that crosses
+  modules and the page that answers it — a data store's, which lists every module that writes
+  and reads it.
+
 - **A data store page names the code that writes it and the code that reads it.** A migration
   says a table exists; only the source says which module touches it, and reading SQL out of
   string literals in thirteen languages supplies the half of the data map that was missing.
@@ -746,7 +752,7 @@ All notable changes to this project are documented here. Format follows
   dot-directory they have never heard of.
 
   **The flag writes nothing at all.** Not `AGENTS.md`, and not the bundle it would otherwise have
-  built — it prints three sentences to stdout and exits, so `signpost build -suggest-agents-md >>
+  built — it prints a short stub to stdout and exits, so `signpost build -suggest-agents-md >>
   AGENTS.md` is the whole adoption step and the `>>` is the human's to type. That is design §6.2
   held to literally: signpost writes `.signpost/` and nothing else, because a generator that
   overwrites a file encoding somebody's intent is how teams learn to distrust tooling. A flag on

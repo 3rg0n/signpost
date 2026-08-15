@@ -262,6 +262,42 @@ func TestSuggestAgentsMdPrintsAPointerAtTheIndex(t *testing.T) {
 	}
 }
 
+// The stub says when to reach for the bundle, not only where it is.
+//
+// The two halves do different work and the second is the one that changes behaviour. A model
+// told the map exists knows the bundle is there; it opens the handler it would have grepped
+// for anyway, because nothing connected the symptom in front of it to a page. So the sentence
+// has to name a symptom and the page that answers it, which is what turns "read the map" into
+// a first move.
+//
+// Asserted on the words a reader acts on rather than on the sentence as a whole, because the
+// wording is prose somebody will improve. What must survive an edit is that the stub tells a
+// reader where to start when a symptom crosses more than one module, and that the thing it
+// sends them to is one the bundle actually renders — see the corpus stage, which appends this
+// stub and then checks the claim against a built bundle. A stub promising a page that answers
+// nothing is worse than no stub: it spends the model's trust once.
+func TestSuggestAgentsMdSaysWhenToReachForTheBundle(t *testing.T) {
+	root := fixture(t)
+	stdout, stderr, code := invoke(t, "build", "-suggest-agents-md", root)
+	if code != 0 {
+		t.Fatalf("exit = %d\n%s", code, stderr)
+	}
+	for _, want := range []string{"crosses modules", "writes it", "reads it"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the stub does not say %q, so it states where the bundle is and never when "+
+				"to open it. Orientation is not triage: a model that knows the map exists still "+
+				"greps first unless a symptom is named alongside the page that answers "+
+				"it:\n%s", want, stdout)
+		}
+	}
+	// Two paragraphs, because the triage sentence is a second one. Folded into the first it
+	// reads as more description of the index rather than an instruction about a symptom.
+	if strings.Count(stdout, "\n\n") < 2 {
+		t.Errorf("the stub is one paragraph, so the triage sentence reads as more description "+
+			"of the index rather than as an instruction:\n%s", stdout)
+	}
+}
+
 // The negative boundary, and the one design §6.2 forbids breaking: the flag writes nothing.
 // Not the bundle it would otherwise have built, and above all not AGENTS.md — signpost writes
 // .signpost/ and nothing else, and a generator that overwrote the file encoding somebody's

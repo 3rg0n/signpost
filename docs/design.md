@@ -559,6 +559,13 @@ each linked to the table and never to each other, since sharing a table is not a
 either module declares, and a data edge carries no weight: a module writing `orders` from eleven
 call sites is more verbose, not eleven times a writer.
 
+A data store's page renders what points *at* it — `Written by` and `Read by` — and it is the
+only page that does. Everywhere else the useful direction is outward: what a module imports is
+what a reader follows. Here the question arrives from the table's side, because a reader with a
+duplicate row has the table and wants the code, and assembling that from a dozen module pages
+is the work the page exists to have already done. It is also what makes the §6.2 pointer's
+triage sentence true rather than a promise.
+
 Telling a query from prose is the whole difficulty, and the rule is SQL's grammar rather than a
 list of English words. "could not update the order" and "select the row you want from the list"
 both read as SQL to anything searching for a verb, and the second names a table called `the`. So
@@ -1517,6 +1524,21 @@ convention, and a generator overwriting them is how teams learn to distrust
 tooling. `signpost build -suggest-agents-md` prints a proposed stub to stdout for a
 human to take or leave, and that is the extent of it: it writes nothing — not
 `AGENTS.md`, not even the bundle — so the `>>` that appends it is the human's to type.
+
+The stub says two things, and the second is the one that changes behaviour. Where the
+bundle is, is orientation: a model that reads it knows the bundle exists and still opens
+the handler it would have grepped for, because nothing connected the symptom in front of
+it to a page. So the stub also names a symptom that crosses modules and the page that
+answers it — a data store's, because that is the one page rendering what points *at* it
+(§4.1), so the reverse direction a reader needs is on the page rather than assembled from
+a dozen others. Everything past those two sentences would be signpost asserting content
+about somebody else's repository; these assert only how to use signpost's own artifact.
+
+That sentence could not ship before the data pass. A bundle whose data stores carried no
+writers and no readers would send a reader to a page answering nothing, and an instruction
+naming absent content spends a model's trust once — the same reasoning
+[ADR 0034](adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) applies to
+edges signpost cannot support.
 
 The other half of that boundary is a build that says when nothing points at the bundle.
 A bundle no instructions name is the one failure a green build cannot show — every page

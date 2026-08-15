@@ -274,6 +274,21 @@ that was sitting in twenty-eight pages it never opened. Models are trained to re
 have never heard of. This repository's own [`AGENTS.md`](AGENTS.md) is that pointer, and
 it is the whole fix.
 
+A second line is worth adding, and it does different work: say *when* to reach for the
+bundle. Knowing the map exists does not stop a model opening the handler it would have
+grepped for, because nothing connected the symptom in front of it to a page.
+
+```markdown
+When a symptom crosses modules — the same rows written from two places, a change that
+surfaced somewhere else — start from the thing involved rather than the code you would
+grep first: a data store's page names every module that writes it and every module that
+reads it.
+```
+
+The stub below prints both. That one names data because a data store's page is the page
+that renders what points *at* it, so the reverse direction is on the page rather than
+assembled from a dozen others.
+
 signpost will not write those files for you — they encode your intent, and a generator
 that overwrites them is how teams learn to distrust tooling
 ([design §6.2](docs/design.md)). What it will do is draft the line and let you place it:
