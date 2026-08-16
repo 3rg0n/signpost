@@ -53,7 +53,11 @@ func topicHeading(t Topic) string {
 	case TopicTest:
 		return "Testing"
 	case TopicGates:
-		return "What blocks a merge"
+		// Not "What blocks a merge": the section is written from workflow triggers, and
+		// whether any of those checks is required is branch protection, which is repository
+		// configuration and is not in the tree (ADR 0032, issue #49). A heading is the part a
+		// reader keeps when they skim, so it cannot be the one place the claim creeps back.
+		return "What runs against a change"
 	case TopicHistory:
 		return "How changes are recorded"
 	case TopicDependencies:

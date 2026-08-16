@@ -45,8 +45,8 @@ import (
 
 // Topic groups findings on the page. The order of the constants is the order of the
 // sections, chosen as the order a contributor meets them: how do I build it, how do I
-// test it, what will stop my merge, how are changes recorded and released, who reviews it,
-// what am I expected to know.
+// test it, what will run against my change, how are changes recorded and released, who
+// reviews it, what am I expected to know.
 type Topic string
 
 const (
@@ -359,25 +359,47 @@ func gateFindings(facts []manifest.Facts) []Finding {
 	if workflows == 0 {
 		return []Finding{{
 			Topic: TopicGates,
-			Text: "No CI workflows were found, so nothing automated can block a bad " +
-				"change. Every check is whatever a reviewer remembers to run.",
+			// Scoped to the tree, because that is all this package read. "Nothing automated
+			// can block a bad change" reaches past it twice over: a required check can be
+			// reported by a service outside `.github/workflows` through the status API, and
+			// whether any check is required at all is branch protection. Absence of workflow
+			// files is evidence about the tree and nothing else, and §4.2's rule is that the
+			// absence of a measurement is never reported as a clean bill of health — in
+			// either direction (ADR 0032, issue #49).
+			Text: "No CI workflows are declared in this tree, so nothing here states an " +
+				"automated check a change has to meet. Whether one is enforced elsewhere is " +
+				"repository configuration and is not in the tree.",
 			Looked: []string{".github/workflows"},
 		}}
 	}
 	if len(gates) == 0 {
 		return []Finding{{
 			Topic: TopicGates,
-			Text: plural(workflows, "CI workflow") + " exist, but no job runs on a pull " +
-				"request or on a push to the default branch — so none of them can stop a " +
-				"merge.",
+			// The trigger is the finding. A job that never runs on a pull request or a
+			// default-branch push cannot be a required check whatever branch protection
+			// says, so this one is safe to state — but it is stated as the trigger it was
+			// read from rather than as an outcome, so all three branches of this function
+			// speak about the same fact.
+			Text: plural(workflows, "CI workflow") + " exist, but no job in them runs on a " +
+				"pull request or on a push to the default branch, so none of them runs " +
+				"against a change on its way in.",
 			Looked: []string{".github/workflows"},
 		}}
 	}
 	out := []Finding{{
 		Topic:    TopicGates,
 		Declared: true,
-		Text: plural(len(gates), "job") + " can block a merge: " + joinNames(gateNames) +
-			".",
+		// What `manifest.Job.Gate` carries and no more, matching the index's merge-gate
+		// finding word for word (internal/okf.gateFinding) rather than paraphrasing it: the
+		// two sentences are written from the same fact, so a reader who sees them disagree
+		// has to work out which one to trust. "Can block a merge" was stronger than the
+		// fact and wrong on this repository — `pages.yml` sets Gate by that definition and
+		// design §7 says in so many words that it is never a required check. Which checks
+		// are *required* is branch protection, which is repository configuration and is not
+		// in the tree, so the sentence says so instead of guessing (ADR 0032, issue #49).
+		Text: plural(len(gates), "job") + " run on a pull request or on a push to the " +
+			"default branch: " + joinNames(gateNames) + ". Which of them is *required* is " +
+			"configured on the repository and is not in the tree.",
 		Sources: dedupeSources(gates),
 	}}
 	if len(ungated) > 0 {

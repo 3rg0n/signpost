@@ -579,7 +579,10 @@ func TestCorpusPracticesReportsBothKinds(t *testing.T) {
 	for _, want := range []string{
 		"A build command is declared",
 		"A test command is declared",
-		"jobs can block a merge",
+		// The trigger, which is what manifest.Job.Gate carries. Not "can block a merge":
+		// which checks are required is branch protection, which is repository configuration
+		// and is not in the tree (issue #49).
+		"run on a pull request or on a push to the default branch",
 		// The non-gating workflow. Both halves of the gate distinction, since a schedule-only
 		// job cannot be a required check and reporting it as one would be wrong.
 		"outside that gate",
@@ -782,7 +785,7 @@ func TestCorpusGateFindingCountsBothKinds(t *testing.T) {
 	for _, unwanted := range []string{"nightly-scan", "release-build-the-artifact", "release-publish"} {
 		if strings.Contains(gates, unwanted) {
 			t.Errorf("the merge-gate finding lists %s, which runs on a schedule or a tag and "+
-				"cannot block a merge:\n%s", unwanted, gates)
+				"so never runs against a change on its way in:\n%s", unwanted, gates)
 		}
 	}
 }

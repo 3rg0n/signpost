@@ -1255,6 +1255,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The practices page no longer says a CI job blocks a merge, which no file it read states.**
+  `manifest.Job.Gate` means a job runs on a pull request or on a push to the default branch;
+  which checks are *required* is branch protection, and the claim was wrong on this repository,
+  where `pages.yml` gates by that definition while design §7 says it is never a required check.
+  The finding, the section heading, and the no-CI sentence now state the trigger they were read
+  from and say outright that required-check configuration is not in the tree, matching the
+  index's merge-gate finding word for word ([ADR
+  0032](docs/adr/0032-order-is-drawn-only-where-a-file-declares-it.md)).
+
 - **A string literal written on one line in a delimited form was invisible to every reader of
   literals.** The scanner blanks `r#"…"#`, `@"…"` and a one-line `"""…"""` delimiters and all,
   so a Rust raw string holding a query was recovered as no literal at all — drawing neither an
