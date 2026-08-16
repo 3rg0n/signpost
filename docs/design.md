@@ -2148,8 +2148,13 @@ a manifest declaring no dependencies is not an unpinned one, and reporting it as
 unpinned told a reader two builds could resolve different versions of nothing. And
 the CI gate distinction is **per workflow, not per job**: GitHub's required-checks
 operates on job names, any of which can be selected, so every job in a
-`pull_request` workflow can block a merge, and only a schedule-only workflow runs
-outside that gate.
+`pull_request` workflow runs against a change on its way in, and only a
+schedule-only workflow runs outside that gate. What the page will not say is that
+any of those jobs *blocks* a merge. Which checks are required is branch protection
+— repository configuration, not stated in any file signpost reads — and the claim
+was wrong on this repository, where `pages.yml` gates by that definition and §7
+says it is never a required check ([ADR
+0032](adr/0032-order-is-drawn-only-where-a-file-declares-it.md)).
 
 **What signpost does not emit is the score.** A 1–5 maturity level is a rubric,
 and a rubric is an opinion that has to be defended, re-tuned, and argued about

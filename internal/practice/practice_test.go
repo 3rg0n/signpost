@@ -331,14 +331,21 @@ func TestLockEcosystemNamesMatchManifestEcosystem(t *testing.T) {
 	}
 }
 
-// TestGatesDistinguishBlockingJobsFromTheRest checks both branches of the gate finding.
+// TestGatesDistinguishJobsThatRunAgainstAChangeFromTheRest checks both branches of the gate
+// finding.
 //
 // Gating is a property of the workflow's triggers, not of the job: GitHub's required-checks
 // operates on job names and any job in a pull_request workflow can be selected, so a workflow
 // on pull_request makes all of its jobs gates. Only a schedule-only workflow runs outside. The
 // page reports the ungated ones as a fact rather than a gap — a nightly scan is correctly
 // ungated, and calling that a finding would be the rubric this package refuses to be.
-func TestGatesDistinguishBlockingJobsFromTheRest(t *testing.T) {
+//
+// The negative half is the half issue #49 added: the finding must *not* say a job blocks or
+// stops a merge. Whether any of these checks is required is branch protection, which is
+// repository configuration and is not in the tree, and asserting it was wrong on this
+// repository — `pages.yml` sets Gate and design §7 says it is never a required check. A
+// positive-only assertion passes a page that says both things at once.
+func TestGatesDistinguishJobsThatRunAgainstAChangeFromTheRest(t *testing.T) {
 	res := Analyse(Input{
 		Discovered: walk(".github/workflows/ci.yml", ".github/workflows/nightly.yml"),
 		Manifests: facts(
@@ -352,17 +359,36 @@ func TestGatesDistinguishBlockingJobsFromTheRest(t *testing.T) {
 		),
 	})
 
-	blocking := findingsMatching(res, TopicGates, "can block a merge")
-	if len(blocking) != 1 {
-		t.Fatalf("%d finding(s) name the blocking jobs, want 1:\n%s", len(blocking), res.Render())
+	gating := findingsMatching(res, TopicGates, "run on a pull request or on a push to the")
+	if len(gating) != 1 {
+		t.Fatalf("%d finding(s) name the jobs that run against a change, want 1:\n%s",
+			len(gating), res.Render())
 	}
 	for _, name := range []string{"test", "lint"} {
-		if !strings.Contains(blocking[0].Text, name) {
-			t.Errorf("the gate finding does not name the %s job: %q", name, blocking[0].Text)
+		if !strings.Contains(gating[0].Text, name) {
+			t.Errorf("the gate finding does not name the %s job: %q", name, gating[0].Text)
 		}
 	}
-	if strings.Contains(blocking[0].Text, "scan") {
-		t.Errorf("the gate finding names the schedule-only job as blocking: %q", blocking[0].Text)
+	if strings.Contains(gating[0].Text, "scan") {
+		t.Errorf("the gate finding names the schedule-only job: %q", gating[0].Text)
+	}
+	// The finding says which checks run and says outright that it does not know which are
+	// required, so a reader is not left to infer the second from the first.
+	if !strings.Contains(gating[0].Text, "is not in the tree") {
+		t.Errorf("the gate finding does not say that required-check configuration is outside "+
+			"the tree, so a reader can read the list as the set of blocking checks: %q",
+			gating[0].Text)
+	}
+	// Whole-page, not just this finding: the heading is what a skimming reader keeps, and it
+	// is where the claim lived before render.go was changed.
+	page := res.Render()
+	for _, claim := range []string{"block a merge", "blocks a merge", "stop a merge"} {
+		if strings.Contains(page, claim) {
+			t.Errorf("the practices page says %q. Which checks are required is branch "+
+				"protection — repository configuration, not in the tree — and `pages.yml` on "+
+				"this repository sets Gate while design §7 says it is never a required "+
+				"check:\n%s", claim, page)
+		}
 	}
 
 	outside := findingsMatching(res, TopicGates, "outside that gate")
@@ -375,13 +401,18 @@ func TestGatesDistinguishBlockingJobsFromTheRest(t *testing.T) {
 	}
 }
 
-// TestWorkflowsThatCannotBlockAMergeAreReported covers the branch between "no CI at all" and
-// "CI that gates".
+// TestWorkflowsThatNeverRunAgainstAChangeAreReported covers the branch between "no CI at all"
+// and "CI that gates".
 //
-// A repository with workflows none of which run on a pull request or a default-branch push
-// has automation that cannot stop a bad change, and that is a different fact from having no
-// automation. Reporting it as "no CI workflows were found" would be false.
-func TestWorkflowsThatCannotBlockAMergeAreReported(t *testing.T) {
+// A repository whose workflows never run on a pull request or a default-branch push has
+// automation that no change passes through on its way in, and that is a different fact from
+// having no automation. Reporting it as "no CI workflows" would be false.
+//
+// This is the one branch where a trigger does settle the question: a job that never runs on a
+// pull request or a default-branch push cannot be a required check whatever branch protection
+// says. It is still worded as the trigger it was read from, so all three branches speak about
+// the same fact rather than one of them reaching for an outcome (issue #49).
+func TestWorkflowsThatNeverRunAgainstAChangeAreReported(t *testing.T) {
 	res := Analyse(Input{
 		Discovered: walk(".github/workflows/release.yml"),
 		Manifests: facts(manifest.Facts{
@@ -390,12 +421,45 @@ func TestWorkflowsThatCannotBlockAMergeAreReported(t *testing.T) {
 		}),
 	})
 
-	if got := findingsMatching(res, TopicGates, "no job runs on a pull request"); len(got) != 1 {
-		t.Errorf("%d finding(s) report workflows that cannot gate, want 1:\n%s",
+	if got := findingsMatching(res, TopicGates, "no job in them runs on a "); len(got) != 1 {
+		t.Errorf("%d finding(s) report workflows that never run against a change, want 1:\n%s",
 			len(got), res.Render())
 	}
-	if got := findingsMatching(res, TopicGates, "No CI workflows were found"); len(got) != 0 {
+	if got := findingsMatching(res, TopicGates, "No CI workflows are declared"); len(got) != 0 {
 		t.Errorf("a repository with a workflow was reported as having none:\n%s", res.Render())
+	}
+}
+
+// A tree with no workflows is reported as a fact about the tree, not about the repository.
+//
+// The old sentence said "nothing automated can block a bad change", which reaches past what
+// this package read in two directions: a required check can be reported by a service outside
+// `.github/workflows` through the status API, and whether any check is required at all is
+// branch protection. Design §4.2's rule is that the absence of a measurement is never a clean
+// bill of health, and the same rule forbids reporting it as a condemnation (issue #49).
+func TestNoWorkflowsIsReportedAsSilenceInTheTreeNotAbsentEnforcement(t *testing.T) {
+	// A manifest that is not a workflow, because no manifests at all is a different finding
+	// ("nothing here says anything about CI gates either way") and would not reach this branch.
+	// A repository with a go.mod and no CI is the case being reported.
+	res := Analyse(Input{
+		Discovered: walk("go.mod", "main.go"),
+		Manifests:  facts(manifest.Facts{Path: "go.mod", Kind: manifest.KindGoMod}),
+	})
+
+	got := findingsMatching(res, TopicGates, "No CI workflows are declared in this tree")
+	if len(got) != 1 {
+		t.Fatalf("%d finding(s) report the absent workflows, want 1:\n%s", len(got), res.Render())
+	}
+	if !strings.Contains(got[0].Text, "is not in the tree") {
+		t.Errorf("the finding does not say enforcement configured elsewhere is outside what "+
+			"was read, so an empty .github/workflows reads as an ungated repository: %q",
+			got[0].Text)
+	}
+	for _, claim := range []string{"nothing automated", "block a bad"} {
+		if strings.Contains(res.Render(), claim) {
+			t.Errorf("the page says %q, which is a claim about the repository's enforcement "+
+				"and not about the files this package read:\n%s", claim, res.Render())
+		}
 	}
 }
 
