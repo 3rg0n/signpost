@@ -1,0 +1,40 @@
+internal/practice/practice.go
+  s_f6c0b1ac81cb95::t_8e9486faa17dc1 48-49
+  s_f6c0b1ac81cb95::t_2eabd2c520bbd5 392-400
+  s_f6c0b1ac81cb95::t_f4f5982e8d705b 378-385
+  s_f6c0b1ac81cb95::t_fb6429b5c84f71 401-402
+  s_f6c0b1ac81cb95::t_1096fb189f779b 362-371
+internal/practice/practice_test.go
+  s_f6c0b1ac81cb95::t_99e94c6bb4872e 441-447
+  s_f6c0b1ac81cb95::t_bb84cc014fb32f 362-365,368-369,372-391
+  s_f6c0b1ac81cb95::t_2033b45f321d56 334-335,342-348
+  s_f6c0b1ac81cb95::t_594ade3f1fafe6 404-405,407-415
+  s_f6c0b1ac81cb95::t_12cee4c97bbbaa 424-425,428,433-440,448-463
+  s_f6c0b1ac81cb95::t_859e4cb245329b 464-465
+internal/practice/render.go
+  s_f6c0b1ac81cb95::t_3bf67f047bee27 56-59
+  s_f6c0b1ac81cb95::t_64b7420c796c1a 60
+docs/design.md
+  s_f6c0b1ac81cb95::t_ecb80c6286c2ff 2151-2157
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_a1da859274a8f4 788
+  s_f6c0b1ac81cb95::t_b90d033a1400ff 582-585
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_7afacbea9e15f4 1258-1266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "dcc1f031fcd2b5a0afa0457d06d12fc01dcf3e1f",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
