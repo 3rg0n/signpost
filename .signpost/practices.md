@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@87c06ede8626e41ed763c3bac660e77870c3086f
-generated: { by: signpost/dev, at: "2026-08-15" }
+resource: git://github.com/3rg0n/signpost@b4c8f5076ffb2ea629c1401ed3d7029542906974
+generated: { by: signpost/dev, at: "2026-08-16" }
 ---
 # How work is done here
 
@@ -20,18 +20,18 @@ Each line is something this repository states, or something it does not. A missi
   - Looked in Makefile targets, package.json scripts, Cargo aliases, CMake targets, Bazel targets.
 - 83 test files in the tree.
 
-### What blocks a merge
+### What runs against a change
 
-- 11 jobs can block a merge: `commit trailers name real issues`, `corpus (a repository signpost did not write)`, `dependency gate`, `deploy`, `installer parses (5.1 and 7)`, `lint`, and 5 others.
+- 11 jobs run on a pull request or on a push to the default branch: `commit trailers name real issues`, `corpus (a repository signpost did not write)`, `dependency gate`, `deploy`, `installer parses (5.1 and 7)`, `lint`, and 5 others. Which of them is *required* is configured on the repository and is not in the tree.
   - Stated in `.github/workflows/ci.yml` line 23, `.github/workflows/pages.yml` line 36, and `.github/workflows/signpost.yml` line 43.
 - 2 further CI jobs run outside that gate — on a schedule, a tag, or manually.
   - Stated in `.github/workflows/release.yml` line 17 and `.github/workflows/signpost-semantic.yml` line 41.
 
 ### How changes are recorded
 
-- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 147 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
+- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 149 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
   - Looked in the subject line of every commit read.
-- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 113 commits back.
+- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 115 commits back.
 
 ### Dependencies
 
