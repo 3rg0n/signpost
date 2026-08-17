@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0034: a deterministic pass may not produce an ambiguous edge"
 description: "Architecture decision (Accepted), 18 rules read from 0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md."
-resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7/docs/adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md
+resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409/docs/adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-17" }
 attributes:

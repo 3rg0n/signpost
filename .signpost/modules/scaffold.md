@@ -2,7 +2,7 @@
 type: Module
 title: internal/scaffold
 description: 2 go files; 10 exported symbols.
-resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7/internal/scaffold
+resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409/internal/scaffold
 generated: { by: signpost/dev, at: "2026-08-17" }
 attributes:
   - { name: commits, value: "2" }

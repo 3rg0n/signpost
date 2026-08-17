@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7",
+  "resource": "git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409",
   "date": "2026-08-17",
   "counts": {
-    "nodes": 87,
-    "edges": 222,
-    "clusters": 38
+    "nodes": 89,
+    "edges": 224,
+    "clusters": 39
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 222,
+    "extracted": 224,
     "inferred": 0
   },
   "pages": [
@@ -21,6 +21,7 @@
     "modules/discover.md",
     "modules/export.md",
     "modules/extract.md",
+    "modules/gitdiff.md",
     "modules/graph.md",
     "modules/hook.md",
     "modules/manifest.md",
@@ -85,6 +86,7 @@
     "references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md",
     "references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md",
     "references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md",
+    "references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 87 concepts, 222 relationships."
-resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7
+description: "Structural map of this repository: 89 concepts, 224 relationships."
+resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409
 generated: { by: signpost/dev, at: "2026-08-17" }
 ---
 # Repository map
@@ -20,40 +20,40 @@ Start here. What the shape of this repository says, then a line per page naming 
 The places a wrong assumption propagates furthest, so the places to read first.
 
 - [\(repository root\)](./modules/root.md) — 52 relationships (18 in, 34 out)
-- [cmd/signpost](./modules/signpost.md) — 48 relationships (16 in, 32 out)
+- [cmd/signpost](./modules/signpost.md) — 49 relationships (16 in, 33 out)
 - [internal/assemble](./modules/assemble.md) — 28 relationships (12 in, 16 out)
 - [internal/manifest](./modules/manifest.md) — 26 relationships (15 in, 11 out)
-- [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
+- [AGENTS.md](./references/agents-md.md) — 22 relationships (0 in, 22 out)
 
 ### Structural findings
 
 What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
 
 - **Import cycles: none.** No module here imports its way back to itself.
-- **Cross-cluster edges: 50.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
+- **Cross-cluster edges: 43.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
   - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/config](./modules/config.md) → [internal/manifest](./modules/manifest.md) (imports)
-  - [internal/config](./modules/config.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/config](./modules/config.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/export](./modules/export.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/extract](./modules/extract.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/graph](./modules/graph.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/hook](./modules/hook.md) → [internal/okf](./modules/okf.md) (imports)
+  - [internal/hook](./modules/hook.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/manifest](./modules/manifest.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/model](./modules/model.md) → [cmd/signpost](./modules/signpost.md) (changes with)
+  - [internal/model](./modules/model.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/okf](./modules/okf.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/practice](./modules/practice.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/assemble](./modules/assemble.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/config](./modules/config.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/discover](./modules/discover.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/export](./modules/export.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/extract](./modules/extract.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/graph](./modules/graph.md) (changes with)
+  - [\(repository root\)](./modules/root.md) → [internal/hook](./modules/hook.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/manifest](./modules/manifest.md) (changes with)
-  - [\(repository root\)](./modules/root.md) → [internal/okf](./modules/okf.md) (changes with)
-  - [\(repository root\)](./modules/root.md) → [internal/practice](./modules/practice.md) (changes with)
-  - and 30 more
+  - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
+  - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 35.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 36.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 15 more
+  - and 16 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -95,6 +95,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/discover](./modules/discover.md) — 5 go files; 44 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 7 exported symbols.
 - [internal/extract](./modules/extract.md) — 34 go files; 80 exported symbols.
+- [internal/gitdiff](./modules/gitdiff.md) — 1 go file; 8 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 53 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 17 exported symbols.
 - [internal/manifest](./modules/manifest.md) — 37 go files; 130 exported symbols.
@@ -105,7 +106,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/scaffold](./modules/scaffold.md) — 2 go files; 10 exported symbols.
 - [internal/selfupdate](./modules/selfupdate.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 27 go files; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 29 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
@@ -164,6 +165,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0032: order is drawn only where a file declares it](./references/adr-0032-order-is-drawn-only-where-a-file-declares-it.md) — Architecture decision (Accepted), 21 rules read from 0032-order-is-drawn-only-where-a-file-declares-it.md.
 - [ADR 0033: the binary replaces itself only from a verified release](./references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md) — Architecture decision (Accepted), 24 rules read from 0033-the-binary-replaces-itself-only-from-a-verified-release.md.
 - [ADR 0034: a deterministic pass may not produce an ambiguous edge](./references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) — Architecture decision (Accepted), 18 rules read from 0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md.
+- [ADR 0035: a structural diff is text and a second commit is a worktree](./references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md) — Architecture decision (Accepted), 28 rules read from 0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 
