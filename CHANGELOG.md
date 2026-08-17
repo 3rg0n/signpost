@@ -8,6 +8,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`signpost graph show -all` lists every structural finding in full**, instead of the first few
+  of each. The bounds are right for a terminal and unchanged by default, but a model that greps
+  `and 35 more` had nowhere to go for the rest, so the findings design §7.1 calls load-bearing
+  were available complete to nobody (#41).
+
 - **The `AGENTS.md` stub says when to reach for the bundle, not only where it is.** Telling a
   model the map exists is orientation; it opens the handler it would have grepped for anyway,
   because nothing connected the symptom to a page. The stub now names a symptom that crosses
@@ -1254,6 +1259,10 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+- **`graph show`'s hub heading counts the hubs it prints.** It counted every node instead, so
+  `-top 500` on this repository claimed 87 above 52 lines and a repository with no edges printed
+  a heading with nothing under it (#41).
 
 - **The practices page no longer says a CI job blocks a merge, which no file it read states.**
   `manifest.Job.Gate` means a job runs on a pull request or on a push to the default branch;

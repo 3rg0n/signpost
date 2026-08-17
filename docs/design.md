@@ -1439,8 +1439,8 @@ that one key and nothing else.
 Anything that decides whether a check *fails* stays a flag — `-as-of-bundle`,
 `-fail-on-cycle`, any future threshold — because a repository that can weaken its own gate
 by committing a file is not gated. So is anything that is a property of one invocation
-rather than of the repository: `-quiet`, `-o`, `-format`, `-verbose`, `-top`. Those keys
-are **refused by name with a reason**, not ignored, because somebody who writes
+rather than of the repository: `-quiet`, `-o`, `-format`, `-verbose`, `-top`, `-all`.
+Those keys are **refused by name with a reason**, not ignored, because somebody who writes
 `fail_on_cycle: false` believes they have configured something, and a tool that reads the
 file, does the opposite, and exits 0 has told them their gate is what they asked for.
 
@@ -1699,6 +1699,17 @@ omitted. `graph show` does the opposite and both are right: a terminal is scroll
 past, and in a committed file a section that vanishes when clean is
 indistinguishable from one a build failed to write
 ([ADR 0030](adr/0030-a-finding-states-its-own-absence.md)).
+
+`graph show` bounds every finding it prints, because the report is read at a
+terminal and a page of bundle paths is where somebody stops reading. **`-all` lifts
+all five bounds**, and it exists because the other reader is a model: a truncated
+list ends in `and 35 more`, an agent that greps cannot grep what was elided, and
+there was nowhere to go and look — the complete data lives only as raw nodes and
+edges in the JSON export, from which recovering the bridges means recomputing the
+clustering. So the findings this section calls load-bearing were available complete
+to nobody. The default is unchanged, the truncation names the flag that lifts it,
+and `-all` with `-top` is refused rather than resolved: one is a bound and the other
+is its absence, so silently honouring one would drop a flag somebody typed.
 
 ### 7.2 `site/` — the landing page and the viewer
 

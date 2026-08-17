@@ -3601,6 +3601,87 @@ func TestCorpusIndexStatesEveryStructuralFinding(t *testing.T) {
 	}
 }
 
+// TestCorpusGraphShowListsEveryFindingUnderAll is the regression for issue #41, through the
+// real binary on a repository signpost did not write.
+//
+// The unit tests in graph_test.go drive the writers with a hand-built graph, which is the right
+// input for asserting each bound. What they cannot cover is the command: `-all` has to reach
+// the writers through flag parsing, the config layer, and `runGraphShow`'s own decision to zero
+// `-top` alongside the other four bounds. A lift wired to four of the five reads as a fix and
+// leaves exactly the failure the issue describes for whichever finding was missed, and that
+// wiring is only exercised end to end.
+//
+// The corpus rather than this repository because it exceeds every bound at once — 52 bridges,
+// 26 components, 23 orphans, and a 67-node component — and because a repository signpost's own
+// CI rebuilds cannot be relied on to keep doing so. The counts are deliberately not asserted,
+// per this file's rule: what is asserted is that no elision marker survives `-all` and that the
+// default still produces one.
+func TestCorpusGraphShowListsEveryFindingUnderAll(t *testing.T) {
+	dir := corpusRepo(t)
+
+	// The negative boundary first, and it is the half that makes the rest mean anything.
+	// Issue #41 puts changing the default out of scope: the elision is right for a terminal,
+	// and a fix that lifted the bound for everybody would pass every assertion below while
+	// having done the one thing the issue asked it not to.
+	def, stderr, code := invoke(t, "graph", "show", "-quiet", dir)
+	if code != 0 {
+		t.Fatalf("graph show: exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(def, " more (-all lists them)") {
+		t.Errorf("the default report on the corpus truncates nothing, so the bound a terminal "+
+			"reader depends on is gone:\n%s", def)
+	}
+
+	all, stderr, code := invoke(t, "graph", "show", "-quiet", "-all", dir)
+	if code != 0 {
+		t.Fatalf("graph show -all: exit = %d\n%s", code, stderr)
+	}
+	// Every elision this command can produce, in both spellings: the two writers that stop
+	// listing findings say `and N more (-all lists them)`, and joinTop, which bounds the names
+	// *inside* one finding, says `and N more` with nothing after it. Matching only the first
+	// would leave the second class of bound unasserted, and that is the class the issue's table
+	// counts three of.
+	for _, line := range strings.Split(all, "\n") {
+		if strings.Contains(line, " more") {
+			t.Errorf("-all still truncated a finding: %q", strings.TrimSpace(line))
+		}
+	}
+
+	// And the lift is real rather than cosmetic: the complete report has to be longer than the
+	// bounded one. Without this, a `-all` that only suppressed the marker would pass.
+	if len(strings.Split(all, "\n")) <= len(strings.Split(def, "\n")) {
+		t.Errorf("-all produced %d lines against the default's %d, so nothing was added",
+			len(strings.Split(all, "\n")), len(strings.Split(def, "\n")))
+	}
+
+	// The hub list separately, because it is the one bound `-all` does not lift through limits:
+	// it rides on `-top`, which `runGraphShow` zeroes alongside the other four. Every assertion
+	// above passes with that line deleted — the hub bound cuts at ten with no marker to find and
+	// no count to disagree with — so the finding a reader is told to reach for `-all` for would
+	// come back bounded and silent about it.
+	if bounded, lifted := hubLines(def), hubLines(all); lifted <= bounded {
+		t.Errorf("-all listed %d hubs against the default's %d, so -top still bounds the list",
+			lifted, bounded)
+	}
+}
+
+// hubLines counts the entries under `graph show`'s hub heading, which is the section with no
+// elision marker: the bound cuts the list and says nothing.
+func hubLines(out string) int {
+	n, in := 0, false
+	for _, line := range strings.Split(out, "\n") {
+		switch {
+		case strings.HasPrefix(line, "hubs (top "):
+			in = true
+		case in && strings.TrimSpace(line) == "":
+			return n
+		case in:
+			n++
+		}
+	}
+	return n
+}
+
 // findingLine returns the index line beginning with prefix, or "" when there is none.
 func findingLine(idx, prefix string) string {
 	for _, line := range strings.Split(idx, "\n") {

@@ -292,9 +292,13 @@ var refused = map[string]string{
 		"they did not read, and design §4.2 is that unmeasured must not read as measured",
 	"verbose": "it is a property of one invocation. Pass -verbose",
 	"top":     "it is a property of one invocation: how many hubs this reader wanted listed",
-	"format":  "it is a property of one invocation: what this caller wanted rendered",
-	"o":       "it is a property of one invocation: where this caller wanted the output",
-	"output":  "it is a property of one invocation: where this caller wanted the output",
+	"all": "it is a property of one invocation: whether this reader wanted every finding " +
+		"listed in full or the terminal-sized report. A file setting it would make a person's " +
+		"terminal print sixty lines of bundle paths for reasons in a file they did not read. " +
+		"Pass -all",
+	"format": "it is a property of one invocation: what this caller wanted rendered",
+	"o":      "it is a property of one invocation: where this caller wanted the output",
+	"output": "it is a property of one invocation: where this caller wanted the output",
 	"openai": "credentials are read from the environment and never from a file (ADR 0009). " +
 		"openai.api_key does not exist: the file is committed, and a format with a place for " +
 		"an API key is a format that eventually has one in it. Set " + model.EnvAPIKey +
