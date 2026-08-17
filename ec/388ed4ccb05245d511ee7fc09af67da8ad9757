@@ -1,0 +1,69 @@
+README.md
+  s_f6c0b1ac81cb95::t_bac5164decc394 571
+  s_f6c0b1ac81cb95::t_4589ad7a1ca634 18
+internal/gitdiff/worktree.go
+  s_f6c0b1ac81cb95::t_24074ced60228e 1-273
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_e8090dc61429dd 11-17
+cmd/signpost/diff_test.go
+  s_f6c0b1ac81cb95::t_727232eb00b977 632-635,641-644
+  s_f6c0b1ac81cb95::t_880efeb2ac7ee0 93-94,155-156
+  s_f6c0b1ac81cb95::t_7a39ef2fbed2c1 1-92,95-154,157-254,352-631,636-640,645-740
+  s_f6c0b1ac81cb95::t_cc755a94405d52 255-288,290-322
+  s_f6c0b1ac81cb95::t_6e4792995b541f 289
+  s_f6c0b1ac81cb95::t_ab38c3d6c3aa85 323-351
+cmd/signpost/corpus_test.go
+  s_f6c0b1ac81cb95::t_e22b59a43fb05c 4858-5001
+docs/design.md
+  s_f6c0b1ac81cb95::t_122c0cf8130b5a 1330
+  s_f6c0b1ac81cb95::t_e325d7ae4a0547 1715-1760
+docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md
+  s_f6c0b1ac81cb95::t_5be93435f8c610 1-76,99-121,143-168,175-177
+  s_f6c0b1ac81cb95::t_8831ce157dfdc3 77-98
+  s_f6c0b1ac81cb95::t_4a53e8f8ce3786 169-174
+  s_f6c0b1ac81cb95::t_3c4d9e1ce472b9 122-142
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_cfb507b9f1fe96 54
+cmd/signpost/diff.go
+  s_f6c0b1ac81cb95::t_fa5d639de240af 401-420,422
+  s_f6c0b1ac81cb95::t_8e72517a8efdaf 191
+  s_f6c0b1ac81cb95::t_28721a328475ac 344
+  s_f6c0b1ac81cb95::t_d5a1d230b87094 93-98,102-111
+  s_f6c0b1ac81cb95::t_4f05d2af7c6fdd 372-373,379-380
+  s_f6c0b1ac81cb95::t_8b65ae515bb214 274
+  s_f6c0b1ac81cb95::t_910333baeab79c 473
+  s_f6c0b1ac81cb95::t_b2fc7a8ee871cf 175,178
+  s_f6c0b1ac81cb95::t_4b71a32d088773 228-232
+  s_f6c0b1ac81cb95::t_aeb1090cb384a6 186
+  s_f6c0b1ac81cb95::t_fbec75d066d308 1-45,51-92,99-101,112-121,124-174,176-177,179-185,187-190,192-197,199-200,216-227,233-261,266-273,275-309,311-322,324-343,345-362,369-370,374-377,381-400,423-442,445-446,464-472,474-523,538-548
+  s_f6c0b1ac81cb95::t_ad81a62b10906e 122-123
+  s_f6c0b1ac81cb95::t_c626aa427b55f5 262-265
+  s_f6c0b1ac81cb95::t_7daf2c3d6e0403 421
+  s_f6c0b1ac81cb95::t_ac755a893e6fa4 524-537
+  s_f6c0b1ac81cb95::t_89f52b152a75a0 198
+  s_f6c0b1ac81cb95::t_fa4758f922820f 363-368
+  s_f6c0b1ac81cb95::t_1125ee31f7b7d0 443-444,447-463
+  s_f6c0b1ac81cb95::t_7765e0f242a6dc 201-215
+  s_f6c0b1ac81cb95::t_e9dd0b6d16d0fb 371,378
+  s_f6c0b1ac81cb95::t_ff8dc64d8787bc 46-50
+  s_f6c0b1ac81cb95::t_62a807271fc4e9 310
+  s_f6c0b1ac81cb95::t_ef7eb89d8e136e 323
+cmd/signpost/main.go
+  s_f6c0b1ac81cb95::t_4a666a21a960fb 98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ec388ed4ccb05245d511ee7fc09af67da8ad9757",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
