@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 87 concepts, 218 relationships."
-resource: git://github.com/3rg0n/signpost@b4c8f5076ffb2ea629c1401ed3d7029542906974
-generated: { by: signpost/dev, at: "2026-08-16" }
+description: "Structural map of this repository: 87 concepts, 222 relationships."
+resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7
+generated: { by: signpost/dev, at: "2026-08-17" }
 ---
 # Repository map
 
@@ -19,8 +19,8 @@ Start here. What the shape of this repository says, then a line per page naming 
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [\(repository root\)](./modules/root.md) — 50 relationships (17 in, 33 out)
-- [cmd/signpost](./modules/signpost.md) — 46 relationships (15 in, 31 out)
+- [\(repository root\)](./modules/root.md) — 52 relationships (18 in, 34 out)
+- [cmd/signpost](./modules/signpost.md) — 48 relationships (16 in, 32 out)
 - [internal/assemble](./modules/assemble.md) — 28 relationships (12 in, 16 out)
 - [internal/manifest](./modules/manifest.md) — 26 relationships (15 in, 11 out)
 - [internal/discover](./modules/discover.md) — 21 relationships (14 in, 7 out)
@@ -30,15 +30,17 @@ The places a wrong assumption propagates furthest, so the places to read first.
 What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
 
 - **Import cycles: none.** No module here imports its way back to itself.
-- **Cross-cluster edges: 43.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
+- **Cross-cluster edges: 50.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
   - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/config](./modules/config.md) → [internal/manifest](./modules/manifest.md) (imports)
+  - [internal/config](./modules/config.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/export](./modules/export.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/extract](./modules/extract.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/graph](./modules/graph.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/hook](./modules/hook.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/hook](./modules/hook.md) → [internal/okf](./modules/okf.md) (imports)
   - [internal/manifest](./modules/manifest.md) → [\(repository root\)](./modules/root.md) (changes with)
-  - [internal/model](./modules/model.md) → [\(repository root\)](./modules/root.md) (changes with)
+  - [internal/model](./modules/model.md) → [cmd/signpost](./modules/signpost.md) (changes with)
   - [internal/okf](./modules/okf.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/practice](./modules/practice.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/assemble](./modules/assemble.md) (changes with)
@@ -46,12 +48,10 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/export](./modules/export.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/extract](./modules/extract.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/graph](./modules/graph.md) (changes with)
-  - [\(repository root\)](./modules/root.md) → [internal/hook](./modules/hook.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/manifest](./modules/manifest.md) (changes with)
-  - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/okf](./modules/okf.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/practice](./modules/practice.md) (changes with)
-  - and 23 more
+  - and 30 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
 - **Unconnected concepts: 35.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
@@ -105,7 +105,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/scaffold](./modules/scaffold.md) — 2 go files; 10 exported symbols.
 - [internal/selfupdate](./modules/selfupdate.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 26 go files; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 27 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.

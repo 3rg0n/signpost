@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@b4c8f5076ffb2ea629c1401ed3d7029542906974
-generated: { by: signpost/dev, at: "2026-08-16" }
+resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7
+generated: { by: signpost/dev, at: "2026-08-17" }
 ---
 # How work is done here
 
@@ -18,7 +18,7 @@ Each line is something this repository states, or something it does not. A missi
 
 - **Not declared.** No test command is declared. This is the fact an agent most needs before it offers to add a test, because it decides where the test goes and how it is run.
   - Looked in Makefile targets, package.json scripts, Cargo aliases, CMake targets, Bazel targets.
-- 83 test files in the tree.
+- 84 test files in the tree.
 
 ### What runs against a change
 
@@ -29,9 +29,9 @@ Each line is something this repository states, or something it does not. A missi
 
 ### How changes are recorded
 
-- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 149 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
+- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 151 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
   - Looked in the subject line of every commit read.
-- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 115 commits back.
+- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 117 commits back.
 
 ### Dependencies
 

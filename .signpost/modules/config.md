@@ -2,23 +2,25 @@
 type: Module
 title: internal/config
 description: 2 go files; 3 exported symbols.
-resource: git://github.com/3rg0n/signpost@b4c8f5076ffb2ea629c1401ed3d7029542906974/internal/config
-generated: { by: signpost/dev, at: "2026-08-16" }
+resource: git://github.com/3rg0n/signpost@656e2ef6f7a45c7f3a5cc06d4a8139348acff5c7/internal/config
+generated: { by: signpost/dev, at: "2026-08-17" }
 attributes:
-  - { name: commits, value: "1" }
+  - { name: commits, value: "2" }
   - { name: exported, value: "3" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-08-02" }
-  - { name: last_commit, value: "2026-08-02" }
-  - { name: lines_added, value: "820" }
-  - { name: lines_removed, value: "0" }
+  - { name: last_commit, value: "2026-08-17" }
+  - { name: lines_added, value: "840" }
+  - { name: lines_removed, value: "5" }
   - { name: package, value: config }
   - { name: top_author, value: 3rg0n }
-  - { name: top_author_share, value: 100% }
+  - { name: top_author_share, value: 50% }
 edges:
   - { kind: imports, to: ./hook.md, confidence: extracted, weight: 1, source: internal/config/config.go }
   - { kind: imports, to: ./manifest.md, confidence: extracted, weight: 1, source: internal/config/config.go }
   - { kind: imports, to: ./model.md, confidence: extracted, weight: 2, source: internal/config/config.go }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 2 }
+  - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 2 }
 ---
 # internal/config
 
@@ -34,6 +36,8 @@ edges:
 - `internal/config/config_test.go`
 
 - **Exports** (3): `Config`, `File`, `Load`
+
+- **Changes with**: [\(repository root\)](./root.md) ×2, [cmd/signpost](./signpost.md) ×2
 
 - **Imports**: [internal/hook](./hook.md) ×1, [internal/manifest](./manifest.md) ×1, [internal/model](./model.md) ×2
 <!-- /signpost:managed:structure -->
