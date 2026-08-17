@@ -281,7 +281,7 @@ func TestNonConfigurableFlagsCannotBeSet(t *testing.T) {
 		// ADR 0009: whether to spend a model, as opposed to which model.
 		"semantic", "semantic_timeout",
 		// Third class: a property of one invocation, not repository state.
-		"quiet", "verbose", "top", "format", "o", "output",
+		"quiet", "verbose", "top", "all", "format", "o", "output",
 		// Specified in design §5 and not built. Accepting it would be a file that looks
 		// configured and is not.
 		"budget",
@@ -294,8 +294,19 @@ func TestNonConfigurableFlagsCannotBeSet(t *testing.T) {
 			// "not a key this file may set" plus a reason. The reason is the part that matters:
 			// somebody who wanted fail_on_cycle off needs to be told the workflow is where that
 			// decision lives, or they will look for another way to do it here.
-			if !strings.Contains(msg, "may set") {
+			//
+			// The whole phrase, and the absence of "unknown key" beside it. A substring of
+			// "may set" is in unknownKey's message too — it lists what the file may set — so
+			// dropping a key from `refused` moves it to the unknown branch and satisfies a
+			// looser check. That distinction is the one ADR 0011 exists for: an unknown key
+			// says nothing about *why*, and the reason is what stops somebody looking for
+			// another way to weaken their own gate here.
+			if !strings.Contains(msg, "is not a key this file may set") {
 				t.Errorf("error does not say the key is refused rather than unknown: %s", msg)
+			}
+			if strings.Contains(msg, "unknown key") {
+				t.Errorf("the key fell through to the unknown-key branch, so it is not refused "+
+					"with a reason: %s", msg)
 			}
 			if len(msg) < len(key)+60 {
 				t.Errorf("error gives no reason: %s", msg)

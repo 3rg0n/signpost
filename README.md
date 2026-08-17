@@ -14,6 +14,7 @@ markdown committed to the repo.
 signpost build .                      # write the bundle to .signpost/ — the point of the tool
 signpost verify .                     # is the committed bundle still true? non-zero if not
 signpost graph show .                 # report structure: hubs, cycles, bridges, islands
+signpost graph show -all .            # the same findings in full, not the first few of each
 signpost view .                       # open the graph in a browser, served from 127.0.0.1
 signpost graph export -format mermaid .   # render the graph for a diagram or another tool
 ```
