@@ -4855,3 +4855,147 @@ func interpolatedCount(stderr string) (int, bool) {
 	}
 	return 0, false
 }
+
+// A structural diff between two commits reports what the tree says and not what the log says.
+//
+// Issue #39, and this is the stage for the defect the feature shipped with rather than only for
+// the feature. `signpost graph diff HEAD~3 HEAD` on signpost's own repository reported exactly
+// four findings across three commits that touched no import, and all four were `co_changes`
+// edges between /modules/config and three others. The cause is arithmetic rather than a bug in
+// the comparison: a co-change edge is drawn from the commits each revision's log holds
+// (ADR 0020) and a pair needs two of them, so the newer revision — whose log is a superset by
+// construction — draws edges the older one had no history for. Every diff over more than one
+// commit therefore reported coupling that crossed the threshold in between as structural
+// change.
+//
+// # Why this is here and not only in diff_test.go
+//
+// The package tests build graphs by hand and can assert that `structural()` excludes the kind.
+// They cannot produce the condition, because the condition is two real logs of different
+// depths. This stage commits the same edit to two directories twice, which is exactly the
+// threshold, and then diffs the commit before the second edit against the one after it: the
+// trees are identical apart from two comment lines, and the older log holds one co-change
+// commit where the newer holds two. Before the fix this printed two findings. It is the same
+// argument the file header makes for issue #9 — a defect survives a package's tests when the
+// tree those tests run in cannot express the condition.
+//
+// # The positive boundary
+//
+// A test that only asserts silence passes against a diff that reports nothing at all, so the
+// second half adds a real import in a third commit and requires it to be named. The two
+// assertions together say what the command means: history-derived coupling is not a diff, and
+// an import somebody wrote is.
+func TestCorpusDiffReportsTheTreeAndNotTheLog(t *testing.T) {
+	dir := corpusRepo(t)
+
+	// Two commits touching the same two directories, which is the co-change threshold exactly
+	// (vcs.aggregate drops a pair seen once). Comments rather than code, so the structure the
+	// extractors see is byte-identical across all three commits below.
+	for i, msg := range []string{"first pair", "second pair"} {
+		appendLine(t, dir, "go/store/store.go", fmt.Sprintf("\n// pair %d\n", i))
+		appendLine(t, dir, "py/greeter/store.py", fmt.Sprintf("\n# pair %d\n", i))
+		gitRun(t, dir, "add", "-A")
+		gitRun(t, dir, "commit", "--quiet", "-m", msg)
+	}
+
+	// HEAD~1 -> HEAD. One co-change commit on the older side, two on the newer, so the pair
+	// crosses the threshold inside the range being compared.
+	stdout, stderr, code := invoke(t, "graph", "diff", "-quiet", "HEAD~1", "HEAD", dir)
+	if code != 0 {
+		t.Fatalf("diff: exit = %d\n%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "no structural difference") {
+		t.Errorf("two commits that added only comments were reported as structural change. The "+
+			"co-change pair go/store <-> py/greeter crossed its two-commit threshold inside "+
+			"this range, and a diff that compares history-derived edges reports that as an "+
+			"edge gained — indistinguishable from an import somebody added:\n%s", stdout)
+	}
+	// Named, because the absence line above is also what a diff that compared nothing prints.
+	if strings.Contains(stdout, "co_changes") {
+		t.Errorf("a co_changes edge appears in the findings:\n%s", stdout)
+	}
+	// The header counts the set the findings do. `518 -> 522 edges` above an empty list is a
+	// contradiction inside the header, and it is where a reader concludes the tool lost four
+	// edges rather than that it excluded them.
+	if from, to, ok := diffEdgeCounts(stdout); !ok {
+		t.Errorf("no edge counts in the header:\n%s", stdout)
+	} else if from != to {
+		t.Errorf("the header says %d -> %d edges above a report of no difference. The counts "+
+			"include the co-change edges the findings exclude, so the two numbers describe "+
+			"different sets under one heading:\n%s", from, to, stdout)
+	}
+
+	// The positive boundary. A real import in a third commit, against the same history that
+	// produced the false positive above — so this cannot be satisfied by a command that reports
+	// nothing.
+	appendLine(t, dir, "go/greeter/greeter.go", "\nvar _ = store.List\n")
+	replaceInFile(t, dir, "go/greeter/greeter.go",
+		"\t\"github.com/google/uuid\"\n",
+		"\t\"github.com/google/uuid\"\n\n\t\"example.com/corpus/greeter/store\"\n")
+	gitRun(t, dir, "add", "-A")
+	gitRun(t, dir, "commit", "--quiet", "-m", "greeter reads the store")
+
+	stdout, stderr, code = invoke(t, "graph", "diff", "-quiet", "HEAD~1", "HEAD", dir)
+	if code != 0 {
+		t.Fatalf("diff after the import: exit = %d\n%s", code, stderr)
+	}
+	if strings.Contains(stdout, "no structural difference") {
+		t.Fatalf("an import added between two commits was not reported. The exclusion above is "+
+			"then indistinguishable from comparing no edges at all:\n%s", stdout)
+	}
+	gained := findSection(stdout, "edges gained")
+	if !strings.Contains(gained, "-imports->") {
+		t.Errorf("the new import is not among the gained edges:\n%s", stdout)
+	}
+	// Both endpoints, by page name rather than by path: the IDs are what the diff prints and
+	// what a reader greps the two bundles for.
+	for _, want := range []string{"greeter", "store"} {
+		if !strings.Contains(gained, want) {
+			t.Errorf("the gained edge does not name %q:\n%s", want, gained)
+		}
+	}
+}
+
+// appendLine adds text to the end of a corpus file.
+func appendLine(t *testing.T, root, rel, text string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	b, err := os.ReadFile(full) // #nosec G304 -- a path this test just built under t.TempDir
+	if err != nil {
+		t.Fatalf("reading %s: %v", rel, err)
+	}
+	if err := os.WriteFile(full, append(b, text...), 0o600); err != nil {
+		t.Fatalf("writing %s: %v", rel, err)
+	}
+}
+
+// replaceInFile substitutes the one occurrence of old in a corpus file, failing if it is not
+// there. Failing rather than no-oping: a fixture edit that silently matched nothing would leave
+// the assertion it sets up passing for the wrong reason.
+func replaceInFile(t *testing.T, root, rel, old, new string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(rel))
+	b, err := os.ReadFile(full) // #nosec G304 -- a path this test just built under t.TempDir
+	if err != nil {
+		t.Fatalf("reading %s: %v", rel, err)
+	}
+	if !strings.Contains(string(b), old) {
+		t.Fatalf("%s does not contain %q, so this edit changes nothing", rel, old)
+	}
+	out := strings.Replace(string(b), old, new, 1)
+	if err := os.WriteFile(full, []byte(out), 0o600); err != nil {
+		t.Fatalf("writing %s: %v", rel, err)
+	}
+}
+
+// diffEdgeCounts reads the two edge counts out of a diff's header line.
+func diffEdgeCounts(stdout string) (from, to int, ok bool) {
+	for _, line := range strings.Split(stdout, "\n") {
+		var fn, fe, tn, te int
+		if _, err := fmt.Sscanf(strings.TrimSpace(line),
+			"%d nodes, %d edges -> %d nodes, %d edges", &fn, &fe, &tn, &te); err == nil {
+			return fe, te, true
+		}
+	}
+	return 0, 0, false
+}

@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **`signpost graph diff <from> <to>` reports what changed structurally between two commits**,
+  checking each revision out into a temporary worktree so neither the working tree nor the index
+  is touched. Concepts added, removed, and renamed — renames asked of git and aggregated to the
+  directory a module is — plus edges gained and lost, with co-change excluded because the newer
+  revision's log is a superset of the older one's (#39,
+  [ADR 0035](docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md)).
+
 - **`signpost graph show -all` lists every structural finding in full**, instead of the first few
   of each. The bounds are right for a terminal and unchanged by default, but a model that greps
   `and 35 more` had nowhere to go for the rest, so the findings design §7.1 calls load-bearing

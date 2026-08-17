@@ -95,6 +95,7 @@ func commands() []command {
 		{name: "graph", summary: "report or render the structure signpost found", was: "show", subs: []command{
 			{name: "show", summary: "analyse a repository and report its structure", run: runGraphShow},
 			{name: "export", summary: "render the graph as mermaid, dot, graphml, or json", run: runExport},
+			{name: "diff", summary: "report what changed structurally between two commits", run: runGraphDiff},
 		}},
 		{name: "view", summary: "serve the graph on 127.0.0.1 and open a browser", run: runView},
 		{name: "init", summary: "write the CI files that keep a bundle honest, or publish it", subs: []command{
