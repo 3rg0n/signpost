@@ -1327,6 +1327,7 @@ signpost build -semantic           # and summarise modules with the configured b
 signpost verify [path]             # conformance + link + staleness; non-zero on failure
 signpost graph show [path]         # report structure: hubs, cycles, bridges, islands
 signpost graph export -format ...  # mermaid, dot, graphml, or json
+signpost graph diff <a> <b> [path] # what changed structurally between two commits
 signpost view [path]               # serve the graph on 127.0.0.1 and open a browser
 signpost view -static <dir>        # write that same page to a directory and exit
 signpost init github               # scaffold the workflow that keeps a bundle honest
@@ -1710,6 +1711,52 @@ clustering. So the findings this section calls load-bearing were available compl
 to nobody. The default is unchanged, the truncation names the flag that lifts it,
 and `-all` with `-top` is refused rather than resolved: one is a bound and the other
 is its absence, so silently honouring one would drop a flag somebody typed.
+
+`graph diff <from> <to>` compares two commits and is text for the same reason,
+which is the argument [ADR
+0035](adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md)
+turns on: the findings above are text because that is what an agent consumes, and a
+picture has no `-all`. It reports concepts added, removed, and renamed, and edges
+gained and lost. A concept present at both revisions is not otherwise compared —
+churn differs at every commit by definition, so including it would make every
+module a finding.
+
+Three consequences worth stating here rather than only in the ADR:
+
+- **A revision that is not checked out comes from a detached `git worktree`, analysed
+  by the same pipeline as everything else.** Nothing below the analysis knows whether
+  the path it was handed is the user's checkout, so this costs no second
+  implementation — where teaching discovery to read a git object tree would mean a
+  second `.gitignore` layering, a second byte budget, and a second census. It costs a
+  full copy of the tree on disk for the duration, about eleven seconds per revision on
+  this repository, which is why this is not on any hot path: `build` and `verify` read
+  the tree they already stand in.
+- **A rename is git's answer, not signpost's.** `git diff -M` reports renamed files;
+  a module node is a directory (§4.2), so a directory move is the set of file moves
+  under it. Resolved *before* edges are compared, or a renamed module with fifteen
+  imports reads as one removal, one addition, and thirty edge changes — a diff in which
+  `git mv` and a rewrite are indistinguishable. A directory whose files went to two
+  destinations is a split, and reporting one of them as the destination would assert a
+  relationship the repository does not state, so it is a removal plus additions
+  ([ADR 0034](adr/0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) makes
+  the same refusal for an interpolated table name).
+- **Co-change is excluded, and this one was found by running it.** A co-change edge is
+  drawn from the commits each revision's log holds (§4.1), and the newer revision's log
+  is a superset of the older one's *by construction* — so a pair that crossed the
+  threshold in between appears as an edge gained, indistinguishable from an import
+  somebody wrote. On this repository `graph diff HEAD~3 HEAD` reported exactly four
+  findings across three commits that touched no import, and all four were co-change.
+  The loss is real: co-change is the only coupling no static read produces. It is not
+  available *as a diff* because the edge is a claim about a window of history rather
+  than about a tree, and two revisions do not share a window; `graph show` at each
+  revision answers that question instead.
+
+This is also the one command that requires git rather than degrading without it.
+Everything else treats history as an optional signal and reports its absence as a
+fact ([ADR 0020](adr/0020-git-history-annotates-the-map-and-never-draws-it.md)); there
+is no best-effort answer to what changed between two commits in a tree that has none,
+so the three ways it cannot run — git absent, not a repository, no commits — are three
+separate messages, because the remedies are three different things.
 
 ### 7.2 `site/` — the landing page and the viewer
 

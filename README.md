@@ -15,6 +15,7 @@ signpost build .                      # write the bundle to .signpost/ — the p
 signpost verify .                     # is the committed bundle still true? non-zero if not
 signpost graph show .                 # report structure: hubs, cycles, bridges, islands
 signpost graph show -all .            # the same findings in full, not the first few of each
+signpost graph diff HEAD~5 HEAD .     # what changed structurally: modules, renames, edges
 signpost view .                       # open the graph in a browser, served from 127.0.0.1
 signpost graph export -format mermaid .   # render the graph for a diagram or another tool
 ```
@@ -567,6 +568,7 @@ in a repository without a bundle.
 | Graph assembly and import resolution | done |
 | Mermaid / DOT / GraphML / JSON export | done |
 | `signpost graph show`, `signpost graph export` | done |
+| `signpost graph diff` — structural change between two commits | done |
 | Git signals (co-change, churn, ownership) | done |
 | `signpost build` — OKF emit with edit preservation | done |
 | `signpost verify` — conformance, links, staleness | done |
