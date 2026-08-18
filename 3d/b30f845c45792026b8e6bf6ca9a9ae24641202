@@ -1,0 +1,44 @@
+README.md
+  s_f6c0b1ac81cb95::t_4eb5089557f23d 227
+  s_f6c0b1ac81cb95::t_86af2a45a09907 234-240
+docs/adr/0036-a-kept-orphan-says-so-on-the-page.md
+  s_f6c0b1ac81cb95::t_e3c0f6d5aa09d6 1-97
+internal/okf/frontmatter.go
+  s_f6c0b1ac81cb95::t_9d9ccec61d724f 194-209
+internal/okf/bundle_test.go
+  s_f6c0b1ac81cb95::t_faf619ccf54757 10
+  s_f6c0b1ac81cb95::t_e8139da651ef72 513-518
+  s_f6c0b1ac81cb95::t_488006261a90a0 574-769
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_ca65f577ddf401 11-17
+internal/okf/bundle.go
+  s_f6c0b1ac81cb95::t_affa9ad833334e 314
+  s_f6c0b1ac81cb95::t_7368bf0ca899a6 413
+  s_f6c0b1ac81cb95::t_92e43157f397a2 310-313
+  s_f6c0b1ac81cb95::t_1978b47c53b670 335-384
+docs/design.md
+  s_f6c0b1ac81cb95::t_88c0a7bbcf384d 1110-1119
+  s_f6c0b1ac81cb95::t_afe3e33244e266 1529-1534
+cmd/signpost/build.go
+  s_f6c0b1ac81cb95::t_acde3a6ded730c 398-402,404
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_72ce91349eeca9 55
+internal/okf/page.go
+  s_f6c0b1ac81cb95::t_46f02299c7fe55 297-315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3db30f845c45792026b8e6bf6ca9a9ae24641202",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
