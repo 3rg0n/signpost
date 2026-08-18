@@ -585,7 +585,7 @@ in a repository without a bundle.
 | `build -semantic` — module role summaries, grounded and cited | done |
 | Semantic pass: doc-to-code linking, invariants, cluster labels | v0.3 |
 | Viewer: search by name, path, or file · deep links to source | done |
-| Viewer: diff between two commits | v0.4 |
+| Viewer: diff between two commits | declined — `graph diff` reports it as text ([ADR 0035](docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md)) |
 
 The deterministic core is usable end-to-end: build a bundle, commit it, and CI keeps
 it honest. `build -semantic` adds the summaries that say what a module is *for*,
