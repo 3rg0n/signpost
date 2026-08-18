@@ -191,6 +191,22 @@ const statusKey = "signpost_status"
 // something else without changing what this one meant.
 const statusStaleVerification = "stale-verification"
 
+// statusConceptRemoved marks a page whose concept is gone from the repository and which the
+// sweep kept anyway, because somebody had written on it.
+//
+// The second value the comment above left room for, and it outranks the first — which is what
+// keeps this key a scalar. A page can be both: a human reviewed it at an older commit, and then
+// the thing it describes went away. The second answer makes the first moot, since whether a
+// review of a module is current is a question about nothing once the module is gone. A list
+// would answer both at once, at the cost of changing the key's shape for every consumer and
+// for its §3.1 slot, to say something no reader needs.
+//
+// The precedence needs no comparison anywhere: withStatus replaces whatever is there, and the
+// sweep runs after every page is merged. It is recorded here because that ordering is the only
+// thing implementing it, and a later change that marked pages before merging them would invert
+// the rank without touching a line that mentions either value.
+const statusConceptRemoved = "concept-removed"
+
 // legacyStatusLine reports whether a carried line is a `status: stale-verification` written
 // by a signpost older than ADR 0021, which owned the spec's key.
 //

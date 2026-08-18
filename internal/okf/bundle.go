@@ -307,7 +307,11 @@ func sweepStale(dir string, files map[string]string, res *Result) error {
 			res.Stale = append(res.Stale, rel)
 			continue
 		}
-		if !prunable(normalizeRead(string(src))) {
+		page := normalizeRead(string(src))
+		if !prunable(page) {
+			// Kept, and marked, so the reason it is still here survives the terminal that ran
+			// the build. See markConceptRemoved.
+			markConceptRemoved(full, page)
 			res.Stale = append(res.Stale, rel)
 			continue
 		}
@@ -326,6 +330,56 @@ func sweepStale(dir string, files map[string]string, res *Result) error {
 	sort.Strings(res.Stale)
 	sort.Strings(res.Removed)
 	return nil
+}
+
+// markConceptRemoved writes signpost's "the concept this describes is gone" status into a page
+// the sweep kept, and does nothing at all when it cannot.
+//
+// The other half of reporting a kept orphan, and the half that reaches the reader who matters.
+// `Stale` reaches whoever ran the build; the bundle is committed and read by people and agents
+// who never will (§4.6), and to them a page describing a module that no longer exists is
+// indistinguishable from one whose module is still there — the same plausible edges, the same
+// resource stamp naming a commit where the code really did exist. That is precisely the state
+// ADR 0010's ghost pages were in, and a page is where a reader is standing when the question
+// occurs to them.
+//
+// Self-clearing, for the reason the downgrade mark is: the key is generated, so a rebuild in
+// which the concept exists again replaces the whole block and the mark goes with it. The mark
+// is also not a human key, so it cannot save the page — delete the notes that kept it and the
+// next sweep prunes it, marker and all.
+//
+// # What this does not do
+//
+// It does not write to a file signpost did not write, and the guard is the whole first half of
+// the function. prunable refuses to *delete* such a file; refusing to *edit* it is the same
+// judgement, and both shapes reach here because both are non-prunable for exactly that reason.
+//
+// It does not fail the build. A page that could not be written is a page that is still there,
+// exactly as it was, and the bundle this run rendered is correct — the posture sweepStale takes
+// on a page it could not read or could not remove. The page is reported as kept either way,
+// which is the fact a reader acts on.
+//
+// It does not make `verify` demand the mark. checkUpToDate compares only the pages a run
+// produces, and an orphan is by definition not one of them, so a bundle built by an older
+// signpost passes the gate while a build would still change this page. That is deliberate:
+// checkOrphans already warns about the same page, and escalating it to "a build would change
+// this" would turn one fact into two findings and make a warning into a failure through the
+// back door. The write is idempotent, so the divergence closes on the next build with no churn.
+func markConceptRemoved(full, src string) {
+	p := ParsePage(src)
+	if !p.HasFrontmatter || !p.hasManagedRegion() {
+		return
+	}
+	p.Frontmatter = withStatus(p.Frontmatter, statusConceptRemoved)
+	out := p.Render()
+	if out == src {
+		// Already marked by an earlier run. Not rewritten, so the mtime does not move and a
+		// file watcher does not fire on every build for the life of the page — the same reason
+		// writeIfChanged compares before writing.
+		return
+	}
+	// #nosec G306 -- a committed, world-readable knowledge artifact, as everywhere else here
+	_ = os.WriteFile(full, []byte(out), 0o644)
 }
 
 // prunable reports whether a page holds nothing but the skeleton a first emit wrote, so that
@@ -356,14 +410,7 @@ func prunable(src string) bool {
 	if carryHumanKeys(p.Frontmatter) != "" {
 		return false
 	}
-	managed := false
-	for _, r := range p.Body {
-		if r.Managed() {
-			managed = true
-			break
-		}
-	}
-	if !managed {
+	if !p.hasManagedRegion() {
 		return false
 	}
 	for _, line := range strings.Split(p.HumanText(), "\n") {

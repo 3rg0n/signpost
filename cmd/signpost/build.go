@@ -395,8 +395,13 @@ func reportBuild(p *printer, root string, res *okf.Result) {
 		// Kept because somebody has written on them. See internal/okf's package comment: a
 		// renamed directory must not silently remove a page someone put notes on, so the
 		// decision is handed back rather than made here. `verify` warns about the same pages.
+		//
+		// "and marked" is stated because this is the one line in a build that reports pages
+		// being *edited* outside the counts above — those describe the pages a run rendered,
+		// and a kept orphan is not one of them. Without it a reader who saw "0 updated" would
+		// have no reason to expect a diff.
 		p.printf("  %d page(s) describe concepts that no longer exist and have been "+
-			"written on, so they were kept:\n    %s\n",
+			"written on, so they were kept and marked in the page:\n    %s\n",
 			n, joinTop(n, 10, func(i int) string { return res.Stale[i] }))
 	}
 }

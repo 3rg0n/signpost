@@ -294,6 +294,25 @@ func (p *Page) Managed(name string) (string, bool) {
 	return "", false
 }
 
+// hasManagedRegion reports whether signpost wrote any part of this page's body.
+//
+// This is the "is this page mine at all" test, and it has two callers that must never
+// disagree: prunable, deciding whether a page is signpost's to delete, and the sweep's mark,
+// deciding whether it is signpost's to write into. A file with neither frontmatter nor a
+// managed region is a markdown file somebody dropped in the bundle directory — not this
+// tool's to delete no matter what the graph says, and equally not this tool's to annotate.
+// Shared rather than written out twice, because the two answers diverging is a change nobody
+// would see: the sweep would edit a document it does not own, and the only evidence would be
+// in someone else's git history.
+func (p *Page) hasManagedRegion() bool {
+	for _, r := range p.Body {
+		if r.Managed() {
+			return true
+		}
+	}
+	return false
+}
+
 // HumanText returns everything outside managed regions, concatenated. Used by tests and
 // by verify to assert nothing was lost; not used to rebuild a page, which needs the
 // region order.
