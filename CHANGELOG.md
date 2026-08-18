@@ -982,6 +982,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **The v0.4 roadmap item "diff between two commits" in the viewer is declined, not deferred.**
+  `signpost graph diff` reports it as text instead, because the reader design §7.1 names is an
+  agent and a diagram has no `-all`; the other two v0.4 viewer items, search and deep links to
+  source, already shipped, so the milestone closes rather than carrying
+  ([ADR 0035](docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md)).
+
 - **The walk's default byte budget is 3 GiB, raised from 512 MiB.** A monorepo of roughly
   275,000 files recorded 170,530 of them as skipped under the old default and reported its
   own first-party packages as unresolved imports, because the files defining them were never

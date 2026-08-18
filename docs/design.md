@@ -2253,9 +2253,15 @@ content-hash cache, human-review preservation, `signpost-semantic.yml`.
 **v0.3 — enrichment and query.** SCIP reader, codeatlas bridge, `why` and `path`,
 GraphML/DOT/JSON export.
 
-**v0.4 — the viewer, deepened.** The node-link view in `site/graph.html` ships with
-v0.1; v0.4 adds what it does not yet have — search, diff-between-commits, and deep
-links to source. Still zero JS dependencies, still hardened per §7.2.
+**v0.4 — the viewer, deepened. Closed rather than carried.** The node-link view in
+`site/graph.html` ships with v0.1, and this milestone listed the three things it
+lacked. Search and deep links to source shipped, still with zero JS dependencies
+and still hardened per §7.2. The third, diff between two commits, is declined *for
+the viewer*: `graph diff` reports it as text instead, because the reader §7.1 names
+is an agent and a diagram has no `-all`
+([ADR 0035](adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md)).
+A person comparing two releases visually is not served, which that ADR records as a
+real loss rather than a tidy trade.
 
 **v0.5 — MCP server.** stdio JSON-RPC so an agent queries the bundle instead of
 reading files. Hand-rolled, following the pattern codeatlas already proved with
