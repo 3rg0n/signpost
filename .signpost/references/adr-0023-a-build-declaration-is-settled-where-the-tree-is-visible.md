@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0023: a build declaration is settled where the tree is visible"
 description: "Architecture decision (Accepted), 23 rules read from 0023-a-build-declaration-is-settled-where-the-tree-is-visible.md."
-resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409/docs/adr/0023-a-build-declaration-is-settled-where-the-tree-is-visible.md
+resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/docs/adr/0023-a-build-declaration-is-settled-where-the-tree-is-visible.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-17" }
+generated: { by: signpost/dev, at: "2026-08-18" }
 attributes:
   - { name: number, value: "0023" }
   - { name: rules, value: "23" }

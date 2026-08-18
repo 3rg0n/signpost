@@ -2,9 +2,9 @@
 type: External Dependency
 title: actions/upload-pages-artifact
 description: github-actions dependency actions/upload-pages-artifact (fc324d3547104276b827a68afc52ff2a11cc49c9)
-resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409
+resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09
 tags: [direct, external, github-actions]
-generated: { by: signpost/dev, at: "2026-08-17" }
+generated: { by: signpost/dev, at: "2026-08-18" }
 attributes:
   - { name: ecosystem, value: github-actions }
   - { name: name, value: actions/upload-pages-artifact }

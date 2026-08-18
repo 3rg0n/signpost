@@ -2,20 +2,20 @@
 type: Module
 title: (repository root)
 description: "2 powershell files; 10 exported symbols; entrypoint #!, param."
-resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409
+resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09
 tags: [entrypoint]
-generated: { by: signpost/dev, at: "2026-08-17" }
+generated: { by: signpost/dev, at: "2026-08-18" }
 attributes:
-  - { name: commits, value: "78" }
+  - { name: commits, value: "79" }
   - { name: entrypoints, value: "#!, param" }
   - { name: exported, value: "10" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-17" }
-  - { name: lines_added, value: "5363" }
-  - { name: lines_removed, value: "247" }
+  - { name: last_commit, value: "2026-08-18" }
+  - { name: lines_added, value: "5370" }
+  - { name: lines_removed, value: "248" }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 51% }
+  - { name: top_author_share, value: 52% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 19 }
   - { kind: co_changes, to: ./config.md, confidence: extracted, weight: 2 }
@@ -31,7 +31,7 @@ edges:
   - { kind: co_changes, to: ./scaffold.md, confidence: extracted, weight: 2 }
   - { kind: co_changes, to: ./semantic.md, confidence: extracted, weight: 3 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 51 }
-  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 15 }
+  - { kind: co_changes, to: ./site.md, confidence: extracted, weight: 16 }
   - { kind: co_changes, to: ./vcs.md, confidence: extracted, weight: 6 }
   - { kind: co_changes, to: ./view.md, confidence: extracted, weight: 3 }
   - { kind: configures, to: ../references/github-actions-actions-cache.md, confidence: extracted, source: .github/workflows/signpost-semantic.yml }
@@ -67,7 +67,7 @@ edges:
 
 - **Exports** (10): `Get-Arch`, `Get-LatestVersion`, `Write-Step`, `die`, `fetch`, `fetch_stdout`, `info`, `need`, `sha256`, `usage`
 
-- **Changes with**: [internal/assemble](./assemble.md) ×19, [internal/config](./config.md) ×2, [internal/discover](./discover.md) ×14, [internal/export](./export.md) ×3, [internal/extract](./extract.md) ×10, [internal/graph](./graph.md) ×5, [internal/hook](./hook.md) ×2, [internal/manifest](./manifest.md) ×10, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×15, [internal/practice](./practice.md) ×7, [internal/scaffold](./scaffold.md) ×2, [internal/semantic](./semantic.md) ×3, [cmd/signpost](./signpost.md) ×51, [site](./site.md) ×15, [internal/vcs](./vcs.md) ×6, [internal/view](./view.md) ×3
+- **Changes with**: [internal/assemble](./assemble.md) ×19, [internal/config](./config.md) ×2, [internal/discover](./discover.md) ×14, [internal/export](./export.md) ×3, [internal/extract](./extract.md) ×10, [internal/graph](./graph.md) ×5, [internal/hook](./hook.md) ×2, [internal/manifest](./manifest.md) ×10, [internal/model](./model.md) ×2, [internal/okf](./okf.md) ×15, [internal/practice](./practice.md) ×7, [internal/scaffold](./scaffold.md) ×2, [internal/semantic](./semantic.md) ×3, [cmd/signpost](./signpost.md) ×51, [site](./site.md) ×16, [internal/vcs](./vcs.md) ×6, [internal/view](./view.md) ×3
 
 - **Configures**: [actions/cache](../references/github-actions-actions-cache.md), [actions/checkout](../references/github-actions-actions-checkout.md), [actions/configure-pages](../references/github-actions-actions-configure-pages.md), [actions/deploy-pages](../references/github-actions-actions-deploy-pages.md), [actions/setup-go](../references/github-actions-actions-setup-go.md), [actions/upload-pages-artifact](../references/github-actions-actions-upload-pages-artifact.md), [golangci/golangci-lint-action](../references/github-actions-golangci-golangci-lint-action.md), [github.com/cespare/xxhash/v2](../references/go-github-com-cespare-xxhash-v2.md), [github.com/go-logr/logr](../references/go-github-com-go-logr-logr.md), [github.com/go-logr/stdr](../references/go-github-com-go-logr-stdr.md), [github.com/google/uuid](../references/go-github-com-google-uuid.md), [go.opentelemetry.io/auto/sdk](../references/go-go-opentelemetry-io-auto-sdk.md), [go.opentelemetry.io/otel](../references/go-go-opentelemetry-io-otel.md), [go.opentelemetry.io/otel/metric](../references/go-go-opentelemetry-io-otel-metric.md), [go.opentelemetry.io/otel/sdk](../references/go-go-opentelemetry-io-otel-sdk.md), [go.opentelemetry.io/otel/trace](../references/go-go-opentelemetry-io-otel-trace.md), [golang.org/x/sys](../references/go-golang-org-x-sys.md)
 <!-- /signpost:managed:structure -->

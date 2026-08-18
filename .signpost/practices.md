@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409
-generated: { by: signpost/dev, at: "2026-08-17" }
+resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09
+generated: { by: signpost/dev, at: "2026-08-18" }
 ---
 # How work is done here
 
@@ -29,9 +29,9 @@ Each line is something this repository states, or something it does not. A missi
 
 ### How changes are recorded
 
-- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 153 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
+- **Not declared.** Commit subjects follow no machine-readable convention — 1 of 155 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
   - Looked in the subject line of every commit read.
-- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 119 commits back.
+- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 121 commits back.
 
 ### Dependencies
 

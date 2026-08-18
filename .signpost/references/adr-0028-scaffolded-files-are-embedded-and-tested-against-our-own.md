@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0028: scaffolded files are embedded and tested against our own"
 description: "Architecture decision (Accepted), 26 rules read from 0028-scaffolded-files-are-embedded-and-tested-against-our-own.md."
-resource: git://github.com/3rg0n/signpost@9423d6862a760d2846b57c80da3a96a280bf4409/docs/adr/0028-scaffolded-files-are-embedded-and-tested-against-our-own.md
+resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/docs/adr/0028-scaffolded-files-are-embedded-and-tested-against-our-own.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-17" }
+generated: { by: signpost/dev, at: "2026-08-18" }
 attributes:
   - { name: number, value: "0028" }
   - { name: rules, value: "26" }
