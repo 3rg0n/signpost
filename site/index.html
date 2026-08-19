@@ -59,7 +59,14 @@
 
     <main id="main">
       <!-- The hero is the tool's own real output on its own repository, including
-           the line where it reports what it could not read. -->
+           the line where it reports what it could not read. Pasted from a run, not
+           written by hand, and the caption dates it so a number here is a fact about
+           a day rather than a claim about now. Two elisions, both to keep the figure
+           a screen tall: the line naming the run's root directory, which is whatever
+           path the machine used, and everything after the hubs — cross-cluster edges,
+           disconnected components, unconnected concepts. Nothing is reflowed or
+           re-padded. Re-pasting means running `signpost graph show .`, taking the top
+           through the hubs block, dropping the root line, and moving the date. -->
       <section class="hero">
         <h1 class="hero__line">
           Give models signposting<br />
@@ -73,36 +80,43 @@
         </p>
 
         <figure class="term">
-          <figcaption class="term__cap">signpost, run on its own repository</figcaption>
+          <figcaption class="term__cap">signpost, run on its own repository · 2026-08-19</figcaption>
           <pre class="term__body"><span class="term__prompt">$</span> signpost graph show .
-analysed 166 files: 49 nodes, 87 edges
-<span class="u">  no extractor for: .ps1 (1), .sh (1)</span>
-<span class="u">  8 file(s) of no recognised kind: .html (2), .css (1), .svg (1), cname (1), and 3 more</span>
-  history: 73 commits, 17 co-change pair(s)
+analysed 258 files: 90 nodes, 224 edges
+<span class="u">  1 file(s) not read: test fixture directory (1)</span>
+<span class="u">  9 file(s) of no recognised kind: .html (3), .css (1), .gitattributes (1), .gitignore (1), .svg (1), cname (1), and 1 more</span>
+<span class="u">  15 statement(s) named 8 table(s) no migration declares: orders (5), archive (2), counters (2), things (2), customers (1), and 3 more</span>
+<span class="u">  19 statement(s) build a table name at run time; no edge drawn</span>
+  history: 160 commits, 55 co-change pair(s)
 
-  49 nodes, 87 edges, 33 clusters
+  90 nodes, 224 edges, 40 clusters
+
+concepts
+  Document               38
+  External Dependency    17
+  Module                 22
+  Pipeline               13
 
 hubs (top 10 by degree)
-  /modules/signpost      in 10   out 23
-  /modules/discover      in 11   out 4
-  /modules/manifest      in 10   out 5
-  /modules/assemble      in 4    out 7
-
-cross-cluster edges (44)
-  /modules/assemble -imports-&gt; /modules/graph
-  /modules/config -imports-&gt; /modules/manifest
-
-disconnected components (30)
-  20 nodes: /modules/assemble, /modules/config, and 18 more
-  1 nodes: /references/adr-0001-hand-written-tolerant-yaml-reader</pre>
+  /modules/root                              in 18   out 34
+  /modules/signpost                          in 16   out 33
+  /modules/assemble                          in 12   out 16
+  /modules/manifest                          in 15   out 11
+  /references/agents-md                      in 0    out 22
+  /modules/discover                          in 14   out 7
+  /modules/okf                               in 11   out 9
+  /modules/site                              in 11   out 9
+  /modules/graph                             in 12   out 6
+  /modules/extract                           in 9    out 8</pre>
         </figure>
         <p class="term__note">
           <span class="u-key" aria-hidden="true"></span>
-          The two dim lines are the gaps. The first is a language signpost knows
-          and has no extractor for; the second is files it could not identify at
-          all, which is a different admission and gets a different line.
+          The four dim lines are the gaps, and each is a different admission: a
+          directory recorded rather than read, files of no kind it recognises,
+          tables the code names that no migration declares, and statements whose
+          table is built at run time, where drawing an edge would mean guessing.
           Coverage is not opt-in: the absence of a measurement is never a clean
-          bill of health.
+          bill of health. The run continues past the hubs.
           <a href="graph.html">See this graph rendered.</a>
         </p>
       </section>

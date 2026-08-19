@@ -1280,6 +1280,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The landing page's hero showed a run of a much smaller repository than this one.** It reported
+  166 analysed files, 49 nodes, and 87 edges, against a tree that now measures 258, 90, and 224,
+  and it named two coverage gaps where a real run names four. The figure is a pasted run again,
+  with a dated caption, and the note beside it describes each of the four gaps.
+
 - **The landing page's status table said the semantic pass was still to come, eight rows after it
   shipped.** It listed the pass at `v0.2` and called v0.1 in progress, while the README's table and
   the 0.1.0 changelog entry both record `build -semantic`, the model backends, and seven other
