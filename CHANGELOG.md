@@ -997,6 +997,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- **The viewer says when a `file://` page is what stopped it, instead of reporting the browser's
+  wording.** A page opened from disk cannot fetch `graph.json` at all — the browser blocks it from
+  origin `null` and throws "Failed to fetch", which is also what a broken deploy throws, so the
+  message named the wrong cause. It now says the file is the reason and names `signpost view`,
+  which serves the same page over http. `view -static` writes this viewer to a directory, so
+  arriving here from a file is ordinary rather than a mistake.
+
 - **The v0.4 roadmap item "diff between two commits" in the viewer is declined, not deferred.**
   `signpost graph diff` reports it as text instead, because the reader design §7.1 names is an
   agent and a diagram has no `-all`; the other two v0.4 viewer items, search and deep links to

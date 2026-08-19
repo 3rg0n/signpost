@@ -1,6 +1,7 @@
-package main
+package site
 
 import (
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -48,13 +49,15 @@ import (
 //
 // # Why this test lives here
 //
-// site/ holds HTML, CSS, and JavaScript, and no Go package. This one already reads repository
-// documents through init_test.go's readRepoFile, which finds the root by walking up to go.mod, so
-// the paths below are repository-relative and survive a package move.
+// This package embeds the viewer's files so that `view` serves the published page rather than a
+// fork of it. index.html is the one file in this directory it does not embed — the landing page
+// has no reader in Go — so the package owns the file without depending on it, which is the right
+// place for a test that reads it. go test runs in the package directory, so the paths below are
+// relative to site/.
 
 const (
-	readmePath = "README.md"
-	sitePath   = "site/index.html"
+	readmePath = "../README.md"
+	sitePath   = "index.html"
 )
 
 // statusRow is one row of either table. class is the site's <tr> class and is empty for a
@@ -87,7 +90,11 @@ var (
 // found that way.
 func siteDoc(t *testing.T, rel string) string {
 	t.Helper()
-	return strings.ReplaceAll(readRepoFile(t, rel), "\r\n", "\n")
+	b, err := os.ReadFile(rel)
+	if err != nil {
+		t.Fatalf("read %s: %v", rel, err)
+	}
+	return strings.ReplaceAll(string(b), "\r\n", "\n")
 }
 
 // flatten strips markup and link syntax and collapses whitespace, so a cell written across

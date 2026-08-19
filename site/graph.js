@@ -150,11 +150,29 @@
 
   // failed says what to run instead. A viewer that cannot load its data is a
   // dead end only if it does not name the path that does not need it.
+  //
+  // A page opened from a file cannot fetch at all. The browser blocks it from
+  // origin `null` whatever sits next to it on disk, and the error it throws
+  // reads "Failed to fetch" — the same sentence a broken deploy produces, so
+  // reporting it names the wrong cause. `view -static` writes this viewer to a
+  // directory, which makes that the ordinary way to arrive here, so the file
+  // case says what stopped it and names the command that serves the same page
+  // over http.
   function failed(err) {
     clear(el.fallback);
-    el.fallback.appendChild(
-      text("The graph could not be loaded: " + err.message + ". ")
-    );
+    if (location.protocol === "file:") {
+      el.fallback.appendChild(
+        text(
+          "This page was opened from a file, so the browser refused to let it read graph.json. "
+        )
+      );
+      el.fallback.appendChild(mono("signpost view"));
+      el.fallback.appendChild(text(" serves this viewer over http. "));
+    } else {
+      el.fallback.appendChild(
+        text("The graph could not be loaded: " + err.message + ". ")
+      );
+    }
     el.fallback.appendChild(text("It is readable without this page — "));
     el.fallback.appendChild(mono("signpost graph ."));
     el.fallback.appendChild(text(" prints the findings as text."));

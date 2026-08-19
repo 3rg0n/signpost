@@ -50,7 +50,7 @@ nothing to do with the page, in a workflow that is deliberately off the merge pa
 
 ## Decision
 
-A test in `cmd/signpost/site_test.go` compares the two tables on their **verdicts** and checks
+A test in `site/status_test.go` compares the two tables on their **verdicts** and checks
 the pasted run for **internal consistency**. It runs in the existing `test` job, so it blocks a
 pull request on all three platforms and adds no workflow.
 
