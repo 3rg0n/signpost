@@ -378,7 +378,10 @@ func markConceptRemoved(full, src string) {
 		// writeIfChanged compares before writing.
 		return
 	}
-	// #nosec G306 -- a committed, world-readable knowledge artifact, as everywhere else here
+	// #nosec G306,G703 -- G306: a committed, world-readable knowledge artifact, as everywhere
+	// else here. G703: `full` is a path from the walk of the bundle directory that chose this
+	// page, joined and cleaned there — the same value the read above and the remove below use,
+	// and taint analysis sees it here only because this is the write.
 	_ = os.WriteFile(full, []byte(out), 0o644)
 }
 
