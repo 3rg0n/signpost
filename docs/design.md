@@ -115,7 +115,7 @@ Which yields:
 | Language | Go. Static binary, cross-compiles to the four platforms we care about. |
 | Dependency policy | Direct deps only, few, each justified in an ADR. Dependabot + Renovate enabled day one. CI fails on a new direct dep without an ADR. |
 | Go parsing | `go/parser` + `go/ast` — full-precision AST, in the stdlib, free. |
-| Other-language parsing | Hand-written extractors (§4.2), nine languages at F1 1.000. A tree-sitter binding is the fallback for one language whose scored fixtures cannot reach target by hand — a library decision, not a tool decision, and ours to bump (ADR [0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)). |
+| Other-language parsing | Hand-written extractors, every language in §4.1 scored at F1 1.000 (§4.2). A tree-sitter binding is the fallback for one language whose scored fixtures cannot reach target by hand — a library decision, not a tool decision, and ours to bump (ADR [0022](adr/0022-extractors-are-hand-written-and-tree-sitter-has-a-threshold.md)). |
 | Graph algorithms | Hand-written (§4.4). Roughly 600 lines, all textbook — genuinely cheaper than a dependency. |
 | Clustering | Louvain, hand-written. ~200 lines versus a JIT-compiler toolchain. Label propagation was tried first and rejected on measured behaviour (§4.4, ADR [0019](adr/0019-louvain-over-label-propagation.md)). |
 | YAML | Hand-written tolerant reader and hand-written emitter, both ours. Helm templates are not YAML and a conforming parser rejects them outright, so a library would not have covered the files that matter (ADR [0001](adr/0001-hand-written-tolerant-yaml-reader.md)). |
