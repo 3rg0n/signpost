@@ -1,0 +1,29 @@
+docs/design.md
+  s_f6c0b1ac81cb95::t_098694d202d102 118
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_8ff5ae7f777978 11-16
+  s_f6c0b1ac81cb95::t_548c127511b5ba 1304-1308
+docs/adr/0038-documented-languages-are-checked-against-the-registry.md
+  s_f6c0b1ac81cb95::t_2df98f9f29b8a7 1-79
+docs/adr/README.md
+  s_f6c0b1ac81cb95::t_b3504734284e6a 57
+internal/extract/languages_test.go
+  s_f6c0b1ac81cb95::t_1ddc438c9ef22f 1-140,143-146,148-150,152-244
+  s_f6c0b1ac81cb95::t_f0842c296c5594 141-142,147,151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c5697fc0873925d2f22bf7542060079ede16f05d",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
