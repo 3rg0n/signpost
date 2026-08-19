@@ -3,7 +3,7 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 91 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e
+resource: git://github.com/3rg0n/signpost@fc4af02fdfa37579f05a7855ddd1be7f2607689f
 generated: { by: signpost/dev, at: "2026-08-19" }
 ---
 # Repository map
@@ -106,8 +106,8 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/scaffold](./modules/scaffold.md) — 2 go files; 10 exported symbols.
 - [internal/selfupdate](./modules/selfupdate.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 30 go files; entrypoint main; package main.
-- [site](./modules/site.md) — 2 go files; 1 exported symbol.
+- [cmd/signpost](./modules/signpost.md) — 29 go files; entrypoint main; package main.
+- [site](./modules/site.md) — 3 go files; 1 exported symbol.
 - [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.

@@ -2,7 +2,7 @@
 type: Pipeline
 title: signpost rebuild the bundle
 description: "CI job rebuild the bundle in the signpost workflow, 6 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e/.github/workflows/signpost.yml
+resource: git://github.com/3rg0n/signpost@fc4af02fdfa37579f05a7855ddd1be7f2607689f/.github/workflows/signpost.yml
 tags: [gate]
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:

@@ -2,7 +2,7 @@
 type: Pipeline
 title: ci signpost analyses signpost
 description: "CI job signpost analyses signpost in the ci workflow, 13 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e/.github/workflows/ci.yml
+resource: git://github.com/3rg0n/signpost@fc4af02fdfa37579f05a7855ddd1be7f2607689f/.github/workflows/ci.yml
 tags: [gate]
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
