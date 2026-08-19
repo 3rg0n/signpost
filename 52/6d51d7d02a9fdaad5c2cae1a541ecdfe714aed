@@ -1,0 +1,25 @@
+site/index.html
+  s_f6c0b1ac81cb95::t_ccc52bdc218e87 62-69
+  s_f6c0b1ac81cb95::t_0ab821b83e2673 83,85-90,92,94-98,100-110
+  s_f6c0b1ac81cb95::t_ae367dbe2fef00 114-117,119
+site/style.css
+  s_f6c0b1ac81cb95::t_dd8eafe08fbc0f 246-251
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_4270fd70745873 1283-1287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "526d51d7d02a9fdaad5c2cae1a541ecdfe714aed",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "3rg0n <62959009+3rg0n@users.noreply.github.com>"
+    }
+  }
+}
