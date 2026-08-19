@@ -2,7 +2,7 @@
 type: Pipeline
 title: ci corpus (a repository signpost did not write)
 description: "CI job corpus (a repository signpost did not write) in the ci workflow, 22 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991/.github/workflows/ci.yml
+resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e/.github/workflows/ci.yml
 tags: [gate]
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:

@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0008: the viewer lives in this repository"
 description: "Architecture decision (Accepted), 23 rules read from 0008-the-viewer-lives-in-this-repository.md."
-resource: git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991/docs/adr/0008-the-viewer-lives-in-this-repository.md
+resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e/docs/adr/0008-the-viewer-lives-in-this-repository.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:

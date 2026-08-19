@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991",
+  "resource": "git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e",
   "date": "2026-08-19",
   "counts": {
-    "nodes": 90,
+    "nodes": 91,
     "edges": 224,
-    "clusters": 40
+    "clusters": 41
   },
   "confidence": {
     "ambiguous": 0,
@@ -88,6 +88,7 @@
     "references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md",
     "references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md",
     "references/adr-0036-a-kept-orphan-says-so-on-the-page.md",
+    "references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

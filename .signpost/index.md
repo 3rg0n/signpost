@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 90 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991
+description: "Structural map of this repository: 91 concepts, 224 relationships."
+resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e
 generated: { by: signpost/dev, at: "2026-08-19" }
 ---
 # Repository map
@@ -53,7 +53,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 37.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 38.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 17 more
+  - and 18 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -106,7 +106,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/scaffold](./modules/scaffold.md) — 2 go files; 10 exported symbols.
 - [internal/selfupdate](./modules/selfupdate.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
-- [cmd/signpost](./modules/signpost.md) — 29 go files; entrypoint main; package main.
+- [cmd/signpost](./modules/signpost.md) — 30 go files; entrypoint main; package main.
 - [site](./modules/site.md) — 2 go files; 1 exported symbol.
 - [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
@@ -167,6 +167,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0034: a deterministic pass may not produce an ambiguous edge](./references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) — Architecture decision (Accepted), 18 rules read from 0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md.
 - [ADR 0035: a structural diff is text and a second commit is a worktree](./references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md) — Architecture decision (Accepted), 28 rules read from 0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md.
 - [ADR 0036: a kept orphan says so on the page](./references/adr-0036-a-kept-orphan-says-so-on-the-page.md) — Architecture decision (Accepted), 19 rules read from 0036-a-kept-orphan-says-so-on-the-page.md.
+- [ADR 0037: the landing page is gated on its verdicts not its words](./references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md) — Architecture decision (Accepted), 23 rules read from 0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

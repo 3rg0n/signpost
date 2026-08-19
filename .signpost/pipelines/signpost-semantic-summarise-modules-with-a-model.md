@@ -2,7 +2,7 @@
 type: Pipeline
 title: signpost-semantic summarise modules with a model
 description: "CI job summarise modules with a model in the signpost-semantic workflow, 8 steps"
-resource: git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991/.github/workflows/signpost-semantic.yml
+resource: git://github.com/3rg0n/signpost@dfd1e5d229c029d8c3e1fad3c6c83588d130900e/.github/workflows/signpost-semantic.yml
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: job, value: summarise modules with a model }
