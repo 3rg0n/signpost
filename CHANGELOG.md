@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The landing page's status table and its pasted run are checked against the tree**, in the
+  existing test job rather than a new workflow. The two tables must state the same verdict for
+  each row, row labels stay free because the site words them differently on purpose, and the
+  paste must agree with itself: the same node and edge counts in its header and its summary, a
+  hub heading that counts its own rows, a note whose spelled-out number counts the coverage
+  lines, and a dated caption. Both sets of claims drifted in the same week with nothing to catch
+  it ([ADR 0037](docs/adr/0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md)).
+
 - **A page whose concept is gone but which somebody wrote on now says so on the page**, gaining a
   generated `signpost_status: concept-removed`. Such a page was named on stdout and warned about by
   `verify`, both of which reach whoever ran a command rather than the reader of a committed bundle,
