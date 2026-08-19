@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A page whose concept is gone but which somebody wrote on now says so on the page**, gaining a
+  generated `signpost_status: concept-removed`. Such a page was named on stdout and warned about by
+  `verify`, both of which reach whoever ran a command rather than the reader of a committed bundle,
+  to whom it was indistinguishable from a live page; the mark clears itself when the concept comes
+  back, outranks `stale-verification`, and is written only to a page signpost wrote (#61,
+  [ADR 0036](docs/adr/0036-a-kept-orphan-says-so-on-the-page.md)).
+
 - **`signpost graph diff <from> <to>` reports what changed structurally between two commits**,
   checking each revision out into a temporary worktree so neither the working tree nor the index
   is touched. Concepts added, removed, and renamed — renames asked of git and aggregated to the

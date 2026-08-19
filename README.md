@@ -224,16 +224,20 @@ left out — in a committed file, a section that disappears when the answer is
 "none" reads exactly like one the build failed to write
 ([ADR 0030](docs/adr/0030-a-finding-states-its-own-absence.md)).
 
-Two rules govern rewriting, and they are why the bundle is safe to hand-edit:
+Three rules govern rewriting, and they are why the bundle is safe to hand-edit:
 
 - **Only the managed regions are regenerated.** Generated prose sits between
   `<!-- signpost:managed:name -->` markers. Everything else on the page — a
   `## Notes` section, a paragraph correcting the summary, a key you added to the
   frontmatter — is carried across byte-for-byte, and the run reports how many
   pages it carried notes on.
-- **Nothing is deleted.** A page describing a directory that no longer exists is
-  reported as stale and left alone, because a rename would otherwise silently
-  delete the notes somebody wrote on it.
+- **A page is deleted only when deleting it destroys nothing.** A page describing a
+  directory that no longer exists holds either just the skeleton a first emit wrote —
+  in which case the run removes it and names it — or something you put there, in which
+  case it is kept and gains `signpost_status: concept-removed`, so the page itself says
+  why it is still in the bundle. A rename must never silently take your notes with it
+  ([ADR 0010](docs/adr/0010-a-stale-page-is-deleted-only-when-nobody-wrote-on-it.md),
+  [ADR 0036](docs/adr/0036-a-kept-orphan-says-so-on-the-page.md)).
 - **A review that no longer applies says so.** If you add a `verified:` block
   recording that you checked a page, and the commit it described has since
   changed, the block is kept and the page gains

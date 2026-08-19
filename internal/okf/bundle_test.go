@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/3rg0n/signpost/internal/graph"
 	"github.com/3rg0n/signpost/internal/manifest"
@@ -509,6 +510,12 @@ func TestCheckPageRel(t *testing.T) {
 // A page whose node no longer exists and which somebody has written on is reported, never
 // deleted. A renamed directory or a regressed extractor must not silently take a human's notes
 // with it, which is the half of issue #10 that argues against pruning at all.
+//
+// The byte comparison also fixes the negative boundary for the sweep's mark: this fixture has
+// frontmatter and no managed region, so it is a markdown file somebody dropped in the bundle
+// directory rather than a page signpost wrote. It is reported as kept and left alone — not
+// annotated, for the same reason it is not deleted. TestWriteDoesNotMarkAFileItDidNotWrite
+// covers the shape with no frontmatter at all.
 func TestWriteReportsStalePagesWithoutDeletingThem(t *testing.T) {
 	root, _, g := write(t)
 	stalePath := filepath.Join(root, BundleDir, "modules", "removed.md")
@@ -561,6 +568,202 @@ func TestWriteRemovesAnUnwrittenStalePage(t *testing.T) {
 	}
 	if _, err := os.Stat(full); !os.IsNotExist(err) {
 		t.Errorf("%s is still on disk: %v", rel, err)
+	}
+}
+
+// orphan copies an emitted page to a bundle path no node renders to, which is how these tests
+// produce a page whose concept is gone without editing the graph. Copied from the emitter's own
+// output for the reason TestWriteRemovesAnUnwrittenStalePage gives: a hand-built page asserts
+// against the test's idea of what signpost writes rather than against what it writes.
+func orphan(t *testing.T, root, from, to string) string {
+	t.Helper()
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(to))
+	if err := os.WriteFile(full, []byte(read(t, root, from)), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", to, err)
+	}
+	return full
+}
+
+// reviewed adds a human `verified:` block naming resource to a page, and rebuilds so the merge
+// carries the key to the bottom of the block. That is the shape a page is really in when its
+// concept goes away: whatever the last run that still had a node for it wrote.
+func reviewed(t *testing.T, root, rel, resource string, g *graph.Graph) {
+	t.Helper()
+	full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+	page := read(t, root, rel)
+	src := strings.Replace(page, "---\ntype: Module\n",
+		"---\nverified:\n  - { by: human:ecopelan, at: 2026-07-30, resource: "+resource+" }\ntype: Module\n", 1)
+	if src == page {
+		t.Fatal("test setup: frontmatter shape changed")
+	}
+	if err := os.WriteFile(full, []byte(src), 0o644); err != nil {
+		t.Fatalf("writing the reviewed page: %v", err)
+	}
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("rebuild after review: %v", err)
+	}
+}
+
+// A kept orphan says so in the page, not only on the terminal that ran the build.
+//
+// The other half of the sweep's report, and the half that reaches the reader who matters.
+// `Stale` reaches whoever ran signpost; the bundle is committed and read by people and agents
+// who never will, and to them this page is indistinguishable from one whose module still
+// exists — same plausible edges, same resource stamp naming a commit where the code really did
+// exist. That is the state ADR 0010's ghost pages were in.
+func TestWriteMarksAKeptOrphanPage(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/internal-auth.md"
+	// A review of the commit the page describes, so the sweep keeps this page without the merge
+	// also downgrading it. The two marks are separated here and combined in the test below.
+	reviewed(t, root, rel, demoOptions().Resource+"/internal/auth", g)
+
+	const gone = "modules/gone.md"
+	orphan(t, root, rel, gone)
+	res, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("sweep rebuild: %v", err)
+	}
+	if strings.Join(res.Stale, ",") != gone {
+		t.Fatalf("Stale = %v, want [%s]", res.Stale, gone)
+	}
+
+	got := read(t, root, gone)
+	if !strings.Contains(got, statusKey+": "+statusConceptRemoved) {
+		t.Errorf("the kept page carries no %s: %s\n%s", statusKey, statusConceptRemoved, got)
+	}
+	// The human's block is the audit trail and is why the page is still here at all.
+	if !strings.Contains(got, "human:ecopelan") {
+		t.Errorf("the human block was dropped while marking the page:\n%s", got)
+	}
+	// In signpost's half, above the human keys, per §3.1 — the same slot a downgrade takes.
+	if strings.Index(got, statusKey+":") > strings.Index(got, "verified:") {
+		t.Errorf("%s was written below the human keys:\n%s", statusKey, got)
+	}
+	// And on signpost's key, not the spec's, for ADR 0021's reason. Anchored to a line start:
+	// `signpost_status:` contains `status:`, so an unanchored check passes on the output it is
+	// meant to reject.
+	if strings.Contains(got, "\nstatus:") {
+		t.Errorf("the mark was written to the spec's status key:\n%s", got)
+	}
+	if _, diag := parseFrontmatter(t, ParsePage(got).Frontmatter); diag != "" {
+		t.Errorf("a marked orphan's frontmatter is unreadable: %s", diag)
+	}
+	// The mark is generated, not carried, so it cannot make an orphan permanent: remove the
+	// notes that kept the page and the next sweep prunes it, mark and all.
+	if carried := carryHumanKeys(statusKey + ": " + statusConceptRemoved + "\n"); carried != "" {
+		t.Errorf("the mark reads as a human key, so a marked page can never be pruned: %q", carried)
+	}
+}
+
+// `concept-removed` outranks `stale-verification`, and one page carries one status.
+//
+// A page can be both — a human reviewed it at an older commit, and then the concept went away.
+// The second answer makes the first moot, so the sweep's mark replaces the merge's rather than
+// joining it. That is what keeps the key a scalar rather than a list.
+func TestWriteMarkingAKeptOrphanOutranksAStaleVerification(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/internal-auth.md"
+	// A review of a commit that is not the one being described, so a real build marks the page
+	// stale-verification before it is ever an orphan.
+	reviewed(t, root, rel, "git://example.com/repo@0000000/internal/auth", g)
+	if got := read(t, root, rel); !strings.Contains(got, statusKey+": "+statusStaleVerification) {
+		t.Fatalf("test setup: the page was not marked stale:\n%s", got)
+	}
+
+	const gone = "modules/gone.md"
+	orphan(t, root, rel, gone)
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("sweep rebuild: %v", err)
+	}
+
+	got := read(t, root, gone)
+	if n := strings.Count(got, statusKey+":"); n != 1 {
+		t.Fatalf("%d status lines, want exactly 1:\n%s", n, got)
+	}
+	if !strings.Contains(got, statusKey+": "+statusConceptRemoved) {
+		t.Errorf("the sweep's mark did not replace the merge's:\n%s", got)
+	}
+}
+
+// A marked orphan is byte-stable, and a run that changes nothing does not rewrite it.
+//
+// Neither property comes for free here: the mark is written by a pass that runs outside
+// writeIfChanged, so nothing else in the emitter is keeping them. A line-based insert run twice
+// would leave two status lines, which ADR 0005 turns into commit churn in someone else's
+// repository, and a rewrite producing identical bytes would still move the mtime on every build
+// for the life of the page, which fires their file watcher.
+func TestWriteIsStableWhileAnOrphanIsMarked(t *testing.T) {
+	root, _, g := write(t)
+	const rel = "modules/internal-auth.md"
+	reviewed(t, root, rel, demoOptions().Resource+"/internal/auth", g)
+
+	const gone = "modules/gone.md"
+	full := orphan(t, root, rel, gone)
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("first sweep rebuild: %v", err)
+	}
+	first := read(t, root, gone)
+
+	// Stamped with a time no run would produce, so "was it rewritten" does not depend on the
+	// filesystem's mtime granularity being finer than the gap between two builds.
+	stamp := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(full, stamp, stamp); err != nil {
+		t.Fatalf("stamping %s: %v", gone, err)
+	}
+	if _, err := Write(root, g, demoOptions()); err != nil {
+		t.Fatalf("second sweep rebuild: %v", err)
+	}
+
+	if second := read(t, root, gone); second != first {
+		t.Errorf("a marked orphan is not byte-stable:\n got %q\nwant %q", second, first)
+	}
+	if n := strings.Count(first, statusKey+":"); n != 1 {
+		t.Errorf("%d status lines, want exactly 1:\n%s", n, first)
+	}
+	info, err := os.Stat(full)
+	if err != nil {
+		t.Fatalf("stat %s: %v", gone, err)
+	}
+	if !info.ModTime().Equal(stamp) {
+		t.Errorf("an already-marked page was rewritten by a run that changed nothing")
+	}
+}
+
+// Negative boundary: a file signpost did not write is not signpost's to annotate.
+//
+// The mark restates a conclusion signpost reached about a page signpost emitted. A markdown
+// file somebody dropped in the bundle directory has no such conclusion to restate, and editing
+// it would be this tool writing into a document it does not own — the same judgement that stops
+// prunable deleting one. Both shapes reach the mark, because being non-prunable for exactly
+// that reason is what sends them there, so both are asserted.
+func TestWriteDoesNotMarkAFileItDidNotWrite(t *testing.T) {
+	root, _, g := write(t)
+	foreign := map[string]string{
+		// No frontmatter: not a page signpost wrote, and nothing to insert a key into.
+		"modules/dropped.md": "# Scratch\n\nSomething I was drafting.\n",
+		// Frontmatter but no managed region: signpost wrote no part of this body either.
+		"modules/keyed.md": "---\nowner: platform-team\n---\n# Notes\n\nWhatever this is.\n",
+	}
+	for rel, src := range foreign {
+		full := filepath.Join(root, BundleDir, filepath.FromSlash(rel))
+		if err := os.WriteFile(full, []byte(src), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", rel, err)
+		}
+	}
+
+	res, err := Write(root, g, demoOptions())
+	if err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	// Reported as kept, which is the part a reader acts on, and sorted.
+	if want := "modules/dropped.md,modules/keyed.md"; strings.Join(res.Stale, ",") != want {
+		t.Errorf("Stale = %v, want [%s]", res.Stale, want)
+	}
+	for rel, src := range foreign {
+		if got := read(t, root, rel); got != src {
+			t.Errorf("%s was modified:\n got %q\nwant %q", rel, got, src)
+		}
 	}
 }
 

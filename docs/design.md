@@ -1107,6 +1107,16 @@ and anything else is kept and reported for a human to resolve. Every uncertainty
 unreadable file, an unrecognised frontmatter key, a `verified:` block — falls toward
 keeping it.
 
+**A kept page says so on the page**, gaining a generated `signpost_status:
+concept-removed` — [ADR 0036](adr/0036-a-kept-orphan-says-so-on-the-page.md). Reporting
+it in the run's output and in `verify` reaches whoever ran a command; the bundle is
+committed so that it is useful without signpost installed, and to that reader an
+unmarked orphan is indistinguishable from a live page. The mark is generated, so it
+clears itself when the concept comes back and cannot make an orphan permanent, and only
+a page signpost wrote gets one. It outranks `stale-verification`: once the thing a page
+describes is gone, whether a human's review of it is current is a question about
+nothing.
+
 `verify`'s severity mirrors that split, and the mirror is what makes the finding
 actionable rather than decorative. A surplus page a build **would** remove is a
 failure, because the remedy is `signpost build` — the same remedy every other failure
@@ -1516,6 +1526,12 @@ The mechanism that makes the bundle compound rather than churn:
   (§4.6). Anything a human touched — a note, a rewritten heading, a `verified:` block,
   an unrecognised frontmatter key — makes the page theirs to remove, and the run says
   so instead.
+- A page kept that way gains a generated `signpost_status: concept-removed`, so the
+  page states why it is still in the bundle rather than leaving that in a run's output
+  ([ADR 0036](adr/0036-a-kept-orphan-says-so-on-the-page.md)). The key holds one value
+  and this one outranks `stale-verification`. Like the downgrade it is generated, so it
+  clears itself; unlike the downgrade it is written by the sweep rather than the merge,
+  which is what puts it second.
 
 ### 6.2 What signpost does not write
 
