@@ -2,8 +2,8 @@
 type: Module
 title: internal/manifest
 description: 37 go files; 130 exported symbols.
-resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/internal/manifest
-generated: { by: signpost/dev, at: "2026-08-18" }
+resource: git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d/internal/manifest
+generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: commits, value: "11" }
   - { name: exported, value: "130" }

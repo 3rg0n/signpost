@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0029: the viewer is written by the run that publishes it"
 description: "Architecture decision (Accepted), 24 rules read from 0029-the-viewer-is-written-by-the-run-that-publishes-it.md."
-resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/docs/adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md
+resource: git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d/docs/adr/0029-the-viewer-is-written-by-the-run-that-publishes-it.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-18" }
+generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: number, value: "0029" }
   - { name: rules, value: "24" }

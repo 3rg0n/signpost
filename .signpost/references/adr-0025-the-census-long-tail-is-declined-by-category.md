@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0025: the census long tail is declined by category"
 description: "Architecture decision (Accepted), 15 rules read from 0025-the-census-long-tail-is-declined-by-category.md."
-resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/docs/adr/0025-the-census-long-tail-is-declined-by-category.md
+resource: git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d/docs/adr/0025-the-census-long-tail-is-declined-by-category.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-18" }
+generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: number, value: "0025" }
   - { name: rules, value: "15" }

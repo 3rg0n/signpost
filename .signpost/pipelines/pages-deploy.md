@@ -2,9 +2,9 @@
 type: Pipeline
 title: pages deploy
 description: "CI job deploy in the pages workflow, 7 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09/.github/workflows/pages.yml
+resource: git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d/.github/workflows/pages.yml
 tags: [gate]
-generated: { by: signpost/dev, at: "2026-08-18" }
+generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: job, value: deploy }
   - { name: permissions, value: "id-token:write, pages:write" }

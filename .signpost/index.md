@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 89 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09
-generated: { by: signpost/dev, at: "2026-08-18" }
+description: "Structural map of this repository: 90 concepts, 224 relationships."
+resource: git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d
+generated: { by: signpost/dev, at: "2026-08-19" }
 ---
 # Repository map
 
@@ -53,7 +53,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 36.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 37.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 16 more
+  - and 17 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -166,6 +166,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0033: the binary replaces itself only from a verified release](./references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md) — Architecture decision (Accepted), 24 rules read from 0033-the-binary-replaces-itself-only-from-a-verified-release.md.
 - [ADR 0034: a deterministic pass may not produce an ambiguous edge](./references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md) — Architecture decision (Accepted), 18 rules read from 0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md.
 - [ADR 0035: a structural diff is text and a second commit is a worktree](./references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md) — Architecture decision (Accepted), 28 rules read from 0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md.
+- [ADR 0036: a kept orphan says so on the page](./references/adr-0036-a-kept-orphan-says-so-on-the-page.md) — Architecture decision (Accepted), 19 rules read from 0036-a-kept-orphan-says-so-on-the-page.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

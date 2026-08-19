@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@7e60b898c22eb0414d3310c78c40d1edee929c09",
-  "date": "2026-08-18",
+  "resource": "git://github.com/3rg0n/signpost@b79de0676f16cad7c9fc13a1d1ef719c22f2256d",
+  "date": "2026-08-19",
   "counts": {
-    "nodes": 89,
+    "nodes": 90,
     "edges": 224,
-    "clusters": 39
+    "clusters": 40
   },
   "confidence": {
     "ambiguous": 0,
@@ -87,6 +87,7 @@
     "references/adr-0033-the-binary-replaces-itself-only-from-a-verified-release.md",
     "references/adr-0034-a-deterministic-pass-may-not-produce-an-ambiguous-edge.md",
     "references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md",
+    "references/adr-0036-a-kept-orphan-says-so-on-the-page.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
