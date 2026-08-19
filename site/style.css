@@ -243,6 +243,12 @@ code {
 .term__body {
   margin: 0;
   padding: 1.25rem 1.1rem 1.4rem;
+  /* Wrapped rather than scrolled. Two of the run's coverage lines are longer than this
+     measure, and they are the lines the note below asks the reader to look at; cut at the
+     right edge they read as `.gitignore (1), .sv`. A terminal narrower than the output
+     wraps it, so this is the same thing the figure would show on a real 90-column
+     window. overflow-x stays for a token too long to break. */
+  white-space: pre-wrap;
   overflow-x: auto;
   color: var(--ink-dim);
   font-family: var(--mono);
