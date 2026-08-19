@@ -338,8 +338,8 @@ disconnected components (30)
         <h2 class="row__key">status</h2>
         <div class="row__body">
           <p class="prose prose--lead">
-            v0.1 in progress — the deterministic core. No model required, no
-            network.
+            v0.1.0 — the deterministic core, complete. No model required and no
+            network, unless you opt into the semantic pass.
           </p>
 
           <table class="status">
@@ -401,15 +401,63 @@ disconnected components (30)
                 <th scope="row"><code>signpost.yml</code> — rebuild on push, gate pull requests</th>
                 <td>done</td>
               </tr>
-              <tr class="is-open">
-                <th scope="row">Semantic pass: local IPC, or any OpenAI-compatible endpoint</th>
-                <td>v0.2</td>
+              <tr class="is-done">
+                <th scope="row"><code>signpost hooks</code> — optional local post-commit reminder</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>signpost update</code> — replace the binary from a checksum-verified release
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>signpost init github</code> — scaffold that workflow into another repository
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row"><code>.signpost.yml</code> — per-repository defaults, no gate keys</th>
+                <td>done</td>
               </tr>
               <tr class="is-done">
                 <th scope="row">
                   <a href="graph.html">The graph viewer</a> — in this repo, no JS dependencies
                 </th>
                 <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>signpost view</code> — the same viewer on 127.0.0.1, for any repository
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>signpost view -static</code> — write that viewer to a directory, for a deploy
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>signpost init pages</code> — scaffold the Pages deploy into another repository
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">Model backends: local IPC, or any OpenAI-compatible endpoint</th>
+                <td>done</td>
+              </tr>
+              <tr class="is-done">
+                <th scope="row">
+                  <code>build -semantic</code> — module role summaries, grounded and cited
+                </th>
+                <td>done</td>
+              </tr>
+              <tr class="is-open">
+                <th scope="row">Semantic pass: doc-to-code linking, invariants, cluster labels</th>
+                <td>v0.3</td>
               </tr>
               <tr class="is-done">
                 <th scope="row">Viewer: search by name, path, or file · deep links to source</th>
@@ -424,10 +472,13 @@ disconnected components (30)
 
           <p class="prose">
             The deterministic core is usable end-to-end: build a bundle, commit
-            it, and the workflow keeps it honest. What v0.2 adds is the summary
-            that says what a module is <em>for</em> — the one thing no
-            deterministic read can honestly produce, and so the one thing left
-            as a placeholder rather than guessed at.
+            it, and the workflow keeps it honest. <code>build -semantic</code>
+            adds the summaries that say what a module is <em>for</em>, which no
+            deterministic read can honestly produce — off unless you configure a
+            backend <em>and</em> pass the flag, so the ordinary build stays
+            offline and byte-stable. Every summary cites the files it rests on,
+            and one citation that does not resolve drops the summary rather than
+            the citation.
           </p>
         </div>
       </section>

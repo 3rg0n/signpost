@@ -2262,12 +2262,20 @@ infrastructure extraction, git signals, graph build with metrics, OKF emit, veri
 Mermaid, `signpost.yml`. No model anywhere. This version is independently useful:
 it produces an accurate structural map and a working `index.md`.
 
-**v0.2 — semantic pass.** Backend interface, inferd and openai-compat
-implementations, schema-constrained extraction, grounding enforcement,
-content-hash cache, human-review preservation, `signpost-semantic.yml`.
+**v0.2 — semantic pass. Shipped inside v0.1.0.** Backend interface, inferd and
+openai-compat implementations, schema-constrained extraction, grounding
+enforcement, content-hash cache, human-review preservation, and
+`signpost-semantic.yml`, all of them released in v0.1.0 rather than held for a
+second tag. The milestone stays here with its contents named, for the reason v0.4
+below does: what was planned as a phase is part of the record even when the phase
+did not become a release. It bought a version number's worth of scope and did not
+spend one, because the pass is opt-in twice over (§4.5) and so changes nothing for
+a repository that does not configure a backend.
 
 **v0.3 — enrichment and query.** SCIP reader, codeatlas bridge, `why` and `path`,
-GraphML/DOT/JSON export.
+and the semantic pass's remaining questions — doc-to-code linking, invariants,
+cluster labels. GraphML/DOT/JSON export was listed here and shipped with v0.1.0
+instead.
 
 **v0.4 — the viewer, deepened. Closed rather than carried.** The node-link view in
 `site/graph.html` ships with v0.1, and this milestone listed the three things it

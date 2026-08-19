@@ -1280,6 +1280,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The landing page's status table said the semantic pass was still to come, eight rows after it
+  shipped.** It listed the pass at `v0.2` and called v0.1 in progress, while the README's table and
+  the 0.1.0 changelog entry both record `build -semantic`, the model backends, and seven other
+  commands as released. The table now carries the README's rows and states, and `docs/design.md`
+  §10 says its v0.2 milestone shipped inside v0.1.0 rather than listing it as a phase still ahead.
+
 - **`graph show`'s hub heading counts the hubs it prints.** It counted every node instead, so
   `-top 500` on this repository claimed 87 above 52 lines and a repository with no edges printed
   a heading with nothing under it (#41).
