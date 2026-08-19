@@ -2,7 +2,7 @@
 type: Module
 title: internal/view
 description: 5 go files; 4 exported symbols.
-resource: git://github.com/3rg0n/signpost@7441a5d393b73195ebaf1116d194318a7b9b36dd/internal/view
+resource: git://github.com/3rg0n/signpost@fd881702084abbf7ca124cb20e883404e112b991/internal/view
 generated: { by: signpost/dev, at: "2026-08-19" }
 attributes:
   - { name: commits, value: "3" }
