@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The install commands are checked against the README and against the files they name.** The
+  landing page and the README must give the same ways to install, the scripts those commands name
+  must be exactly the `install.*` files this repository holds, and the fetch URLs and `go install`
+  target must name the module in `go.mod`
+  ([ADR 0039](docs/adr/0039-an-install-command-is-checked-against-what-it-names.md)).
+
 - **Every documented list of languages is checked against the extractor registry.** The README's
   `What it reads` paragraph and its status row, the landing page's `reads` lead and its status row,
   and design §4.1 must each name exactly the languages `DefaultRegistry` reads, compared as a set
