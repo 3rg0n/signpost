@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Every documented list of languages is checked against the extractor registry.** The README's
+  `What it reads` paragraph and its status row, the landing page's `reads` lead and its status row,
+  and design §4.1 must each name exactly the languages `DefaultRegistry` reads, compared as a set
+  so that wording and order stay free and an omission is declared where it is made
+  ([ADR 0038](docs/adr/0038-documented-languages-are-checked-against-the-registry.md)).
+
 - **The landing page's status table and its pasted run are checked against the tree**, in the
   existing test job rather than a new workflow. The two tables must state the same verdict for
   each row, row labels stay free because the site words them differently on purpose, and the
@@ -1294,6 +1300,11 @@ All notable changes to this project are documented here. Format follows
   repository cannot quiet its own gate by committing a file.
 
 ### Fixed
+
+- **`docs/design.md` credited hand-written extractors for nine languages, against a registry that
+  reads eighteen.** The decision table now points at §4.1 for which languages there are and §4.2
+  for how they are scored, and states no count, because a count is a second copy of what the list
+  already carries.
 
 - **The landing page's hero showed a run of a much smaller repository than this one.** It reported
   166 analysed files, 49 nodes, and 87 edges, against a tree that now measures 258, 90, and 224,
