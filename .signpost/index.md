@@ -2,8 +2,8 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 91 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@fc4af02fdfa37579f05a7855ddd1be7f2607689f
+description: "Structural map of this repository: 92 concepts, 224 relationships."
+resource: git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952
 generated: { by: signpost/dev, at: "2026-08-19" }
 ---
 # Repository map
@@ -53,7 +53,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 38.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 39.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 18 more
+  - and 19 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -94,7 +94,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/config](./modules/config.md) — 2 go files; 3 exported symbols.
 - [internal/discover](./modules/discover.md) — 5 go files; 44 exported symbols.
 - [internal/export](./modules/export.md) — 6 go files; 7 exported symbols.
-- [internal/extract](./modules/extract.md) — 34 go files; 80 exported symbols.
+- [internal/extract](./modules/extract.md) — 35 go files; 80 exported symbols.
 - [internal/gitdiff](./modules/gitdiff.md) — 1 go file; 8 exported symbols.
 - [internal/graph](./modules/graph.md) — 4 go files; 53 exported symbols.
 - [internal/hook](./modules/hook.md) — 2 go files; 17 exported symbols.
@@ -168,6 +168,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0035: a structural diff is text and a second commit is a worktree](./references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md) — Architecture decision (Accepted), 28 rules read from 0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md.
 - [ADR 0036: a kept orphan says so on the page](./references/adr-0036-a-kept-orphan-says-so-on-the-page.md) — Architecture decision (Accepted), 19 rules read from 0036-a-kept-orphan-says-so-on-the-page.md.
 - [ADR 0037: the landing page is gated on its verdicts not its words](./references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md) — Architecture decision (Accepted), 23 rules read from 0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md.
+- [ADR 0038: documented languages are checked against the registry](./references/adr-0038-documented-languages-are-checked-against-the-registry.md) — Architecture decision (Accepted), 17 rules read from 0038-documented-languages-are-checked-against-the-registry.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

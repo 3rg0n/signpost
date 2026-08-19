@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@fc4af02fdfa37579f05a7855ddd1be7f2607689f",
+  "resource": "git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952",
   "date": "2026-08-19",
   "counts": {
-    "nodes": 91,
+    "nodes": 92,
     "edges": 224,
-    "clusters": 41
+    "clusters": 42
   },
   "confidence": {
     "ambiguous": 0,
@@ -89,6 +89,7 @@
     "references/adr-0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md",
     "references/adr-0036-a-kept-orphan-says-so-on-the-page.md",
     "references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md",
+    "references/adr-0038-documented-languages-are-checked-against-the-registry.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
