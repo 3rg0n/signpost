@@ -1,0 +1,26 @@
+CONTRIBUTING.md
+  s_f6c0b1ac81cb95::t_56dbede0588f26 253-261
+  s_f6c0b1ac81cb95::t_a63f123c9f4f37 266-288
+CHANGELOG.md
+  s_f6c0b1ac81cb95::t_92333fc74c4baf 9-15,19
+  s_f6c0b1ac81cb95::t_fb418c193f4c1e 16-18
+.github/workflows/release.yml
+  s_f6c0b1ac81cb95::t_e77752ed64af73 34-53
+  s_f6c0b1ac81cb95::t_6ee81bde71e349 11-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "55e8fd578b0cb89093c2060739238c96e11fd8fe",
+  "prompts": {},
+  "sessions": {
+    "s_f6c0b1ac81cb95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "151935e3-d249-47ab-b987-1ee88cf9798f",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}
