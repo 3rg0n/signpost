@@ -3,7 +3,7 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 93 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@ac0a450e63beff43084c57b386d0b89ff72f950f
+resource: git://github.com/3rg0n/signpost@84f4b54f22fbae91331c174d67531defae5e4faf
 generated: { by: signpost/dev, at: "2026-08-20" }
 ---
 # Repository map
@@ -183,14 +183,14 @@ What the shape of this repository says. Each line is a result — where one read
 - [actions/upload-pages-artifact](./references/github-actions-actions-upload-pages-artifact.md) — github-actions dependency actions/upload-pages-artifact (fc324d3547104276b827a68afc52ff2a11cc49c9)
 - [golangci/golangci-lint-action](./references/github-actions-golangci-golangci-lint-action.md) — github-actions dependency golangci/golangci-lint-action (ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a)
 - [github.com/cespare/xxhash/v2](./references/go-github-com-cespare-xxhash-v2.md) — go dependency github.com/cespare/xxhash/v2 (v2.3.0)
-- [github.com/go-logr/logr](./references/go-github-com-go-logr-logr.md) — go dependency github.com/go-logr/logr (v1.4.3)
+- [github.com/go-logr/logr](./references/go-github-com-go-logr-logr.md) — go dependency github.com/go-logr/logr (v1.4.4)
 - [github.com/go-logr/stdr](./references/go-github-com-go-logr-stdr.md) — go dependency github.com/go-logr/stdr (v1.2.2)
 - [github.com/google/uuid](./references/go-github-com-google-uuid.md) — go dependency github.com/google/uuid (v1.6.0)
 - [go.opentelemetry.io/auto/sdk](./references/go-go-opentelemetry-io-auto-sdk.md) — go dependency go.opentelemetry.io/auto/sdk (v1.2.1)
-- [go.opentelemetry.io/otel](./references/go-go-opentelemetry-io-otel.md) — go dependency go.opentelemetry.io/otel (v1.44.0)
-- [go.opentelemetry.io/otel/metric](./references/go-go-opentelemetry-io-otel-metric.md) — go dependency go.opentelemetry.io/otel/metric (v1.44.0)
+- [go.opentelemetry.io/otel](./references/go-go-opentelemetry-io-otel.md) — go dependency go.opentelemetry.io/otel (v1.45.0)
+- [go.opentelemetry.io/otel/metric](./references/go-go-opentelemetry-io-otel-metric.md) — go dependency go.opentelemetry.io/otel/metric (v1.45.0)
 - [go.opentelemetry.io/otel/sdk](./references/go-go-opentelemetry-io-otel-sdk.md) — go dependency go.opentelemetry.io/otel/sdk (v1.44.0)
-- [go.opentelemetry.io/otel/trace](./references/go-go-opentelemetry-io-otel-trace.md) — go dependency go.opentelemetry.io/otel/trace (v1.44.0)
+- [go.opentelemetry.io/otel/trace](./references/go-go-opentelemetry-io-otel-trace.md) — go dependency go.opentelemetry.io/otel/trace (v1.45.0)
 - [golang.org/x/sys](./references/go-golang-org-x-sys.md) — go dependency golang.org/x/sys (v0.45.0)
 <!-- /signpost:managed:index -->
 
