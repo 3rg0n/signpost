@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0018: view serves a repository over loopback"
 description: "Architecture decision (Accepted), 20 rules read from 0018-view-serves-a-repository-over-loopback.md."
-resource: git://github.com/3rg0n/signpost@84f4b54f22fbae91331c174d67531defae5e4faf/docs/adr/0018-view-serves-a-repository-over-loopback.md
+resource: git://github.com/3rg0n/signpost@9cddf5540e501565a971cf874b69a62660fa71f5/docs/adr/0018-view-serves-a-repository-over-loopback.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:

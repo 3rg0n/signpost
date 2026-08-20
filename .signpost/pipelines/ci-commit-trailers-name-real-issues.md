@@ -2,7 +2,7 @@
 type: Pipeline
 title: ci commit trailers name real issues
 description: "CI job commit trailers name real issues in the ci workflow, 2 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@84f4b54f22fbae91331c174d67531defae5e4faf/.github/workflows/ci.yml
+resource: git://github.com/3rg0n/signpost@9cddf5540e501565a971cf874b69a62660fa71f5/.github/workflows/ci.yml
 tags: [gate]
 generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:

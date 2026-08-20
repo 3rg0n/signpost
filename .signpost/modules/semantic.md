@@ -2,7 +2,7 @@
 type: Module
 title: internal/semantic
 description: 3 go files; 8 exported symbols.
-resource: git://github.com/3rg0n/signpost@84f4b54f22fbae91331c174d67531defae5e4faf/internal/semantic
+resource: git://github.com/3rg0n/signpost@9cddf5540e501565a971cf874b69a62660fa71f5/internal/semantic
 generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:
   - { name: commits, value: "3" }
