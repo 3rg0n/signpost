@@ -2,8 +2,8 @@
 type: Module
 title: internal/config
 description: 2 go files; 3 exported symbols.
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/internal/config
-generated: { by: signpost/dev, at: "2026-08-20" }
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/internal/config
+generated: { by: signpost/dev, at: "2026-08-21" }
 attributes:
   - { name: commits, value: "2" }
   - { name: exported, value: "3" }

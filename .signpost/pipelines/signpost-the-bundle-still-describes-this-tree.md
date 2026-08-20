@@ -2,9 +2,9 @@
 type: Pipeline
 title: signpost the bundle still describes this tree
 description: "CI job the bundle still describes this tree in the signpost workflow, 4 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/.github/workflows/signpost.yml
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/.github/workflows/signpost.yml
 tags: [gate]
-generated: { by: signpost/dev, at: "2026-08-20" }
+generated: { by: signpost/dev, at: "2026-08-21" }
 attributes:
   - { name: job, value: the bundle still describes this tree }
   - { name: permissions, value: contents:read }

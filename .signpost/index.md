@@ -3,8 +3,8 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 93 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181
-generated: { by: signpost/dev, at: "2026-08-20" }
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c
+generated: { by: signpost/dev, at: "2026-08-21" }
 ---
 # Repository map
 
@@ -124,7 +124,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ci signpost analyses signpost](./pipelines/ci-signpost-analyses-signpost.md) — CI job signpost analyses signpost in the ci workflow, 13 steps; runs on a pull request or a default-branch push
 - [ci test](./pipelines/ci-test.md) — CI job test (${{ matrix.os }}) in the ci workflow, 6 steps; runs on a pull request or a default-branch push
 - [pages deploy](./pipelines/pages-deploy.md) — CI job deploy in the pages workflow, 7 steps; runs on a pull request or a default-branch push
-- [release build and publish](./pipelines/release-build-and-publish.md) — CI job build and publish in the release workflow, 5 steps
+- [release build and publish](./pipelines/release-build-and-publish.md) — CI job build and publish in the release workflow, 6 steps
 - [signpost rebuild the bundle](./pipelines/signpost-rebuild-the-bundle.md) — CI job rebuild the bundle in the signpost workflow, 6 steps; runs on a pull request or a default-branch push
 - [signpost-semantic summarise modules with a model](./pipelines/signpost-semantic-summarise-modules-with-a-model.md) — CI job summarise modules with a model in the signpost-semantic workflow, 8 steps
 - [signpost the bundle still describes this tree](./pipelines/signpost-the-bundle-still-describes-this-tree.md) — CI job the bundle still describes this tree in the signpost workflow, 4 steps; runs on a pull request or a default-branch push

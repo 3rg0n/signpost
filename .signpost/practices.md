@@ -2,8 +2,8 @@
 type: Practices
 title: How work is done here
 description: "What this repository declares about building, testing, gating, and ownership — and what it does not."
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181
-generated: { by: signpost/dev, at: "2026-08-20" }
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c
+generated: { by: signpost/dev, at: "2026-08-21" }
 ---
 # How work is done here
 
@@ -25,13 +25,13 @@ Each line is something this repository states, or something it does not. A missi
 - 11 jobs run on a pull request or on a push to the default branch: `commit trailers name real issues`, `corpus (a repository signpost did not write)`, `dependency gate`, `deploy`, `installer parses (5.1 and 7)`, `lint`, and 5 others. Which of them is *required* is configured on the repository and is not in the tree.
   - Stated in `.github/workflows/ci.yml` line 23, `.github/workflows/pages.yml` line 36, and `.github/workflows/signpost.yml` line 43.
 - 2 further CI jobs run outside that gate — on a schedule, a tag, or manually.
-  - Stated in `.github/workflows/release.yml` line 17 and `.github/workflows/signpost-semantic.yml` line 41.
+  - Stated in `.github/workflows/release.yml` line 28 and `.github/workflows/signpost-semantic.yml` line 41.
 
 ### How changes are recorded
 
-- **Not declared.** Commit subjects follow no machine-readable convention — 4 of 176 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
+- **Not declared.** Commit subjects follow no machine-readable convention — 4 of 178 read match the Conventional Commits shape. A message here is prose, so what a change was for has to be read rather than parsed.
   - Looked in the subject line of every commit read.
-- 2 tags reachable from this commit, the most recent `v0.1.0` on 2026-08-01, 142 commits back.
+- 3 tags reachable from this commit, the most recent `v0.2.0` on 2026-08-20, 2 commits back.
 
 ### Dependencies
 

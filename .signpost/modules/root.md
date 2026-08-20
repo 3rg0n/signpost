@@ -2,20 +2,20 @@
 type: Module
 title: (repository root)
 description: "2 powershell files; 10 exported symbols; entrypoint #!, param."
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c
 tags: [entrypoint]
-generated: { by: signpost/dev, at: "2026-08-20" }
+generated: { by: signpost/dev, at: "2026-08-21" }
 attributes:
-  - { name: commits, value: "89" }
+  - { name: commits, value: "90" }
   - { name: entrypoints, value: "#!, param" }
   - { name: exported, value: "10" }
   - { name: files, value: "2" }
   - { name: first_commit, value: "2026-07-29" }
-  - { name: last_commit, value: "2026-08-20" }
-  - { name: lines_added, value: "5465" }
+  - { name: last_commit, value: "2026-08-21" }
+  - { name: lines_added, value: "5508" }
   - { name: lines_removed, value: "273" }
   - { name: top_author, value: Ergon Copeland }
-  - { name: top_author_share, value: 55% }
+  - { name: top_author_share, value: 56% }
 edges:
   - { kind: co_changes, to: ./assemble.md, confidence: extracted, weight: 19 }
   - { kind: co_changes, to: ./config.md, confidence: extracted, weight: 2 }

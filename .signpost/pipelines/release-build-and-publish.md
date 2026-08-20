@@ -1,15 +1,15 @@
 ---
 type: Pipeline
 title: release build and publish
-description: "CI job build and publish in the release workflow, 5 steps"
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/.github/workflows/release.yml
-generated: { by: signpost/dev, at: "2026-08-20" }
+description: "CI job build and publish in the release workflow, 6 steps"
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/.github/workflows/release.yml
+generated: { by: signpost/dev, at: "2026-08-21" }
 attributes:
   - { name: job, value: build and publish }
   - { name: permissions, value: contents:write }
   - { name: runner, value: ubuntu-24.04 }
-  - { name: runs, value: Checkout → Set up Go → Verify → Build → Publish }
-  - { name: steps, value: "5" }
+  - { name: runs, value: Check the ref is a release tag → Checkout → Set up Go → Verify → Build → Publish }
+  - { name: steps, value: "6" }
   - { name: workflow, value: release }
 edges:
   - { kind: configures, to: ../references/github-actions-actions-checkout.md, confidence: extracted, source: .github/workflows/release.yml }
@@ -18,7 +18,7 @@ edges:
 # release build and publish
 
 <!-- signpost:managed:summary -->
-CI job build and publish in the release workflow, 5 steps
+CI job build and publish in the release workflow, 6 steps
 <!-- /signpost:managed:summary -->
 
 ## Structure

@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0014: adopt the otel sdk and write the exporter"
 description: "Architecture decision (Accepted), 44 rules read from 0014-adopt-the-otel-sdk-and-write-the-exporter.md."
-resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md
+resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/docs/adr/0014-adopt-the-otel-sdk-and-write-the-exporter.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-20" }
+generated: { by: signpost/dev, at: "2026-08-21" }
 attributes:
   - { name: number, value: "0014" }
   - { name: rules, value: "44" }
