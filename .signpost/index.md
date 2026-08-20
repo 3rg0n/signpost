@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 92 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952
-generated: { by: signpost/dev, at: "2026-08-19" }
+description: "Structural map of this repository: 93 concepts, 224 relationships."
+resource: git://github.com/3rg0n/signpost@ac0a450e63beff43084c57b386d0b89ff72f950f
+generated: { by: signpost/dev, at: "2026-08-20" }
 ---
 # Repository map
 
@@ -53,7 +53,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
   - and 23 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
-- **Unconnected concepts: 39.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
+- **Unconnected concepts: 40.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
   - [ADR 0002: patchable dependencies not zero dependencies](./references/adr-0002-patchable-dependencies-not-zero-dependencies.md)
   - [ADR 0003: directory granularity for module nodes](./references/adr-0003-directory-granularity-for-module-nodes.md)
@@ -74,7 +74,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [ADR 0018: view serves a repository over loopback](./references/adr-0018-view-serves-a-repository-over-loopback.md)
   - [ADR 0019: louvain over label propagation](./references/adr-0019-louvain-over-label-propagation.md)
   - [ADR 0020: git history annotates the map and never draws it](./references/adr-0020-git-history-annotates-the-map-and-never-draws-it.md)
-  - and 19 more
+  - and 20 more
 - **Merge gates: 11 of 13 CI jobs.** These run on a pull request or on a push to the default branch, so they are the automated checks a change meets. Which of them is *required* is configured on the repository and is not in the tree.
   - [ci commit trailers name real issues](./pipelines/ci-commit-trailers-name-real-issues.md)
   - [ci corpus \(a repository signpost did not write\)](./pipelines/ci-corpus-a-repository-signpost-did-not-write.md)
@@ -107,7 +107,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [internal/selfupdate](./modules/selfupdate.md) — 2 go files; 10 exported symbols.
 - [internal/semantic](./modules/semantic.md) — 3 go files; 8 exported symbols.
 - [cmd/signpost](./modules/signpost.md) — 29 go files; entrypoint main; package main.
-- [site](./modules/site.md) — 3 go files; 1 exported symbol.
+- [site](./modules/site.md) — 4 go files; 1 exported symbol.
 - [internal/sqlstmt](./modules/sqlstmt.md) — 2 go files; 10 exported symbols.
 - [internal/telemetry](./modules/telemetry.md) — 5 go files; 8 exported symbols.
 - [internal/vcs](./modules/vcs.md) — 10 go files; 16 exported symbols.
@@ -169,6 +169,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0036: a kept orphan says so on the page](./references/adr-0036-a-kept-orphan-says-so-on-the-page.md) — Architecture decision (Accepted), 19 rules read from 0036-a-kept-orphan-says-so-on-the-page.md.
 - [ADR 0037: the landing page is gated on its verdicts not its words](./references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md) — Architecture decision (Accepted), 23 rules read from 0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md.
 - [ADR 0038: documented languages are checked against the registry](./references/adr-0038-documented-languages-are-checked-against-the-registry.md) — Architecture decision (Accepted), 17 rules read from 0038-documented-languages-are-checked-against-the-registry.md.
+- [ADR 0039: an install command is checked against what it names](./references/adr-0039-an-install-command-is-checked-against-what-it-names.md) — Architecture decision (Accepted), 12 rules read from 0039-an-install-command-is-checked-against-what-it-names.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 

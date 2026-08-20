@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0027: a gate fails only on what the reader can fix"
 description: "Architecture decision (Accepted), 21 rules read from 0027-a-gate-fails-only-on-what-the-reader-can-fix.md."
-resource: git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952/docs/adr/0027-a-gate-fails-only-on-what-the-reader-can-fix.md
+resource: git://github.com/3rg0n/signpost@ac0a450e63beff43084c57b386d0b89ff72f950f/docs/adr/0027-a-gate-fails-only-on-what-the-reader-can-fix.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-19" }
+generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:
   - { name: number, value: "0027" }
   - { name: rules, value: "21" }

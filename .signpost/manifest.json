@@ -1,12 +1,12 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952",
-  "date": "2026-08-19",
+  "resource": "git://github.com/3rg0n/signpost@ac0a450e63beff43084c57b386d0b89ff72f950f",
+  "date": "2026-08-20",
   "counts": {
-    "nodes": 92,
+    "nodes": 93,
     "edges": 224,
-    "clusters": 42
+    "clusters": 43
   },
   "confidence": {
     "ambiguous": 0,
@@ -90,6 +90,7 @@
     "references/adr-0036-a-kept-orphan-says-so-on-the-page.md",
     "references/adr-0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md",
     "references/adr-0038-documented-languages-are-checked-against-the-registry.md",
+    "references/adr-0039-an-install-command-is-checked-against-what-it-names.md",
     "references/agents-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",

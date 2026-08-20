@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0030: a finding states its own absence"
 description: "Architecture decision (Accepted), 18 rules read from 0030-a-finding-states-its-own-absence.md."
-resource: git://github.com/3rg0n/signpost@6ef04bd3596ca99913f76a401f4265368c1cd952/docs/adr/0030-a-finding-states-its-own-absence.md
+resource: git://github.com/3rg0n/signpost@ac0a450e63beff43084c57b386d0b89ff72f950f/docs/adr/0030-a-finding-states-its-own-absence.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-19" }
+generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:
   - { name: number, value: "0030" }
   - { name: rules, value: "18" }
