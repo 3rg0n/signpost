@@ -55,6 +55,7 @@ lost; Consequences states what this costs, not only what it buys.
 | [0036](0036-a-kept-orphan-says-so-on-the-page.md) | A kept orphan says so on the page | Accepted |
 | [0037](0037-the-landing-page-is-gated-on-its-verdicts-not-its-words.md) | The landing page is gated on its verdicts, not its words | Accepted |
 | [0038](0038-documented-languages-are-checked-against-the-registry.md) | Documented languages are checked against the registry | Accepted |
+| [0039](0039-an-install-command-is-checked-against-what-it-names.md) | An install command is checked against what it names | Accepted |
 
 [ADR 0002](0002-patchable-dependencies-not-zero-dependencies.md)'s *rule* — patchable
 dependencies, few enough that bumping stays routine — still binds. Its *consequence*, that
