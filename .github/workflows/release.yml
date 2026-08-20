@@ -8,6 +8,17 @@ on:
   push:
     tags:
       - "v*"
+  # A recovery path, not a second way to release. A tag push is suppressed when the
+  # tagged commit's message carries [skip ci]: GitHub honours the keyword on a tag
+  # push too, and this repository pushes a bundle rebuild carrying it after every
+  # merge (ADR 0005) — which is the commit at the tip of main when a release is cut.
+  # pages.yml records the same hazard for the same reason.
+  #
+  # v0.2.0 was tagged there. It published nothing and reported nothing, because a
+  # suppressed workflow leaves no run to look at, failed or otherwise. Tag the merge
+  # commit instead. When a tag is already on a rebuild commit, dispatch this workflow
+  # with that tag as the ref, rather than moving the tag.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +31,26 @@ jobs:
       # Creating the release and uploading assets to it.
       contents: write
     steps:
+      # First, before a checkout and before the gate. A push can only arrive here from a
+      # v* tag, but a dispatch takes whatever ref it is given and the Actions UI offers
+      # branches first. A mis-selected ref would otherwise run the whole gate and then
+      # fail in `gh release create --verify-tag`, ten minutes later, looking for a tag
+      # named after a branch.
+      - name: Check the ref is a release tag
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" != tag ]; then
+            echo "::error::${GITHUB_REF_NAME} is a ${GITHUB_REF_TYPE}; this workflow releases a tag"
+            exit 1
+          fi
+          case "${GITHUB_REF_NAME}" in
+            v*) ;;
+            *)
+              echo "::error::tag ${GITHUB_REF_NAME} is not a v* release tag"
+              exit 1
+              ;;
+          esac
+
       # Actions are pinned by commit SHA, not by tag: a tag is mutable and has been
       # moved in a real supply-chain compromise, and a moved tag in a job that holds
       # contents: write publishes whatever it now points at.
