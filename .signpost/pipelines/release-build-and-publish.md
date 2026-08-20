@@ -2,7 +2,7 @@
 type: Pipeline
 title: release build and publish
 description: "CI job build and publish in the release workflow, 5 steps"
-resource: git://github.com/3rg0n/signpost@9cddf5540e501565a971cf874b69a62660fa71f5/.github/workflows/release.yml
+resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/.github/workflows/release.yml
 generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:
   - { name: job, value: build and publish }

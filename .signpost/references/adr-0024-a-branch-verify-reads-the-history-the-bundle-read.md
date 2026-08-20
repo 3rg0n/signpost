@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0024: a branch verify reads the history the bundle read"
 description: "Architecture decision (Accepted), 15 rules read from 0024-a-branch-verify-reads-the-history-the-bundle-read.md."
-resource: git://github.com/3rg0n/signpost@9cddf5540e501565a971cf874b69a62660fa71f5/docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md
+resource: git://github.com/3rg0n/signpost@5b9976790930fcb3d9e480efa42b47c57a9ea181/docs/adr/0024-a-branch-verify-reads-the-history-the-bundle-read.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-08-20" }
 attributes:
