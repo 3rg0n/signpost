@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A release tag on the bundle-rebuild commit published nothing and reported nothing.**
+  That commit carries `[skip ci]`, which GitHub honours on a tag push as well as a branch
+  push, so `release.yml` never started — and a suppressed workflow leaves no failed run to
+  find. `v0.2.0` was tagged there first. The workflow now takes a manual trigger as a
+  recovery path and checks that its ref is a `v*` tag before it builds anything, and
+  `CONTRIBUTING.md` has a `Releasing` section saying to tag the merge commit. It also says
+  that the same keyword skips a pull request's checks from anywhere in a commit message,
+  including a paragraph quoting it, because the commit adding that section did exactly that.
+
 ## [0.2.0] - 2026-08-20
 
 Everything the map is made of, widened. v0.1.0 read five languages; this release reads

@@ -250,9 +250,41 @@ closing keyword, ask whether the number is one *this* repository can resolve:
 `gh issue view <n> --repo 3rg0n/signpost`. A number from a planner belongs in the
 message without a keyword, where it is a note rather than an instruction.
 
+**A skip keyword in a commit message skips the run, wherever in the message it appears.**
+GitHub reads `[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]` and `[actions skip]`
+anywhere in the message, so a paragraph *quoting* one silences the pull request as surely
+as a subject line does. That failure is quieter than a red check: a skipped run is absent,
+so the PR reports no checks at all and `gh pr checks` exits 0 saying so. This repository
+writes that keyword on every bundle-rebuild commit (ADR 0005), which makes it a thing worth
+explaining in a message — explain it without the brackets. The commit that added the
+`Releasing` section below quoted it in a paragraph and got zero checks on the first push.
+
 Bug reports are most useful with the repository shape that triggered them — a
 minimal directory tree and the command you ran. `signpost graph show .` output on a
 real repo is often enough.
+
+## Releasing
+
+**Tag the merge commit, not the bundle rebuild that follows it.** Pushing a `v*` tag is
+the whole release: `.github/workflows/release.yml` re-runs the gate, cross-compiles six
+platforms, and publishes the archives plus the `checksums.txt` that the installers and
+`signpost update` verify against.
+
+The tip of `main` is the wrong commit to tag. After every merge, the `signpost` workflow
+pushes `Rebuild the signpost bundle [skip ci]`, and GitHub honours that keyword on a tag
+push as well as on a branch push. The release workflow never starts, and there is no run
+to look at — a suppressed workflow does not fail, it is absent. `v0.2.0` was tagged there
+first and published nothing.
+
+So: `git tag -a v0.X.0 <merge-commit> -m "..."`, push it, then check
+`gh run list --workflow release.yml` shows a run. If a tag is already on a rebuild commit,
+dispatch the workflow with that tag as the ref instead of moving the tag —
+`gh workflow run release.yml --ref v0.X.0`. Moving a tag that anything has fetched is what
+the pinning comment in that workflow warns about.
+
+Before the tag, close the changelog's `[Unreleased]` section as `[X.Y.Z] - <date>` with a
+lead paragraph naming what the release is for, and add the two link references at the
+bottom of the file.
 
 ## License
 
