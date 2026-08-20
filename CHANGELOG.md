@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-20
+
+Everything the map is made of, widened. v0.1.0 read five languages; this release reads
+eighteen, along with Terraform, CMake and Bazel, and it names the files it could not
+identify instead of dropping them. The bundle gained pages that state a module's public
+surface, a data store's readers and writers, and which CI jobs gate a change.
+
+Adopting signpost is now a command rather than a paste. `signpost init github` writes the
+CI setup, `signpost init pages` scaffolds the deploy, and `signpost update` replaces the
+binary from a verified release. `signpost graph diff` reports what changed structurally
+between two commits, and the viewer can be searched.
+
+One breaking change: `signpost export` is now `signpost graph export`. The semantic pass
+is still opt-in, and nothing else here needs a model or a network.
+
 ### Added
 
 - **The install commands are checked against the README and against the files they name.** The
@@ -3474,6 +3489,7 @@ ourselves, and few enough that bumping stays routine. See `docs/design.md` §2.
 - Tarjan is iterative rather than recursive, with a 20,000-node deep-chain test,
   because recursion risks stack exhaustion on the large monorepos signpost targets.
 
-[Unreleased]: https://github.com/3rg0n/signpost/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/3rg0n/signpost/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/3rg0n/signpost/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/3rg0n/signpost/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/3rg0n/signpost/releases/tag/v0.0.1
