@@ -2272,6 +2272,11 @@ did not become a release. It bought a version number's worth of scope and did no
 spend one, because the pass is opt-in twice over (§4.5) and so changes nothing for
 a repository that does not configure a backend.
 
+The tag `v0.2.0` is therefore not this milestone. It carries the language coverage
+§4.1 states, the infrastructure readers, `graph diff`, `init github`, `init pages`,
+`update`, and viewer search. A milestone name and a version number stopped meaning
+the same thing here, and reading this list as the tag's contents gets both wrong.
+
 **v0.3 — enrichment and query.** SCIP reader, codeatlas bridge, `why` and `path`,
 and the semantic pass's remaining questions — doc-to-code linking, invariants,
 cluster labels. GraphML/DOT/JSON export was listed here and shipped with v0.1.0
