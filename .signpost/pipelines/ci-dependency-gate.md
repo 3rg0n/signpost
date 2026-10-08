@@ -2,9 +2,9 @@
 type: Pipeline
 title: ci dependency gate
 description: "CI job dependency gate in the ci workflow, 4 steps; runs on a pull request or a default-branch push"
-resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4/.github/workflows/ci.yml
+resource: git://github.com/3rg0n/signpost@22583c34c403b11973a7eee4abcc20c715a0a4ed/.github/workflows/ci.yml
 tags: [gate]
-generated: { by: signpost/dev, at: "2026-10-07" }
+generated: { by: signpost/dev, at: "2026-10-08" }
 attributes:
   - { name: job, value: dependency gate }
   - { name: permissions, value: contents:read }

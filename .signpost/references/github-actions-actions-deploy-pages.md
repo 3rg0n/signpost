@@ -2,9 +2,9 @@
 type: External Dependency
 title: actions/deploy-pages
 description: github-actions dependency actions/deploy-pages (368f82528645a54fb793d4d04e342629a3f51346)
-resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4
+resource: git://github.com/3rg0n/signpost@22583c34c403b11973a7eee4abcc20c715a0a4ed
 tags: [direct, external, github-actions]
-generated: { by: signpost/dev, at: "2026-10-07" }
+generated: { by: signpost/dev, at: "2026-10-08" }
 attributes:
   - { name: ecosystem, value: github-actions }
   - { name: name, value: actions/deploy-pages }

@@ -2,8 +2,8 @@
 type: Module
 title: internal/scaffold
 description: 2 go files; 10 exported symbols.
-resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4/internal/scaffold
-generated: { by: signpost/dev, at: "2026-10-07" }
+resource: git://github.com/3rg0n/signpost@22583c34c403b11973a7eee4abcc20c715a0a4ed/internal/scaffold
+generated: { by: signpost/dev, at: "2026-10-08" }
 attributes:
   - { name: commits, value: "2" }
   - { name: exported, value: "10" }
@@ -16,7 +16,7 @@ attributes:
   - { name: top_author, value: Ergon Copeland }
   - { name: top_author_share, value: 100% }
 edges:
-  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 4 }
+  - { kind: co_changes, to: ./root.md, confidence: extracted, weight: 5 }
   - { kind: co_changes, to: ./signpost.md, confidence: extracted, weight: 3 }
 ---
 # internal/scaffold
@@ -34,7 +34,7 @@ edges:
 
 - **Exports** (10): `Apply`, `ConfigPath`, `ErrExists`, `File`, `PagesPath`, `Plan`, `Plan.Blocked`, `PlanGitHub`, `PlanPages`, `WorkflowPath`
 
-- **Changes with**: [\(repository root\)](./root.md) ×4, [cmd/signpost](./signpost.md) ×3
+- **Changes with**: [\(repository root\)](./root.md) ×5, [cmd/signpost](./signpost.md) ×3
 <!-- /signpost:managed:structure -->
 
 ## Notes
