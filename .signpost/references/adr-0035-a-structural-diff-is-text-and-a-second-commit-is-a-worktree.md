@@ -2,7 +2,7 @@
 type: Document
 title: "ADR 0035: a structural diff is text and a second commit is a worktree"
 description: "Architecture decision (Accepted), 28 rules read from 0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md."
-resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91/docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md
+resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4/docs/adr/0035-a-structural-diff-is-text-and-a-second-commit-is-a-worktree.md
 tags: [accepted, adr, constraint]
 generated: { by: signpost/dev, at: "2026-10-07" }
 attributes:

@@ -3,7 +3,7 @@ okf_version: "0.2"
 type: Index
 title: Repository map
 description: "Structural map of this repository: 94 concepts, 246 relationships."
-resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91
+resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4
 generated: { by: signpost/dev, at: "2026-10-07" }
 ---
 # Repository map
@@ -179,7 +179,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [actions/cache](./references/github-actions-actions-cache.md) — github-actions dependency actions/cache (55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
 - [actions/checkout](./references/github-actions-actions-checkout.md) — github-actions dependency actions/checkout (3d3c42e5aac5ba805825da76410c181273ba90b1)
 - [actions/configure-pages](./references/github-actions-actions-configure-pages.md) — github-actions dependency actions/configure-pages (45bfe0192ca1faeb007ade9deae92b16b8254a0d)
-- [actions/deploy-pages](./references/github-actions-actions-deploy-pages.md) — github-actions dependency actions/deploy-pages (cd2ce8fcbc39b97be8ca5fce6e763baed58fa128)
+- [actions/deploy-pages](./references/github-actions-actions-deploy-pages.md) — github-actions dependency actions/deploy-pages (368f82528645a54fb793d4d04e342629a3f51346)
 - [actions/setup-go](./references/github-actions-actions-setup-go.md) — github-actions dependency actions/setup-go (b7ad1dad31e06c5925ef5d2fc7ad053ef454303e)
 - [actions/upload-pages-artifact](./references/github-actions-actions-upload-pages-artifact.md) — github-actions dependency actions/upload-pages-artifact (fc324d3547104276b827a68afc52ff2a11cc49c9)
 - [golangci/golangci-lint-action](./references/github-actions-golangci-golangci-lint-action.md) — github-actions dependency golangci/golangci-lint-action (ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a)

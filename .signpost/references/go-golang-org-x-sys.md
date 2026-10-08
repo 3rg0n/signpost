@@ -2,7 +2,7 @@
 type: External Dependency
 title: golang.org/x/sys
 description: go dependency golang.org/x/sys (v0.47.0)
-resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91
+resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4
 tags: [external, go]
 generated: { by: signpost/dev, at: "2026-10-07" }
 attributes:
