@@ -1,16 +1,16 @@
 {
   "okf_version": "0.2",
   "generator": "signpost/dev",
-  "resource": "git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c",
-  "date": "2026-08-21",
+  "resource": "git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91",
+  "date": "2026-10-07",
   "counts": {
-    "nodes": 93,
-    "edges": 224,
+    "nodes": 94,
+    "edges": 246,
     "clusters": 43
   },
   "confidence": {
     "ambiguous": 0,
-    "extracted": 224,
+    "extracted": 246,
     "inferred": 0
   },
   "pages": [
@@ -92,6 +92,7 @@
     "references/adr-0038-documented-languages-are-checked-against-the-registry.md",
     "references/adr-0039-an-install-command-is-checked-against-what-it-names.md",
     "references/agents-md.md",
+    "references/claude-md.md",
     "references/github-actions-actions-cache.md",
     "references/github-actions-actions-checkout.md",
     "references/github-actions-actions-configure-pages.md",

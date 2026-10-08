@@ -2,9 +2,9 @@
 okf_version: "0.2"
 type: Index
 title: Repository map
-description: "Structural map of this repository: 93 concepts, 224 relationships."
-resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c
-generated: { by: signpost/dev, at: "2026-08-21" }
+description: "Structural map of this repository: 94 concepts, 246 relationships."
+resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91
+generated: { by: signpost/dev, at: "2026-10-07" }
 ---
 # Repository map
 
@@ -19,18 +19,18 @@ Start here. What the shape of this repository says, then a line per page naming 
 
 The places a wrong assumption propagates furthest, so the places to read first.
 
-- [\(repository root\)](./modules/root.md) — 52 relationships (18 in, 34 out)
-- [cmd/signpost](./modules/signpost.md) — 49 relationships (16 in, 33 out)
-- [internal/assemble](./modules/assemble.md) — 28 relationships (12 in, 16 out)
-- [internal/manifest](./modules/manifest.md) — 26 relationships (15 in, 11 out)
-- [AGENTS.md](./references/agents-md.md) — 22 relationships (0 in, 22 out)
+- [\(repository root\)](./modules/root.md) — 53 relationships (19 in, 34 out)
+- [cmd/signpost](./modules/signpost.md) — 50 relationships (17 in, 33 out)
+- [internal/assemble](./modules/assemble.md) — 29 relationships (13 in, 16 out)
+- [internal/manifest](./modules/manifest.md) — 27 relationships (16 in, 11 out)
+- [internal/discover](./modules/discover.md) — 22 relationships (15 in, 7 out)
 
 ### Structural findings
 
 What the shape of this repository says. Each line is a result — where one reads "none", that is the finding.
 
 - **Import cycles: none.** No module here imports its way back to itself.
-- **Cross-cluster edges: 43.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
+- **Cross-cluster edges: 45.** Where a change is most likely to surprise someone: the two sides are maintained as separate concerns and coupled anyway.
   - [internal/assemble](./modules/assemble.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/config](./modules/config.md) → [\(repository root\)](./modules/root.md) (changes with)
   - [internal/discover](./modules/discover.md) → [\(repository root\)](./modules/root.md) (changes with)
@@ -51,7 +51,7 @@ What the shape of this repository says. Each line is a result — where one read
   - [\(repository root\)](./modules/root.md) → [internal/hook](./modules/hook.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/manifest](./modules/manifest.md) (changes with)
   - [\(repository root\)](./modules/root.md) → [internal/model](./modules/model.md) (changes with)
-  - and 23 more
+  - and 25 more
 - **Disconnected islands: none.** Everything that is linked at all is linked into one body.
 - **Unconnected concepts: 40.** Nothing links to or from these: dead code, an unreferenced document, or a gap in extraction. Which of the three it is needs a human.
   - [ADR 0001: hand written tolerant yaml reader](./references/adr-0001-hand-written-tolerant-yaml-reader.md)
@@ -171,6 +171,7 @@ What the shape of this repository says. Each line is a result — where one read
 - [ADR 0038: documented languages are checked against the registry](./references/adr-0038-documented-languages-are-checked-against-the-registry.md) — Architecture decision (Accepted), 17 rules read from 0038-documented-languages-are-checked-against-the-registry.md.
 - [ADR 0039: an install command is checked against what it names](./references/adr-0039-an-install-command-is-checked-against-what-it-names.md) — Architecture decision (Accepted), 12 rules read from 0039-an-install-command-is-checked-against-what-it-names.md.
 - [AGENTS.md](./references/agents-md.md) — Stated constraints, 14 rules read from AGENTS.md.
+- [CLAUDE.md](./references/claude-md.md) — Stated constraints, 26 rules read from CLAUDE.md.
 - [README.md](./references/readme-md.md) — Architecture decision, 7 rules read from README.md.
 
 ### External dependencies
@@ -187,10 +188,10 @@ What the shape of this repository says. Each line is a result — where one read
 - [github.com/go-logr/stdr](./references/go-github-com-go-logr-stdr.md) — go dependency github.com/go-logr/stdr (v1.2.2)
 - [github.com/google/uuid](./references/go-github-com-google-uuid.md) — go dependency github.com/google/uuid (v1.6.0)
 - [go.opentelemetry.io/auto/sdk](./references/go-go-opentelemetry-io-auto-sdk.md) — go dependency go.opentelemetry.io/auto/sdk (v1.2.1)
-- [go.opentelemetry.io/otel](./references/go-go-opentelemetry-io-otel.md) — go dependency go.opentelemetry.io/otel (v1.45.0)
-- [go.opentelemetry.io/otel/metric](./references/go-go-opentelemetry-io-otel-metric.md) — go dependency go.opentelemetry.io/otel/metric (v1.45.0)
-- [go.opentelemetry.io/otel/sdk](./references/go-go-opentelemetry-io-otel-sdk.md) — go dependency go.opentelemetry.io/otel/sdk (v1.45.0)
-- [go.opentelemetry.io/otel/trace](./references/go-go-opentelemetry-io-otel-trace.md) — go dependency go.opentelemetry.io/otel/trace (v1.45.0)
+- [go.opentelemetry.io/otel](./references/go-go-opentelemetry-io-otel.md) — go dependency go.opentelemetry.io/otel (v1.46.0)
+- [go.opentelemetry.io/otel/metric](./references/go-go-opentelemetry-io-otel-metric.md) — go dependency go.opentelemetry.io/otel/metric (v1.46.0)
+- [go.opentelemetry.io/otel/sdk](./references/go-go-opentelemetry-io-otel-sdk.md) — go dependency go.opentelemetry.io/otel/sdk (v1.46.0)
+- [go.opentelemetry.io/otel/trace](./references/go-go-opentelemetry-io-otel-trace.md) — go dependency go.opentelemetry.io/otel/trace (v1.46.0)
 - [golang.org/x/sys](./references/go-golang-org-x-sys.md) — go dependency golang.org/x/sys (v0.47.0)
 <!-- /signpost:managed:index -->
 
