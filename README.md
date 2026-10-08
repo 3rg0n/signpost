@@ -475,6 +475,13 @@ because a command was typed correctly. Neither file is ever overwritten: one alr
 there stops the command and exits 0, because replacing a workflow you tuned with our
 default would be worse than doing nothing.
 
+**A protected default branch needs a token.** The push uses `GITHUB_TOKEN`, which a
+branch protection rule or ruleset requiring pull requests will refuse. Set a
+`SIGNPOST_PUSH_TOKEN` repository secret to a GitHub App token or fine-grained PAT that
+the rule lets bypass it, scoped to `contents: write` on that one repository, and the
+workflow pushes with that instead. Without it, the rejected push fails the job with an
+error saying so rather than git's message alone.
+
 `.signpost.yml` gets `repo:` filled in from your `origin` remote, and the output says
 so and asks you to check it — a remote is a property of your checkout, and a fork's
 remote names the upstream. Nothing is committed; that is yours to review first.

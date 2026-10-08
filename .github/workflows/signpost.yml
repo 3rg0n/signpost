@@ -66,6 +66,17 @@ jobs:
           # reports the shallowness, but a bundle committed from a shallow clone
           # would still record thinner numbers than the repository has.
           fetch-depth: 0
+          # The credential the push at the end of this job uses, because checkout
+          # persists it. GITHUB_TOKEN cannot push to a branch whose protection or
+          # ruleset requires pull requests, and such a rule usually cannot exempt it.
+          # A repository with that protection sets SIGNPOST_PUSH_TOKEN to a GitHub App
+          # token or fine-grained PAT that *is* allowed to bypass it, with
+          # `contents: write` on this repository and nothing else.
+          #
+          # A push with that token starts workflows, and its actor is not
+          # github-actions[bot], so loop guard 2 does not see it. Guards 1 and 3 still
+          # do: the commit changes only `.signpost/` and carries the skip keyword.
+          token: ${{ secrets.SIGNPOST_PUSH_TOKEN || github.token }}
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -127,7 +138,18 @@ jobs:
           # but does not stop a human pushing between this job's checkout and
           # here, and overwriting their commit to land generated markdown would
           # be the worst possible trade.
-          git push --force-with-lease
+          #
+          # A rejection by branch protection (GH006) or a ruleset (GH013) is named,
+          # because git's own message says what was refused and not what to change.
+          if ! git push --force-with-lease 2>"${RUNNER_TEMP}/push.err"; then
+            cat "${RUNNER_TEMP}/push.err" >&2
+            if grep -qE 'GH006|GH013' "${RUNNER_TEMP}/push.err"; then
+              echo "::error::the default branch is protected against this push. Set the" \
+                "SIGNPOST_PUSH_TOKEN secret to a GitHub App token or fine-grained PAT" \
+                "that the protection rule allows to bypass it; see the checkout step."
+            fi
+            exit 1
+          fi
 
   verify:
     name: the bundle still describes this tree

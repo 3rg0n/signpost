@@ -8,6 +8,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The scaffolded workflow installed v0.1.0.** `signpost init github` and `init pages`
+  pinned `SIGNPOST_VERSION` to the previous release; both now install v0.2.0, and a test
+  requires the pin to match the newest released section of this changelog.
+- **A protected default branch made the scaffolded bundle push fail.** `GITHUB_TOKEN`
+  cannot push past a protection rule or ruleset that requires pull requests. The build job
+  now checks out with a `SIGNPOST_PUSH_TOKEN` secret when one is set, so a token the rule
+  lets bypass it does the push, and falls back to `GITHUB_TOKEN` otherwise. A push the
+  protection rejects now fails with an error naming that secret, not git's message alone.
+  This repository's own `signpost.yml` and `signpost-semantic.yml` carry the same change.
 - **A release tag on the bundle-rebuild commit published nothing and reported nothing.**
   That commit carries `[skip ci]`, which GitHub honours on a tag push as well as a branch
   push, so `release.yml` never started — and a suppressed workflow leaves no failed run to

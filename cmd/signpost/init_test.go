@@ -158,6 +158,10 @@ func TestScaffoldedWorkflowMatchesTheOneThisRepositoryRuns(t *testing.T) {
 		"[skip ci]", // loop guard 3
 		"git push --force-with-lease",
 		"git diff --quiet --cached -- .signpost",
+		// A protected default branch rejects GITHUB_TOKEN; the push falls back to it only
+		// when no bypass-capable token is configured, and names the fix when rejected.
+		"          token: ${{ secrets.SIGNPOST_PUSH_TOKEN || github.token }}",
+		"grep -qE 'GH006|GH013'",
 	} {
 		if !strings.Contains(ours, want) {
 			t.Fatalf("this test's expectations are stale: %q is no longer in "+
@@ -302,6 +306,31 @@ func TestScaffoldedWorkflowPinsTheVersionItInstalls(t *testing.T) {
 		t.Errorf("the scaffolded workflow installs %v; the two jobs must run the same "+
 			"version or a pull request is gated by a different build than wrote the bundle",
 			versions)
+	}
+}
+
+// TestScaffoldsPinTheNewestRelease catches the pin a release forgot to raise. The tag
+// shape alone cannot: both templates shipped v0.2.0 still installing v0.1.0. The
+// changelog's newest closed section is the release being cut, because CONTRIBUTING.md
+// closes it before the tag, so the pin is raised in the same commit or the gate is red.
+func TestScaffoldsPinTheNewestRelease(t *testing.T) {
+	newest := regexp.MustCompile(`(?m)^## \[([0-9]+\.[0-9]+\.[0-9]+)\]`).
+		FindStringSubmatch(readRepoFile(t, "CHANGELOG.md"))
+	if newest == nil {
+		t.Fatal("CHANGELOG.md has no released section to compare the pin against")
+	}
+	want := "v" + newest[1]
+	pin := regexp.MustCompile(`SIGNPOST_VERSION: (\S+)`)
+	for name, body := range map[string]string{
+		"signpost.yml": scaffoldedWorkflow(t),
+		"pages.yml":    scaffoldedPages(t),
+	} {
+		for _, m := range pin.FindAllStringSubmatch(body, -1) {
+			if m[1] != want {
+				t.Errorf("scaffolded %s installs %s, but the newest release in CHANGELOG.md "+
+					"is %s: new adopters would start on an old signpost", name, m[1], want)
+			}
+		}
 	}
 }
 
