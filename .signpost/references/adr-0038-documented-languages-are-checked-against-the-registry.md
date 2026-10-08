@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0038: documented languages are checked against the registry"
 description: "Architecture decision (Accepted), 17 rules read from 0038-documented-languages-are-checked-against-the-registry.md."
-resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/docs/adr/0038-documented-languages-are-checked-against-the-registry.md
+resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91/docs/adr/0038-documented-languages-are-checked-against-the-registry.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-08-21" }
+generated: { by: signpost/dev, at: "2026-10-07" }
 attributes:
   - { name: number, value: "0038" }
   - { name: rules, value: "17" }

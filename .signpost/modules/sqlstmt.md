@@ -2,8 +2,8 @@
 type: Module
 title: internal/sqlstmt
 description: 2 go files; 10 exported symbols.
-resource: git://github.com/3rg0n/signpost@d1306301254e8ea7e9b378ae577464dd2212a84c/internal/sqlstmt
-generated: { by: signpost/dev, at: "2026-08-21" }
+resource: git://github.com/3rg0n/signpost@822d068b2c3d5e794e1d629591d395182a789e91/internal/sqlstmt
+generated: { by: signpost/dev, at: "2026-10-07" }
 attributes:
   - { name: commits, value: "1" }
   - { name: exported, value: "10" }
