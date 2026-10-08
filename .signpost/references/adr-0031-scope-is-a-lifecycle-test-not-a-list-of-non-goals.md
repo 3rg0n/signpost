@@ -2,9 +2,9 @@
 type: Document
 title: "ADR 0031: scope is a lifecycle test not a list of non goals"
 description: "Architecture decision (Accepted), 19 rules read from 0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md."
-resource: git://github.com/3rg0n/signpost@0230a413019b787cc25f91a5f18f8ea7542c2fd4/docs/adr/0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md
+resource: git://github.com/3rg0n/signpost@22583c34c403b11973a7eee4abcc20c715a0a4ed/docs/adr/0031-scope-is-a-lifecycle-test-not-a-list-of-non-goals.md
 tags: [accepted, adr, constraint]
-generated: { by: signpost/dev, at: "2026-10-07" }
+generated: { by: signpost/dev, at: "2026-10-08" }
 attributes:
   - { name: number, value: "0031" }
   - { name: rules, value: "19" }
