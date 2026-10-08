@@ -200,7 +200,7 @@ jobs:
             if grep -qE 'GH006|GH013' "${RUNNER_TEMP}/push.err"; then
               echo "::error::the default branch is protected against this push. Set the" \
                 "SIGNPOST_PUSH_TOKEN secret to a GitHub App token or fine-grained PAT" \
-                "that the protection rule allows to bypass it; see signpost.yml."
+                "that the protection rule allows to bypass it; see the checkout step."
             fi
             exit 1
           fi
