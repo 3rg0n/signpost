@@ -56,6 +56,9 @@ jobs:
           # and churn, exactly as signpost.yml does. A depth-1 checkout would
           # make those numbers thin rather than absent.
           fetch-depth: 0
+          # The push credential, for a protected default branch; signpost.yml's
+          # checkout says why and what the token must be.
+          token: ${{ secrets.SIGNPOST_PUSH_TOKEN || github.token }}
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -192,4 +195,12 @@ jobs:
           # queues runs but does not stop a human pushing between this job's
           # checkout and here, and overwriting their commit to land generated
           # prose would be the worst possible trade.
-          git push --force-with-lease
+          if ! git push --force-with-lease 2>"${RUNNER_TEMP}/push.err"; then
+            cat "${RUNNER_TEMP}/push.err" >&2
+            if grep -qE 'GH006|GH013' "${RUNNER_TEMP}/push.err"; then
+              echo "::error::the default branch is protected against this push. Set the" \
+                "SIGNPOST_PUSH_TOKEN secret to a GitHub App token or fine-grained PAT" \
+                "that the protection rule allows to bypass it; see signpost.yml."
+            fi
+            exit 1
+          fi
