@@ -89,7 +89,7 @@ jobs:
       # the churn that gets a committed artifact deleted. Raise it deliberately.
       - name: Install signpost
         env:
-          SIGNPOST_VERSION: v0.2.0
+          SIGNPOST_VERSION: v0.2.1
         run: |
           set -euo pipefail
           # The release archive is fetched directly and its SHA-256 checked against the
@@ -184,7 +184,7 @@ jobs:
 
       - name: Install signpost
         env:
-          SIGNPOST_VERSION: v0.2.0
+          SIGNPOST_VERSION: v0.2.1
         run: |
           set -euo pipefail
           # The release archive is fetched directly and its SHA-256 checked against the

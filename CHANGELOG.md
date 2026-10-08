@@ -6,11 +6,19 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-08
+
+Adopting signpost on a protected repository, fixed. v0.2.0's `signpost init github`
+scaffolded a workflow that installed v0.1.0 and whose bundle push a protected default
+branch refused; this release's scaffold installs v0.2.1 and can push with a token the
+protection rule lets through. The analysis and the bundle it writes are unchanged.
+
 ### Fixed
 
 - **The scaffolded workflow installed v0.1.0.** `signpost init github` and `init pages`
-  pinned `SIGNPOST_VERSION` to the previous release; both now install v0.2.0, and a test
-  requires the pin to match the newest released section of this changelog.
+  pinned `SIGNPOST_VERSION` to the previous release; both now install v0.2.1, and a test
+  requires the pin to match the newest released section of this changelog, so the next
+  release cannot ship the same mistake.
 - **A protected default branch made the scaffolded bundle push fail.** `GITHUB_TOKEN`
   cannot push past a protection rule or ruleset that requires pull requests. The build job
   now checks out with a `SIGNPOST_PUSH_TOKEN` secret when one is set, so a token the rule
@@ -25,6 +33,10 @@ All notable changes to this project are documented here. Format follows
   `CONTRIBUTING.md` has a `Releasing` section saying to tag the merge commit. It also says
   that the same keyword skips a pull request's checks from anywhere in a commit message,
   including a paragraph quoting it, because the commit adding that section did exactly that.
+
+### Changed
+
+- The OpenTelemetry modules are at 1.46.0, from 1.45.0.
 
 ## [0.2.0] - 2026-08-20
 
@@ -3509,7 +3521,8 @@ ourselves, and few enough that bumping stays routine. See `docs/design.md` §2.
 - Tarjan is iterative rather than recursive, with a 20,000-node deep-chain test,
   because recursion risks stack exhaustion on the large monorepos signpost targets.
 
-[Unreleased]: https://github.com/3rg0n/signpost/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/3rg0n/signpost/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/3rg0n/signpost/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/3rg0n/signpost/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/3rg0n/signpost/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/3rg0n/signpost/releases/tag/v0.0.1
